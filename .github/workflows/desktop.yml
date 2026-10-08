@@ -81,18 +81,18 @@ jobs:
         with:
           path: ~/.local/share/flatpak
           key: flatpak-runtimes-25.08-${{ runner.os }}
-      # apt with timeouts and retries, the step itself limited: a runner whose Ubuntu mirror stalls (the Azure mirror
-      # unreachable, the fallback hanging on its package lists) once held a release for most of an hour. A stalled
-      # fetch is dropped after 30 seconds and tried again; a whole attempt that fails is tried twice more.
+      # flatpak-builder and what it builds with (its recommended tools named, the runner's own as it happens), and the
+      # helpers flatpak runs as it installs: from the cache kept per runner image, else the mirror with retries
+      # (.github/actions/apt-install), the step itself limited.
       - if: matrix.target == 'linux'
         timeout-minutes: 20
+        uses: ./.github/actions/apt-install
+        with:
+          packages: >-
+            flatpak flatpak-builder elfutils binutils git patch unzip xz-utils zstd
+            desktop-file-utils gtk-update-icon-cache hicolor-icon-theme shared-mime-info
+      - if: matrix.target == 'linux'
         run: |
-          apt_get() { sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 "$@"; }
-          for attempt in 1 2 3; do
-            if timeout 300 bash -c "$(declare -f apt_get); apt_get update && apt_get install -y flatpak flatpak-builder elfutils"; then break; fi
-            [ "$attempt" = 3 ] && exit 1
-            echo "apt attempt $attempt failed; trying again"; sleep 15
-          done
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.electronjs.Electron2.BaseApp//25.08
       - run: npm run bundle
