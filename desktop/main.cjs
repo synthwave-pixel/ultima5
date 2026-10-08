@@ -12,14 +12,17 @@
 // The page is sandboxed, and the installer's scan for the game's files is the
 // one thing it may ask of the disk (preload.cjs, scan.cjs). Launched from a
 // non-Steam shortcut, the app puts Steam's library artwork in place, once
-// (steamArt.cjs).
-const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = require('electron');
+// (steamArt.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
+// (updates.cjs).
+const electron = require('electron');
+const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
 const { writeFileSync, existsSync } = require('node:fs');
 const { scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
+const { checkForUpdates } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
@@ -172,6 +175,8 @@ app.whenReady().then(() => {
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
   }, 3000);
+  // Newer releases looked for once the game is up (updates.cjs); nothing asked under Game Mode. Never in a smoke test.
+  if (!process.env.ULTIMA5_SMOKE) setTimeout(() => void checkForUpdates({ electron, win, quiet: inGamescope }), 5000);
   // A smoke test (smoke.cjs): screenshot after the game has drawn, then quit.
   const shot = process.env.ULTIMA5_SMOKE;
   if (shot) {

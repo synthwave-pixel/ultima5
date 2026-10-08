@@ -69,8 +69,9 @@ games.
 - **Windows and macOS**: the installers on the
   [Releases page](https://github.com/synthwave-pixel/ultima5/releases/latest),
   a Windows installer or portable `.exe` and an Apple Silicon `.dmg`
-  (macOS 13 or later; Intel Macs: use the browser). They are unsigned, so
-  each system asks once:
+  (macOS 13 or later; Intel Macs: use the browser). The Windows installer
+  then keeps itself up to date; the macOS app and the portable `.exe` say
+  when a newer version is out. They are unsigned, so each system asks once:
   - Windows: SmartScreen asks; choose More info, then Run anyway.
   - macOS: the first launch is refused. Open System Settings, choose
     Privacy & Security, scroll down to Security and click Open Anyway
@@ -86,7 +87,7 @@ games.
   on the device, or add `https://github.com/synthwave-pixel/ultima5` in
   Obtainium by hand. iOS has no app on purpose: use the browser.
 - **Linux without Flatpak**: the `AppImage` on the Releases page. Make it
-  executable and run it.
+  executable and run it; it keeps itself up to date.
 
 ### Installing from a terminal
 
