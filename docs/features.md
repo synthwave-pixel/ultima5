@@ -115,10 +115,11 @@ describes how the Modern look is drawn.
     dirt edges keep the original's specks; the shores are drawn from the
     map on the EGA's grid, with a fringe of sand along every grass coast,
     lake and river bank. The towns and buildings are the Modern look's own.
-  - *Apple ][*: the Apple II's six colours, each tile whole on black as
-    the Apple drew it. It uses the ultima3 port's Apple II tiles where
-    Ultima III had the same thing, tiles made from them where it had not,
-    and the player's own tiles in the Apple's colours for the rest.
+  - *Apple ][*: Ultima V's own Apple II tiles, all 512 of them, in the
+    Apple II's six colours, each tile whole on black as the Apple drew
+    it. The game was drawn for the Apple II first and its PC tiles after;
+    the tiles come off the Apple version's Program disk (`npm run apple2`)
+    and are shipped with the page, so the PC game is all a player needs.
   - *PC EGA*: the 1988 PC game's tiles exactly, from the player's own
     files, each whole on black as the EGA drew them, with the party out in
     the world as 1988's single icon - inside the Modern screen, with its

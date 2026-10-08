@@ -9,7 +9,5 @@ look's figures and grounds where Ultima V has the same thing as Ultima
 III, so they reach the game through
 `web/public/graphics/standard-tiles.png`.
 
-Two other sheets come from the same port, served as they are:
-`web/public/graphics/apple2-tiles.png` (its Apple II tiles, the Apple ][
-set's where the two games share a tile) and
+One other sheet comes from the same port, served as it is:
 `web/public/graphics/standard-caps.png` (its Standard border's caps).

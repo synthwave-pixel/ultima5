@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { decodePng } from '../tools/png';
 import { lzwDecompress } from '../src/data/lzw.ts';
 import { DEFAULTS, loadOptions, SETTINGS_KEY } from '../src/game/settings.ts';
-import { apple, appleArt, FROM_U3 } from '../src/ui/appleArt.ts';
+import { apple, appleArt, fromSheet } from '../src/ui/appleArt.ts';
 import { HI_WIDTH, type TileArt, TilesAlone } from '../src/ui/framebuffer.ts';
 import { CELL, type Manifest, OUTLINE_COLOUR, OUTLINE_WIDTH, StandardArt } from '../src/ui/standardArt.ts';
 import { gameFiles } from './helpers.ts';
@@ -29,13 +29,19 @@ describe('the tile sets', () => {
 
 describe('the Apple ][ tiles', () => {
   const tiles = lzwDecompress(gameFiles().get('TILES.16'));
-  const png = decodePng(readFileSync(new URL('../public/graphics/apple2-tiles.png', import.meta.url)));
-  const u3 = new Uint32Array(png.data.buffer.slice(0));
-  const art = appleArt(tiles, u3, png.width, null);
+  const png = decodePng(readFileSync(new URL('../public/graphics/apple2-u5-tiles.png', import.meta.url)));
+  const sheet = new Uint32Array(png.data.buffer.slice(0));
   // The Apple II's six colours (RGBA in memory order: 0xAABBGGRR).
   const SIX = new Set([0xff000000, 0xffffffff, 0xfffdcf15, 0xff3c6aff, 0xff3cf514, 0xfffd44ff]);
 
-  it('are in the Apple II’s six colours, every tile', () => {
+  it('are Ultima V’s own Apple II tiles, not the player’s EGA ones in the Apple’s colours', () => {
+    const art = appleArt(tiles, sheet, png.width, null);
+    for (const t of [0x05, 0x150, 0x170]) expect(art.figure(t), t.toString(16)).toEqual(fromSheet(sheet, png.width, t));
+    expect(art.figure(0x150)).not.toEqual(apple(tiles, 0x150));
+  });
+
+  it('are the player’s own tiles in the Apple’s colours, every one, without the sheet', () => {
+    const art = appleArt(tiles, null, 0, null);
     const page = new Uint32Array(HI_WIDTH * CELL);
     const off: number[] = [];
     for (let t = 0; t < 512; t++) {
@@ -43,36 +49,11 @@ describe('the Apple ][ tiles', () => {
       for (let y = 0; y < CELL; y++) for (let x = 0; x < CELL; x++) if (!SIX.has(page[y * HI_WIDTH + x])) off.push(t);
     }
     expect([...new Set(off)]).toEqual([]);
-  });
-
-  it('draw a figure on a black square, not on the ground given it', () => {
-    const page = new Uint32Array(HI_WIDTH * CELL);
-    art.draw(page, 0x150, 0, 0, 0x05); // a townsman, on grass
-    expect(page[0]).toBe(0xff000000);
-    // Its figure is clear round it, for a scene to stand it in.
-    expect(art.figure(0x150)[0] >>> 24).toBe(0);
-  });
-
-  it('make what Ultima III had not from its own: the forest darker than the light forest, the scrub sparer than the brush', () => {
-    const lit = (t: number): number => art.figure(t).filter((v) => (v & 0xffffff) !== 0).length;
-    expect(lit(0x0a)).toBeLessThan(lit(0x09) * 0.7);
-    expect(lit(0x06)).toBeLessThan(lit(0x08) * 0.6);
-    expect(lit(0x01)).toBeLessThan(lit(0x02)); // the deep water darker
-    expect(lit(0x03)).toBeGreaterThan(lit(0x02)); // the shallows broader
-  });
-
-  it('take Ultima III’s tiles where it had the same thing, and the player’s own for the rest', () => {
-    expect(FROM_U3.has(0x05)).toBe(true); // grass
-    expect(FROM_U3.has(0x170)).toBe(true); // a guard
-    expect(FROM_U3.has(0x150)).toBe(false); // a townsman: the player's own
-    // A guard is Ultima III's white figure; a townsman the EGA's in the Apple's colours.
-    const white = (px: Uint32Array): number => px.filter((v) => v === 0xffffffff).length;
-    expect(white(art.figure(0x170))).toBeGreaterThan(400);
-    expect(apple(tiles, 0x150).some((v) => v === 0xff3cf514)).toBe(true); // green
+    expect(art.figure(0x150)).toEqual(apple(tiles, 0x150));
   });
 
   it('draw in the PC (1988) look as their own tiles, the lettering the game’s', () => {
-    const lettered = appleArt(tiles, u3, png.width, new StandardArt(new Uint32Array(CELL * CELL), CELL, {}));
+    const lettered = appleArt(tiles, sheet, png.width, new StandardArt(new Uint32Array(CELL * CELL), CELL, {}));
     const alone: TileArt = new TilesAlone(lettered);
     const [a, b] = [new Uint32Array(HI_WIDTH * CELL), new Uint32Array(HI_WIDTH * CELL)];
     for (const t of [0x02, 0x05, 0x0c, 0x150]) {

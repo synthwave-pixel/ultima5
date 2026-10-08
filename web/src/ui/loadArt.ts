@@ -34,27 +34,26 @@ export async function loadStandardArt(font?: Promise<Uint8Array | null>): Promis
 }
 
 /**
- * The Apple ][ tiles (appleArt.ts): the ultima3 port's Apple II sheet (apple2-tiles.png) where Ultima III had the
- * tile, the player's own `tiles` in the Apple's colours for the rest - all of them the player's own if the sheet
- * cannot be had - lettered as `lettering` is.
+ * The Apple ][ tiles (appleArt.ts): Ultima V's own Apple II tiles (apple2-u5-tiles.png), or the player's own `tiles` in
+ * the Apple's colours if the sheet cannot be had - lettered as `lettering` is.
  */
 export async function loadAppleArt(tiles: Uint8Array, lettering: StandardArt | null): Promise<StandardArt> {
-  let u3: Uint32Array | null = null;
+  let sheet: Uint32Array | null = null;
   let width = 0;
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}graphics/apple2-tiles.png`);
+    const res = await fetch(`${import.meta.env.BASE_URL}graphics/apple2-u5-tiles.png`);
     if (res.ok) {
       const bitmap = await createImageBitmap(await res.blob());
       const c = new OffscreenCanvas(bitmap.width, bitmap.height);
       const x = c.getContext('2d')!;
       x.drawImage(bitmap, 0, 0);
-      u3 = new Uint32Array(x.getImageData(0, 0, bitmap.width, bitmap.height).data.buffer.slice(0));
+      sheet = new Uint32Array(x.getImageData(0, 0, bitmap.width, bitmap.height).data.buffer.slice(0));
       width = bitmap.width;
     }
   } catch {
     // The player's own tiles, every one.
   }
-  return appleArt(tiles, u3, width, lettering);
+  return appleArt(tiles, sheet, width, lettering);
 }
 
 /**

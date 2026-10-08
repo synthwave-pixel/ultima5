@@ -17,6 +17,7 @@
     "tiles": "vite-node tools/art/build.ts",
     "pictures": "vite-node tools/art/picture-sheet.ts",
     "runes": "vite-node tools/art/runes.ts",
+    "apple2": "node tools/art/apple2.ts",
     "known": "vite-node tools/install/known.ts",
     "music": "vite-node tools/music/render.ts --"
   },

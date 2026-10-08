@@ -161,9 +161,8 @@ export type TileSet = 'standard' | 'original';
 /**
  * The Standard look's tiles, as the ultima3 port offers its sets. Modern PC: the original land out in the world, its
  * shores and edges still drawn from the map, and the original actors and furniture lifted onto it (originals.ts); the
- * towns' floors and walls and the buildings the Standard look's. Apple ][: the Apple II's six colours, tile by tile on black - the ultima3 port's Apple II tiles
- * where Ultima III had the same thing, made from them where it had not (the forest, the scrub, the hills, the deep and
- * the shallows), the rest the player's own tiles in those colours (appleArt.ts). PC EGA: the player's own tiles as the
+ * towns' floors and walls and the buildings the Standard look's. Apple ][: Ultima V's own Apple II tiles, in the Apple
+ * II's six colours, tile by tile on black (appleArt.ts). PC EGA: the player's own tiles as the
  * 1988 PC game drew them, each whole on black, in the Modern look's screen (egaTiles.ts). The PC (1988) look (tileSet
  * 'original') has a choice of its own (PcTiles).
  */

@@ -4,12 +4,13 @@
 
 *A new engine for the 1988 MS-DOS game, in TypeScript, for the browser,
 the desktop, the Steam Deck and Android. Like OpenMW for Morrowind, it
-ships none of the game: it plays your own copy.*
+ships none of the PC game: it plays your own copy.*
 
 **Play it:** <https://synthwave-pixel.github.io/ultima5/>
 
-The Ultima V Upgrade's music in `web/public/music/` is the one part of
-the game the page itself carries.
+The page itself carries two things of the game's: the Ultima V
+Upgrade's music in `web/public/music/`, and the Apple II version's tiles,
+for the Apple ][ tile set.
 
 - [Installation](#installation) The browser, the Steam Deck, Windows,
   macOS, Linux and Android.
@@ -267,12 +268,14 @@ The port's aim is the 1988 game, played the way a modern player expects,
 without giving up what made it itself. A few principles decide most
 things:
 
-- **Ship none of the game.** Like OpenMW, the engine reads everything from
+- **Ship none of the PC game.** Like OpenMW, the engine reads everything from
   the player's own files - even the Modern PC art is derived from the
   original tiles as the game runs: lifted off their ground, toned, and
   repainted through small per-figure rules, so the Avatar's skin, hair and
   clothes can be recoloured without redrawing a pixel. The tile-by-tile
-  record is in [standard-originals.md](docs/standard-originals.md).
+  record is in [standard-originals.md](docs/standard-originals.md). The
+  Apple ][ tile set is the exception: the Apple II version's own tiles,
+  which a player of the PC game would not otherwise have.
 - **A controller is enough.** Every choice can be made with the d-pad, A
   and B. A prompt is always a menu, never a wait for a button you would
   have to know about; that one rule reshaped the commands, the shops, the
@@ -416,7 +419,7 @@ text layer's overlays).
 ## Credits
 
 The engine's code is under the MIT licence: see [LICENSE](LICENSE). The
-game itself is not included, and remains its owners'; the engine plays
+PC game itself is not included, and remains its owners'; the engine plays
 the player's own copy.
 
 - **The ultima3 port**
@@ -424,13 +427,17 @@ the player's own copy.
   the modernized version of LairWare's Ultima III, whose modern play and
   builds this port follows, and whose Ultima III art and chip sounds it
   borrows (MIT, Copyright (c) 2025 Leon McNeill; see [LICENSE](LICENSE)): its
-  Apple II tiles (`web/public/graphics/apple2-tiles.png`, the Apple ][
-  set's), its Standard border caps (`web/public/graphics/standard-caps.png`),
+  Standard border caps (`web/public/graphics/standard-caps.png`),
   its Standard figures and painted grounds (`web/art/standard/u3/`, from
   which `npm run tiles` draws many of the Modern look's tiles in
   `standard-tiles.png`; see [its note](web/art/standard/u3/README.md)),
   and its Standard sound effects, for the effects the two games share
   (`web/src/audio/chip3.ts`).
+- **The Apple II tiles** of the Apple ][ tile set
+  (`web/public/graphics/apple2-u5-tiles.png`): Ultima V's own, drawn by
+  Origin Systems for the Apple II version (1988), read off its Program
+  disk by `npm run apple2` (`web/tools/art/apple2.ts`). They remain their
+  owners'.
 - **LairWare**, and Leon McNeill, whose Macintosh port of Ultima III,
   and its source, posted in 2025, the ultima3 port grew from - and so,
   through it, this one. Thank you.
