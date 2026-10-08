@@ -1,0 +1,123 @@
+{
+  "name": "ultima5-desktop",
+  "productName": "Ultima V",
+  "version": "1.1.0",
+  "description": "Ultima V: Warriors of Destiny, a new engine for the DOS game's files, as a desktop app",
+  "author": "synthwave-pixel",
+  "license": "MIT",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "bundle": "node bundle.cjs",
+    "start": "electron .",
+    "smoke": "node smoke.cjs",
+    "dist": "node dist.cjs",
+    "dist:linux": "node dist.cjs --linux",
+    "dist:win": "node dist.cjs --win",
+    "dist:mac": "node dist.cjs --mac",
+    "version:show": "node version.cjs"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.17.0"
+  },
+  "build": {
+    "appId": "com.synthwavepixel.ultima5",
+    "productName": "Ultima V",
+    "artifactName": "Ultima-V-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "scan.cjs",
+      "steamArt.cjs",
+      "build/icons/256x256.png",
+      "build/steam/*.png",
+      "app/**/*"
+    ],
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "mac": {
+      "category": "public.app-category.role-playing-games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Ultima-V-${version}-${os}-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "Ultima-V-${version}-${os}-${arch}-portable.${ext}"
+    },
+    "linux": {
+      "category": "Game",
+      "icon": "build/icons",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "desktop": {
+        "entry": {
+          "Name": "Ultima V",
+          "Comment": "Ultima V: Warriors of Destiny"
+        }
+      }
+    },
+    "flatpak": {
+      "runtimeVersion": "25.08",
+      "baseVersion": "25.08",
+      "finishArgs": [
+        "--socket=wayland",
+        "--socket=x11",
+        "--share=ipc",
+        "--device=all",
+        "--filesystem=/run/udev:ro",
+        "--socket=pulseaudio",
+        "--filesystem=home"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/synthwave-pixel/ultima5.git"
+  }
+}

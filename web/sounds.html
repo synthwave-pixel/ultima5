@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Sound effects</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for hearing the effects, the game does not link to it:
+      every sound the game makes - the DOS game's effects (u5d's names), its
+      families of notes and the port's own cues - with what each is, when and
+      how often it plays and where, in the Standard set (the chip voices) or
+      the Original (the PC speaker), through the game's own sound.
+      The game files are the installed copy.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          14px/1.4 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0;
+      }
+      header p {
+        margin: 4px 0 0;
+        color: #999;
+        font-size: 12px;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      #controls {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 13px;
+      }
+      #controls button.on {
+        background: #e8c870;
+        color: #111;
+        border-color: #e8c870;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th {
+        text-align: left;
+        font-weight: normal;
+        color: #888;
+        font-size: 12px;
+        padding: 2px 10px 4px 0;
+        border-bottom: 1px solid #333;
+      }
+      td {
+        padding: 6px 10px 6px 0;
+        vertical-align: top;
+        border-bottom: 1px solid #222;
+      }
+      td.play {
+        white-space: nowrap;
+        max-width: 220px;
+        white-space: normal;
+      }
+      td.play button {
+        margin: 0 3px 3px 0;
+      }
+      td code,
+      td.where,
+      td.voice {
+        color: #888;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+      }
+      .often {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 9px;
+        font-size: 12px;
+        white-space: nowrap;
+        background: #333;
+      }
+      .o0,
+      .o1 {
+        background: #7a2e2e;
+      }
+      .o2 {
+        background: #6a5a22;
+      }
+      .o3 {
+        background: #2e4a6a;
+      }
+      .note {
+        color: #c88;
+      }
+      button {
+        font: inherit;
+        padding: 2px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sound effects</h1>
+      <p>
+        Every sound the game makes: what it is, when and how often it plays, where in the code, and the voice the Standard set gives it.
+        Standard is the chip voices; Original the PC speaker emulated. "silent" marks a sound the DOS game did not have.
+      </p>
+      <div id="controls"></div>
+    </header>
+    <main id="effects">Loading the game files…</main>
+    <script type="module" src="/src/dev/sounds.ts"></script>
+  </body>
+</html>

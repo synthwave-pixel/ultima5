@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Dungeon map cells</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for checking the dungeon map by eye; the game does not
+      link to it. Every cell value the eight dungeons' levels hold, as the
+      game's own map drawing draws it on each of the maps, and what Look
+      says of it. The game files are the installed copy.
+      The choices are kept in the URL.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      header div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        text-align: left;
+        font-weight: normal;
+        color: #8cc8ff;
+        padding: 6px 10px;
+        border-bottom: 1px solid #333;
+        white-space: nowrap;
+      }
+      td {
+        padding: 6px 10px;
+        border-bottom: 1px solid #222;
+        vertical-align: middle;
+      }
+      td.value {
+        font-family: ui-monospace, Menlo, monospace;
+        color: #fff;
+      }
+      td.where {
+        color: #999;
+        font-size: 12px;
+        max-width: 180px;
+      }
+      td.look {
+        white-space: pre-line;
+        max-width: 280px;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Dungeon map cells</h1>
+      <div>
+        <label for="dungeon">Dungeon</label>
+        <select id="dungeon"></select>
+      </div>
+      <div>
+        <label for="show">Show</label>
+        <select id="show">
+          <option value="both" selected>Modern and PC (1988)</option>
+          <option value="modern">Modern</option>
+          <option value="pc">PC (1988)</option>
+        </select>
+      </div>
+      <div>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="2">2x</option>
+          <option value="3" selected>3x</option>
+          <option value="4">4x</option>
+        </select>
+      </div>
+      <p class="legend">
+        Every cell value in the dungeons' levels (DUNGEON.DAT), with where it is found and how often, then the values play makes: what the
+        map takes each for, how each map draws it, the first-person view with it one step ahead, and what Look says (and a sign's words).
+        Each is the game's own drawing, cut out of a real screen: on the maps the cell in the middle of a level of rock, a passage on each
+        side of it (so the PC (1988) maps' arms show); the Modern small map is the three cells a side round the party, who stands west of
+        the cell. Drawn in the light of the dungeon chosen, or of the first it is found in.
+      </p>
+    </header>
+    <main>
+      <table id="cells"></table>
+    </main>
+    <script type="module" src="/src/dev/mapcells.ts"></script>
+  </body>
+</html>

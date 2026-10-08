@@ -1,0 +1,96 @@
+# Ultima V for Android
+
+The built game wrapped in [Capacitor](https://capacitorjs.com/) as an
+Android app, for handhelds such as the AYN Odin, the Retroid Pocket and
+any phone or tablet that can sideload an APK. iOS is left out on purpose:
+installing outside the App Store is more trouble than the web version's
+Add to Home Screen.
+
+## What the app does
+
+- Loads the game from its own files (`app/`, packed into the APK) over
+  Capacitor's `https://localhost` origin, so storage, the clipboard and
+  the Gamepad API behave as in a browser. The service worker is dropped:
+  updates are new APKs, and the saved game stays in the app's storage
+  across them.
+- Runs full screen in landscape with the system bars hidden; a swipe from
+  an edge shows them for a moment.
+- Maps the system Back button (and a handheld's Back key) to Escape, which
+  opens the game's Pause menu. Sent to the background (Home, or another
+  app), the game opens the Pause menu too, so it waits there on return.
+- Offers Quit on the title menu, which closes the app through
+  Capacitor's App plugin (`@capacitor/app`, `App.exitApp()`); a web page
+  has no such plugin, so the site offers no Quit.
+- Choose folder... on the installer opens Android's own folder picker,
+  and Export's To a file its picker for where a new file goes (the
+  GameFolder plugin, `GameFolderPlugin.java`), both with no storage
+  permission. A web view downloads nothing, so the app writes the file
+  itself. Import's From a file needs no plugin: Capacitor's web view
+  answers the page's file input with the system's picker.
+- Physical controls that Android reports as a gamepad switch the game to
+  controller mode on the first press; a tap on the screen shows the
+  virtual controller instead.
+
+The app stays on Capacitor 7, which targets Android API 35, and the Back
+mapping depends on it. `MainActivity.java` catches `KEYCODE_BACK`, which
+Android stops delivering to apps that target API 36 when they run on
+Android 16: Back would leave the app instead of opening the Pause menu.
+Capacitor 8 targets API 36, so moving to it means moving the mapping too,
+to the App plugin's `backButton` listener or an `OnBackPressedCallback`.
+API 36 also ends the landscape lock on screens 600dp and wider, so tablets
+would turn to portrait. The handhelds this app is for are well served by
+Capacitor 7, so it stays until there is a reason to move; the App plugin
+is held to its Capacitor 7 release (`@capacitor/app@^7`) with it.
+
+## Obtainium
+
+[Obtainium](https://github.com/ImranR98/Obtainium) can install the APK
+from the latest release and update it from later ones, given this
+repository (`https://github.com/synthwave-pixel/ultima5`) as the source.
+The APK is the only `.apk` in a release, so no asset filter is needed.
+
+## Building
+
+Requirements: Node 22, a JDK (17 or newer) and the Android SDK with
+platform 35 and build-tools (Android Studio installs them; on a CI runner
+they are preinstalled).
+
+```sh
+cd web && npm ci && cd ../mobile && npm ci
+npm run bundle          # builds ../web with VITE_BASE=./ into app/
+npx cap sync android    # copies app/ and the plugin list into android/
+npm run apk             # dist/Ultima-V-<version>-android.apk
+```
+
+`node ../web/tools/icons.mjs` regenerates the launcher icons, with the
+web and desktop ones, from the pixel art drawn in that script.
+
+## Signing
+
+Android refuses an unsigned APK, and refuses to update an app whose new
+build is signed with a different key. `sideload.keystore` is therefore
+committed: every CI build signs with it, so one build installs over the
+last and keeps its saves. It is a sideload key only; it proves nothing
+beyond "built from this repository's CI", and its password is in
+`android/app/build.gradle`.
+
+For a release key of your own, set four repository secrets and the
+workflow uses them instead: `ANDROID_KEYSTORE_BASE64` (the keystore file,
+base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+`ANDROID_KEY_PASSWORD`. Locally, the same names as environment variables
+(with `ANDROID_KEYSTORE_FILE` as the path) do the same.
+
+## Versions
+
+`apk.cjs` takes the version from `../desktop/version.cjs`, the one source
+for every build: in Actions the major.minor from `desktop/package.json`
+with the run number as the patch, elsewhere a timestamped pre-release.
+Android's `versionCode`, which must rise for a build to install over the
+last, is the run number in Actions and minutes-since-2024 for a local
+build, so a developer's APK installs over any release; going back to a
+release after that means uninstalling first. `package.json` here carries
+no version of its own. The `android/` folder is Capacitor's
+generated project, kept in git as Capacitor intends, with these local
+changes: the version and signing block in `app/build.gradle`,
+`screenOrientation` in the manifest, `MainActivity.java`, the icons, the
+black splash and launcher background.

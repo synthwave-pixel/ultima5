@@ -1,0 +1,110 @@
+# Builds the browser port in web/ and publishes it to GitHub Pages, on
+# every push to main and when started by hand (Actions > Deploy to GitHub
+# Pages > Run workflow).
+# The site is served at https://<owner>.github.io/ultima5/, so Vite is told
+# to prefix asset URLs with /ultima5/. The site also serves the newest
+# release's Flatpak as a signed repository under /flatpak/ (see
+# desktop/flatpak-repo.sh); the release workflow starts a deploy after
+# each release so the repository follows it.
+name: Deploy to GitHub Pages
+
+# Only main publishes (the github-pages environment rejects other
+# branches), and the concurrency group cancels an older run, so a run for
+# any other branch would only cancel a real deploy.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # The game's files, from the private synthwave-pixel/ultima5-gamedata, when GAMEDATA_TOKEN (a read-only token
+      # for that repository) is set; a fork's pull request has no secrets and goes without. Never print the files: the
+      # logs are public.
+      - id: gamedata
+        run: if [ -n "$GAMEDATA_TOKEN" ]; then echo "fetch=yes" >>"$GITHUB_OUTPUT"; fi
+        env:
+          GAMEDATA_TOKEN: ${{ secrets.GAMEDATA_TOKEN }}
+      - if: steps.gamedata.outputs.fetch == 'yes'
+        uses: actions/checkout@v7
+        with:
+          repository: synthwave-pixel/ultima5-gamedata
+          token: ${{ secrets.GAMEDATA_TOKEN }}
+          path: gamedata-private
+          persist-credentials: false
+      - if: steps.gamedata.outputs.fetch == 'yes'
+        run: cp -R gamedata-private/ultima5 gamedata-private/*.zip gamedata/ && rm -rf gamedata-private
+        working-directory: ${{ github.workspace }}
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      # Every test where the checkout has the game's files; without them (the public repository carries none of the
+      # game) the ones that need none.
+      - run: if [ -f ../gamedata/ultima5/DATA.OVL ]; then npm test; else npm run test:nodata; fi
+      # The game's files go before the build, so nothing of them can reach the site.
+      - run: find gamedata -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf {} +
+        working-directory: ${{ github.workspace }}
+      - run: VITE_BUILD="${GITHUB_SHA::7}" npm run build
+        env:
+          VITE_BASE: /ultima5/
+      # The Flatpak repository: the newest release's bundle, imported into a fresh OSTree repository and signed. A
+      # pruned repository holds one commit anyway, so nothing needs keeping between deploys. The runner's package lists
+      # go stale (a superseded version 404s), so they are refreshed first. Until there is a release, and the signing
+      # key is set, the site goes without it.
+      - id: flatpak
+        run: |
+          if [ -n "$FLATPAK_GPG_KEY" ] && gh release view --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "serve=yes" >>"$GITHUB_OUTPUT"
+          else
+            echo "serve=no" >>"$GITHUB_OUTPUT"
+            echo "No release, or no signing key: the site goes without its Flatpak repository."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+      - if: steps.flatpak.outputs.serve == 'yes'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq flatpak ostree
+      - if: steps.flatpak.outputs.serve == 'yes'
+        run: bash desktop/flatpak-repo.sh "$GITHUB_WORKSPACE/web/dist/flatpak"
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+          FLATPAK_GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
+          SITE: https://synthwave-pixel.github.io/ultima5
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

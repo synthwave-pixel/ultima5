@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Ultima V</title>
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+        touch-action: manipulation;
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      @media (aspect-ratio < 1 / 1) {
+        body {
+          align-items: flex-start;
+        }
+      }
+      canvas {
+        /* Its own pixels are the display's (screen.ts sizes it to them and scales the game into them). */
+        image-rendering: auto;
+        /* 320 by 200 at the DOS game's shape: 16:10 as drawn. The EGA monitor
+           stretched it to 4:3; square pixels are the modern choice. */
+        width: min(100vw, calc(100vh * 16 / 10));
+        width: min(100dvw, calc(100dvh * 16 / 10));
+        aspect-ratio: 16 / 10;
+        outline: none;
+        display: block;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="screen" width="320" height="200" tabindex="0"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

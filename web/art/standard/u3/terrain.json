@@ -1,0 +1,21 @@
+{
+  "image": "terrain.png",
+  "cell": 64,
+  "tiles": [
+    "water",
+    "grass",
+    "brush",
+    "forest",
+    "mountains",
+    "dungeon",
+    "towne",
+    "castle",
+    "field",
+    "lava",
+    "moongate",
+    "brick",
+    "towne-2",
+    "castle-2",
+    "floor"
+  ]
+}

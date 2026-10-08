@@ -1,0 +1,29 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# The player's own copy of the game, for the tests and the dev server (gamedata/README.md)
+gamedata/*
+!gamedata/README.md
+
+# The decompiled source, kept beside the port while working on it
+reference/
+
+# Tools' working folders
+.superpowers/
+.playwright-mcp/
+
+# Art review sheets (npm run tiles)
+web/art/standard/contact-*.png
+web/art/standard/peek.png
+
+# The music render's SoundFont and scratch (tools/music)
+web/tools/music/.cache/
+
+# The sheet of the game's pictures for looking over (npm run pictures), made from the player's own files
+web/art/standard/pictures.png
+
+# Local tooling settings (an editor's or an agent's)
+.claude/

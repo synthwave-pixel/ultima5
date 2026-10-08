@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>The corridor</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for checking the first-person dungeon by eye; the game
+      does not link to it. Every sort of cell a party may face, drawn by
+      the game's own corridor drawing, in Original and Standard side by
+      side. The game files are the installed copy. The
+      choices are kept in the URL.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      header div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select,
+      input {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      figure {
+        margin: 0;
+        width: var(--w);
+      }
+      figure div {
+        display: flex;
+        gap: 4px;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      figcaption b {
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>The corridor</h1>
+      <div>
+        <label for="shape">Where</label>
+        <select id="shape"></select>
+      </div>
+      <div>
+        <label for="walls">Walls</label>
+        <select id="walls"></select>
+      </div>
+      <div>
+        <label for="look">Show</label>
+        <select id="look">
+          <option value="both" selected>Original and Standard</option>
+          <option value="original">Original</option>
+          <option value="standard">Standard</option>
+        </select>
+      </div>
+      <div>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="1">1x</option>
+          <option value="2" selected>2x</option>
+          <option value="3">3x</option>
+        </select>
+      </div>
+      <p class="legend">
+        The first-person view as the game composes it, cut out of a real screen. <b>Original</b> is the EGA corridor; <b>Standard</b> is the
+        same pictures in the port's palette. The party stands lit, facing north, in a level of solid rock with one cell arranged in front of
+        it.
+      </p>
+    </header>
+    <main>
+      <div class="grid" id="views"></div>
+    </main>
+    <script type="module" src="/src/dev/dungeon.ts"></script>
+  </body>
+</html>

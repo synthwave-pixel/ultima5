@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Tile sets</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for checking the tile sets by eye; the game does not link
+      to it. Every tile in Original (the EGA tiles, animated as the game
+      animates them) and Standard (the port's art), side by side, the actor
+      tiles over a chosen ground. The game files are the installed copy. The choices are kept in the URL.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      header div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select,
+      input {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      #place {
+        padding: 10px 16px;
+        border-bottom: 1px solid #333;
+      }
+      #place .bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        align-items: center;
+      }
+      #place .note {
+        color: #999;
+        font-size: 12px;
+      }
+      #place-view {
+        display: block;
+        width: 800px;
+        max-width: 100%;
+        aspect-ratio: 16 / 10;
+        margin-top: 8px;
+        border: 1px solid #333;
+        background: #000;
+      }
+      #place-view[hidden] {
+        display: none;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      figure {
+        margin: 0;
+        width: var(--w);
+      }
+      figure div {
+        display: flex;
+        gap: 4px;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      figcaption b {
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tile sets</h1>
+      <div>
+        <label for="ux">UX</label>
+        <select id="ux">
+          <option value="both">PC (1988) and Modern</option>
+          <option value="standard">Modern</option>
+          <option value="original">PC (1988)</option>
+        </select>
+      </div>
+      <div>
+        <label for="tiles">Tiles</label>
+        <select id="tiles">
+          <option value="modern-pc">Modern PC</option>
+          <option value="apple2">Apple ][</option>
+          <option value="pc-ega">PC EGA</option>
+        </select>
+      </div>
+      <div>
+        <label for="outlines">Outlines</label>
+        <select id="outlines">
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </div>
+      <div>
+        <label for="ground">Ground</label>
+        <select id="ground">
+          <option value="5">grass</option>
+          <option value="64">wood floor</option>
+          <option value="68">cobbles</option>
+          <option value="69">hex floor</option>
+          <option value="2">water</option>
+          <option value="-1">black</option>
+        </select>
+      </div>
+      <div>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="1">1x</option>
+          <option value="2">2x</option>
+          <option value="3">3x</option>
+        </select>
+      </div>
+      <div>
+        <input type="checkbox" id="animate" checked />
+        <label for="animate">Animate</label>
+      </div>
+      <div>
+        <label for="filter">Find</label>
+        <input id="filter" size="14" placeholder="name or number" />
+      </div>
+      <p class="legend">
+        Each tile as the map draws it, PC EGA on the left and Standard on the right, its number in <b>blue</b> - UX, Tiles and Outlines as
+        Settings has them. What stands on a ground - a creature, a chair, a castle - is on the chosen one, which Standard art shows through
+        and the EGA tiles do not; a creature the game animates is one entry, going through its four frames.
+      </p>
+    </header>
+    <section id="place">
+      <div class="bar">
+        <label for="place-pick">Place</label>
+        <select id="place-pick">
+          <option value="">Choose a place, an arena or a room…</option>
+        </select>
+        <button type="button" id="place-next">Next</button>
+        <span class="note"
+          >The game there, in a game of its own that saves nothing, in the UX and Tiles chosen above; a map tile clicked shows its example
+          here.</span
+        >
+      </div>
+      <iframe id="place-view" title="The place chosen, as the game draws it" hidden></iframe>
+    </section>
+    <main id="sets">Loading the game files…</main>
+    <script type="module" src="/src/dev/tiles.ts"></script>
+  </body>
+</html>

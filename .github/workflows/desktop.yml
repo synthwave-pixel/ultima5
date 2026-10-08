@@ -1,0 +1,195 @@
+# Builds the desktop app (desktop/, Electron) for Windows, macOS and Linux
+# and the Android app (mobile/, Capacitor), as the ultima3 port's do. A
+# push to main is a development build: every build stays as a workflow
+# artifact. A push to the release branch (git push origin main:release),
+# or a run started by hand (Actions > Desktop and Android builds > Run
+# workflow) with "publish" on, is a release: the builds are published as
+# a GitHub Release. With "publish" off a run keeps its builds as
+# artifacts, to try a change first; with "android_only" on, only the APK
+# is built (the desktop runners, macOS and Windows above all, are the
+# costly ones), and there is no release. The version is the major.minor from desktop/package.json
+# with the run number as the patch (1.0.37, say), decided by
+# desktop/version.cjs; a new series starts by changing that major.minor.
+# A release's notes are GitHub's generated ones (the compare link). The
+# release job first looks for a section of the root README headed with
+# the release's version ("### v1.0.37", or "### v1.0.37, <date>"), through
+# desktop/release-notes.cjs, and puts it above them; the README has no
+# such section, so a release says so in a warning and goes out with the
+# generated notes alone. Desktop builds are unsigned: see "Desktop app,
+# and the Steam Deck" in docs/install.md for what that means on each
+# platform. The APK is signed with the committed sideload key unless the
+# ANDROID_KEYSTORE_* secrets provide a release key. Linux gets a Flatpak
+# bundle as well as an AppImage; the Linux job installs (and caches) the
+# runtimes it needs.
+name: Desktop and Android builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a GitHub Release (off keeps the builds as artifacts only)
+        type: boolean
+        default: true
+      android_only:
+        description: Build only the Android app (no desktop builds, so no release)
+        type: boolean
+        default: false
+  # No paths filter: GitHub skips a filtered workflow when a push creates the branch, which is how a release starts.
+  push:
+    branches: [main, release]
+
+permissions:
+  contents: write
+  actions: write # to start the Pages deploy after a release
+
+jobs:
+  build:
+    if: ${{ !inputs.android_only }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            args: --linux AppImage flatpak
+          - os: windows-latest
+            target: win
+            args: --win
+          - os: macos-latest
+            target: mac
+            args: --mac
+    runs-on: ${{ matrix.os }}
+    # A build takes under ten minutes; anything near this is a runner stuck, better failed than left waiting.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            desktop/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: desktop
+      # The Flatpak needs flatpak-builder and the Freedesktop runtime, SDK and Electron base app: about a gigabyte, so
+      # the user installation is cached between runs and the install is a no-op when the cache is warm.
+      - if: matrix.target == 'linux'
+        uses: actions/cache@v6
+        with:
+          path: ~/.local/share/flatpak
+          key: flatpak-runtimes-25.08-${{ runner.os }}
+      # apt with timeouts and retries, the step itself limited: a runner whose Ubuntu mirror stalls (the Azure mirror
+      # unreachable, the fallback hanging on its package lists) once held a release for most of an hour. A stalled
+      # fetch is dropped after 30 seconds and tried again; a whole attempt that fails is tried twice more.
+      - if: matrix.target == 'linux'
+        timeout-minutes: 20
+        run: |
+          apt_get() { sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 "$@"; }
+          for attempt in 1 2 3; do
+            if timeout 300 bash -c "$(declare -f apt_get); apt_get update && apt_get install -y flatpak flatpak-builder elfutils"; then break; fi
+            [ "$attempt" = 3 ] && exit 1
+            echo "apt attempt $attempt failed; trying again"; sleep 15
+          done
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.electronjs.Electron2.BaseApp//25.08
+      - run: npm run bundle
+        working-directory: desktop
+      - run: npm run dist -- ${{ matrix.args }}
+        working-directory: desktop
+        env:
+          # Unsigned macOS builds: skip the notarisation step electron-builder would otherwise attempt.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      # The built app, launched: it must start with its fuses set (its ASAR checked, and loaded from nothing else).
+      - if: matrix.target == 'linux'
+        run: xvfb-run -a node smoke-built.cjs
+        working-directory: desktop
+        env:
+          ELECTRON_NO_SANDBOX: 1
+      - if: matrix.target != 'linux'
+        run: node smoke-built.cjs
+        working-directory: desktop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ultima5-${{ matrix.target }}
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.flatpak
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            mobile/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+        working-directory: web
+      - run: npm ci
+        working-directory: mobile
+      - run: npm run bundle
+        working-directory: mobile
+      - run: npx cap sync android
+        working-directory: mobile
+      # A release key from the repository secrets, when there is one; otherwise Gradle falls back to the sideload key.
+      - if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/release.keystore"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}"
+            echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}"
+          } >> "$GITHUB_ENV"
+      - run: npm run apk
+        working-directory: mobile
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ultima5-android
+          path: mobile/dist/*.apk
+          if-no-files-found: error
+
+  # A manual run (unless told not to publish), or a push to the release branch, publishes one release with every file
+  # once all four builds exist; the tag lands on this commit.
+  release:
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish) || github.ref == 'refs/heads/release' }}
+    needs: [build, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: echo "version=$(node desktop/version.cjs)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        with:
+          path: files
+          merge-multiple: true
+      - run: ls -la files
+      # The notes are the README changelog's section for this version (desktop/release-notes.cjs), above GitHub's
+      # generated compare link; without a section the release still goes out, with a warning and the link alone.
+      - run: |
+          node desktop/release-notes.cjs "$VERSION" > notes.md
+          notes=()
+          if [ -s notes.md ]; then notes=(--notes-file notes.md); else echo "::warning::README.md has no changelog section for v$VERSION"; fi
+          gh release create "v$VERSION" files/* --title "v$VERSION" --generate-notes "${notes[@]}" --target "$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+      # The site serves the newest release as a Flatpak repository: redeploy it now that there is a newer one.
+      - run: gh workflow run pages.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

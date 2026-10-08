@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="tground" cx="512" cy="470" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#11303A"/>
+      <stop offset="1" stop-color="#071315"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="160" fill="url(#tground)"/>
+  <rect x="96" y="96" width="832" height="832" fill="none" stroke="#611207" stroke-width="34"/>
+  <rect x="96" y="96" width="832" height="832" fill="none" stroke="#B8321F" stroke-width="20"/>
+  <rect x="130" y="130" width="764" height="764" fill="none" stroke="#E88C45" stroke-opacity="0.8" stroke-width="5"/>
+  <rect x="70" y="70" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="85" y="85" width="22" height="22" rx="3" fill="#E88C45"/><rect x="902" y="70" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="917" y="85" width="22" height="22" rx="3" fill="#E88C45"/><rect x="70" y="902" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="85" y="917" width="22" height="22" rx="3" fill="#E88C45"/><rect x="902" y="902" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="917" y="917" width="22" height="22" rx="3" fill="#E88C45"/>
+  <g transform="translate(512 521) scale(0.86) translate(-512 -521)">
+  <defs><linearGradient id="tchrome" gradientUnits="userSpaceOnUse" x1="0" y1="150" x2="0" y2="892">
+      <stop offset="0" stop-color="#E4F5F7"/>
+      <stop offset="0.28" stop-color="#A3DDF0"/>
+      <stop offset="0.46" stop-color="#67CBEC"/>
+      <stop offset="0.5" stop-color="#2E464D"/>
+      <stop offset="0.53" stop-color="#3064BC"/>
+      <stop offset="0.8" stop-color="#349CE2"/>
+      <stop offset="1" stop-color="#A3DDF0"/>
+    </linearGradient><filter id="tblur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="trim" x="-5%" y="-5%" width="110%" height="110%">
+      <feMorphology in="SourceAlpha" operator="erode" radius="7" result="in"/>
+      <feComposite in="SourceAlpha" in2="in" operator="out" result="edge"/>
+      <feGaussianBlur in="edge" stdDeviation="1.2" result="soft"/>
+      <feFlood flood-color="#FFFFFF" flood-opacity="0.6"/>
+      <feComposite in2="soft" operator="in"/>
+    </filter></defs>
+  <g transform="translate(10 18)" fill="#000" opacity="0.65" filter="url(#tblur)"><path d="M512 150 C604 150 664 226 664 318 C664 398 616 458 560 500 L464 500 C408 458 360 398 360 318 C360 226 420 150 512 150 Z M512 214 C462 214 430 260 430 318 C430 380 466 428 512 462 C558 428 594 380 594 318 C594 260 562 214 512 214 Z" fill-rule="evenodd"/><path d="M256 486 C300 500 360 504 420 504 L604 504 C664 504 724 500 768 486 L768 590 C724 576 664 572 604 572 L420 572 C360 572 300 576 256 590 Z" fill-rule="evenodd"/><path d="M474 560 L550 560 C556 680 566 790 588 858 L600 892 L424 892 L436 858 C458 790 468 680 474 560 Z" fill-rule="evenodd"/></g>
+  <g fill="#0B1D24" stroke="#0B1D24" stroke-width="30" stroke-linejoin="round"><path d="M512 150 C604 150 664 226 664 318 C664 398 616 458 560 500 L464 500 C408 458 360 398 360 318 C360 226 420 150 512 150 Z M512 214 C462 214 430 260 430 318 C430 380 466 428 512 462 C558 428 594 380 594 318 C594 260 562 214 512 214 Z" fill-rule="evenodd"/><path d="M256 486 C300 500 360 504 420 504 L604 504 C664 504 724 500 768 486 L768 590 C724 576 664 572 604 572 L420 572 C360 572 300 576 256 590 Z" fill-rule="evenodd"/><path d="M474 560 L550 560 C556 680 566 790 588 858 L600 892 L424 892 L436 858 C458 790 468 680 474 560 Z" fill-rule="evenodd"/></g>
+  <g fill="url(#tchrome)"><path d="M512 150 C604 150 664 226 664 318 C664 398 616 458 560 500 L464 500 C408 458 360 398 360 318 C360 226 420 150 512 150 Z M512 214 C462 214 430 260 430 318 C430 380 466 428 512 462 C558 428 594 380 594 318 C594 260 562 214 512 214 Z" fill-rule="evenodd"/><path d="M256 486 C300 500 360 504 420 504 L604 504 C664 504 724 500 768 486 L768 590 C724 576 664 572 604 572 L420 572 C360 572 300 576 256 590 Z" fill-rule="evenodd"/><path d="M474 560 L550 560 C556 680 566 790 588 858 L600 892 L424 892 L436 858 C458 790 468 680 474 560 Z" fill-rule="evenodd"/></g>
+  <g fill="#FFFFFF" filter="url(#trim)"><path d="M512 150 C604 150 664 226 664 318 C664 398 616 458 560 500 L464 500 C408 458 360 398 360 318 C360 226 420 150 512 150 Z M512 214 C462 214 430 260 430 318 C430 380 466 428 512 462 C558 428 594 380 594 318 C594 260 562 214 512 214 Z" fill-rule="evenodd"/><path d="M256 486 C300 500 360 504 420 504 L604 504 C664 504 724 500 768 486 L768 590 C724 576 664 572 604 572 L420 572 C360 572 300 576 256 590 Z" fill-rule="evenodd"/><path d="M474 560 L550 560 C556 680 566 790 588 858 L600 892 L424 892 L436 858 C458 790 468 680 474 560 Z" fill-rule="evenodd"/></g></g>
+</svg>

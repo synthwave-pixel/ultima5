@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Debug pages</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      The development index, not linked from the game: the test pages, and the game's development starts.
+      ?dev carries the development cheats to every link; the game files are the installed copy (the game's Scan for game files...).
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          15px/1.5 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 26px 0 8px;
+        color: #eee;
+        border-bottom: 1px solid #333;
+        padding-bottom: 4px;
+      }
+      p.lede,
+      .note {
+        color: #999;
+        font-size: 13px;
+        margin: 0;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      li {
+        padding: 8px 0;
+        border-bottom: 1px solid #1f1f1f;
+      }
+      a {
+        color: #e8c870;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      a:hover,
+      a:focus-visible {
+        text-decoration: underline;
+      }
+      .what {
+        display: block;
+        color: #aaa;
+        font-size: 13px;
+      }
+      .also {
+        font-size: 13px;
+        color: #888;
+      }
+      .also a {
+        font-weight: normal;
+        margin-right: 10px;
+      }
+      .pick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 4px;
+      }
+      select,
+      button {
+        font: inherit;
+        font-size: 14px;
+        padding: 3px 8px;
+        max-width: 100%;
+      }
+      kbd {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 3px;
+        padding: 0 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Debug pages</h1>
+      <p class="lede">
+        The test pages and the game's development starts. Open this page with <code>?dev</code> and every link turns on the development
+        cheats. The game files are the installed copy, put there once per browser origin by the game's Scan for game files...
+      </p>
+
+      <h2>Test pages</h2>
+      <ul>
+        <li>
+          <a data-href="tiles.html">Tiles</a>
+          <span class="what"
+            >Every tile in the Original and Standard sets side by side, animated; each tile's versions, and real stretches of the map drawn
+            as the game draws them. Above them, the game at any place, battle arena or dungeon room, with Next.</span
+          >
+          <span class="also">Only: <a data-href="tiles.html?ux=standard">Standard</a><a data-href="tiles.html?ux=original">PC EGA</a></span>
+        </li>
+        <li>
+          <a data-href="deltas.html">Tile deltas</a>
+          <span class="what"
+            >The tiles Modern PC still draws in the Standard art, each beside the original and the original as Modern PC would draw it -
+            whole, or lifted onto its ground - with a choice for each, kept here and copied out as a list.</span
+          >
+        </li>
+        <li>
+          <a data-href="grass.html">Grass</a>
+          <span class="what"
+            >Modern PC's grass: the ground between its blades and the blades set by hue, saturation and value, and every tile with grass in
+            it, what stands on it and stretches of Britannia drawn again as they change.</span
+          >
+        </li>
+        <li>
+          <a data-href="appearance.html">Appearance</a>
+          <span class="what"
+            >The Avatar's figures with their regions (skin, hair, main clothes, trim) marked, every skin, hair colour and hue on each, and
+            the Avatar walking as chosen.</span
+          >
+        </li>
+        <li>
+          <a data-href="sounds.html">Sound effects</a>
+          <span class="what"
+            >Every sound the game makes, with what it is, when and how often it plays, where in the code, and the Standard set's voice; play
+            each in either set.</span
+          >
+        </li>
+        <li>
+          <a data-href="pictures.html">Pictures</a>
+          <span class="what">Every picture in the game's picture files, Original and Standard side by side.</span>
+        </li>
+        <li>
+          <a data-href="dungeon.html">Dungeon corridor</a>
+          <span class="what"
+            >The first-person dungeon view for every kind of cell, as the game composes it, Original and Standard side by side.</span
+          >
+        </li>
+        <li>
+          <a data-href="mapcells.html">Dungeon map cells</a>
+          <span class="what">Every cell value in the dungeons as each dungeon map draws it, and what Look says of it.</span>
+        </li>
+        <li>
+          <a data-href="runes.html">The runes</a>
+          <span class="what"
+            >Every dungeon sign carved on its wall and read into English, and printed in the log; carve style and face to compare. And every
+            other place runes are printed - signs looked at, words spoken in runes, the Codex, a position, ALAKAZAM, the ending - printed in
+            the log, in either look.</span
+          >
+        </li>
+      </ul>
+
+      <h2>The game</h2>
+      <p class="note">The starts below work in a development build only; elsewhere they open the game as usual.</p>
+      <ul>
+        <li>
+          <a data-href="./">Play</a>
+          <span class="what">The game from its title screen.</span>
+        </li>
+        <li>
+          <a data-href="./?play">Continue, skipping the title</a>
+          <span class="what">The saved game, straight in (a new one where there is no save).</span>
+        </li>
+        <li>
+          <a data-href="./?play&amp;new">New game, skipping the title</a>
+          <span class="what">A fresh party at the start, whatever is saved. Its first autosave replaces the save.</span>
+        </li>
+        <li>
+          <span>Start at a town or castle</span>
+          <span class="what">At the place's south gate.</span>
+          <div class="pick">
+            <select id="town" aria-label="Town"></select
+            ><button id="go-town">Go</button>
+          </div>
+        </li>
+        <li>
+          <span>Start in a dungeon</span>
+          <span class="what">On its first level, at the entrance; or from below, on its last level, as from the Underworld.</span>
+          <div class="pick">
+            <select id="dungeon" aria-label="Dungeon"></select
+            ><button id="go-dungeon">Go</button><button id="go-under">From below</button>
+          </div>
+        </li>
+        <li>
+          <span>Start in the Underworld</span>
+          <span class="what">Beneath a dungeon's entrance, where its lowest ladder comes out; Doom's own door.</span>
+          <div class="pick">
+            <select id="underworld" aria-label="Underworld"></select
+            ><button id="go-underworld">Go</button>
+          </div>
+        </li>
+        <li>
+          <a data-href="./?play&amp;at=ending">The ending</a>
+          <span class="what">The ending's pictures, one after another.</span>
+        </li>
+      </ul>
+      <p class="note" id="names"></p>
+
+      <h2>In the game</h2>
+      <ul>
+        <li>
+          <span>Cheats</span>
+          <span class="what"
+            >Pause (<kbd>Esc</kbd> or Start), Help, then <kbd>Y</kbd>: gold, reagents, keys, levels, places to go, and the development
+            build's own.</span
+          >
+        </li>
+      </ul>
+    </main>
+    <script type="module" src="/src/dev/debug.ts"></script>
+  </body>
+</html>

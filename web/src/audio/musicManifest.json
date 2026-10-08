@@ -1,0 +1,579 @@
+{
+  "U5THEME.XMI": {
+    "original": {
+      "file": "original/U5THEME.54abc054.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "celtic": {
+      "file": "celtic/U5THEME.4f6ef24c.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "consort": {
+      "file": "consort/U5THEME.fda628d4.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "orchestra": {
+      "file": "orchestra/U5THEME.508402e5.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "strings": {
+      "file": "strings/U5THEME.55d34459.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "remastered": {
+      "file": "remastered/U5THEME.ea8dc6ba.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "upsidedown": {
+      "file": "upsidedown/U5THEME.d08b1fa7.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "newwave": {
+      "file": "newwave/U5THEME.8235481a.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    },
+    "grid": {
+      "file": "grid/U5THEME.ba497ec0.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 128
+    }
+  },
+  "BRITLAND.XMI": {
+    "celtic": {
+      "file": "celtic/BRITLAND.f1fb2cd1.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "consort": {
+      "file": "consort/BRITLAND.11ac60b6.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "orchestra": {
+      "file": "orchestra/BRITLAND.966df697.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "strings": {
+      "file": "strings/BRITLAND.256a152b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "original": {
+      "file": "original/BRITLAND.b1c8cb8f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "remastered": {
+      "file": "remastered/BRITLAND.cd41a55f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "upsidedown": {
+      "file": "upsidedown/BRITLAND.65f0616e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "newwave": {
+      "file": "newwave/BRITLAND.85068633.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    },
+    "grid": {
+      "file": "grid/BRITLAND.fee89995.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 72.39167800453515
+    }
+  },
+  "HORNPIPE.XMI": {
+    "celtic": {
+      "file": "celtic/HORNPIPE.6f5c0b83.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "consort": {
+      "file": "consort/HORNPIPE.71d93814.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "orchestra": {
+      "file": "orchestra/HORNPIPE.ca829562.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "piano": {
+      "file": "piano/HORNPIPE.1c725052.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "strings": {
+      "file": "strings/HORNPIPE.204b299b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "original": {
+      "file": "original/HORNPIPE.96478cf3.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "remastered": {
+      "file": "remastered/HORNPIPE.84effc55.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    },
+    "newwave": {
+      "file": "newwave/HORNPIPE.d15b1031.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 44.8
+    }
+  },
+  "ENGGMNT.XMI": {
+    "celtic": {
+      "file": "celtic/ENGGMNT.6bda8d00.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "consort": {
+      "file": "consort/ENGGMNT.6752d1ec.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "orchestra": {
+      "file": "orchestra/ENGGMNT.a37baf03.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "strings": {
+      "file": "strings/ENGGMNT.fcf281b0.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "original": {
+      "file": "original/ENGGMNT.1f69950b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "remastered": {
+      "file": "remastered/ENGGMNT.626858b6.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "upsidedown": {
+      "file": "upsidedown/ENGGMNT.4a485282.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "grid": {
+      "file": "grid/ENGGMNT.cc89ee7d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    },
+    "newwave": {
+      "file": "newwave/ENGGMNT.8463e9aa.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 64.4
+    }
+  },
+  "STONES.XMI": {
+    "celtic": {
+      "file": "celtic/STONES.a7150938.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "consort": {
+      "file": "consort/STONES.211fa919.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "orchestra": {
+      "file": "orchestra/STONES.f6f155c6.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "original": {
+      "file": "original/STONES.43eb4850.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "piano": {
+      "file": "piano/STONES.e2e57f94.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "strings": {
+      "file": "strings/STONES.8511250f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "remastered": {
+      "file": "remastered/STONES.047c2e18.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "upsidedown": {
+      "file": "upsidedown/STONES.ff40b193.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    },
+    "newwave": {
+      "file": "newwave/STONES.78350d6d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 149.27501133786848
+    }
+  },
+  "GREYSON.XMI": {
+    "celtic": {
+      "file": "celtic/GREYSON.40d8789e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "consort": {
+      "file": "consort/GREYSON.c62aedd4.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "orchestra": {
+      "file": "orchestra/GREYSON.4e6a5715.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "original": {
+      "file": "original/GREYSON.b738a892.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "piano": {
+      "file": "piano/GREYSON.b82cec50.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "remastered": {
+      "file": "remastered/GREYSON.53a3806e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "strings": {
+      "file": "strings/GREYSON.ce4664a6.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    },
+    "newwave": {
+      "file": "newwave/GREYSON.b5a7372e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 55.15
+    }
+  },
+  "FANFARE.XMI": {
+    "original": {
+      "file": "original/FANFARE.8f35778d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 63.65834467120182
+    },
+    "piano": {
+      "file": "piano/FANFARE.649b987b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 63.65834467120182
+    },
+    "remastered": {
+      "file": "remastered/FANFARE.65227377.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 63.65834467120182
+    },
+    "juno": {
+      "file": "juno/FANFARE.1b796b8f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 63.65834467120182
+    }
+  },
+  "MONARCH.XMI": {
+    "original": {
+      "file": "original/MONARCH.7dfc75c2.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "remastered": {
+      "file": "remastered/MONARCH.a504d785.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "orchestra": {
+      "file": "orchestra/MONARCH.e3e4f4f7.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "piano": {
+      "file": "piano/MONARCH.1d4d4c45.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "strings": {
+      "file": "strings/MONARCH.4fe763d3.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "upsidedown": {
+      "file": "upsidedown/MONARCH.56b7f902.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    },
+    "newwave": {
+      "file": "newwave/MONARCH.c69da63d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 49.17498866213152
+    }
+  },
+  "TRNTLLA.XMI": {
+    "original": {
+      "file": "original/TRNTLLA.99237b70.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "remastered": {
+      "file": "remastered/TRNTLLA.502f93a9.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "celtic": {
+      "file": "celtic/TRNTLLA.084a8403.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "consort": {
+      "file": "consort/TRNTLLA.955d4a70.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "orchestra": {
+      "file": "orchestra/TRNTLLA.63d0ea25.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "piano": {
+      "file": "piano/TRNTLLA.7a55a775.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "strings": {
+      "file": "strings/TRNTLLA.bfe5a7bd.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "grid": {
+      "file": "grid/TRNTLLA.71f5e91f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "upsidedown": {
+      "file": "upsidedown/TRNTLLA.655d18ee.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    },
+    "newwave": {
+      "file": "newwave/TRNTLLA.2f00d61f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 48.85834467120181
+    }
+  },
+  "HALLS.XMI": {
+    "original": {
+      "file": "original/HALLS.8d2f2777.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "remastered": {
+      "file": "remastered/HALLS.77d29c22.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "celtic": {
+      "file": "celtic/HALLS.8ef133eb.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "consort": {
+      "file": "consort/HALLS.2addff45.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "orchestra": {
+      "file": "orchestra/HALLS.c0d6915b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "strings": {
+      "file": "strings/HALLS.371e0bb4.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "grid": {
+      "file": "grid/HALLS.80eac540.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "upsidedown": {
+      "file": "upsidedown/HALLS.a3a6fb64.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    },
+    "newwave": {
+      "file": "newwave/HALLS.fb2d498b.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 90.76666666666667
+    }
+  },
+  "WRLDBLW.XMI": {
+    "original": {
+      "file": "original/WRLDBLW.6d2cd14d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "remastered": {
+      "file": "remastered/WRLDBLW.b46ae39f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "celtic": {
+      "file": "celtic/WRLDBLW.42d73952.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "consort": {
+      "file": "consort/WRLDBLW.616e5e5c.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "orchestra": {
+      "file": "orchestra/WRLDBLW.b10d4bdf.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "strings": {
+      "file": "strings/WRLDBLW.1a371cd3.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "grid": {
+      "file": "grid/WRLDBLW.5f1cd100.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "upsidedown": {
+      "file": "upsidedown/WRLDBLW.033d3a57.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    },
+    "newwave": {
+      "file": "newwave/WRLDBLW.cc13ee8d.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 88.05
+    }
+  },
+  "BLCKTHRN.XMI": {
+    "original": {
+      "file": "original/BLCKTHRN.22a73067.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 99.55834467120181
+    },
+    "orchestra": {
+      "file": "orchestra/BLCKTHRN.b4461cdc.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 116.33333333333333
+    },
+    "remastered": {
+      "file": "remastered/BLCKTHRN.16918cca.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 99.55834467120181
+    },
+    "grid": {
+      "file": "grid/BLCKTHRN.84724b41.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 116.33333333333333
+    }
+  },
+  "LADYNAN.XMI": {
+    "consort": {
+      "file": "consort/LADYNAN.58791dab.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 82.56666666666666
+    },
+    "original": {
+      "file": "original/LADYNAN.2f34d336.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 82.56666666666666
+    },
+    "piano": {
+      "file": "piano/LADYNAN.46730e4e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 82.56666666666666
+    },
+    "remastered": {
+      "file": "remastered/LADYNAN.fbe4c8a6.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 82.56666666666666
+    },
+    "newwave": {
+      "file": "newwave/LADYNAN.1df2f823.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 82.56666666666666
+    }
+  },
+  "REUNION.XMI": {
+    "piano": {
+      "file": "piano/REUNION.a74e9f1a.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 21.14
+    },
+    "original": {
+      "file": "original/REUNION.541af578.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 21.433333333333334
+    },
+    "remastered": {
+      "file": "remastered/REUNION.73ff54f7.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 21.14
+    }
+  },
+  "RULEBRIT.XMI": {
+    "piano": {
+      "file": "piano/RULEBRIT.97e5ec47.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 46.78333333333333
+    },
+    "original": {
+      "file": "original/RULEBRIT.9f8b3f2e.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 46.78333333333333
+    },
+    "remastered": {
+      "file": "remastered/RULEBRIT.ac724d06.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 46.78333333333333
+    },
+    "upsidedown": {
+      "file": "upsidedown/RULEBRIT.5fe88005.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 46.78333333333333
+    }
+  },
+  "AMIGA.XMI": {
+    "original": {
+      "file": "original/AMIGA.e21e71ff.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 109.33333333333333
+    },
+    "remastered": {
+      "file": "remastered/AMIGA.1409fac8.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 109.33333333333333
+    }
+  }
+}

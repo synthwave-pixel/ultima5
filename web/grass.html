@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Grass</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for choosing Modern PC's grass by eye; the game does not
+      link to it. Every tile with grass in it, and every place that stands on
+      it, redrawn as the grass's two colours - the ground between the blades
+      and the blades - are changed. The colours are kept in the URL, to send.
+      The game files are the installed copy.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 28px;
+        align-items: flex-start;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      .colour {
+        display: grid;
+        grid-template-columns: auto 180px 3.5em;
+        gap: 2px 8px;
+        align-items: center;
+      }
+      .colour h3 {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin: 0 0 2px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .swatch {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 1px solid #555;
+        border-radius: 3px;
+      }
+      .hex {
+        color: #9aa;
+        font:
+          12px ui-monospace,
+          Menlo,
+          monospace;
+      }
+      .colour label {
+        color: #999;
+      }
+      .colour output {
+        text-align: right;
+        font:
+          12px ui-monospace,
+          Menlo,
+          monospace;
+      }
+      input[type='range'] {
+        width: 180px;
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .side div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select,
+      button {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+        max-width: var(--w);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      figcaption b {
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Grass</h1>
+      <div class="colour" id="ground"></div>
+      <div class="colour" id="blade"></div>
+      <div class="side">
+        <div>
+          <label for="size">Size</label>
+          <select id="size">
+            <option value="1">1x</option>
+            <option value="2" selected>2x</option>
+            <option value="3">3x</option>
+          </select>
+          <input type="checkbox" id="animate" checked />
+          <label for="animate">Animate</label>
+        </div>
+        <div>
+          <button id="reset">Reset</button>
+          <button id="copy">Copy values</button>
+        </div>
+        <div class="hex" id="copied"></div>
+      </div>
+      <p class="legend">
+        Modern PC's grass is two colours: the <b>ground</b> between the blades (the original's black, toned) and the <b>blades</b>. Every
+        tile with grass in it and everything standing on it is drawn again as you move the sliders - the roads, the edges and the shores
+        take it from the grass too. Below the world the land is drawn darker and colder, the grass with it. The colours are kept in the
+        page's address, so it can be sent as it is.
+      </p>
+    </header>
+    <main id="tiles">Loading the game files…</main>
+    <script type="module" src="/src/dev/grass.ts"></script>
+  </body>
+</html>

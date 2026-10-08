@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Pictures</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for checking the game's own pictures by eye; the game
+      does not link to it. Every picture of every picture file, in Original
+      (the EGA colours doubled) and Standard (the port's restyling), side
+      by side. The game files are the installed copy.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      header div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select,
+      input {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      .legend b {
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      .legend i {
+        color: #d08a4a;
+        font-style: normal;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      figure {
+        margin: 0 0 14px;
+      }
+      figure div {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+        margin-bottom: 3px;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        background: #000;
+        outline: 1px solid #333;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Pictures</h1>
+      <div>
+        <label for="file">File</label>
+        <select id="file"></select>
+      </div>
+      <div>
+        <label for="show">Show</label>
+        <select id="show">
+          <option value="both">Original and Standard</option>
+          <option value="standard">Standard</option>
+          <option value="original">Original</option>
+        </select>
+      </div>
+      <div>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="1">1x</option>
+          <option value="2">2x</option>
+        </select>
+      </div>
+      <p class="legend">
+        Each picture as the game draws it: <b>Original</b> is the EGA colours doubled, <i>Standard</i> the palette, the dithers blended and
+        the edges followed. The corridor's files (DNG1-3, ITEMS) are restyled as walls, the rest as scenes; MON files are drawn as their
+        Standard figures in the game, and show here in both.
+      </p>
+    </header>
+    <main id="pictures">Loading the game files…</main>
+    <script type="module" src="/src/dev/pictures.ts"></script>
+  </body>
+</html>

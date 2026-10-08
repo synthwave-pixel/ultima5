@@ -1,0 +1,18 @@
+{
+  "name": "ultima5-mobile",
+  "private": true,
+  "description": "Ultima V as a Capacitor app: the web build wrapped for Android handhelds.",
+  "scripts": {
+    "bundle": "node bundle.cjs",
+    "sync": "cap sync android",
+    "apk": "node apk.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7"
+  }
+}

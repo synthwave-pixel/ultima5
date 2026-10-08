@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Appearance</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for the Avatar's appearance (appearance.ts); the game does not
+      link to it. Each figure's regions as labelled (avatarRegions.ts), the
+      people of Sosaria's skin (originals.ts), every skin and hair colour on
+      every figure, every hue of the clothes, and the Avatar walking as chosen. The game files are the installed copy.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 28px;
+        align-items: flex-start;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      #live {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        align-items: center;
+      }
+      #live div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      #live label {
+        color: #999;
+      }
+      #live canvas {
+        border: 1px solid #333;
+        background: #222;
+      }
+      select,
+      button {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 18px 0 6px;
+        color: #eee;
+      }
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      .row h3 {
+        width: 8em;
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: #ccc;
+      }
+      figcaption {
+        max-width: 128px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      figcaption b {
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+      .key span {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin: 0 3px 0 10px;
+        border: 1px solid #555;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Appearance</h1>
+      <p class="legend key">
+        The Avatar's figure, skin, hair and clothes (appearance.ts), on the Modern PC tiles. Regions:
+        <span style="background: #f0f"></span>skin <span style="background: #0ff"></span>hair <span style="background: #ff0"></span>main
+        clothes <span style="background: #fff"></span>trim.
+      </p>
+    </header>
+    <main id="page">Loading the game files…</main>
+    <script type="module" src="/src/dev/appearance.ts"></script>
+  </body>
+</html>

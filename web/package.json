@@ -1,0 +1,43 @@
+{
+  "name": "ultima5-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A TypeScript engine for Ultima V: Warriors of Destiny, playing the player's own MS-DOS data.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:https": "vite --mode https",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:nodata": "vitest run --mode nodata",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . ../desktop/*.cjs ../mobile/*.cjs",
+    "tiles": "vite-node tools/art/build.ts",
+    "pictures": "vite-node tools/art/picture-sheet.ts",
+    "runes": "vite-node tools/art/runes.ts",
+    "known": "vite-node tools/install/known.ts",
+    "music": "vite-node tools/music/render.ts --"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "node-web-audio-api": "^2.2.0",
+    "prettier": "3.8.1",
+    "spessasynth_core": "^4.3.22",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^7.0.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3"
+  }
+}
