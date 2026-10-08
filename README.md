@@ -14,7 +14,7 @@ the Apple ][ tile set, and the box's painting, for the key art.
 
 ![The Modern look: a town, talk by the words you have learned, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
-![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon](promo/looks.jpg)
+![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
 
 - [Installation](#installation) The browser, the Steam Deck, Windows,
   macOS, Linux and Android.

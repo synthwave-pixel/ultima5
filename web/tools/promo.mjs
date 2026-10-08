@@ -2,7 +2,8 @@
 //   - promo/features.jpg: nine scenes of the Modern look, each captioned - towns, talk, combat, the dungeons and their
 //     map, the journal, the cloth map, the mirror and the gypsy;
 //   - promo/looks.jpg: the two looks and their tiles (Modern with Modern PC, Apple ][ or PC EGA; PC 1988 with PC EGA or
-//     Apple ][), each in the world, a town, combat and a dungeon.
+//     Apple ][), each in the world, a town, combat and a dungeon, and the Modern look's dungeon also as the whole
+//     level's map (its tiles; the first-person view is the same in all three).
 // The screenshots are the game's own canvas (2560x1600), taken in the dev server with tools/pilot (its bot, the
 // `?play&peek&at=` starts and shots.mjs to save them) from a mid-game save, and so made from the player's own copy of the
 // game: they are kept in screenshots/ at the repository's root (git-ignored), named promo-<scene>.png as below.
@@ -30,14 +31,15 @@ const FEATURES = [
   ['gypsy', "The gypsy's questions of virtue, as in the original"],
 ];
 
+// Each look and its tiles, and whether it has the whole level's map for a dungeon (the Modern look's alone).
 const LOOKS = [
-  ['look-modern', 'Modern look, Modern PC tiles'],
-  ['look-apple', 'Modern look, Apple ][ tiles'],
-  ['look-ega', 'Modern look, PC EGA tiles'],
-  ['look-orig-ega', 'PC 1988 look, PC EGA tiles'],
-  ['look-orig-apple', 'PC 1988 look, Apple ][ tiles'],
+  ['look-modern', 'Modern look, Modern PC tiles', true],
+  ['look-apple', 'Modern look, Apple ][ tiles', true],
+  ['look-ega', 'Modern look, PC EGA tiles', true],
+  ['look-orig-ega', 'PC 1988 look, PC EGA tiles', false],
+  ['look-orig-apple', 'PC 1988 look, Apple ][ tiles', false],
 ];
-const SCENES = ['world', 'town', 'combat', 'dungeon'];
+const SCENES = ['world', 'town', 'combat', 'dungeon', 'dungeon-map'];
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -90,16 +92,19 @@ const GAP = 12; // between pictures across
 
 // The looks: a row to each look and its tiles, a column to each scene.
 {
-  const w = (W - 2 * M - 3 * GAP) / 4;
+  const w = (W - 2 * M - (SCENES.length - 1) * GAP) / SCENES.length;
   const h = Math.round((w * 10) / 16);
   const top = 88;
   const row = h + 52;
   let body = text('Two looks, three tile sets, one game', M, 44, 34, ICE);
-  SCENES.forEach((scene, c) => (body += text(scene.toUpperCase(), M + c * (w + GAP), 76, 15, DIM)));
-  LOOKS.forEach(([look, label], r) => {
+  SCENES.forEach((scene, c) => (body += text(scene.replace('-', ' ').toUpperCase(), M + c * (w + GAP), 76, 15, DIM)));
+  LOOKS.forEach(([look, label, mapped], r) => {
     const y = top + r * row;
     body += text(label, M, y + 24, 22, PALE);
-    SCENES.forEach((scene, c) => (body += shot(`${look}-${scene}`, M + c * (w + GAP), y + 36, w, h)));
+    SCENES.forEach((scene, c) => {
+      if (scene === 'dungeon-map' && !mapped) return;
+      body += shot(`${look}-${scene}`, M + c * (w + GAP), y + 36, w, h);
+    });
   });
   writeJpeg('promo/looks.jpg', svg(W, top + LOOKS.length * row + 4, body));
 }
