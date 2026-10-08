@@ -12,6 +12,10 @@ The page itself carries three things of the game's: the Ultima V
 Upgrade's music in `web/public/music/`, the Apple II version's tiles, for
 the Apple ][ tile set, and the box's painting, for the key art.
 
+![The Modern look: a town, talk by the words you have learned, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
+
+![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon](promo/looks.jpg)
+
 - [Installation](#installation) The browser, the Steam Deck, Windows,
   macOS, Linux and Android.
 - [New to Ultima V?](#new-to-ultima-v) Get it running and find your feet.
@@ -371,7 +375,9 @@ sheets; `npm run apple2 -- <disk>` reads the Apple ][ tiles off the Apple
 II version's Program disk (disk 1 of 8, a `.dsk`, `.po` or its `.zip`); `node web/tools/icons.mjs` redraws the icons and
 `node web/tools/key-art.mjs` the key art from the box's painting (Steam's
 library artwork, the boot screen, the banner above, and each at its native
-size in `art/`). The dev server puts
+size in `art/`); `node web/tools/promo.mjs` puts the sheets of screenshots
+at the top together (`promo/`), from the dev server's screenshots in
+`screenshots/` (see the script for the scenes). The dev server puts
 the game on `window.u5` for the console. `web/tools/pilot/` is a bot that
 plays the development build by the controller's keys alone; it played the
 game along the GameFAQs walkthrough, start to proclamation, to find what a
