@@ -6,11 +6,7 @@
     </radialGradient>
   </defs>
   <rect width="1024" height="1024" rx="160" fill="url(#tground)"/>
-  <rect x="96" y="96" width="832" height="832" fill="none" stroke="#611207" stroke-width="34"/>
-  <rect x="96" y="96" width="832" height="832" fill="none" stroke="#B8321F" stroke-width="20"/>
-  <rect x="130" y="130" width="764" height="764" fill="none" stroke="#E88C45" stroke-opacity="0.8" stroke-width="5"/>
-  <rect x="70" y="70" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="85" y="85" width="22" height="22" rx="3" fill="#E88C45"/><rect x="902" y="70" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="917" y="85" width="22" height="22" rx="3" fill="#E88C45"/><rect x="70" y="902" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="85" y="917" width="22" height="22" rx="3" fill="#E88C45"/><rect x="902" y="902" width="52" height="52" rx="6" fill="#B8321F" stroke="#611207" stroke-width="8"/><rect x="917" y="917" width="22" height="22" rx="3" fill="#E88C45"/>
-  <g transform="translate(512 521) scale(0.86) translate(-512 -521)">
+  <g transform="translate(512 512) scale(1.0454) translate(-512 -521)">
   <defs><linearGradient id="tchrome" gradientUnits="userSpaceOnUse" x1="0" y1="150" x2="0" y2="892">
       <stop offset="0" stop-color="#E4F5F7"/>
       <stop offset="0.28" stop-color="#A3DDF0"/>

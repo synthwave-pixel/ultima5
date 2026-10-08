@@ -1,10 +1,10 @@
 // The app's icon, drawn here as vectors and rendered at every size it is wanted: an ankh in the chrome of the box's
-// "Ultima V" lettering (ice white at the top, a dark horizon, deep blue below), on the box's near-black, inside the
-// box's red frame. One drawing, in the shapes each place wants:
-//   - a tile, square with rounded corners and the frame: the desktop apps (desktop/build/icon.png, and the sizes in
+// "Ultima V" lettering (ice white at the top, a dark horizon, deep blue below), on the box's near-black, with no
+// frame round it. One drawing, in the shapes each place wants:
+//   - a tile, square with rounded corners: the desktop apps (desktop/build/icon.png, and the sizes in
 //     desktop/build/icons/ that the Linux packages install - a Flatpak takes none over 512), the PWA, Apple's
 //     touch icon, Android's legacy launcher icon;
-//   - a disc, the frame a ring: Android's legacy round launcher icon;
+//   - a disc: Android's legacy round launcher icon;
 //   - the ankh alone in the middle of a larger square: Android's adaptive icon (its foreground, on
 //     ic_launcher_background's colour; the launcher cuts it to a circle or a squircle, and shows it on the launch
 //     screen) and the PWA's maskable icon.
@@ -12,48 +12,34 @@
 // Run `node tools/icons.mjs`.
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CENTRE, GROUND, ORANGE, RED, RED_DARK, REACH, ROOT, ankh, ground, writePng } from './ankh.mjs';
+import { CENTRE, GROUND, REACH, ROOT, ankh, ground, writePng } from './ankh.mjs';
 
-/** The tile: a rounded square, the box's red frame (a broad line between dark ones, a thin bright one inside) and its corners. */
+/** The ankh centred on the drawing, all of it within a circle `safe` of the square's width across. */
+function centred(id, safe) {
+  return `<g transform="translate(512 512) scale(${((safe * 512) / REACH).toFixed(4)}) translate(-${CENTRE.x} -${CENTRE.y})">${ankh(id)}</g>`;
+}
+
+/** The tile: the ankh on the box's near-black, a rounded square, no frame round it. */
 function tile() {
-  const corners = [
-    [96, 96],
-    [928, 96],
-    [96, 928],
-    [928, 928],
-  ]
-    .map(
-      ([x, y]) =>
-        `<rect x="${x - 26}" y="${y - 26}" width="52" height="52" rx="6" fill="${RED}" stroke="${RED_DARK}" stroke-width="8"/>` +
-        `<rect x="${x - 11}" y="${y - 11}" width="22" height="22" rx="3" fill="${ORANGE}"/>`,
-    )
-    .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${ground('t')}
   <rect width="1024" height="1024" rx="160" fill="url(#tground)"/>
-  <rect x="96" y="96" width="832" height="832" fill="none" stroke="${RED_DARK}" stroke-width="34"/>
-  <rect x="96" y="96" width="832" height="832" fill="none" stroke="${RED}" stroke-width="20"/>
-  <rect x="130" y="130" width="764" height="764" fill="none" stroke="${ORANGE}" stroke-opacity="0.8" stroke-width="5"/>
-  ${corners}
-  <g transform="translate(512 521) scale(0.86) translate(-512 -521)">${ankh('t')}</g>
+  ${centred('t', 0.78)}
 </svg>`;
 }
 
-/** The tile for the smallest sizes (48 and under): the frame only a red edge, the ankh as large as the square allows. */
+/** The tile for the smallest sizes (48 and under): the ankh as large as the square allows. */
 function smallTile() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${ground('s')}
-  <rect x="24" y="24" width="976" height="976" rx="150" fill="url(#sground)" stroke="${RED}" stroke-width="48"/>
-  <g transform="translate(512 512) scale(1.12) translate(-${CENTRE.x} -${CENTRE.y})">${ankh('s')}</g>
+  <rect width="1024" height="1024" rx="160" fill="url(#sground)"/>
+  ${centred('s', 0.84)}
 </svg>`;
 }
 
-/** The disc: the frame a ring round it. */
+/** The disc: the ankh on the ground, round. */
 function disc() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${ground('d')}
   <circle cx="512" cy="512" r="512" fill="url(#dground)"/>
-  <circle cx="512" cy="512" r="466" fill="none" stroke="${RED_DARK}" stroke-width="36"/>
-  <circle cx="512" cy="512" r="466" fill="none" stroke="${RED}" stroke-width="22"/>
-  <circle cx="512" cy="512" r="430" fill="none" stroke="${ORANGE}" stroke-opacity="0.8" stroke-width="5"/>
-  <g transform="translate(512 521) scale(0.98) translate(-512 -521)">${ankh('d')}</g>
+  ${centred('d', 0.8)}
 </svg>`;
 }
 
