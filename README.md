@@ -360,7 +360,8 @@ the Codex, a position, ALAKAZAM, the ending - in either look).
 **Tools**: `npm run known` rebuilds the known copies' fingerprints from
 `gamedata/ultima5/`; `npm run tiles` redraws the Standard tile sheet from code
 (`web/tools/art/`); `npm run pictures` and `npm run runes` make their
-sheets; `node web/tools/icons.mjs` redraws the icons and
+sheets; `npm run apple2 -- <disk>` reads the Apple ][ tiles off the Apple
+II version's Program disk (disk 1 of 8, a `.dsk`, `.po` or its `.zip`); `node web/tools/icons.mjs` redraws the icons and
 `node web/tools/key-art.mjs` the key art (Steam's library artwork, the boot
 screen, the banner above). The dev server puts
 the game on `window.u5` for the console. `web/tools/pilot/` is a bot that
@@ -371,7 +372,9 @@ rules (parties at four stages of a game against creatures from rats to
 dragons, many fights each: how often won, and at what cost), and `fuzz.ts`
 plays thousands of careless fights - random rules, party, arena or room,
 loot strewn, keys - checking after every key what must hold of a fight
-(`npx vite-node tools/sim/fuzz.ts -- fights=1000`).
+(`node --import ./tools/node-ts.mjs tools/sim/fuzz.ts fights=1000`, in `web/`).
+The tools run on Node 26: `web/tools/node-ts.mjs` compiles the TypeScript
+that Node's own type stripping cannot.
 
 **Dev cheats**: the cheats that skip the climb and the story (Raise every
 level, Exit dungeon, Auto kill, Slay every foe, Mix 10 of every spell,

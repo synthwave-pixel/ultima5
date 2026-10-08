@@ -5,7 +5,7 @@
  * game's (public/music/<version>/) and the styles' (screenshots/styles-v2/),
  * reported, the harshest first, to screenshots/fatigue.md.
  *
- *   npx vite-node tools/music/fatigue.ts
+ *   node --import ./tools/node-ts.mjs tools/music/fatigue.ts
  */
 
 import { execFileSync } from 'node:child_process';

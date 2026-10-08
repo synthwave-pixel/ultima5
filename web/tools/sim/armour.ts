@@ -7,7 +7,7 @@
  * cost, how many fell, and how often the party lost. The party plays as a player would (tactics.ts): heals, Negate
  * Magic, Protection and attack spells where they are called for, auto combat's blows and shots the rest of the time.
  *
- *   npx vite-node tools/sim/armour.ts [-- fights=40] [stage=Mid] [rules=modern] [tactics=off] [log] [storyArmour=6]
+ *   node --import ./tools/node-ts.mjs tools/sim/armour.ts [-- fights=40] [stage=Mid] [rules=modern] [tactics=off] [log] [storyArmour=6]
  *     [monster names...]
  *
  * With tactics=off the party casts nothing, auto combat alone.

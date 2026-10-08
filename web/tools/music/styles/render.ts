@@ -5,7 +5,7 @@
  * through and a fade, levelled as the game's are, into screenshots/styles-v2/<style>/. The game's own are rendered by
  * tools/music/render.ts.
  *
- *   npx vite-node tools/music/styles/render.ts [style...] [TUNE.XMI...]
+ *   node --import ./tools/node-ts.mjs tools/music/styles/render.ts [style...] [TUNE.XMI...]
  */
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';

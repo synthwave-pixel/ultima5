@@ -17,7 +17,7 @@ const where = (r: Row): string => `${r.who.name} (${r.who.where}) ${r.stub}`;
 describe('the reviewed keyword labels', () => {
   it('cover every keyword whose townsman says two different words that fit it, or none', () => {
     const missing = [...ambiguous, ...borrowed].filter((r) => !(keyOf(r) in KEYWORD_LABELS)).map(where);
-    expect(missing, 'run npx vite-node tools/talk/keywords.ts and review these').toEqual([]);
+    expect(missing, 'run node --import ./tools/node-ts.mjs tools/talk/keywords.ts and review these').toEqual([]);
   });
 
   it('are each a keyword of that conversation, labelled with a word said in Britannia that fits it', () => {

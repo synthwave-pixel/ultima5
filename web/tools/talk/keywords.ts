@@ -16,7 +16,7 @@
  * Each clash is told with who says each word, and whether the keyword's own townsman does. Run, with a copy in
  * ../gamedata/ultima5 (gamedata/README.md):
  *
- *   npx vite-node tools/talk/keywords.ts [--all]
+ *   node --import ./tools/node-ts.mjs tools/talk/keywords.ts [--all]
  *
  * (--all lists every keyword, not only the clashes.)
  */

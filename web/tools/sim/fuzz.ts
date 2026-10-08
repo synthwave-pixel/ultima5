@@ -9,7 +9,7 @@
  * every key, what must always hold of a fight is checked; a crash, a broken rule or a fight that never ends is
  * reported with the seed that replays it.
  *
- *   npx vite-node tools/sim/fuzz.ts [-- fights=500] [seed=1] [rooms=only|none] [log]
+ *   node --import ./tools/node-ts.mjs tools/sim/fuzz.ts [-- fights=500] [seed=1] [rooms=only|none] [log]
  */
 
 import { freeActor } from '../../src/game/actors.ts';

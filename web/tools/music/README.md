@@ -12,7 +12,7 @@ npm run music -- strings piano BRITLAND.XMI STONES.XMI
 ```
 
 The styles (`styles/`: `orchestrate.ts` for the sampled ones, `engine.ts` for the synthesized, `arrange.ts` for how
-each tune is treated) are Electronic's and Classical's; `npx vite-node tools/music/styles/render.ts` renders any of
+each tune is treated) are Electronic's and Classical's; `node --import ./tools/node-ts.mjs tools/music/styles/render.ts` renders any of
 them to `screenshots/styles-v2/` to listen to, and `fatigue.ts` measures every render for what tires the ear.
 
 **Original** needs MuseScore General (MIT; 40 MB) in `tools/music/.cache/` (git-ignored, never shipped):

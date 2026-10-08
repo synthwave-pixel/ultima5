@@ -14,12 +14,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . ../desktop/*.cjs ../mobile/*.cjs",
-    "tiles": "vite-node tools/art/build.ts",
-    "pictures": "vite-node tools/art/picture-sheet.ts",
-    "runes": "vite-node tools/art/runes.ts",
+    "tiles": "node --import ./tools/node-ts.mjs tools/art/build.ts",
+    "pictures": "node --import ./tools/node-ts.mjs tools/art/picture-sheet.ts",
+    "runes": "node --import ./tools/node-ts.mjs tools/art/runes.ts",
     "apple2": "node tools/art/apple2.ts",
-    "known": "vite-node tools/install/known.ts",
-    "music": "vite-node tools/music/render.ts --"
+    "known": "node --import ./tools/node-ts.mjs tools/install/known.ts",
+    "music": "node --import ./tools/node-ts.mjs tools/music/render.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
