@@ -77,6 +77,9 @@ games.
     Privacy & Security, scroll down to Security and click Open Anyway
     beside Ultima V. Or, in Terminal, once:
     `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`.
+
+    <img src="docs/macos-open-anyway.png" alt="System Settings, Privacy &amp; Security: under Security, &quot;Ultima V&quot; was blocked to protect your Mac, with the Open Anyway button beside it" width="600">
+
 - **Android**: the APK (`Ultima-V-<version>-android.apk`) on the Releases
   page, for handhelds like the AYN Odin or the Retroid Pocket and for
   phones and tablets. Copy it to the device and open it; Android asks once
