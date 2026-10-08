@@ -72,7 +72,10 @@ function createWindow() {
     minHeight: 400,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
-    fullscreen: wantsFullScreen(),
+    // Full screen at the start only when wanted. `fullscreen: false` said outright would also take full screen away on
+    // macOS altogether (the green button, Window > Enter Full Screen, F11), so it is left unsaid otherwise.
+    fullscreenable: true,
+    ...(wantsFullScreen() ? { fullscreen: true } : {}),
     title: 'Ultima V',
     icon: join(__dirname, 'build', 'icons', '256x256.png'), // the window's (packaged: package.json build.files)
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
