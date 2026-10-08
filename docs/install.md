@@ -88,6 +88,10 @@ downloaded update is installed when the game quits.
   to Security, click Open Anyway beside Ultima V, and confirm with your
   password or Touch ID; it opens normally from then on. Or, in Terminal,
   once: `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`.
+  If the game's sound plays through a device that is also a microphone (a
+  USB microphone with a headphone jack, a headset), macOS may ask whether
+  Ultima V may use the microphone when the sound first starts. The game
+  never uses it: choose Don't Allow, and the sound plays on.
 - **Linux and SteamOS**: the Flatpak repository, installed as above, is
   the way on a Steam Deck and on any Linux with Flatpak: one click or one
   line, and updates arrive with every other Flatpak's. Add the game to

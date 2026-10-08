@@ -76,7 +76,10 @@ games.
   - macOS: the first launch is refused. Open System Settings, choose
     Privacy & Security, scroll down to Security and click Open Anyway
     beside Ultima V. Or, in Terminal, once:
-    `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`.
+    `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`. If
+    macOS later asks to let Ultima V use the microphone (it can when the
+    sound plays through a USB microphone or headset), choose Don't Allow:
+    the game never uses it, and the sound plays on.
 
     <img src="docs/macos-open-anyway.png" alt="System Settings, Privacy &amp; Security: under Security, &quot;Ultima V&quot; was blocked to protect your Mac, with the Open Anyway button beside it" width="600">
 

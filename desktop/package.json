@@ -68,7 +68,12 @@
         }
       ],
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Ultima V never uses the microphone. macOS can ask when the game's sound plays through a device that is also a microphone, such as a USB microphone or a headset. Choose Don't Allow: the game and its sound play on as before.",
+        "NSAudioCaptureUsageDescription": "Ultima V never records any sound. Choose Don't Allow: the game and its sound play on as before.",
+        "NSCameraUsageDescription": "Ultima V never uses the camera. Choose Don't Allow: the game plays on as before."
+      }
     },
     "win": {
       "target": [
