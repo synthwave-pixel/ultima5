@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { decodePng } from '../tools/png';
 import { lzwDecompress } from '../src/data/lzw.ts';
 import { DEFAULTS, loadOptions, SETTINGS_KEY } from '../src/game/settings.ts';
-import { apple, appleArt, fromSheet } from '../src/ui/appleArt.ts';
+import { apple, appleArt, FLOWS, fromSheet } from '../src/ui/appleArt.ts';
+import { TileAnimator } from '../src/ui/animate.ts';
 import { HI_WIDTH, type TileArt, TilesAlone } from '../src/ui/framebuffer.ts';
 import { CELL, type Manifest, OUTLINE_COLOUR, OUTLINE_WIDTH, StandardArt } from '../src/ui/standardArt.ts';
 import { gameFiles } from './helpers.ts';
@@ -50,6 +51,32 @@ describe('the Apple ][ tiles', () => {
     }
     expect([...new Set(off)]).toEqual([]);
     expect(art.figure(0x150)).toEqual(apple(tiles, 0x150));
+  });
+
+  it('carry the water flowing through the rivers and shores as the PC’s flows, their banks left as they are', () => {
+    const own = tiles.slice();
+    const art = appleArt(own, sheet, png.width, null);
+    const animator = new TileAnimator(own);
+    const water = new Set([0, 0xff000000, 0xfffdcf15]); // clear, black and the Apple's blue
+    const at = (t: number): Uint32Array => {
+      const page = new Uint32Array(HI_WIDTH * CELL);
+      art.draw(page, t, 0, 0);
+      return Uint32Array.from({ length: CELL * CELL }, (_, i) => page[Math.floor(i / CELL) * HI_WIDTH + (i % CELL)]);
+    };
+    const first = new Map(FLOWS.map((t) => [t, at(t)]));
+    for (let i = 0; i < 8; i++) {
+      animator.tick();
+      art.tick();
+    }
+    let flowing = 0;
+    for (const t of FLOWS) {
+      const [was, now] = [first.get(t)!, at(t)];
+      if (now.some((v, i) => v !== was[i])) flowing++;
+      // The banks - what of the Apple's own tile is neither water nor black - never change.
+      const plain = fromSheet(sheet, png.width, t);
+      for (let i = 0; i < now.length; i++) if (!water.has(plain[i])) expect(now[i], t.toString(16)).toBe(plain[i]);
+    }
+    expect(flowing).toBeGreaterThan(FLOWS.length / 2);
   });
 
   it('draw in the PC (1988) look as their own tiles, the lettering the game’s', () => {

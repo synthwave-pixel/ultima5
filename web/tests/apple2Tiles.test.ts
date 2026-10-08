@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BLACK, GREEN, ORANGE, row, sheet as makeSheet, tile, TILE_H, TILE_W, VIOLET, BLUE, WHITE } from '../tools/art/apple2.ts';
 import { decodePng } from '../tools/png';
-import { APPLE_H, APPLE_W, appleArt, fromSheet } from '../src/ui/appleArt.ts';
+import { APPLE_H, APPLE_W, appleArt, FLAGS, FLAMES, fromSheet } from '../src/ui/appleArt.ts';
 import { HI_WIDTH } from '../src/ui/framebuffer.ts';
 import { CELL } from '../src/ui/standardArt.ts';
 
@@ -56,7 +56,7 @@ describe('the Apple ][ sheet', () => {
   });
 
   it('makes every tile of the set from the sheet, in the Apple’s colours, each whole on black', () => {
-    const art = appleArt(new Uint8Array(0), sheet, png.width, null);
+    const art = appleArt(new Uint8Array(512 * 128), sheet, png.width, null);
     const page = new Uint32Array(HI_WIDTH * CELL);
     const off: number[] = [];
     for (let t = 0; t < 512; t++) {
@@ -80,5 +80,60 @@ describe('the Apple ][ sheet', () => {
     expect(lit.length).toBeGreaterThanOrEqual(4);
     expect(lit.length).toBeLessThanOrEqual(5);
     expect(lit[0]).toBe(Math.ceil((3 * CELL) / APPLE_W));
+  });
+});
+
+describe('the Apple ][ tiles the PC animates', () => {
+  const png = decodePng(readFileSync(new URL('../public/graphics/apple2-u5-tiles.png', import.meta.url)));
+  const sheet = new Uint32Array(png.data.buffer.slice(0));
+  /** The set over blank PC tiles, and a tile as drawn now. */
+  const made = () => {
+    const tiles = new Uint8Array(512 * 128);
+    const art = appleArt(tiles, sheet, png.width, null);
+    const drawn = (t: number): Uint32Array => {
+      const page = new Uint32Array(HI_WIDTH * CELL);
+      art.draw(page, t, 0, 0);
+      return Uint32Array.from({ length: CELL * CELL }, (_, i) => page[Math.floor(i / CELL) * HI_WIDTH + (i % CELL)]);
+    };
+    return { tiles, art, drawn };
+  };
+
+  it('flap each flag when the PC’s flaps, and nothing of the tile but its pennant', () => {
+    const { tiles, art, drawn } = made();
+    for (const [t, [x0, x1, y0, y1]] of FLAGS) {
+      const still = drawn(t);
+      tiles[t * 128] ^= 0xff; // the PC's flag, flapped
+      art.tick();
+      const flapped = drawn(t);
+      const moved = [...flapped.keys()].filter((i) => flapped[i] !== still[i]);
+      expect(moved.length, t.toString(16)).toBeGreaterThan(0);
+      for (const i of moved) {
+        const [ax, ay] = [Math.floor(((i % CELL) * APPLE_W) / CELL), Math.floor((Math.floor(i / CELL) * APPLE_H) / CELL)];
+        expect(ax >= x0 && ax <= x1 && (ay === y0 || ay === y1), t.toString(16)).toBe(true);
+      }
+      tiles[t * 128] ^= 0xff; // and back
+      art.tick();
+      expect(drawn(t)).toEqual(still);
+    }
+  });
+
+  it('flicker each flame as the PC’s flickers: some of its fire dark, nothing else of it changed', () => {
+    const { tiles, art, drawn } = made();
+    const black = 0xff000000;
+    for (const t of FLAMES.keys()) {
+      const plain = fromSheet(sheet, png.width, t);
+      const darkened = new Set<number>();
+      for (let n = 1; n <= 4; n++) {
+        tiles[t * 128 + 5] = n; // the PC's flame, flickering
+        art.tick();
+        const now = drawn(t);
+        for (let i = 0; i < now.length; i++) {
+          if (now[i] === plain[i] || plain[i] >>> 24 === 0) continue;
+          expect(now[i], t.toString(16)).toBe(black);
+          darkened.add(i);
+        }
+      }
+      expect(darkened.size, t.toString(16)).toBeGreaterThan(0);
+    }
   });
 });
