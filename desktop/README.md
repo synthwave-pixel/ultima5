@@ -1,7 +1,7 @@
 # Ultima V desktop app
 
 A thin Electron shell around the built game in `../web`. See
-[Hacking on it](../README.md#hacking-on-it) in the root README for how it
+[Developer notes](../docs/developer-notes.md) for how it
 fits together, and [Desktop app, and the Steam Deck](../docs/install.md#desktop-app-and-the-steam-deck)
 for how to install the builds on Windows, macOS, Linux and the Steam Deck.
 
