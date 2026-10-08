@@ -349,14 +349,20 @@ export function journalTop(g: Game): JournalLine[] {
     about: dungeonStatus(g, d),
     hint: DUNGEON_HINTS[d],
   }));
-  // The Shadowlords by what each is - Falsehood, Hatred, Cowardice, as the game names their shards (items.ts) - and not
-  // by their names, which are for the player to find: to be called up at a flame they must be known.
+  // The Shadowlords by what each is - Falsehood, Hatred, Cowardice, as the game names their shards (items.ts) - and by
+  // name only once it has been heard (words.ts): the names are for the player to find, since to be called up at a
+  // flame they must be known. The name stands at the right of its line until the Shadowlord is slain, and on its card.
   const aspects = [0x8d18, 0x8d24, 0x8d2e].map((a) => g.t(a).replace(/[!\s]+$/, ''));
-  const shadowlords = [0, 1, 2].map((i) => ({
-    label: row(aspects[i], s.shadowlords[i] === 0xff ? 'slain' : ''),
-    about: s.shadowlords[i] === 0xff ? 'Slain.' : s.shards[i] !== 0 ? 'At large. Its shard is held.' : 'At large.',
-    hint: SHADOWLORD_HINTS[i],
-  }));
+  const lordNames = g.data.table(0x444a, 3).map((n) => (n.trim() && g.words.forStub(n.trim(), true) ? named(n.trim()) : ''));
+  const shadowlords = [0, 1, 2].map((i) => {
+    const slain = s.shadowlords[i] === 0xff;
+    const state = slain ? 'Slain.' : s.shards[i] !== 0 ? 'At large. Its shard is held.' : 'At large.';
+    return {
+      label: row(aspects[i], slain ? 'slain' : lordNames[i]),
+      about: lordNames[i] ? `${lordNames[i]}. ${state}` : `Its name is not known. ${state}`,
+      hint: SHADOWLORD_HINTS[i],
+    };
+  });
   const shards = [0, 1, 2].filter((i) => s.shards[i] !== 0).length;
   const none = (what: string): JournalLine[] => [{ label: what, hint: '', enabled: false }];
   return [

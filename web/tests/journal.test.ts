@@ -105,6 +105,28 @@ describe('the journal', () => {
     expect(top[7].open?.title).toBe('Clues heard');
   });
 
+  it('names a Shadowlord once its name is heard - on its line until it is slain, and on its card', () => {
+    const { g } = newGame();
+    const s = g.s;
+    s.shadowlords.fill(0);
+    s.shards.fill(0);
+    const lords = (): { label: string; about?: string }[] => journalTop(g)[4].open!.lines;
+    const name = g.data.table(0x444a, 3)[0].trim(); // the Shadowlord of Falsehood
+    const shown = name[0] + name.slice(1).toLowerCase();
+    expect(lords()[0].label).toBe('Falsehood            ');
+    expect(lords()[0].about).toBe('Its name is not known. At large.');
+    // Heard in conversation, as talk.ts learns what is said.
+    g.words.learn(g, `"The Shadowlord of Falsehood is called ${name}."`);
+    expect(lords()[0].label).toBe(`Falsehood${shown.padStart(12)}`);
+    expect(lords()[0].about).toBe(`${shown}. At large.`);
+    expect(lords()[1].label).toBe('Hatred               '); // the others still unnamed
+    s.shards[0] = 1;
+    expect(lords()[0].about).toBe(`${shown}. At large. Its shard is held.`);
+    s.shadowlords[0] = 0xff;
+    expect(lords()[0].label).toBe('Falsehood       slain');
+    expect(lords()[0].about).toBe(`${shown}. Slain.`);
+  });
+
   it('prints the hint of the line the bar is on when Y is pressed, and leaves the list open', async () => {
     const { journalScreen } = await import('../src/game/menu.ts');
     const { Pad } = await import('../src/game/io.ts');

@@ -683,8 +683,9 @@ other hurt in the game kills as it always did.
   that has something to say shows it over the party, as a card: a shrine
   or a dungeon what the party knows of it ("A mystery..." until something
   is, then found - seen on the map - its mantra or Word once heard, and how
-  its quest stands or whether it is unsealed); a Shadowlord whether it is
-  at large or slain; a piece of equipment what it is for; a companion
+  its quest stands or whether it is unsealed); a Shadowlord its name, once
+  heard (on its line too, until it is slain), and whether it is at large or
+  slain; a piece of equipment what it is for; a companion
   their calling and where they are; the Shrines that the Avatar is drawn
   to them. A line with a hint says "Y: Hint" at the card's foot, and Y
   gives it:
