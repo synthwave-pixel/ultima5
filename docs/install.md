@@ -59,7 +59,11 @@ folder picker.
 The same game is packaged as a desktop app with Electron, for players who
 want a plain window, an icon in the dock, or a Steam shortcut. The
 desktop app keeps its saved game in its own storage, separate from the
-browser's; Export and Import move a game between them. Its title menu has
+browser's; Export and Import move a game between them. It starts full screen, or as
+a window if that is how it was last left: the system's own controls (the
+green button on macOS, the window manager's elsewhere), F11 or Alt+Enter,
+and the full-screen switch at the upper right of the touch pad (a click
+anywhere shows the pad) go between the two. Its title menu has
 a Quit, for a full screen or Steam's Game Mode where the window has no
 close button, and only one copy runs at a time: launching it again brings
 the open one forward, so two copies never write over each other's save.
@@ -79,8 +83,8 @@ the open one forward, so two copies never write over each other's save.
   settings pick a Gamepad template. The first launch from that shortcut
   puts the game's artwork in Steam's library folder for it (never over
   artwork already there), which Steam shows once it restarts. The app sees the controller as a
-  gamepad and switches to controller mode on the first press, and starts
-  full screen when Steam launches it. In Game Mode it also turns off GPU
+  gamepad and switches to controller mode on the first press, and always
+  starts full screen when Steam launches it. In Game Mode it also turns off GPU
   acceleration and the browser sandbox, which have hung other Electron
   apps under gamescope. The `.flatpak` bundle on the Releases page is the
   same build for an offline install (`flatpak install --user <file>`,

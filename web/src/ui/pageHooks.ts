@@ -19,6 +19,7 @@ import { ScanlineOverlay } from './scanlines.ts';
 import { addressedAsLady } from '../game/appearance.ts';
 import type { Screen } from './screen.ts';
 import type { PcSound } from './sound.ts';
+import { fullScreen } from './fullScreen.ts';
 import { TouchPad } from './touch.ts';
 
 const PAD_KEY = 'ultima5.touchpad';
@@ -284,6 +285,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     onPress: () => from('touch'),
     onToggle: (shown) => remember(PAD_KEY, shown ? '1' : '0'),
     shown: recall(PAD_KEY) === '1',
+    fullScreen: fullScreen(),
   });
   g.hooks = {
     applyOptions: apply,

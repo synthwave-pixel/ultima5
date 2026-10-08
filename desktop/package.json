@@ -34,6 +34,7 @@
       "preload.cjs",
       "scan.cjs",
       "steamArt.cjs",
+      "windowState.cjs",
       "build/icons/256x256.png",
       "build/steam/*.png",
       "app/**/*"
