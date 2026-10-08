@@ -22,7 +22,6 @@ import { watchOtherWindows } from './game/otherWindows.ts';
 import { Intro, unmadeAvatar } from './game/intro.ts';
 import { Screen } from './ui/screen.ts';
 import { installPageHooks } from './ui/pageHooks.ts';
-import { SCANLINE_LEVEL, scanlineBands } from './ui/scanlines.ts';
 import { PcSound } from './ui/sound.ts';
 import { loadOptions } from './game/settings.ts';
 import { chromeTone } from './game/chromeTone.ts';
@@ -119,9 +118,9 @@ function canvasNotice(canvas: HTMLCanvasElement, text: string): void {
 }
 
 /**
- * The boot screen while the game loads (web/public/boot.png, tools/key-art.mjs): the game screen's own 320 by 200,
- * grown to the display's size unsmoothed as the game's picture is, with the game's scanlines over it in the display's
- * own pixels as the Scanlines setting draws them (scanlines.ts), whatever the setting. Drawn again as the window is
+ * The boot screen while the game loads (web/public/boot.jpg, tools/key-art.mjs): the box's painting under the title,
+ * the game screen's shape, drawn smooth at the display's size - a painting, not the game's own picture, so neither
+ * grown unsmoothed nor lined with the game's scanlines. Drawn again as the window is
  * resized, until `stop` is called (the game about to draw) - which waits until it has been up BOOT_MS, so that a quick
  * start does not flash it. It has a moment to come (it is cached with the page); if it does not, or cannot, the
  * Loading notice stays, and nothing is waited for.
@@ -139,10 +138,9 @@ function bootScreen(canvas: HTMLCanvasElement): Promise<() => Promise<void>> {
     [canvas.width, canvas.height] = [Math.round(r.width * devicePixelRatio), Math.round(r.height * devicePixelRatio)];
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(art, 0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = `rgba(0,0,0,${1 - SCANLINE_LEVEL})`;
-    for (const [y, rows] of scanlineBands(canvas.height)) ctx.fillRect(0, y, canvas.width, rows);
     bootShown = true;
     shownAt ||= performance.now();
   };
@@ -160,7 +158,7 @@ function bootScreen(canvas: HTMLCanvasElement): Promise<() => Promise<void>> {
     };
     art.onerror = settle;
     setTimeout(settle, 1500);
-    art.src = `${import.meta.env.BASE_URL}boot.png`;
+    art.src = `${import.meta.env.BASE_URL}boot.jpg`;
   });
 }
 

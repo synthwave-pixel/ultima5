@@ -1,6 +1,6 @@
 # Ultima V: Warriors of Destiny
 
-![Ultima V: Warriors of Destiny - the ankh before three Shadowlords](docs/banner.png)
+![Ultima V: Warriors of Destiny, 1988 to 2026 - the Avatar standing over his fallen friend, three Shadowlords looming over them, from the box's painting](docs/banner.png)
 
 *A new engine for the 1988 MS-DOS game, in TypeScript, for the browser,
 the desktop, the Steam Deck and Android. Like OpenMW for Morrowind, it
@@ -8,9 +8,9 @@ ships none of the PC game: it plays your own copy.*
 
 **Play it:** <https://synthwave-pixel.github.io/ultima5/>
 
-The page itself carries two things of the game's: the Ultima V
-Upgrade's music in `web/public/music/`, and the Apple II version's tiles,
-for the Apple ][ tile set.
+The page itself carries three things of the game's: the Ultima V
+Upgrade's music in `web/public/music/`, the Apple II version's tiles, for
+the Apple ][ tile set, and the box's painting, for the key art.
 
 - [Installation](#installation) The browser, the Steam Deck, Windows,
   macOS, Linux and Android.
@@ -363,8 +363,9 @@ the Codex, a position, ALAKAZAM, the ending - in either look).
 (`web/tools/art/`); `npm run pictures` and `npm run runes` make their
 sheets; `npm run apple2 -- <disk>` reads the Apple ][ tiles off the Apple
 II version's Program disk (disk 1 of 8, a `.dsk`, `.po` or its `.zip`); `node web/tools/icons.mjs` redraws the icons and
-`node web/tools/key-art.mjs` the key art (Steam's library artwork, the boot
-screen, the banner above). The dev server puts
+`node web/tools/key-art.mjs` the key art from the box's painting (Steam's
+library artwork, the boot screen, the banner above, and each at its native
+size in `art/`). The dev server puts
 the game on `window.u5` for the console. `web/tools/pilot/` is a bot that
 plays the development build by the controller's keys alone; it played the
 game along the GameFAQs walkthrough, start to proclamation, to find what a
@@ -437,6 +438,9 @@ the player's own copy.
   `standard-tiles.png`; see [its note](web/art/standard/u3/README.md)),
   and its Standard sound effects, for the effects the two games share
   (`web/src/audio/chip3.ts`).
+- **The box's painting**, by Denis Loubet for Origin Systems (1988): the
+  key art - Steam's library artwork, the boot screen, the banner above
+  (`art/`, `web/art/cover/`). It remains its owners'.
 - **The Apple II tiles** of the Apple ][ tile set
   (`web/public/graphics/apple2-u5-tiles.png`): Ultima V's own, drawn by
   Origin Systems for the Apple II version (1988), read off its Program
