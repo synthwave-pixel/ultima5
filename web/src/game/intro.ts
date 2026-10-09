@@ -179,6 +179,8 @@ const SUGGESTED = [
 
 /** The title menu's choices by letter. */
 const MENU = 'JCUAR';
+/** The title menu's box: the lines it holds (more scroll, intro.ts menu). */
+const MENU_ROWS = 8;
 
 /** The rows under the name's line where its menu stands. */
 const NAME_MENU_ROW = 0x15;
@@ -580,15 +582,42 @@ export class Intro {
       [0xb, 0x315e],
       [10, 0x316f],
     ];
-    // The port's own lines under the game's five: its settings, and a new version that has come down and waits.
+    // The port's own lines under the game's five: its settings, deleting a character, a newer version (ui/updates.ts),
+    // and Quit in the apps.
+    const version = this.g.hooks.update?.offer()?.version;
     for (const k of this.menuKeys().slice(MENU.length)) {
-      const label = k === 'S' ? 'Settings' : k === 'D' ? 'Delete Character' : k === 'Q' ? 'Quit' : 'Update: restart';
+      const label =
+        k === 'S' ? 'Settings' : k === 'D' ? 'Delete Character' : k === 'Q' ? 'Quit' : version ? `Update (${version})` : 'Update';
       items.push([(0x28 - label.length - 2) >> 1, label]);
     }
+    // The box holds eight lines: more, and they scroll with the bar, an arrow at the box's edge where there are more
+    // above or below.
     const top = items.length > 6 ? 0x10 : 0x11;
-    items.forEach(([x, text], i) => {
+    const scrolls = items.length > MENU_ROWS;
+    if (scrolls) {
+      if (sel < this.menuTop) this.menuTop = sel;
+      if (sel >= this.menuTop + MENU_ROWS) this.menuTop = sel - MENU_ROWS + 1;
+      this.menuTop = Math.max(0, Math.min(this.menuTop, items.length - MENU_ROWS));
+      g.text.clearArea(1, top, 0x26, top + MENU_ROWS - 1);
+    } else this.menuTop = 0;
+    const shown = scrolls ? items.slice(this.menuTop, this.menuTop + MENU_ROWS) : items;
+    if (scrolls) {
+      const fg = g.text.win.fg;
+      g.text.win.fg = Colour.lightGray;
+      if (this.menuTop > 0) {
+        g.text.moveTo(0x25, top);
+        g.printChar(0x18);
+      }
+      if (this.menuTop + MENU_ROWS < items.length) {
+        g.text.moveTo(0x25, top + MENU_ROWS - 1);
+        g.printChar(0x19);
+      }
+      g.text.win.fg = fg;
+    }
+    shown.forEach(([x, text], row) => {
+      const i = row + this.menuTop;
       if (i === sel) g.printChar(0xfd);
-      g.text.moveTo(x, i + top);
+      g.text.moveTo(x, row + top);
       // Journey Onward grey with no game saved to journey on with (the port's), passed over by the bar.
       const fg = g.text.win.fg;
       if (i === 0 && this.noSave) g.text.win.fg = 8;
@@ -660,9 +689,49 @@ export class Intro {
    * stands aside for it (the picker's Delete a character... still offers it, with two or more).
    */
   private menuKeys(): string {
-    const after = (this.g.hooks.update?.ready() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
-    const del = !this.noSave && MENU.length + 2 + after.length <= 8 ? 'D' : '';
-    return MENU + 'S' + del + after;
+    const after = (this.g.hooks.update?.offer() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
+    return MENU + 'S' + (this.noSave ? '' : 'D') + after;
+  }
+
+  /** Whether a newer version waits to be told of (updateBox). */
+  private updateDue(): boolean {
+    const offer = this.g.hooks.update?.offer();
+    return !!offer && !offer.told;
+  }
+
+  /** The first of the title menu's lines shown, where there are more than its box holds (menu). */
+  private menuTop = 0;
+
+  /**
+   * A newer version not yet told of (ui/updates.ts), in a box of its own over the title, once a version: what it is,
+   * and the way to it - the restart into a build come down, or its release's page, to read what changed and download
+   * from. Later leaves it in the menu's Update line. Whether the box was shown (the title to be drawn again).
+   */
+  private async updateBox(): Promise<boolean> {
+    const g = this.g;
+    const update = g.hooks.update;
+    const offer = update?.offer();
+    if (!update || !offer || offer.told) return false;
+    update.told();
+    // Keys pressed before it came (the opening skipped, the menu moved) are let go: none may answer it unseen.
+    g.p.flushKeys();
+    const { choose, wrap } = await import('./menu.ts');
+    const restart = offer.kind === 'restart';
+    const name = offer.version ? `Ultima V ${offer.version}` : 'A new version';
+    const text = restart
+      ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
+      : `${name} is out${offer.current ? `; this is ${offer.current}` : ''}. Its page says what is new. Your saved game carries over.`;
+    const lines = [...wrap(text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
+    const go = restart ? 'Restart now' : 'Open release page';
+    const i = await choose(
+      g,
+      restart ? 'Update ready' : 'Update available',
+      [...lines, { label: go }, { label: 'Later' }],
+      lines.length,
+      true,
+    );
+    if (i === lines.length) update.apply();
+    return true;
   }
 
   // --- The opening -------------------------------------------------------------------------
@@ -1425,14 +1494,18 @@ export class Intro {
       queued = 0;
       let keys = this.menuKeys();
       while (key <= 0x20) {
-        // An update may come down while the title waits: its line is added then.
+        // An update may come down while the title waits: its box, once a version, and its line added then.
+        if (await this.updateBox()) {
+          await this.title(false);
+          this.titleMenu(choice);
+        }
         if (this.menuKeys() !== keys) {
           keys = this.menuKeys();
           this.menu(choice);
         }
         this.selectPrompt();
         key = 0;
-        for (let n = 0; n < 200 && key === 0; n++) {
+        for (let n = 0; n < 200 && key === 0 && !this.updateDue(); n++) {
           key = upper(asPad(g, g.p.pollKey())); // a keyboard read as a controller is one here too
           if (key === 0) {
             this.spin(n);
@@ -1440,6 +1513,8 @@ export class Intro {
             await this.ticks(1);
           }
         }
+        // An update come while the title waits: its box at once (the loop's head), not after the next key.
+        if (key === 0 && this.updateDue()) continue;
         switch (key) {
           case K.Left:
           case K.Up:

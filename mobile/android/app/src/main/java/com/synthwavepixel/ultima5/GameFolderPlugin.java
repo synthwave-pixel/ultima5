@@ -29,10 +29,32 @@ import java.util.Set;
  * picker, which needs no storage permission, and the game's files read out of the folder chosen - the names the page
  * asks for and the Upgrade's music, a few folders down - as base64 for the page to check and install. And Export's
  * To a file (web/src/ui/pageHooks.ts androidSave), which a web view cannot do by itself: the system's own picker for
- * where a new file goes, the saved game written there.
+ * where a new file goes, the saved game written there. And a newer release's page, opened in the system's browser
+ * (openUrl).
  */
 @CapacitorPlugin(name = "GameFolder")
 public class GameFolderPlugin extends Plugin {
+  /**
+   * A web page opened in the system's own browser (web/src/ui/updates.ts): a newer release's page, to read what
+   * changed and download the APK from - only an https:// address.
+   */
+  @PluginMethod
+  public void openUrl(PluginCall call) {
+    String url = call.getString("url", "");
+    if (url == null || !url.startsWith("https://")) {
+      call.reject("Only an https:// page");
+      return;
+    }
+    try {
+      Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+      view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      getActivity().startActivity(view);
+      call.resolve();
+    } catch (ActivityNotFoundException e) {
+      call.reject("No browser to open it in");
+    }
+  }
+
   @PluginMethod
   public void pick(PluginCall call) {
     startActivityForResult(call, new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), "picked");

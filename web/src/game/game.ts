@@ -7,6 +7,7 @@
  * field.
  */
 
+import type { UpdateHook } from '../ui/updates.ts';
 import type { ChromePlace } from './chromeTone.ts';
 import { TileCycles } from '../ui/animate.ts';
 import type { Text } from '../ui/text.ts';
@@ -106,8 +107,11 @@ export interface GameHooks {
    * where that keyboard leaves it in sight; `value` to begin from, at most `max` letters. Null if it was put by.
    */
   askText?: ((title: string, value: string, max: number) => Promise<string | null>) | undefined;
-  /** The installed app's next version: whether it has come down and waits, and the restart into it. */
-  update?: { ready: () => boolean; apply: () => void };
+  /**
+   * A newer version (ui/updates.ts): what it is - one come down that a restart takes up, or a release whose page is
+   * opened - taking it up, and the player told of it (its box at the title, once a version).
+   */
+  update?: UpdateHook;
   /** Leave the game, where it runs as an app that can (ui/platform.ts appQuit); a browser tab has none. */
   quit?: (() => void) | undefined;
 }

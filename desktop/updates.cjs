@@ -1,15 +1,17 @@
 // Updates from the GitHub releases (main.cjs), a few seconds after the window is up, each way as this copy allows:
 //   'auto'   - Windows installed by its installer, and the AppImage: electron-updater fetches a newer release in the
 //              background (the latest*.yml the release carries) and installs it when the game quits, or at once if
-//              the player says so.
+//              the player restarts into it.
 //   'notice' - macOS and the Windows portable .exe, which electron-updater cannot replace (macOS installs an update
 //              only into an app signed by an Apple developer; this one is not): the player is told a newer release
-//              is out, once for each, and offered its page. Signing the Mac app would make it 'auto' (issue #1).
+//              is out and offered its page, to read what changed and download from. Signing the Mac app would make it
+//              'auto' (issue #1).
 //   'none'   - the Flatpak, which flatpak updates; the app run unpackaged (development); or --no-update-check.
-// Under Steam's Game Mode nothing is asked: an update downloaded is installed when the game quits, and a notice
-// waits for the desktop. A failure to look (offline, GitHub down) is only logged.
+// What there is is told to the page (preload.cjs u5native.updates; web/src/ui/updates.ts), which says so in the
+// game's own way - a line in the title menu, and once a version a box over the title - and asks for the restart or
+// the page from here. Under Steam's Game Mode no page is offered (a browser there leaves the game behind); a build
+// downloaded is still installed when the game quits. A failure to look (offline, GitHub down) is only logged.
 const { readFileSync, writeFileSync } = require('node:fs');
-const { join } = require('node:path');
 
 const OWNER = 'synthwave-pixel';
 const REPO = 'ultima5';
@@ -54,11 +56,31 @@ function shouldNotice(latest, current, told) {
 }
 
 /**
- * Look for an update, as this copy allows (updateKind). `electron` is the main process's (app, dialog, shell, net);
- * `win` the game's window; `quiet` true under Game Mode, where nothing is asked.
+ * What there is to update to, for the page (web/src/ui/updates.ts UpdateOffer): a build come down ('restart'), or a
+ * release out ('release'); its version and this copy's; and whether the player has been told of it.
  */
-async function checkForUpdates({ electron, win, quiet }) {
-  const { app, dialog, shell, net } = electron;
+let offer = null;
+const listeners = new Set();
+
+/** The offer now, or null. */
+const currentOffer = () => offer;
+
+/** Told each time the offer changes. */
+function onOffer(listener) {
+  listeners.add(listener);
+}
+
+function publish(next) {
+  offer = next;
+  for (const l of listeners) l(offer);
+}
+
+/**
+ * Look for an update, as this copy allows (updateKind). `electron` is the main process's (app, net); `quiet` true
+ * under Game Mode, where no page is offered. `file`, where the version last told of is kept (updates.json).
+ */
+async function checkForUpdates({ electron, quiet, file }) {
+  const { app, net } = electron;
   const kind = updateKind({ packaged: app.isPackaged, platform: process.platform, env: process.env, argv: process.argv });
   if (kind === 'none') return;
   if (kind === 'auto') {
@@ -66,20 +88,9 @@ async function checkForUpdates({ electron, win, quiet }) {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on('error', (e) => console.warn('update:', e?.message ?? e));
-    autoUpdater.on('update-downloaded', async (info) => {
+    autoUpdater.on('update-downloaded', (info) => {
       console.log(`update: ${info.version} downloaded, installed on quitting`);
-      if (quiet || win.isDestroyed()) return;
-      const { response } = await dialog.showMessageBox(win, {
-        type: 'info',
-        message: `Ultima V ${info.version} is ready`,
-        detail:
-          'It will be installed when you quit the game. Restart now to play it at once: anything since the game last ' +
-          'saved (at a door, or Save in the Pause menu) is lost, as when closing the window.',
-        buttons: ['Later', 'Restart now'],
-        defaultId: 0,
-        cancelId: 0,
-      });
-      if (response === 1) autoUpdater.quitAndInstall();
+      publish({ kind: 'restart', version: String(info.version), current: app.getVersion(), told: false });
     });
     await autoUpdater.checkForUpdates().catch((e) => console.warn('update:', e?.message ?? e));
     return;
@@ -90,21 +101,33 @@ async function checkForUpdates({ electron, win, quiet }) {
     const res = await net.fetch(LATEST_API, { headers: { Accept: 'application/vnd.github+json' } });
     if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
     const latest = String((await res.json()).tag_name ?? '').replace(/^v/, '');
-    const file = join(app.getPath('userData'), 'updates.json');
-    if (!latest || !shouldNotice(latest, app.getVersion(), noticed(file)) || win.isDestroyed()) return;
-    writeFileSync(file, JSON.stringify({ noticed: latest }));
-    const { response } = await dialog.showMessageBox(win, {
-      type: 'info',
-      message: `Ultima V ${latest} is out`,
-      detail: `This is ${app.getVersion()}. The new version is on the game's releases page; your saved game carries over.`,
-      buttons: ['Later', 'Open the releases page'],
-      defaultId: 1,
-      cancelId: 0,
-    });
-    if (response === 1) void shell.openExternal(RELEASES);
+    const current = app.getVersion();
+    if (!latest || !isNewer(latest, current)) return;
+    publish({ kind: 'release', version: latest, current, told: !shouldNotice(latest, current, noticed(file)) });
   } catch (e) {
     console.warn('update check:', e?.message ?? e);
   }
 }
 
-module.exports = { updateKind, isNewer, shouldNotice, checkForUpdates, RELEASES };
+/** Take up the offer: the restart into the build come down, or the release's page in the player's browser. */
+function applyUpdate({ electron }) {
+  if (!offer) return false;
+  if (offer.kind === 'restart') require('electron-updater').autoUpdater.quitAndInstall();
+  else void electron.shell.openExternal(RELEASES);
+  return true;
+}
+
+/** The player has been told of the offer (its box shown): not again for this version, a release's kept in `file`. */
+function toldOfUpdate({ file }) {
+  if (!offer) return;
+  if (offer.kind === 'release') {
+    try {
+      writeFileSync(file, JSON.stringify({ noticed: offer.version }));
+    } catch (e) {
+      console.warn('update:', e?.message ?? e);
+    }
+  }
+  publish({ ...offer, told: true });
+}
+
+module.exports = { updateKind, isNewer, shouldNotice, checkForUpdates, applyUpdate, toldOfUpdate, currentOffer, onOffer, RELEASES };

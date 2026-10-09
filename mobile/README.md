@@ -27,6 +27,11 @@ Add to Home Screen.
   permission. A web view downloads nothing, so the app writes the file
   itself. Import's From a file needs no plugin: Capacitor's web view
   answers the page's file input with the system's picker.
+- Looks for a newer release on GitHub as the game starts (`web/src/ui/updates.ts`):
+  one newer than the APK's own version is said in a box over the title,
+  once a version, and an Update line in the title menu, which opens the
+  release's page in the system's browser (the GameFolder plugin's
+  `openUrl`) - to read what changed and download the APK from.
 - Physical controls that Android reports as a gamepad switch the game to
   controller mode on the first press; a tap on the screen shows the
   virtual controller instead.

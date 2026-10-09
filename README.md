@@ -134,7 +134,9 @@ game yourself - is in [Installing Ultima V](docs/install.md).
 Every release, with the desktop and Android downloads, is on the
 [Releases page](https://github.com/synthwave-pixel/ultima5/releases). The
 browser version always runs the newest, and offers to restart when an
-update has downloaded.
+update has downloaded. The desktop and Android apps say in the game when
+a newer version is out, and offer it - the restart into it, or its
+release's page to read and download from.
 
 ## New to Ultima V?
 

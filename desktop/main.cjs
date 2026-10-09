@@ -22,7 +22,7 @@ const { homedir } = require('node:os');
 const { writeFileSync, existsSync } = require('node:fs');
 const { scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
-const { checkForUpdates } = require('./updates.cjs');
+const { applyUpdate, checkForUpdates, currentOffer, onOffer, toldOfUpdate } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
@@ -161,7 +161,17 @@ app.whenReady().then(() => {
     if (typeof on === 'boolean' && on !== win.isFullScreen()) win.setFullScreen(on);
     return win.isFullScreen();
   });
+  // A newer version (updates.cjs), for the game to say in its own way (preload.cjs u5native.updates): the offer, taking
+  // it up, the player told of it. Only the game's own page may ask.
+  const fromGame = (event) => String(event.senderFrame?.url ?? '').startsWith('app://');
+  const updatesFile = join(app.getPath('userData'), 'updates.json');
+  ipcMain.handle('update-offer', (event) => (fromGame(event) ? currentOffer() : null));
+  ipcMain.handle('update-apply', (event) => fromGame(event) && applyUpdate({ electron }));
+  ipcMain.handle('update-told', (event) => void (fromGame(event) && toldOfUpdate({ file: updatesFile })));
   const win = createWindow();
+  onOffer((o) => {
+    if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);
+  });
   // Launched from a non-Steam shortcut, the first time: Steam's library artwork put in place (steamArt.cjs), a moment
   // after the window is up, apart from everything else. It never throws, and what it did is only logged.
   setTimeout(() => {
@@ -175,8 +185,8 @@ app.whenReady().then(() => {
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
   }, 3000);
-  // Newer releases looked for once the game is up (updates.cjs); nothing asked under Game Mode. Never in a smoke test.
-  if (!process.env.ULTIMA5_SMOKE) setTimeout(() => void checkForUpdates({ electron, win, quiet: inGamescope }), 5000);
+  // Newer releases looked for once the game is up (updates.cjs); no page offered under Game Mode. Never in a smoke test.
+  if (!process.env.ULTIMA5_SMOKE) setTimeout(() => void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile }), 5000);
   // A smoke test (smoke.cjs): screenshot after the game has drawn, then quit.
   const shot = process.env.ULTIMA5_SMOKE;
   if (shot) {

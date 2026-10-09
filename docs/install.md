@@ -69,16 +69,20 @@ close button, and only one copy runs at a time: launching it again brings
 the open one forward, so two copies never write over each other's save.
 
 **Updates.** A few seconds after it starts, the app looks for a newer
-release on the Releases page. Installed with the Windows installer, or
-run as the AppImage, it downloads the new version in the background and
-installs it when you quit the game (or at once, if you choose Restart now
-when it says it is ready). On macOS, and as the Windows portable `.exe`,
-it says once that a newer version is out and offers the Releases page:
+release on the Releases page, and says so in the game itself: a box over
+the title screen, once for each version, and an Update line in the title
+menu (Update (1.1.44)) until it is taken. Installed with the Windows
+installer, or run as the AppImage, it downloads the new version in the
+background and installs it when you quit the game (or at once, with
+Restart now). On macOS, and as the Windows portable `.exe`, it offers the
+release's page instead - to read what changed and download it yourself:
 macOS installs updates only into apps signed by an Apple developer, which
-this one is not yet ([#1](https://github.com/synthwave-pixel/ultima5/issues/1)). The Flatpak updates with every other Flatpak's, the
-Android app through Obtainium. `--no-update-check` on the command line
-turns the check off; under Steam's Game Mode nothing is asked, and a
-downloaded update is installed when the game quits.
+this one is not yet ([#1](https://github.com/synthwave-pixel/ultima5/issues/1)). The Android app does the same,
+opening the release's page in your browser; Obtainium can update it for
+you instead. The Flatpak updates with every other Flatpak's.
+`--no-update-check` on the command line turns the check off; under
+Steam's Game Mode no page is offered, and a downloaded update is
+installed when the game quits.
 
 - **Windows**: an installer and a portable `.exe`. Both are unsigned, so
   SmartScreen asks once; choose More info, then Run anyway.

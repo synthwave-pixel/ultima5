@@ -837,8 +837,9 @@ they are and when they last saved, and its last line, Delete a
 character..., lets one go with all their saves once asked twice; Delete
 Character, a line of the title's own whenever a character is kept, does
 the same for any of them, the only one too (Journey Onward then grey).
-In the apps, while an update waits to be restarted into, its line takes
-Delete Character's place in the title's eight. Eight characters are the
+A newer version (in the apps, a newer release; in the browser, a build
+downloaded) has a line of its own, Update (1.1.44), and the title's lines
+scroll where they are more than its box's eight. Eight characters are the
 most kept - each with up to eight saves, well within the browser's few
 megabytes: at eight, Create New Character offers to delete one instead,
 and Import takes only a game of one already kept (Replace). The list of

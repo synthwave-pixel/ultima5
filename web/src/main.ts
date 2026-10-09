@@ -28,6 +28,7 @@ import { chromeTone } from './game/chromeTone.ts';
 import { appQuit, launchWarning, warningDue, type CapacitorLike } from './ui/platform.ts';
 import { showNotice } from './ui/notice.ts';
 import { installCrashHandler, reportCrash } from './ui/crash.ts';
+import { androidUpdates, desktopUpdates, webUpdates, type DesktopUpdates, type UpdateHook } from './ui/updates.ts';
 import { registerSW } from 'virtual:pwa-register';
 
 const WARNED_KEY = 'ultima5.iosWarned';
@@ -53,6 +54,56 @@ const applyUpdate =
         },
       })
     : () => Promise.resolve();
+
+/**
+ * Where a newer version is to be learnt of (ui/updates.ts): the desktop app's main process, the Android app's look at
+ * GitHub, or the web's service worker.
+ */
+function updateHook(cap: CapacitorLike | undefined): UpdateHook {
+  const desktop = (window as { u5native?: { updates?: DesktopUpdates } }).u5native?.updates;
+  if (desktop) return desktopUpdates(desktop);
+  const plugins = (cap as { Plugins?: AndroidPlugins } | undefined)?.Plugins;
+  const getInfo = plugins?.App?.getInfo;
+  if (native && getInfo) {
+    return androidUpdates({
+      version: async () => (await getInfo.call(plugins.App)).version,
+      openUrl: (url) => {
+        if (plugins.GameFolder?.openUrl) void plugins.GameFolder.openUrl({ url }).catch(() => window.open(url, '_blank'));
+        else window.open(url, '_blank');
+      },
+      fetch: (...a) => fetch(...a),
+      told: {
+        get: () => {
+          try {
+            return localStorage.getItem(UPDATE_TOLD_KEY);
+          } catch {
+            return null;
+          }
+        },
+        set: (v) => {
+          try {
+            localStorage.setItem(UPDATE_TOLD_KEY, v);
+          } catch {
+            // Nowhere to keep it: told again next time.
+          }
+        },
+      },
+    });
+  }
+  return webUpdates(
+    () => updateReady,
+    () => void applyUpdate(true),
+  );
+}
+
+/** The Android app's plugins the update needs: the APK's version, and a page opened in the system's browser. */
+interface AndroidPlugins {
+  App?: { getInfo?: () => Promise<{ version: string }> };
+  GameFolder?: { openUrl?: (o: { url: string }) => Promise<unknown> };
+}
+
+/** The version the Android app last told the player of (ui/updates.ts androidUpdates). */
+const UPDATE_TOLD_KEY = 'ultima5.updateTold';
 
 /**
  * What the page keeps is kept: ask the browser not to evict it, and warn an iOS tab of WebKit's seven days - in the
@@ -243,7 +294,7 @@ async function start(): Promise<void> {
   // The iOS warning first: closing it is pressed before the game's own keys and gamepad are listened to.
   await keepStorage();
   installPageHooks(g, screen, canvas, tiles, sound);
-  g.hooks.update = { ready: () => updateReady, apply: () => void applyUpdate(true) };
+  g.hooks.update = updateHook(capacitor);
   // The desktop app closes its window to quit (its last window closing quits it), the Android app exits; a browser
   // tab gets no Quit.
   g.hooks.quit = appQuit(location.protocol, () => window.close(), capacitor);

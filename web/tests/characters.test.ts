@@ -1,3 +1,4 @@
+import type { UpdateOffer } from '../src/ui/updates.ts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { characterIds, chooseCharacter, CHARACTERS_KEY, charKey, MAX_CHARACTERS, newCharacter } from '../src/game/characters.ts';
 import { Relocate } from '../src/game/cheats.ts';
@@ -876,5 +877,97 @@ describe('a character’s settings, put to use', () => {
     const { g } = await atTitleWith((game) => (game.hooks.applyOptions = (o) => void applied.push({ ...o })), Pad.A, Pad.B, Pad.A);
     expect(applied.at(-1)).toMatchObject({ tileSet: 'standard', musicLevel: 6 }); // Dupre's, the latest
     expect(g.options.tileSet).toBe('standard');
+  });
+});
+
+/** A newer version at the title (ui/updates.ts): its box once a version, its menu line, and the menu scrolling. */
+describe('an update at the title', () => {
+  /** A release out (the Android app's, the Mac's), a character kept and Quit there: nine lines for the box's eight. */
+  const offered = (told = false) => {
+    const calls = { applied: 0, told: 0 };
+    let offer: UpdateOffer | null = { kind: 'release', version: '1.1.44', current: '1.1.43', told };
+    const setup = (g: Game): void => {
+      g.hooks.update = {
+        offer: () => offer,
+        apply: () => void calls.applied++,
+        told: () => {
+          calls.told++;
+          if (offer) offer = { ...offer, told: true };
+        },
+      };
+      g.hooks.quit = () => undefined;
+      endWhenDone(g);
+    };
+    return { calls, setup };
+  };
+  const screen = (p: { rows: string[][] }): string => p.rows.map((r) => r.join('')).join('\n');
+  /** The run ended at the title menu once the keys are gone: its own wait polls for keys, and would go on for ever. */
+  const endWhenDone = (g: Game): void => {
+    const p = g.p as unknown as { pollKey(): number; flushKeys(): void; keys: number[] };
+    const poll = p.pollKey.bind(p);
+    p.pollKey = () => {
+      if (p.keys.length === 0) throw new Error('script ran out of keys');
+      return poll();
+    };
+    // The keys pressed before the update's box let go, as the page's own are (the opening's Escapes, here).
+    p.flushKeys = () => {
+      while (p.keys[0] === K.Escape) p.keys.shift();
+    };
+  };
+
+  it('says what it is in a box of its own, once, the release page opened from it', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered();
+    // The box first, its bar on Open release page: taken.
+    const { p, g } = await atTitleWith(setup, Pad.A);
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('Ultima V 1.1.44 is out; this is 1.1.43.');
+    expect(calls).toEqual({ applied: 1, told: 1 });
+    expect(g.menuShown).toBeNull();
+  });
+
+  it('leaves it to the menu on Later, its line Update with the version, the nine lines scrolling in the box', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered();
+    // Later; then up from Journey Onward to the last line, Quit, the menu scrolled to its foot.
+    const { p, lines } = await atTitleWith(setup, K.Down, Pad.A, K.Up);
+    expect(calls).toEqual({ applied: 0, told: 1 });
+    expect(lines).toBe('JCUARSD!Q');
+    const shown = screen(p);
+    expect(shown).toContain('Update (1.1.44)');
+    expect(shown).toContain('Quit');
+    expect(shown).not.toContain('Journey Onward'); // scrolled off the top
+    expect(shown).toContain('\u0018'); // more above
+  });
+
+  it('shows no box for a version told of already, and opens the page from its line', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered(true);
+    // Up twice from Journey Onward: Quit, then Update; chosen.
+    const { p } = await atTitleWith(setup, K.Up, K.Up, Pad.A);
+    expect(p.log).not.toContain('is out');
+    expect(calls).toEqual({ applied: 1, told: 0 });
+  });
+
+  it('fits the menu unscrolled where there is room, the web’s update line saying no version', async () => {
+    const { webUpdates } = await import('../src/ui/updates.ts');
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { p, lines } = await atTitleWith((g) => {
+      g.hooks.update = webUpdates(
+        () => true,
+        () => undefined,
+      );
+      endWhenDone(g);
+    });
+    expect(lines).toBe('JCUARSD!');
+    const shown = screen(p);
+    expect(shown).toContain('Journey Onward');
+    expect(shown).toMatch(/ Update /);
+    expect(shown).not.toContain('\u0018');
+    expect(p.log).not.toContain('is out'); // the web's: no box
   });
 });

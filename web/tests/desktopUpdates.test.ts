@@ -2,7 +2,17 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkForUpdates, isNewer, RELEASES, shouldNotice, updateKind } from '../../desktop/updates.cjs';
+import {
+  applyUpdate,
+  checkForUpdates,
+  currentOffer,
+  isNewer,
+  onOffer,
+  RELEASES,
+  shouldNotice,
+  toldOfUpdate,
+  updateKind,
+} from '../../desktop/updates.cjs';
 
 /** Updates from the GitHub releases (desktop/updates.cjs). */
 describe('the desktop app’s updates', () => {
@@ -41,15 +51,17 @@ describe('the desktop app’s updates', () => {
     expect(shouldNotice('1.1.10', '1.1.10', null)).toBe(false); // up to date
   });
 
-  it('offer the releases page for a newer release, once, and nothing when up to date or GitHub cannot be reached', async () => {
+  it('tell the game of a newer release, its page opened from the game, told of once - nothing up to date or offline', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'u5-updates-'));
-    const was = { platform: process.platform, argv: process.argv };
+    const file = join(dir, 'updates.json');
+    const was = { platform: process.platform };
     Object.defineProperty(process, 'platform', { value: 'darwin' });
     try {
       let latest = 'v1.1.12';
       let reachable = true;
-      const asked: string[] = [];
       const opened: string[] = [];
+      const seen: unknown[] = [];
+      onOffer((o: unknown) => seen.push(o));
       const electron = {
         app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir },
         net: {
@@ -58,31 +70,31 @@ describe('the desktop app’s updates', () => {
             return { ok: true, json: async () => ({ tag_name: latest }) };
           },
         },
-        dialog: {
-          showMessageBox: async (_win: unknown, o: { message: string }) => {
-            asked.push(o.message);
-            return { response: 1 };
-          },
-        },
         shell: { openExternal: async (url: string) => void opened.push(url) },
       };
-      const win = { isDestroyed: () => false };
-      const look = () => checkForUpdates({ electron, win, quiet: false });
+      const look = (quiet = false) => checkForUpdates({ electron, quiet, file });
       await look();
-      expect(asked).toEqual(['Ultima V 1.1.12 is out']);
+      expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.12', current: '1.1.10', told: false });
+      expect(seen).toHaveLength(1);
+      // The game's box shown: told, and kept so; its Open release page.
+      toldOfUpdate({ file });
+      expect(currentOffer()?.told).toBe(true);
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ noticed: '1.1.12' });
+      expect(applyUpdate({ electron })).toBe(true);
       expect(opened).toEqual([RELEASES]);
-      expect(JSON.parse(readFileSync(join(dir, 'updates.json'), 'utf8'))).toEqual({ noticed: '1.1.12' });
-      await look(); // told once
-      expect(asked.length).toBe(1);
+      // Looked again, the same release: told already.
+      await look();
+      expect(currentOffer()?.told).toBe(true);
+      // A newer one since: to be told of.
       latest = 'v1.1.13';
-      await checkForUpdates({ electron, win, quiet: true }); // Game Mode: nothing asked
-      expect(asked.length).toBe(1);
+      await look(true); // Game Mode: no page offered
+      expect(currentOffer()?.version).toBe('1.1.12');
       reachable = false;
       await look(); // offline: only logged
-      expect(asked.length).toBe(1);
+      expect(currentOffer()?.version).toBe('1.1.12');
       reachable = true;
       await look();
-      expect(asked).toEqual(['Ultima V 1.1.12 is out', 'Ultima V 1.1.13 is out']);
+      expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.13', current: '1.1.10', told: false });
     } finally {
       Object.defineProperty(process, 'platform', { value: was.platform });
       rmSync(dir, { recursive: true, force: true });
