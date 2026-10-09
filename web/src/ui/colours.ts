@@ -20,6 +20,7 @@ export const Colour = {
   levelBlue: 0x20 | 9, // a level due (bright blue on the EGA page)
   mana: 0x30 | 13, // a member's mana in the EGA look's line while a spell is chosen (light purple; bright magenta)
   charmed: 0x40 | 13, // a member charmed in a fight, their name (pink; bright magenta on the EGA page)
+  missed: 0x50 | 15, // the turn's marker flashed as a blow or shot misses (a dim white, apart from the dead's grey)
 } as const;
 
 /**
@@ -108,4 +109,4 @@ export function tinted(rgb: number, tint: number): number {
 }
 
 /** The extra colours by their colour number's high bits (0 is none: the EGA's own). */
-export const EXTRA_RGB = [0, 0xb8a0ff, 0x60a0ff, 0xc8a8ff, 0xff6ad5];
+export const EXTRA_RGB = [0, 0xb8a0ff, 0x60a0ff, 0xc8a8ff, 0xff6ad5, 0xbcbcb4];

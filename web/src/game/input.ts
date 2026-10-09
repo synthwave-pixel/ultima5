@@ -453,14 +453,27 @@ function firesHere(g: Game): boolean {
  * other key hands the party back.
  */
 async function autoCombatKey(g: Game): Promise<number> {
-  if (g.options.autoCombat === 'off' || g.s.mapId !== 0xff) return 0;
+  const key = g.options.autoCombat === 'off' || g.s.mapId !== 0xff ? 0 : await autoTurnKey(g);
+  // The turn the player's: "Auto" taken down from the party box's border, the regalia worn named there again.
+  if (key === 0 && g.autoShown) {
+    g.autoShown = false;
+    if (g.s.mapId === 0xff) clearBorderTitle(g);
+  }
+  return key;
+}
+
+/** autoKey, the player's keys told apart for it: one that holds the game (its Pause menu opened here), B, and the rest. */
+async function autoTurnKey(g: Game): Promise<number> {
   const { autoKey } = await import('./autocombat.ts');
   return autoKey(g, async (raw) => {
     const k = asPad(g, raw);
-    if (k !== Pad.Start && k !== Pad.Select && raw !== K.Escape && raw !== LOST_FOCUS) return false;
-    if (!g.inPlay || g.paused) return false;
-    await pauseHere(g);
-    return true;
+    if (k === Pad.Start || k === Pad.Select || raw === K.Escape || raw === LOST_FOCUS) {
+      if (!g.inPlay || g.paused) return 'other';
+      await pauseHere(g);
+      return 'pause';
+    }
+    // B as a controller gives it, or as the keyboard read as one does (Space, X, B); with Classic input, Space.
+    return k === Pad.B || (g.options.input !== 'controller' && raw === 0x20) ? 'back' : 'other';
   });
 }
 

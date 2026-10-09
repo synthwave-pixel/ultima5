@@ -493,7 +493,9 @@ set Input to Classic and type it.
   letters asks for it; off by default, the colour telling.
 - **The turn's marker** in a fight, the outline round the member whose
   turn it is, takes the same colour as their bar in the panel: their
-  state's first, then their hit points' (yellow or red), else white.
+  state's first, then their hit points' (yellow or red), else white. It
+  flashes a dim white for a moment when their blow or shot misses, the
+  attack seen to be made where only the log said so.
 - **Experience** shows on the panel while the command menu's bar rests on
   Ztats: each member's experience over the next level's, thousands as k
   ("1.7k/3.2k"), blue where a level is due, which only camping brings.
@@ -651,9 +653,12 @@ other hurt in the game kills as it always did.
   one pressed in an ally's turn is let go rather than handing the party
   back; once the field is won the allies pass, and the Avatar leaves it
   (Leave combat, Loot and Leave, a room's exit) - or, with the Avatar
-  fallen, asleep or charmed, the allies leave it as All does. In either,
-  Start, Select or Escape opens the Pause menu in the midst of it, where
-  Auto combat can be turned off or changed. One of the party charmed against it is a foe to
+  fallen, asleep or charmed, the allies leave it as All does. While it
+  plays a turn, in either, "Auto" stands on the party box's top border;
+  Start, Select or Escape opens the Pause menu, where Auto combat can be
+  turned off or changed; B twice in quick succession turns it off ("Auto
+  combat off"); and every other button pressed is let go, so none is left
+  over to act in a turn of the player's. One of the party charmed against it is a foe to
   strike with the Classic rules, as in 1988; with the Story or Modern it is
   let alone, auto combat fighting the creatures and waiting while the charm
   wears off - never a blow at the charmed Avatar; but where the one who

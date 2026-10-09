@@ -1540,6 +1540,23 @@ export async function aim(g: Game, i: number, range: number, friend = false): Pr
   return d;
 }
 
+/** How long the turn's marker shows dim as a blow or shot misses (missFlash). */
+const MISS_FLASH_MS = 140;
+
+/**
+ * A miss shown on the one who missed (the port's): in the Standard look, the turn's marker round them flashed a dim
+ * white, the attack seen to be made though it struck nothing - where the log alone said so. The party's side only, as
+ * the marker is theirs.
+ */
+async function missFlash(g: Game, attacker: number): Promise<void> {
+  const d = g.draw;
+  if (g.options.tileSet !== 'standard' || !d.marker || attacker < 0 || attacker > 0x1f || onMonsterSide(g, attacker)) return;
+  const c = g.combat[attacker];
+  d.marker(c.x, c.y, Colour.missed);
+  await g.p.sleep(MISS_FLASH_MS);
+  updateFrame(g);
+}
+
 /** COMSUBS_00d2. */
 function missed(g: Game, i: number): void {
   if (g.s.d588f !== 0)
@@ -1593,6 +1610,7 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number)
   } else if (target > -1) {
     g.printChar('\n');
     missed(g, target);
+    await missFlash(g, i);
   }
   if (weapon === 0x26) await shoot(g, lx, ly, g.combat[i].x, g.combat[i].y, missile);
   if (spent) {
@@ -1615,6 +1633,7 @@ export async function melee(g: Game, i: number, target: number, weapon: number):
     await report(g, target, i);
   } else {
     missed(g, target);
+    await missFlash(g, i);
   }
 }
 

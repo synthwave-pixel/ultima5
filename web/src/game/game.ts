@@ -529,6 +529,10 @@ export class Game {
   autoIdle = 0;
   /** Auto combat (Allies) handed back to the player for the rest of this fight (autocombat.ts handBack). */
   autoHeld = false;
+  /** When a B was last pressed in a turn auto combat played: a second soon after turns it off (autocombat.ts). */
+  autoBackAt = -Infinity;
+  /** Whether "Auto" stands on the party box's top border, auto combat playing the turn (input.ts autoCombatKey). */
+  autoShown = false;
 
   /** Print a DATA.OVL string. */
   say(address: number): void {

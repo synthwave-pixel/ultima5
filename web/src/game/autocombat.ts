@@ -17,6 +17,7 @@
 
 import { actorTileAtRev, treasureLies } from './actors.ts';
 import { arenaFree, autoPlaysTurn, avatarAt, canStrike, combatantAt, distance, keepsLastThrown, onMonsterSide } from './combat.ts';
+import { borderTitle } from './frame.ts';
 import { CF, Game } from './game.ts';
 import { K } from './io.ts';
 import { eased, saveOptions } from './settings.ts';
@@ -100,30 +101,61 @@ function handBack(g: Game): void {
   saveOptions(g.options);
 }
 
+/** How soon after a B in a turn auto combat played a second B turns it off (ms): a double press. */
+const BACK_TWICE_MS = 400;
+
 /**
- * The key auto combat presses now, or 0 to leave it to the player. `pause`, given the key the player pressed meanwhile,
- * opens the Pause menu where it is one that holds the game (Start, Select, Escape: input.ts) and says so: there Auto
- * combat can be changed, and the turn is played - or left to the player - as it then stands.
+ * What a key the player pressed while auto combat plays a turn is (input.ts): one that holds the game (Start, Select,
+ * Escape), its Pause menu already shown; B; or any other, let go.
  */
-export async function autoKey(g: Game, pause?: (key: number) => Promise<boolean>): Promise<number> {
+export type AutoInterrupt = (key: number) => Promise<'pause' | 'back' | 'other'>;
+
+/**
+ * The keys pressed while auto combat plays the turn, each taken now and let go but for two (the port's): one that holds
+ * the game opens the Pause menu, where Auto combat can be changed, the turn then played - or left to the player - as it
+ * stands; and B twice in quick succession turns auto combat off. Whether the player is to take the turn after.
+ */
+async function keysPressed(g: Game, interrupt?: AutoInterrupt): Promise<boolean> {
+  for (let key = g.p.pollKey(); key !== 0; key = g.p.pollKey()) {
+    const what = (await interrupt?.(key)) ?? 'other';
+    if (what === 'pause') {
+      while (g.p.pollKey() !== 0); // what was pressed before it, let go
+      return g.options.autoCombat === 'off' || !autoPlaysTurn(g);
+    }
+    if (what !== 'back') continue;
+    const now = g.p.now?.() ?? 0;
+    if (now - g.autoBackAt < BACK_TWICE_MS) {
+      g.autoBackAt = -Infinity;
+      g.options.autoCombat = 'off';
+      saveOptions(g.options);
+      while (g.p.pollKey() !== 0);
+      if (g.text.win.x !== 0) g.printChar('\n');
+      g.print('Auto combat off\n');
+      return true;
+    }
+    g.autoBackAt = now;
+  }
+  return false;
+}
+
+/**
+ * The key auto combat presses now, or 0 to leave it to the player. `interrupt` says what each key the player pressed
+ * meanwhile is (keysPressed): a key held for the Avatar's own turn, with Allies, is left for it.
+ */
+export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<number> {
   const s = g.s;
   const allies = g.options.autoCombat === 'allies';
   // With Allies the player plays the Avatar, the keys theirs: nothing is taken from them on the Avatar's turn.
   if (allies && (s.combatTurn > 0x1f || !autoPlaysTurn(g))) return 0;
-  const pressed = g.p.pollKey();
-  if (pressed !== 0 && (await pause?.(pressed))) {
-    if (g.options.autoCombat === 'off' || !autoPlaysTurn(g)) return 0;
-  } else if (pressed !== 0 && !allies) {
-    // Any other key, with All, hands the party back; with Allies it is let go, the ally's turn played.
-    g.options.autoCombat = 'off';
-    saveOptions(g.options);
-    return 0;
-  }
+  if (await keysPressed(g, interrupt)) return 0;
   if (s.combatTurn > 0x1f) return 0;
   const me = g.combat[s.combatTurn];
   // The party's own - its members, and the creatures summoned or charmed to its side, whose turns are asked as a
   // member's are (they waited on a press, every one of them, where auto combat played the members).
   if (onMonsterSide(g, s.combatTurn)) return 0;
+  // "Auto" over the party box while the turn is played for the player (taken down as it is theirs: input.ts).
+  borderTitle(g, 'Auto');
+  g.autoShown = true;
   const member = (me.flags & CF.Player) !== 0;
   // One of the party charmed against it: a foe with the Classic rules, as 1988's player had to strike them; with the
   // Modern let alone - the charm wears off (combat.ts shakeCharm), and a blow could kill the Avatar.
