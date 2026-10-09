@@ -15,7 +15,7 @@
 import { freeActor } from '../../src/game/actors.ts';
 import { canEnter } from '../../src/game/actors.ts';
 import { autoKey } from '../../src/game/autocombat.ts';
-import { arenaFight } from '../../src/game/combat.ts';
+import { arenaFight, EF, enemyFlags } from '../../src/game/combat.ts';
 import { roomCell, startRoom } from '../../src/game/devStarts.ts';
 import { CF, type Game } from '../../src/game/game.ts';
 import { K, Pad } from '../../src/game/io.ts';
@@ -76,7 +76,25 @@ function check(g: Game): string[] {
   const standing = new Map<string, number[]>();
   const now = new Set<string>();
   /** Shown or not: an invisible or submerged creature (its actor's anim 0) blocks nobody, in 1988 as here. */
-  const shown = (i: number): string => (s.actors[g.combat[i].actor]?.anim ? '' : ' (unseen)');
+  const unseen = (i: number): boolean => !s.actors[g.combat[i].actor]?.anim;
+  const shown = (i: number): string => (unseen(i) ? ' (unseen)' : '');
+  /**
+   * Whether `i` and `j` may share a square, as 1988 has it (docs/fixing-1988.md, Kept as they were): either unseen
+   * now, or a creature that turns invisible (a ghost) - one walked onto unseen may show again before the next check,
+   * the moves between two keys being many; a corpser and one of the party it dragged under onto its square; two of the
+   * insects of Insect swarm (CAST_07b4), set down four to a square.
+   */
+  const KIND_CORPSER = 0x2d;
+  const KIND_INSECTS = 0x1f;
+  const creature = (i: number): boolean => (g.combat[i].flags & CF.Player) === 0;
+  const ghostly = (i: number): boolean => unseen(i) || (creature(i) && (enemyFlags(g, g.combat[i].who) & EF.Disappear) !== 0);
+  const swallowed = (m: number, c: number): boolean => !creature(m) && creature(c) && g.combat[c].who === KIND_CORPSER;
+  const mayShare = (i: number, j: number): boolean =>
+    ghostly(i) ||
+    ghostly(j) ||
+    swallowed(i, j) ||
+    swallowed(j, i) ||
+    (creature(i) && creature(j) && g.combat[i].who === KIND_INSECTS && g.combat[j].who === KIND_INSECTS);
   for (let i = 0; i < 0x20; i++) {
     const c = g.combat[i];
     const f = c.flags;
@@ -106,7 +124,7 @@ function check(g: Game): string[] {
     for (const j of standing.get(key) ?? []) {
       const pair = `${j}+${i}`;
       const what = (n: number): string => (g.combat[n].flags & CF.Player ? `member ${g.combat[n].who}` : `kind ${g.combat[n].who}`);
-      if (!together.has(pair)) out.push(`${what(j)}${shown(j)} and ${what(i)}${shown(i)} came to stand together`);
+      if (!together.has(pair) && !mayShare(i, j)) out.push(`${what(j)}${shown(j)} and ${what(i)}${shown(i)} came to stand together`);
       now.add(pair);
     }
     standing.set(key, [...(standing.get(key) ?? []), i]);
