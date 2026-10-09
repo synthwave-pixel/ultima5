@@ -1,20 +1,26 @@
-# Builds the browser port in web/ and publishes it to GitHub Pages, on
-# every push to main and when started by hand (Actions > Deploy to GitHub
-# Pages > Run workflow).
+# Builds the browser port in web/ and publishes it to GitHub Pages with
+# each release: the release workflow (desktop.yml) starts it once a
+# release is published, naming the commit released, so the site is the
+# release's game as the apps are. Started by hand (Actions > Deploy to
+# GitHub Pages > Run workflow) it deploys the release branch, or the
+# commit or branch given.
 # The site is served at https://<owner>.github.io/ultima5/, so Vite is told
 # to prefix asset URLs with /ultima5/. The site also serves the newest
 # release's Flatpak as a signed repository under /flatpak/ (see
-# desktop/flatpak-repo.sh); the release workflow starts a deploy after
-# each release so the repository follows it.
+# desktop/flatpak-repo.sh), brought up to the newest release by the
+# deploy that follows each one.
 name: Deploy to GitHub Pages
 
-# Only main publishes (the github-pages environment rejects other
-# branches), and the concurrency group cancels an older run, so a run for
-# any other branch would only cancel a real deploy.
+# The workflow runs on main (the github-pages environment accepts no other
+# branch) and builds the commit asked for: a push to main no longer
+# deploys, so the site changes only with a release.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      source:
+        description: The commit or branch to build and deploy
+        type: string
+        default: release
 
 permissions:
   contents: read
@@ -33,6 +39,8 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source || 'release' }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -64,7 +72,8 @@ jobs:
       # The game's files go before the build, so nothing of them can reach the site.
       - run: find gamedata -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf {} +
         working-directory: ${{ github.workspace }}
-      - run: VITE_BUILD="${GITHUB_SHA::7}" npm run build
+      # The build's mark: the commit built (not main's, where the workflow runs).
+      - run: VITE_BUILD="$(git rev-parse --short=7 HEAD)" npm run build
         env:
           VITE_BASE: /ultima5/
       # The Flatpak repository: the newest release's bundle, imported into a fresh OSTree repository and signed. A

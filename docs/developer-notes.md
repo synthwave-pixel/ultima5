@@ -213,8 +213,9 @@ The workflows in `.github/workflows/`:
 
 | Trigger | What happens |
 |---|---|
-| A push to `main` | Deploys the site to GitHub Pages, and builds the desktop and Android apps as workflow artifacts. |
-| A push to `release` (`git push origin main:release`) | Publishes a release. |
+| A push to `main` | Builds the desktop and Android apps as workflow artifacts. The site is not deployed. |
+| A push to `release` (`git push origin main:release`) | Publishes a release, then deploys that commit to GitHub Pages: the web game changes only with a release. |
+| Deploy to GitHub Pages, run by hand from the Actions tab | Deploys the `release` branch, or the commit or branch given. |
 | Desktop and Android builds, run by hand from the Actions tab | Publishes a release; "Android only" builds just the APK, and turning "publish" off keeps the run's builds as artifacts. |
 
 ## More reading
