@@ -83,12 +83,13 @@ describe('the journal', () => {
       'Dungeons unsealed 1/8',
       'Shards held         1',
       'Shadowlords slain 1/3',
+      'Passwords         0/2',
       'Equipment',
       'Companions',
       `Clues heard ${String(g.notes.length).padStart(9)}`,
     ]);
     expect(top.every((l) => l.label.length <= 21)).toBe(true);
-    expect(top.slice(0, 7).every((l) => l.hint.length > 0)).toBe(true); // every part but the clues, which the Tips cover
+    expect(top.slice(0, 8).every((l) => l.hint.length > 0)).toBe(true); // every part but the clues, which the Tips cover
     const lines = (i: number): string[] => {
       const open = top[i].open;
       return open ? open.lines.map((l) => l.label) : [];
@@ -102,7 +103,7 @@ describe('the journal', () => {
     expect(lines(1)).toEqual(['Compassion   ordained', 'Valour       answered']); // the quests begun and not done
     expect(lines(2)[2]).toBe('Destard      unsealed');
     expect(lines(4)).toEqual(['Falsehood            ', 'Hatred          slain', 'Cowardice            ']);
-    expect(top[7].open?.title).toBe('Clues heard');
+    expect(top[8].open?.title).toBe('Clues heard');
   });
 
   it('names a Shadowlord once its name is heard - on its line until it is slain, and on its card', () => {
@@ -125,6 +126,32 @@ describe('the journal', () => {
     s.shadowlords[0] = 0xff;
     expect(lords()[0].label).toBe('Falsehood       slain');
     expect(lords()[0].about).toBe(`${shown}. Slain.`);
+  });
+
+  it('shows each password on its line once heard, and never before', () => {
+    const { g } = newGame();
+    const lines = (): { label: string; about?: string }[] => journalTop(g)[5].open!.lines;
+    expect(journalTop(g)[5].label).toBe('Passwords         0/2');
+    expect(lines().map((l) => l.label)).toEqual(['Resistance           ', "Blackthorn's         "]);
+    expect(lines()[0].about).toBe('Not yet heard.');
+    // Chamfort's words, as talk.ts learns what is said: the Resistance's password, read from the player's files.
+    const word = 'DAWN';
+    g.words.learn(g, `"The password is ${word}."`);
+    expect(journalTop(g)[5].label).toBe('Passwords         1/2');
+    expect(lines()[0].label).toBe(`Resistance${word.padStart(11)}`);
+    expect(lines()[0].about).toBe(`The password: ${word}.`);
+    expect(lines()[1].about).toBe('Not yet heard.');
+  });
+
+  it('keeps a Shadowlord named without the word Shadowlord as a clue, under the Shadowlords', () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    const lord = g.data.table(0x444a, 3)[1].trim(); // the Shadowlord of Hatred
+    const shown = lord[0] + lord.slice(1).toLowerCase();
+    noteConversation(g, `You see a hermit.\n\n"I once served the mighty ${shown}, but that was long ago."`);
+    expect(g.notes.some((n) => n.text.includes(shown))).toBe(true);
+    const topics = journalTop(g)[8].open!.lines.map((l) => l.label.replace(/\s+/g, ' '));
+    expect(topics).toContain('Shadowlords 1');
   });
 
   it('prints the hint of the line the bar is on when Y is pressed, and leaves the list open', async () => {
@@ -285,7 +312,7 @@ describe("the journal's cards", () => {
     const shot = (): string => p.rows.map((r) => r.join('')).join('\n');
     // Into the shrines (A), a look at the first, down to the second, a look, then back out to the journal's lines, a
     // look, and down to the clues heard (no hint, nothing to say), a look.
-    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(7).fill(K.Down), 'shot', Pad.B];
+    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(8).fill(K.Down), 'shot', Pad.B];
     fly(g, p, [
       () => {
         const k = keys.shift();
@@ -357,8 +384,8 @@ describe("the journal's long hints", () => {
     let read = false;
     const titles: string[] = [];
     fly(g, p, [
-      // The Crown, last of the Equipment, the journal's sixth line.
-      press(K.Down, K.Down, K.Down, K.Down, K.Down, Pad.A, ...Array<number>(12).fill(K.Down), Pad.Y),
+      // The Crown, last of the Equipment, the journal's seventh line.
+      press(K.Down, K.Down, K.Down, K.Down, K.Down, K.Down, Pad.A, ...Array<number>(12).fill(K.Down), Pad.Y),
       () => {
         if (read) return undefined;
         read = true;

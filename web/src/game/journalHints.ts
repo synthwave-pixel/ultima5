@@ -40,6 +40,23 @@ export const SHADOWLORD_HINTS: string[] = [
   "Undone by the Shard of Cowardice at the Flame of Courage, in Serpent's Hold; Lord Malone there knows its name, and Gardner, keeper of the Flame, the way.",
 ];
 
+/**
+ * The passwords: what the journal calls each, who asks for it (whose conversation listens for it, journal.ts
+ * passwords), and who gives it - not the word itself, which shows on its line only once heard.
+ */
+export const PASSWORDS: { label: string; asker: string; hint: string }[] = [
+  {
+    label: 'Resistance',
+    asker: 'Zachariah',
+    hint: "Chamfort, Yew's blacksmith, gives it to one who would aid the Resistance. Its members ask it: Landon, Felespar, Thentis, Thrud and others.",
+  },
+  {
+    label: "Blackthorn's",
+    asker: 'Elistaria',
+    hint: "Flain in Skara Brae gives it. Elistaria at Windemere gives the Black Badge for it, and Blackthorn's guards ask it of one who wears the badge.",
+  },
+];
+
 /** The shards, together. */
 export const SHARD_HINT =
   'The three shards lie deep in the Underworld, down from a dungeon. Its waters are crossed on a magic carpet, and where peaks wall a chamber off, the Blink spell (In Por) crosses them. Sutek, in his hut, tells of the shards.';

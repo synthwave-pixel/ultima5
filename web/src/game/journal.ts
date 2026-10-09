@@ -11,7 +11,8 @@
 
 import { Game, type Note } from './game.ts';
 import { Save } from './save.ts';
-import { DUNGEON_HINTS, EQUIPMENT, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
+import { DUNGEON_HINTS, EQUIPMENT, PASSWORDS, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
+import { scriptAnswers } from './words.ts';
 
 /** What makes a thing said worth noting. */
 const CLUES = [
@@ -41,6 +42,16 @@ const CLUES = [
 ];
 
 const MAX_NOTES = 200;
+
+/**
+ * The Shadowlords' names, from the player's files, upper case: a clue too, and under the Shadowlords' topic, where they
+ * are said without the word Shadowlord ("I once served the mighty Astaroth").
+ */
+const lordNames = (g: Game): string[] =>
+  g.data
+    .table(0x444a, 3)
+    .map((n) => n.trim().toUpperCase())
+    .filter(Boolean);
 
 /** The day as the stats show it. */
 const today = (g: Game): string => `${g.s.month}-${g.s.day}-${g.s.year}`;
@@ -77,7 +88,8 @@ export function noteConversation(g: Game, transcript: string, name = ''): void {
   if (name && new RegExp(`\\b${name.replace(/[^\w' ]/g, '')}\\b`).test(transcript)) who = name;
   for (const answer of answers) {
     const told = answer.filter((p) => !p.startsWith('You see '));
-    if (!told.some((p) => CLUES.some((c) => p.toUpperCase().includes(c)))) continue;
+    const clues = [...CLUES, ...lordNames(g)];
+    if (!told.some((p) => clues.some((c) => p.toUpperCase().includes(c)))) continue;
     for (const p of told) {
       if (g.notes.some((n) => n.text === p)) continue;
       g.notes.push({ who, where, text: p, date: today(g) });
@@ -255,6 +267,38 @@ function knowsOf(g: Game, gate: string): boolean {
   return !!words && g.notes.some((n) => words.test(n.text));
 }
 
+/**
+ * The passwords (PASSWORDS), each as its asker listens for it - the word that is not yes or no in their conversation,
+ * read from the player's files - and whether it has been heard (words.ts). Read once and kept.
+ */
+function passwords(g: Game): { label: string; word: string; known: boolean; hint: string }[] {
+  let words = passwordWords.get(g.data);
+  if (!words) {
+    const scripts = new Map<string, Uint8Array>();
+    for (const name of ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK']) {
+      const file = g.data.files.get(name);
+      if (!file?.length) continue;
+      const count = file[0] | (file[1] << 8);
+      for (let i = 0; i < count; i++) {
+        const at = 2 + i * 4;
+        const script = file.subarray(file[at + 2] | (file[at + 3] << 8), i + 1 < count ? file[at + 6] | (file[at + 7] << 8) : file.length);
+        const end = script.indexOf(0);
+        const who = String.fromCharCode(...script.subarray(0, end < 0 ? 0 : end).map((b) => b & 0x7f))
+          .trim()
+          .toUpperCase();
+        if (!scripts.has(who)) scripts.set(who, script);
+      }
+    }
+    words = PASSWORDS.map((p) => {
+      const script = scripts.get(p.asker.toUpperCase());
+      return (script ? scriptAnswers(script) : []).find((w) => !/^(y|ye|yes|n|no)$/i.test(w))?.toUpperCase() ?? '';
+    });
+    passwordWords.set(g.data, words);
+  }
+  return PASSWORDS.map((p, i) => ({ label: p.label, word: words[i], known: !!words[i] && g.words.knows(words[i]), hint: p.hint }));
+}
+const passwordWords = new WeakMap<Game['data'], string[]>();
+
 /** The companions the roster holds, but for the Avatar and those the party sets out with (INIT.GAM's party). */
 function companionMembers(g: Game): { i: number; name: string }[] {
   const s = g.s;
@@ -353,17 +397,24 @@ export function journalTop(g: Game): JournalLine[] {
   // name only once it has been heard (words.ts): the names are for the player to find, since to be called up at a
   // flame they must be known. The name stands at the right of its line until the Shadowlord is slain, and on its card.
   const aspects = [0x8d18, 0x8d24, 0x8d2e].map((a) => g.t(a).replace(/[!\s]+$/, ''));
-  const lordNames = g.data.table(0x444a, 3).map((n) => (n.trim() && g.words.forStub(n.trim(), true) ? named(n.trim()) : ''));
+  const heardNames = g.data.table(0x444a, 3).map((n) => (n.trim() && g.words.forStub(n.trim(), true) ? named(n.trim()) : ''));
   const shadowlords = [0, 1, 2].map((i) => {
     const slain = s.shadowlords[i] === 0xff;
     const state = slain ? 'Slain.' : s.shards[i] !== 0 ? 'At large. Its shard is held.' : 'At large.';
     return {
-      label: row(aspects[i], slain ? 'slain' : lordNames[i]),
-      about: lordNames[i] ? `${lordNames[i]}. ${state}` : `Its name is not known. ${state}`,
+      label: row(aspects[i], slain ? 'slain' : heardNames[i]),
+      about: heardNames[i] ? `${heardNames[i]}. ${state}` : `Its name is not known. ${state}`,
       hint: SHADOWLORD_HINTS[i],
     };
   });
   const shards = [0, 1, 2].filter((i) => s.shards[i] !== 0).length;
+  // The passwords, each on its line once heard (as a mantra or a Word is on its card), and never before.
+  const known = passwords(g);
+  const passwordLines = known.map((p) => ({
+    label: row(p.label, p.known ? p.word : ''),
+    about: p.known ? `The password: ${p.word}.` : 'Not yet heard.',
+    hint: p.hint,
+  }));
   const none = (what: string): JournalLine[] => [{ label: what, hint: '', enabled: false }];
   return [
     {
@@ -390,6 +441,11 @@ export function journalTop(g: Game): JournalLine[] {
       label: row('Shadowlords slain', `${shadowlords.filter((_, i) => s.shadowlords[i] === 0xff).length}/3`),
       hint: 'Each Shadowlord is undone by its own shard at the Flame of the principle it opposes: stand at the flame, Yell its name, Pass until it steps in, then Use the shard.',
       open: { title: 'Shadowlords', lines: shadowlords },
+    },
+    {
+      label: row('Passwords', `${known.filter((p) => p.known).length}/${known.length}`),
+      hint: "Some doors open only to a password: the Resistance has one, and Blackthorn's order another.",
+      open: { title: 'Passwords', lines: passwordLines },
     },
     {
       label: 'Equipment',
@@ -428,11 +484,12 @@ const asleep = (n: Note): boolean => n.text.startsWith('Asleep. Up and about');
  * The topics of each clue (by TOPICS, or the sleepers'). A paragraph of an answer that names none - kept whole with
  * the paragraph that did (noteConversation) - takes the topics of its neighbour from the same answer.
  */
-function topicsOf(notes: Note[]): string[][] {
+function topicsOf(g: Game, notes: Note[]): string[][] {
+  const lords = lordNames(g);
   const own = notes.map((n) => {
     if (asleep(n)) return [SLEEPERS];
     const u = n.text.toUpperCase();
-    return TOPICS.filter((t) => t.words.some((w) => u.includes(w))).map((t) => t.name);
+    return TOPICS.filter((t) => [...t.words, ...(t.name === 'Shadowlords' ? lords : [])].some((w) => u.includes(w))).map((t) => t.name);
   });
   const same = (a: Note, b: Note | undefined): boolean => !!b && a.who === b.who && a.where === b.where && a.date === b.date;
   return own.map((topics, i) => {
@@ -487,7 +544,7 @@ function clueDone(g: Game, text: string): boolean {
 function clueLines(g: Game): JournalLine[] {
   const notes = g.notes;
   if (notes.length === 0) return [{ label: 'Nothing yet.', hint: '', enabled: false, about: 'Talk to everyone.' }];
-  const topics = topicsOf(notes);
+  const topics = topicsOf(g, notes);
   const out: JournalLine[] = [];
   for (const name of [...TOPICS.map((t) => t.name), SLEEPERS]) {
     const mine = notes

@@ -673,8 +673,9 @@ other hurt in the game kills as it always did.
 - **The journal**, which says "Journal updated" when it takes something
   down: how the quest stands, a line for each part with its count - shrine
   quests done and ordained, dungeons unsealed, shards held, Shadowlords
-  slain, the Equipment (Lord British's Crown, Amulet and Sceptre among
-  it), and the Companions who may join - each opening onto a line for each.
+  slain, the Passwords (the Resistance's and Blackthorn's, each on its
+  line once heard, and never before), the Equipment (Lord British's Crown,
+  Amulet and Sceptre among it), and the Companions who may join - each opening onto a line for each.
   The quest's own things - the Crown, Amulet and Sceptre, the magic carpet,
   skull keys and Black Badge - are each "Mystery...?" until someone speaks
   of it or the party holds it, and a companion the party has not met goes
@@ -694,7 +695,8 @@ other hurt in the game kills as it always did.
   the way to Doom), in a reader of its own. And the clues townsfolk gave,
   kept with the saved game: each answer that names a quest thing (a
   mantra, a Word of Power, a shard, a Shadowlord, the regalia...) kept
-  whole, once, with who said it, where and when - at most 200, the oldest
+  whole, once, with who said it, where and when (a Shadowlord's name a clue
+  too, said without the word Shadowlord) - at most 200, the oldest
   giving way - and read by topic: Mantras, Words of Power, Shadowlords,
   Shards, Lord British, the Codex, the Resistance, the Underworld and
   Doom, Other, and when sleepers are up, each with its count and a page of
