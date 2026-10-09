@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . ../desktop/*.cjs ../mobile/*.cjs",
+    "saves": "node --import ./tools/node-ts.mjs tools/saves/showcase.ts",
     "tiles": "node --import ./tools/node-ts.mjs tools/art/build.ts",
     "pictures": "node --import ./tools/node-ts.mjs tools/art/picture-sheet.ts",
     "runes": "node --import ./tools/node-ts.mjs tools/art/runes.ts",

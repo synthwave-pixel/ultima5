@@ -133,6 +133,7 @@ Run in `web/` unless the path says otherwise.
 | `npm run runes` | Makes the runes sheet. |
 | `npm run apple2 -- <disk>` | Reads the Apple ][ tiles off the Apple II version's Program disk (disk 1 of 8: a `.dsk`, `.po` or its `.zip`). |
 | `npm run music` | Renders the soundtracks (`web/tools/music/`). |
+| `npm run saves` | Writes the showcase saves to `screenshots/saves/`: a dozen exported games at the game's interesting places (Britain, the harpsichord, a shrine, the carpet, a frigate, Deceit, the Underworld, Blackthorn's palace, Doom...), each with a party of the level and gear for it. Import them from Settings; they all share one Avatar, Showcase, so each replaces the last. The places and parties are listed in `web/tools/saves/showcase.ts`. |
 | `node tools/icons.mjs` | Redraws the icons. |
 | `node tools/key-art.mjs` | Draws the key art from the box's painting: Steam's library artwork, the boot screen, the README's banner, and each at its native size in `art/`. |
 | `node tools/promo.mjs` | Puts together the README's sheets of screenshots (`promo/`) from the dev server's screenshots in `screenshots/` (the script lists the scenes). |
