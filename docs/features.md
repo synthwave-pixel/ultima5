@@ -651,7 +651,9 @@ other hurt in the game kills as it always did.
   one pressed in an ally's turn is let go rather than handing the party
   back; once the field is won the allies pass, and the Avatar leaves it
   (Leave combat, Loot and Leave, a room's exit) - or, with the Avatar
-  fallen, asleep or charmed, the allies leave it as All does. One of the party charmed against it is a foe to
+  fallen, asleep or charmed, the allies leave it as All does. In either,
+  Start, Select or Escape opens the Pause menu in the midst of it, where
+  Auto combat can be turned off or changed. One of the party charmed against it is a foe to
   strike with the Classic rules, as in 1988; with the Story or Modern it is
   let alone, auto combat fighting the creatures and waiting while the charm
   wears off - never a blow at the charmed Avatar; but where the one who

@@ -100,13 +100,21 @@ function handBack(g: Game): void {
   saveOptions(g.options);
 }
 
-/** The key auto combat presses now, or 0 to leave it to the player. */
-export async function autoKey(g: Game): Promise<number> {
+/**
+ * The key auto combat presses now, or 0 to leave it to the player. `pause`, given the key the player pressed meanwhile,
+ * opens the Pause menu where it is one that holds the game (Start, Select, Escape: input.ts) and says so: there Auto
+ * combat can be changed, and the turn is played - or left to the player - as it then stands.
+ */
+export async function autoKey(g: Game, pause?: (key: number) => Promise<boolean>): Promise<number> {
   const s = g.s;
   const allies = g.options.autoCombat === 'allies';
   // With Allies the player plays the Avatar, the keys theirs: nothing is taken from them on the Avatar's turn.
   if (allies && (s.combatTurn > 0x1f || !autoPlaysTurn(g))) return 0;
-  if (g.p.pollKey() !== 0 && !allies) {
+  const pressed = g.p.pollKey();
+  if (pressed !== 0 && (await pause?.(pressed))) {
+    if (g.options.autoCombat === 'off' || !autoPlaysTurn(g)) return 0;
+  } else if (pressed !== 0 && !allies) {
+    // Any other key, with All, hands the party back; with Allies it is let go, the ally's turn played.
     g.options.autoCombat = 'off';
     saveOptions(g.options);
     return 0;

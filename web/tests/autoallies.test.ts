@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { autoKey } from '../src/game/autocombat.ts';
 import { autoPlaysTurn, charm } from '../src/game/combat.ts';
 import { CF } from '../src/game/game.ts';
-import { K } from '../src/game/io.ts';
+import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { normaliseOptions } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
@@ -70,6 +70,57 @@ describe('auto combat: Allies', () => {
     expect(g.options.autoCombat).toBe('allies');
     expect(autoPlaysTurn(g)).toBe(false);
     expect(await autoKey(g)).toBe(0);
+  });
+});
+
+/** Pause in the midst of auto combat (input.ts autoCombatKey): the Pause menu, where Auto combat is changed. */
+describe('auto combat and the Pause menu', () => {
+  const fight = (mode: 'allies' | 'all') => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    const s = g.s;
+    s.mapId = 0xff;
+    Object.assign(g.options, { autoCombat: mode, rules: 'modern' });
+    g.commandPrompt = 'combat';
+    for (const c of g.combat) c.flags = 0;
+    Object.assign(g.combat[0], { who: 0, x: 3, y: 5, flags: CF.Player | CF.Dead, actor: 1 }); // the Avatar fallen
+    Object.assign(g.combat[1], { who: 1, x: 6, y: 5, flags: CF.Player, actor: 2 });
+    Object.assign(g.combat[6], { who: 0x14, x: 7, y: 5, flags: CF.Monster, hp: 10, actor: 3 });
+    Object.assign(s, { combatTurn: 1, crosshair: 0, weapon: 0, battleWon: 0, combatFlags: 0 });
+    return { g, p };
+  };
+  /** The Pause menu, as input.ts opens it for Start: what is chosen there, set. */
+  const pauseTo = (g: ReturnType<typeof fight>['g'], to: 'off' | 'allies' | 'all') => async (key: number) => {
+    if (key !== Pad.Start) return false;
+    g.options.autoCombat = to;
+    return true;
+  };
+
+  for (const mode of ['allies', 'all'] as const) {
+    it(`opens it in an ally's turn with ${mode}, the Avatar fallen: turned off there, the turn is the player's`, async () => {
+      const { g, p } = fight(mode);
+      p.keys.push(Pad.Start);
+      expect(await autoKey(g, pauseTo(g, 'off'))).toBe(0);
+      expect(g.options.autoCombat).toBe('off');
+    });
+
+    it(`opens it in an ally's turn with ${mode}: left as it was, the turn is played`, async () => {
+      const { g, p } = fight(mode);
+      p.keys.push(Pad.Start);
+      expect(await autoKey(g, pauseTo(g, mode))).toBe(0x41);
+      expect(g.options.autoCombat).toBe(mode);
+    });
+  }
+
+  it('hands the party back at any other key with All, and lets it go with Allies', async () => {
+    const all = fight('all');
+    all.p.keys.push(K.Up);
+    expect(await autoKey(all.g, pauseTo(all.g, 'all'))).toBe(0);
+    expect(all.g.options.autoCombat).toBe('off');
+    const allies = fight('allies');
+    allies.p.keys.push(K.Up);
+    expect(await autoKey(allies.g, pauseTo(allies.g, 'allies'))).toBe(0x41);
+    expect(allies.g.options.autoCombat).toBe('allies');
   });
 });
 

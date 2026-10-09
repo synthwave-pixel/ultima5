@@ -447,11 +447,21 @@ function firesHere(g: Game): boolean {
   ].some(([x, y]) => (g.view[y * 32 + x] & 0xfc) === 0xb4);
 }
 
-/** Auto combat plays a member's turn (autocombat.ts); a real key press stops it. */
+/**
+ * Auto combat plays a turn (autocombat.ts). A key that holds the game - Start, Select, Escape, the window losing focus -
+ * opens the Pause menu in the midst of it, where Auto combat can be turned off or changed, in either mode; with All any
+ * other key hands the party back.
+ */
 async function autoCombatKey(g: Game): Promise<number> {
   if (g.options.autoCombat === 'off' || g.s.mapId !== 0xff) return 0;
   const { autoKey } = await import('./autocombat.ts');
-  return autoKey(g);
+  return autoKey(g, async (raw) => {
+    const k = asPad(g, raw);
+    if (k !== Pad.Start && k !== Pad.Select && raw !== K.Escape && raw !== LOST_FOCUS) return false;
+    if (!g.inPlay || g.paused) return false;
+    await pauseHere(g);
+    return true;
+  });
 }
 
 /**
