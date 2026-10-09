@@ -1408,8 +1408,8 @@ export async function commandMenu(g: Game): Promise<number> {
 const AUTO_COMBAT_NAMES: Record<AutoCombat, string> = { off: 'Off', allies: 'Allies', all: 'All' };
 const AUTO_COMBAT_NOTES: Record<AutoCombat, string> = {
   off: 'Off: you play every turn of the party.',
-  allies: 'Allies: you play the Avatar, the game plays the rest of the party, summoned and charmed creatures too.',
-  all: 'All: the game plays the whole party until a key is pressed.',
+  allies: 'Allies: Play the Avatar only. Press Pass twice to cancel.',
+  all: 'All: Game plays everyone. Press Pass twice to cancel.',
 };
 
 /**

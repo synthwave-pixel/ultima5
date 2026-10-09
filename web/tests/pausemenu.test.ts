@@ -91,6 +91,32 @@ describe('the Pause menu', () => {
     expect(g.awaitingCommand).toBe(false);
   });
 
+  it("says what each of Auto combat's choices does at the list's foot, whole", async () => {
+    const notes = {
+      off: 'Off: you play every turn of the party.',
+      allies: 'Allies: Play the Avatar only. Press Pass twice to cancel.',
+      all: 'All: Game plays everyone. Press Pass twice to cancel.',
+    } as const;
+    for (const mode of ['off', 'allies', 'all'] as const) {
+      const { g, p } = newGame();
+      journeyOnward(g);
+      g.options.input = 'controller';
+      g.options.autoCombat = mode;
+      let foot = '';
+      p.next = () => {
+        const m = g.menuShown!;
+        if (m.at !== 1) return K.Down; // the bar on Auto combat
+        foot = p.rows
+          .slice(14, 24)
+          .map((r) => r.slice(0, 24).join('').trim())
+          .join(' ');
+        return Pad.B;
+      };
+      await pauseMenu(g);
+      expect(foot.replace(/\s+/g, ' '), mode).toContain(notes[mode]);
+    }
+  });
+
   it('holds Auto combat, turned on and off in place; the command menu no longer offers it, Pass, Pause or saving', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';

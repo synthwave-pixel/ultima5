@@ -82,12 +82,14 @@ const PICTURE: Page = {
     d.fill(x0 + 74, top + 36, x0 + 81, top + 38);
     d.fill(x0 + 88, top + 36, x0 + 95, top + 38);
     // Each face button a black key, its letter in its colour, its corners rounded off - after the letter, which paints
-    // its whole cell.
+    // its whole cell. Not in the Standard look: its lettering is held to the cell's pixels as drawn (framebuffer.ts
+    // lettersShown), and a corner changed after lets the letter go - the keys were left blank.
     for (const [letter, colour, x, y] of FACE) {
       const [bx, by] = [x0 + x * 8, y0 + y * 8];
       d.pen = Colour.black;
       d.fill(bx, by, bx + 7, by + 7);
       put(x, y, letter, colour);
+      if (g.options.tileSet === 'standard') continue;
       d.pen = Colour.darkGray;
       for (const [cx, cy] of [
         [bx, by],
@@ -106,12 +108,14 @@ const PICTURE: Page = {
       [14, 'Y', ': Cast / Hint /'],
       [16, 'X', ': Attack'],
       [17, 'B', ': Back / Pass Turn'],
-      [18, 'A', ': Open / Activate'],
+      [19, 'A', ': Open / Activate'],
     ] as const) {
       put(0, y, letter, colourOf(letter));
       put(1, y, does);
     }
     put(3, 15, 'Center Map');
+    // B twice, while auto combat plays a turn, turns it off (autocombat.ts): a column in from Center Map, to fit.
+    put(2, 18, 'x2 Cancel Auto Mode');
   },
 };
 

@@ -139,6 +139,7 @@ describe("the Help's controller", () => {
       'X: Attack',
       'Y: Cast / Hint /',
       'Center Map',
+      'x2 Cancel Auto Mode',
       'Start / Select: Pause',
     ])
       expect(text).toContain(line);
