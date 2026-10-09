@@ -82,6 +82,18 @@ describe('the sound holds', () => {
     expect(musicHeld()).toBe(false);
   });
 
+  it("pauses the music under the harpsichord's keyboard, through a pause menu opened over it", async () => {
+    const { s } = await sound();
+    const musicHeld = (): boolean => (s as unknown as { player: { held: boolean } }).player.held;
+    s.setHeld('harpsichord', true);
+    expect(musicHeld()).toBe(true);
+    s.setHeld('menu', true);
+    s.setHeld('menu', false);
+    expect(musicHeld()).toBe(true);
+    s.setHeld('harpsichord', false);
+    expect(musicHeld()).toBe(false);
+  });
+
   it('lets the music be heard over a menu where it is asked for (the Music level line), and holds it again', async () => {
     const { s, ctx } = await sound();
     const musicHeld = (): boolean => (s as unknown as { player: { held: boolean } }).player.held;

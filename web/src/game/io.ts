@@ -372,8 +372,11 @@ export interface Sound {
   hearMusic?(on: boolean): void;
 }
 
-/** What holds the sound: the page is away, the pause menu is up, or a list of settings (Settings, at the title too). */
-export type Hold = 'focus' | 'menu' | 'settings';
+/**
+ * What holds the sound: the page is away, the pause menu is up, a list of settings (Settings, at the title too), or the
+ * harpsichord's keyboard (its notes heard alone).
+ */
+export type Hold = 'focus' | 'menu' | 'settings' | 'harpsichord';
 
 export interface Platform {
   text: Text;

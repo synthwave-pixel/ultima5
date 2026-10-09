@@ -130,6 +130,8 @@ export async function playHarpsichord(g: Game): Promise<number> {
   };
   let view = frame();
   let opened = false;
+  // The music paused while the keyboard is up, its notes heard alone; on again (where it is on) when it closes.
+  g.sound.setHeld('harpsichord', true);
   try {
     for (;;) {
       view = { ...view, dot: hintKey(g), pops: view.pops.filter((p) => now() - p.t < 1000) };
@@ -154,6 +156,7 @@ export async function playHarpsichord(g: Game): Promise<number> {
       }
     }
   } finally {
+    g.sound.setHeld('harpsichord', false);
     g.draw.harpsichord?.(null);
     await restoreView(g);
   }

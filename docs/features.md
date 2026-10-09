@@ -287,7 +287,8 @@ describes how the Modern look is drawn.
 - **A harpsichord has a keyboard.** Play (beside one, on any side) or
   walking into it opens nine keys in a box over the map: left and right
   move along them, A plays the key, B gets up, and the number keys 1-9
-  play their keys too. Each note's number rises from its key and fades.
+  play their keys too. Each note's number rises from its key and fades;
+  the music pauses while the keyboard is up.
   Played through in Lord British's chamber, the tune closes the keyboard
   and the wall gives way. In 1988 the tune was printed in the Book of
   Lore; here, once Lord Kenneth of Greyhaven's lesson is in the journal,

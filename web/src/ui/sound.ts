@@ -469,7 +469,7 @@ export class PcSound implements Sound {
     this.musicAgain();
   }
 
-  /** What is holding the sound: the page is away, the pause menu or a list of settings is up. */
+  /** What is holding the sound: the page is away, the pause menu, a list of settings or the harpsichord is up. */
   private readonly holds = new Set<Hold>();
   /** The music heard over a menu's hold: the bar on the Music or Music level line (hearMusic). */
   private hearing = false;
@@ -499,6 +499,6 @@ export class PcSound implements Sound {
 
   /** The music paused while a menu holds it, but where it is to be heard. */
   private holdMusic(): void {
-    this.player.hold((this.holds.has('menu') || this.holds.has('settings')) && !this.hearing);
+    this.player.hold((this.holds.has('menu') || this.holds.has('settings') || this.holds.has('harpsichord')) && !this.hearing);
   }
 }

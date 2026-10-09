@@ -93,6 +93,27 @@ describe('the harpsichord', () => {
     expect(again.shown[0]?.dot).toBe(-1);
   });
 
+  it('holds the music while the keyboard is up, and lets it go when it closes', async () => {
+    const { g, p, shown } = await study(16, 18);
+    const holds: [string, boolean][] = [];
+    g.sound.setHeld = (reason, held) => void holds.push([reason, held]);
+    let heldWhileOpen = false;
+    await keys(g, p, [
+      K.Right,
+      () => {
+        if (!shown.length) return K.Right;
+        heldWhileOpen = holds.at(-1)?.[1] === true;
+        return undefined;
+      },
+      Pad.B,
+    ]);
+    expect(heldWhileOpen).toBe(true);
+    expect(holds).toEqual([
+      ['harpsichord', true],
+      ['harpsichord', false],
+    ]);
+  });
+
   it('has no dot once the way is open', async () => {
     const { g, p, shown } = await study(16, 18);
     lesson(g);
