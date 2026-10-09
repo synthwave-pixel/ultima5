@@ -45,3 +45,22 @@ describe('the look changed mid-game', () => {
     expect(log()).toContain('Logged line');
   });
 });
+
+describe('the look changed in a dungeon', () => {
+  it("draws the map's top border's words again (the level's L), its blank cells left alone", async () => {
+    const { relayout } = await import('../src/game/layout.ts');
+    const { g, p } = newGame();
+    journeyOnward(g);
+    g.text.select(0);
+    g.text.moveTo(11, 0);
+    g.print('L1');
+    const top = (): string => p.rows[0].slice(0, 24).join('');
+    expect(top()).toContain('L1');
+    p.rows[0].fill(' '); // the letters let go, as the screen does on a change of look
+    p.rows[0][3] = '#'; // the border's own, where the record is blank: not painted over
+    g.options.tileSet = 'original';
+    await relayout(g);
+    expect(top()).toContain('L1');
+    expect(p.rows[0][3]).toBe('#');
+  });
+});

@@ -75,6 +75,9 @@ export async function relayout(g: Game): Promise<void> {
   // The log below, drawn again as it reads: the screen let go of the lettering it drew in the other look, the 1988
   // look's prompts - border glyphs, kept as pixels - left alone beside nothing.
   t.repaint(COVER.c1, COVER.r2 + 1, COVER.c2, 24);
+  // And the map's top border's words (a dungeon's "L" of its level, which only its number is drawn again of), the
+  // border's own chrome left as it is.
+  t.repaint(0, 0, 0x17, 0, true);
   log.y = Math.max(0, cursor - log.top);
   // The bottom border's band, cleared of the other look's line, then its own.
   const d = g.draw;

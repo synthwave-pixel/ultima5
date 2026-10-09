@@ -446,18 +446,20 @@ export class Text {
 
   /**
    * Cells (c1, r1)-(c2, r2) drawn again as the record reads, but for any under the cover: a change of look, after which
-   * the screen has let go of the lettering it drew (layout.ts relayout).
+   * the screen has let go of the lettering it drew (layout.ts relayout). `inked`: only the cells with a character,
+   * those without left as they are - a border, whose chrome a blank cell's colour would paint over.
    */
-  repaint(c1: number, r1: number, c2: number, r2: number): void {
-    this.redraw(c1, r1, c2, r2);
+  repaint(c1: number, r1: number, c2: number, r2: number, inked = false): void {
+    this.redraw(c1, r1, c2, r2, inked);
   }
 
-  /** Draw cells (c1, r1)-(c2, r2) again from the record, but for any under the cover. */
-  private redraw(c1: number, r1: number, c2: number, r2: number): void {
+  /** Draw cells (c1, r1)-(c2, r2) again from the record, but for any under the cover (and, `inked`, any blank). */
+  private redraw(c1: number, r1: number, c2: number, r2: number, inked = false): void {
     for (let r = r1; r <= r2; r++)
       for (let c = c1; c <= c2; c++) {
         if (this.hidden(r, c)) continue;
         const cell = this.cells[r][c];
+        if (cell.font < 0 && inked) continue;
         if (cell.font < 0) this.out.clearCells(c, r, c, r, cell.bg);
         else if (cell.cap && this.out.cap) this.out.cap(cell.cap, c, r, cell.fg, cell.bg);
         else this.out.glyph(cell.font, cell.ch.charCodeAt(0), c, r, cell.fg, cell.bg, cell.underline, true);
