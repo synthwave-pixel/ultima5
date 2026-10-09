@@ -44,6 +44,25 @@ export const Pad = { A: 0x100, B: 0x101, X: 0x102, Y: 0x103, Start: 0x104, Selec
 /** The Pause menu's Save game, as a command: saved there and then, without 1988's Quit prompt (storage.ts saveCommand). */
 export const SAVE_NOW = 0x109;
 
+/** Play the harpsichord, as a command: its keyboard (harpsichord.ts), from Play or a walk into it (apart from menu.ts's own 0x104-0x10c). */
+export const HARPSICHORD = 0x106;
+
+/**
+ * The harpsichord's keyboard as the screen draws it over the view (Draw.harpsichord, harpsichord.ts): in the box at
+ * (x, y, w, h) in EGA pixels, nine keys, the bar on `at`, a gold dot on `dot` (-1 none), the key last `pressed` (when,
+ * by Platform.now) and the numbers rising from those played (`pops`).
+ */
+export interface HarpView {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  at: number;
+  dot: number;
+  pressed: { key: number; t: number } | null;
+  pops: { key: number; t: number }[];
+}
+
 /**
  * Not a key: the window lost focus, or the page was hidden (another app in front, the Android app sent to the
  * background), while the game waited for a command. The command prompt opens the Pause menu for it (the ultima3
@@ -162,6 +181,8 @@ export interface Draw {
    * in colour number `colour` (their state's or hit points', as their bar in the party panel).
    */
   marker?(x: number, y: number, colour: number): void;
+  /** The harpsichord's keyboard over the view (HarpView), or null to take it away. */
+  harpsichord?(view: HarpView | null): void;
   /**
    * The Standard look's marks at viewport cell (x, y), four triangles round the square (Mark): a weapon's aim red
    * fading to dark orange and back each second, a spell's dark purple and dark blue, a member a spell is for green

@@ -279,11 +279,21 @@ describes how the Modern look is drawn.
   the bar is on it (how many held, a lot's size and price under that,
   then what it is for); a number dialled in a box, up and down by one
   and left and right by ten; up or down a ladder; the spells that are
-  mixed; the notes of a harpsichord; a Mix line under the reagents.
+  mixed; a Mix line under the reagents.
   Talk, Open and Pick lock from the menu ask no way where only one side
   of the party has someone or something to act on.
   "Which way?" and "Aim" stand on the border while a direction or the
   crosshair is wanted.
+- **A harpsichord has a keyboard.** Play (beside one, on any side) or
+  walking into it opens nine keys in a box over the map: left and right
+  move along them, A plays the key, B gets up, and the number keys 1-9
+  play their keys too. Each note's number rises from its key and fades.
+  Played through in Lord British's chamber, the tune closes the keyboard
+  and the wall gives way. In 1988 the tune was printed in the Book of
+  Lore; here, once Lord Kenneth of Greyhaven's lesson is in the journal,
+  a gold dot marks the tune's next key at Lord British's harpsichord,
+  until the way is open or the Sandalwood Box is had. Seated at a
+  harpsichord, the number keys still play notes, as in 1988.
 - **Each button means one thing everywhere.** A (or Tab) opens a command
   menu with what is at hand first, and chooses; B passes or backs out -
   the answer "none" to any question - and a command backed out of spends

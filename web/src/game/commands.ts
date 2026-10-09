@@ -9,7 +9,7 @@
 
 import { drawVitals } from './frame.ts';
 import { Game } from './game.ts';
-import { K, SAVE_NOW } from './io.ts';
+import { HARPSICHORD, K, SAVE_NOW } from './io.ts';
 import { attackOutdoors, enterCommand } from './outdoors.ts';
 import { Status } from './save.ts';
 import { talkCommand } from './talk.ts';
@@ -126,6 +126,11 @@ async function command(g: Game, key: number): Promise<number> {
       return pushCommand(g);
     case 0x51: // Quit (and save)
       return saveCommand(g);
+    case HARPSICHORD: {
+      // Play, or a walk into the harpsichord: its keyboard (harpsichord.ts).
+      const { playHarpsichord } = await import('./harpsichord.ts');
+      return playHarpsichord(g);
+    }
     case SAVE_NOW: // the Pause menu's Save game
       return saveCommand(g, true);
     case 0x52: // Ready

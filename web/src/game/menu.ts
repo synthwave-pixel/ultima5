@@ -14,8 +14,9 @@ import { foesAbout } from './bumpAct.ts';
 import { clearBorderTitle, drawVitals, updateFrame, Win } from './frame.ts';
 import { drawTextCard } from './shopCard.ts';
 import { CF, Game } from './game.ts';
-import { menuKey, PAUSED, queueKeys } from './input.ts';
-import { K, Pad, SAVE_NOW } from './io.ts';
+import { menuKey, PAUSED } from './input.ts';
+import { besideHarpsichord } from './harpsichord.ts';
+import { HARPSICHORD, K, Pad, SAVE_NOW } from './io.ts';
 import { somethingBeside } from './items.ts';
 import { itemCounts, nextHeld } from './zstats.ts';
 import { holdFullPanel } from './layout.ts';
@@ -1048,8 +1049,8 @@ export function contextual(g: Game): Item[] {
   const s = g.s;
   const out: Item[] = [];
   const where = g.commandPrompt;
-  // Seated at a harpsichord (town.ts numberKey): its notes are the number keys, which a controller has not.
-  if (where === 'town' && g.view[6 * 32 + 5] === 0x8d) out.push({ label: 'Play', key: 0x100 + 6 });
+  // Beside a harpsichord, on any side: its keyboard (harpsichord.ts), the notes a controller has no number keys for.
+  if (where === 'town' && besideHarpsichord(g)) out.push({ label: 'Play', key: HARPSICHORD });
   const near = around(g);
   const foeNear = (): boolean =>
     near
@@ -1321,23 +1322,6 @@ export async function commandMenu(g: Game): Promise<number> {
       await g.hooks.showMap?.(g.s.level === 0xff);
       await restoreView(g);
       return 0;
-    case 0x106: {
-      // The harpsichord: notes chosen one after another until B, then played as the keys they are.
-      const notes: number[] = [];
-      for (;;) {
-        const at = await choose(
-          g,
-          `Notes ${notes.map((n) => String.fromCharCode(n)).join('')}`.slice(-WIDTH),
-          Array.from({ length: 9 }, (_, n) => ({ label: String(n + 1) })),
-          notes.length ? notes[notes.length - 1] - 0x31 : 0,
-        );
-        if (at < 0) break;
-        notes.push(0x31 + at);
-      }
-      await restoreView(g);
-      queueKeys(...notes);
-      return 0;
-    }
     case WAIT: {
       const { waitInTown } = await import('./cmds.ts');
       await waitInTown(g);

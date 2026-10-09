@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { K, Pad } from '../src/game/io.ts';
+import { K, Pad, type HarpView } from '../src/game/io.ts';
 import { runGame, journeyOnward } from '../src/game/run.ts';
 import { fighter, newGame } from './helpers.ts';
 import { command, fly, Landed, pick, press, until, type Step } from './pilot.ts';
@@ -515,7 +515,7 @@ describe('a controller plays', () => {
     expect(menus).toBe(0);
   });
 
-  it("plays the tune at Lord British's harpsichord, note by note from a menu", async () => {
+  it("plays the tune at Lord British's harpsichord, key by key along its keyboard", async () => {
     const { g, p } = newGame();
     journeyOnward(g);
     const s = g.s;
@@ -531,25 +531,31 @@ describe('a controller plays', () => {
     Object.assign(s, { x: at % 32, y: Math.floor(at / 32) - 1 });
     const wall = g.map[0xd * 32 + 0x11];
     const tune = [...g.data.bytes(0x275a, 0xd)];
-    fly(g, p, [command('Play'), playing(tune), press(Pad.B), (game) => (game.commandPrompt === '' ? Pad.B : undefined)]);
+    const shown: (HarpView | null)[] = [];
+    g.draw.harpsichord = (v) => shown.push(v);
+    // Played through, the keyboard closes of itself: no B to leave it.
+    fly(g, p, [command('Play'), playing(tune, shown), (game) => (game.commandPrompt === '' ? Pad.B : undefined)]);
     await play(g);
     expect(g.map[0xd * 32 + 0x11]).not.toBe(wall);
+    expect(shown.at(-1)).toBeNull();
+    // Kenneth's lesson unheard: no gold dot.
+    expect(shown.every((v) => v === null || v.dot === -1)).toBe(true);
   });
 });
 
-/** Choose each note of a tune from the harpsichord's menu, whatever its title has grown to. */
-function playing(tune: number[]): Step {
+/** Play each note of a tune along the harpsichord's keyboard: the bar moved to its key, then A. */
+function playing(tune: number[], shown: (HarpView | null)[]): Step {
   let i = 0;
   return (g) => {
     if (i >= tune.length) return undefined;
-    const m = g.menuShown;
-    if (!m || !m.title.startsWith('Notes')) throw new Error(`expected the notes, found ${m?.title ?? 'no menu'}`);
+    const v = shown.at(-1);
+    if (!v) throw new Error(`expected the keyboard, found ${JSON.stringify(g.said)}`);
     const want = tune[i] - 1;
-    if (m.at === want) {
+    if (v.at === want) {
       i++;
       return Pad.A;
     }
-    return m.at < want ? K.Down : K.Up;
+    return v.at < want ? K.Right : K.Left;
   };
 }
 

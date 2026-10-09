@@ -14,7 +14,8 @@ import { commandPrompt, drawVitals, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
 import { bumpCommand, jimmyWho } from './bumpAct.ts';
 import { bumpInto, getCharYN, getCommandKey, selectDirection } from './input.ts';
-import { K } from './io.ts';
+import { HARPSICHORD, K } from './io.ts';
+import { HARPSICHORD_TILE, openTheWay, strike } from './harpsichord.ts';
 import { moongateTravel } from './moongate.ts';
 import { loadNpcs, moveNpcs, placeNpcs, putNpc, scheduleSlot } from './npc.ts';
 import { Status } from './save.ts';
@@ -26,7 +27,6 @@ import { T } from './tiles.ts';
 import { buildLightMap, setTownTile, tileAt, tileCell, setTileAt } from './world.ts';
 import { drawMoons, drawMapName, setWind } from './frame.ts';
 import { shrine } from './shrine.ts';
-import { shakeScreen } from './effects.ts';
 import { cue } from './cues.ts';
 
 const decrease = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -272,7 +272,9 @@ function bump(g: Game, other: number, ahead: number, dir: number, dx: number, dy
   const beyond = actorTileAt(g, s.x + dx * 2, s.y + dy * 2, s.level);
   // The Crown where it lies (an actor of the place, as the shards are outdoors) is picked up, not attacked.
   const field = other >= 0xe8 && other <= 0xef;
-  if ((other & 0xfc) === 0xb4) bumpInto(g, 0x47, dir);
+  // The harpsichord, walked into from any side: its keyboard (harpsichord.ts).
+  if (other === 0 && ahead === HARPSICHORD_TILE) bumpInto(g, HARPSICHORD, dir);
+  else if ((other & 0xfc) === 0xb4) bumpInto(g, 0x47, dir);
   else if (other >= 0x80 && other !== 0xfc && !field && !someone) bumpInto(g, 0x41, dir);
   else if (other >= 0x80 && someone) bumpInto(g, 0x54, dir);
   else if (other === 0 && beyond >= 0x40 && beyond < 0x80 && counter(g, s.x + dx, s.y + dy)) bumpInto(g, 0x54, dir);
@@ -597,35 +599,10 @@ async function readCommand(g: Game, prompt: boolean): Promise<number> {
   return key;
 }
 
-/** Harpsichord state (D_2767): how far into the tune that opens the way in Lord British's castle. */
-let tuneAt = 0;
-
-/** TOWN_0e34: a number key: a note at the harpsichord, else Set Active Player. */
+/** TOWN_0e34: a number key: a note at the harpsichord (harpsichord.ts), seated at it as 1988 has it, else Set Active Player. */
 async function numberKey(g: Game, key: number): Promise<number> {
-  const s = g.s;
-  if (g.view[6 * 32 + 5] !== 0x8d) return setActivePlayer(g, key);
-  const note = key - 0x30;
-  if (!g.soundOff) void g.sound.pulse(g.data.words(0x2746, 10)[note], 1, 4000, 20000, -4);
-  const tune = g.data.bytes(0x275a, 0xd);
-  if (tune[tuneAt] === note) {
-    tuneAt++;
-    if (tuneAt === 0xd) {
-      tuneAt = 0;
-      if (s.mapId === 0x11 && s.level === 2) {
-        g.map[0xd * 32 + 0x11] ^= 0xb;
-        await shakeScreen(g);
-        g.viewDirty = 1;
-      }
-    }
-  } else if (tuneAt === 0xa && note === 8) {
-    tuneAt = 3;
-  } else if (tuneAt === 0xb && note === 7) {
-    tuneAt = 2;
-  } else if (note === tune[0]) {
-    tuneAt = 1;
-  } else {
-    tuneAt = 0;
-  }
+  if (g.view[6 * 32 + 5] !== HARPSICHORD_TILE) return setActivePlayer(g, key);
+  if (strike(g, key - 0x30)) await openTheWay(g);
   return 3;
 }
 

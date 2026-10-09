@@ -9,7 +9,7 @@
 import { signInk, tinted } from './colours.ts';
 import type { Font } from '../data/font.ts';
 import type { Appearance } from '../game/appearance.ts';
-import { K, type Draw, type Effects, type Platform, type Sound } from '../game/io.ts';
+import { K, type Draw, type Effects, type HarpView, type Platform, type Sound } from '../game/io.ts';
 import { bitPicture, picture, type Picture } from '../data/images.ts';
 import { TileAnimator } from './animate.ts';
 import { menuUp } from './pageMenu.ts';
@@ -71,6 +71,13 @@ const FACES: Record<Face, { family: string; file: string; share: number; bold: n
 
 /** The picture enlarged by the sharpened smoothing (?scale=smooth), to compare with the nearest pixel (show). */
 const SMOOTH = typeof location !== 'undefined' && new URLSearchParams(location.search).get('scale') === 'smooth';
+
+/** How long a number played on the harpsichord rises and fades (ms). */
+const POP_MS = 900;
+
+/** Whether the harpsichord's keyboard is moving: a key down, or a number fading (drawn again each frame till not). */
+const harpMoving = (v: HarpView, now: number): boolean =>
+  (v.pressed !== null && now - v.pressed.t < 200) || v.pops.some((p) => now - p.t < POP_MS);
 
 /** IBM.CH's arrows, 0x18 to 0x1b (up, down, right, left), as the lettering's face has them. */
 const ARROWS = ['\u2191', '\u2193', '\u2192', '\u2190'];
@@ -149,6 +156,7 @@ export class Screen implements Platform {
     // draws: it is not sized here (sizing a canvas clears it, even to the size it has), only as it is shown (show).
     this.ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     this.image = this.ctx.createImageData(HI_WIDTH, HI_HEIGHT);
+    this.glyphs = fonts[0];
     const base = document.createElement('canvas');
     [base.width, base.height] = [HI_WIDTH, HI_HEIGHT];
     this.base = base.getContext('2d') as CanvasRenderingContext2D;
@@ -237,6 +245,10 @@ export class Screen implements Platform {
         return true;
       },
       marker: (x, y, colour) => fb.marker(TILE_X + x * 16, TILE_Y + y * 16, colourRGBA(colour)),
+      harpsichord: (view) => {
+        this.harp = view;
+        fb.dirty = true;
+      },
       aim: (x, y, mark) => fb.aim(TILE_X + x * 16, TILE_Y + y * 16, performance.now(), mark),
       burst: (x, y, frame, magic) => {
         if (this.look === 'standard') fb.burst(x, y, frame, magic);
@@ -307,6 +319,8 @@ export class Screen implements Platform {
           this.fb.dirty = true;
         }
       }
+      // The harpsichord's keyboard drawn again while a key is down or a number fades (drawHarp).
+      if (this.harp && harpMoving(this.harp, performance.now())) this.fb.dirty = true;
       if (this.fb.dirty) {
         this.fb.present(this.image);
         this.show();
@@ -370,6 +384,7 @@ export class Screen implements Platform {
       ctx.globalAlpha = 1;
       for (const m of marks) this.setLetter(ctx, m, m.column * GLYPH_SIDE * scale, m.row * GLYPH_SIDE * scale, cell, m.colour);
     }
+    if (this.harp) this.drawHarp(ctx, w, h, this.harp, performance.now());
     const words = this.fb.words[0];
     if (!words.length) return;
     ctx.setTransform(scale, 0, 0, h / HI_HEIGHT, 0, 0);
@@ -382,6 +397,103 @@ export class Screen implements Platform {
       ctx.fillText(run.text, run.x, run.y);
     }
     ctx.globalAlpha = 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /** The harpsichord's keyboard over the view (harpsichord.ts), or null. */
+  private harp: HarpView | null = null;
+  /** IBM.CH, for the number over a key the PC (1988) look plays (its own lettering, as its screen has it). */
+  private readonly glyphs: Font;
+
+  /**
+   * The harpsichord's keyboard (harpsichord.ts), over the picture at the display's size: nine keys across the box's
+   * lines, pale with dark gaps and the black keys of a scale between (a whole step's gaps: none between 3 and 4, nor 7
+   * and 8), the bar on one; the key just played pressed for a moment; a gold dot on the tune's next key where the
+   * player knows it; and each number played rising from its key and fading. The Standard look's in its lettering and
+   * colours, the PC (1988) look's in the EGA's and IBM.CH's.
+   */
+  private drawHarp(ctx: CanvasRenderingContext2D, w: number, h: number, v: HarpView, now: number): void {
+    const ega = this.look !== 'standard';
+    ctx.setTransform(w / 320, 0, 0, h / 200, 0, 0);
+    const KW = 10;
+    const KH = 28;
+    const kx = v.x + Math.floor((v.w - KW * 9) / 2);
+    const ky = v.y + 14;
+    const pal = ega
+      ? {
+          gap: '#000000',
+          key: '#ffffff',
+          down: '#aaaaaa',
+          black: '#000000',
+          shine: '#ffffff',
+          bar: '#55ffff',
+          dot: '#ffff55',
+          pop: '#ffff55',
+        }
+      : {
+          gap: '#1a1206',
+          key: '#efe7cf',
+          down: '#cfc6ad',
+          black: '#100c08',
+          shine: '#3a332b',
+          bar: '#67cbec',
+          dot: '#e8b030',
+          pop: '#fff4c2',
+        };
+    for (let i = 0; i < 9; i++) {
+      const down = v.pressed?.key === i && now - v.pressed.t < 160 ? 1 : 0;
+      const x0 = kx + i * KW;
+      ctx.fillStyle = pal.gap;
+      ctx.fillRect(x0, ky, KW, KH);
+      ctx.fillStyle = down ? pal.down : pal.key;
+      ctx.fillRect(x0 + 1, ky + down, KW - 2, KH - 1 - down);
+      if (i === v.at) {
+        ctx.fillStyle = pal.bar;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(x0 + 1, ky + KH - 9, KW - 2, 8);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = pal.bar;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 + 1.5, ky + 0.5, KW - 3, KH - 1.5);
+      }
+      if (i === v.dot) {
+        ctx.fillStyle = pal.dot;
+        ctx.beginPath();
+        ctx.arc(x0 + KW / 2, ky + KH - 5 + down, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    for (const b of [0, 1, 3, 4, 5, 7]) {
+      const bx = kx + (b + 1) * KW - 3;
+      ctx.fillStyle = pal.black;
+      ctx.fillRect(bx, ky, 6, 17);
+      if (!ega) {
+        ctx.fillStyle = pal.shine;
+        ctx.fillRect(bx + 1, ky, 1, 15);
+      }
+    }
+    for (const p of v.pops) {
+      const age = (now - p.t) / POP_MS;
+      if (age < 0 || age >= 1) continue;
+      ctx.globalAlpha = 1 - age * age;
+      const cx = kx + p.key * KW + KW / 2;
+      const top = ky - 9 - age * 4;
+      if (ega) {
+        ctx.fillStyle = pal.pop;
+        const code = 0x31 + p.key;
+        for (let r = 0; r < 8; r++)
+          for (let c = 0; c < 8; c++)
+            if (this.glyphs.rows[code * 8 + r] & (0x80 >> c)) ctx.fillRect(Math.round(cx - 4) + c, Math.round(top) + r, 1, 1);
+      } else {
+        ctx.font = `8px "${FACES.mono.family}"`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = pal.pop;
+        ctx.fillText(String(p.key + 1), cx, top);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = 'start';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
