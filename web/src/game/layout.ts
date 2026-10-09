@@ -72,6 +72,9 @@ export async function relayout(g: Game): Promise<void> {
   panelWindows(g);
   drawColumn(g);
   t.clearArea(COVER.c1, COVER.r1, COVER.c2, COVER.r2); // the log's in the one look, the panel's in the other
+  // The log below, drawn again as it reads: the screen let go of the lettering it drew in the other look, the 1988
+  // look's prompts - border glyphs, kept as pixels - left alone beside nothing.
+  t.repaint(COVER.c1, COVER.r2 + 1, COVER.c2, 24);
   log.y = Math.max(0, cursor - log.top);
   // The bottom border's band, cleared of the other look's line, then its own.
   const d = g.draw;

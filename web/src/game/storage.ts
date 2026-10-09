@@ -633,8 +633,13 @@ export async function chooseSave(g: Game, title: string, saves: Kept[]): Promise
 export async function takeUp(g: Game, d: SaveData): Promise<never> {
   restore(g, d);
   const { drawFrame, gameWindows } = await import('./run.ts');
+  const { drawVitals } = await import('./frame.ts');
+  // The screen drawn anew as Journey Onward draws it (run.ts journeyOnward): the menu's box taken away, the frame -
+  // which blacks out everything, the party's panel too - and the panel again, as nothing else draws it till it changes.
+  g.draw.chromeBox?.(null);
   gameWindows(g);
   drawFrame(g);
+  drawVitals(g);
   g.viewDirty = 1;
   const { Relocate } = await import('./cheats.ts');
   throw new Relocate();

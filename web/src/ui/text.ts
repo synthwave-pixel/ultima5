@@ -444,6 +444,14 @@ export class Text {
     return !!k && this.current === k.window && r1 <= k.r2 && r2 >= k.r1 && c1 <= k.c2 && c2 >= k.c1;
   }
 
+  /**
+   * Cells (c1, r1)-(c2, r2) drawn again as the record reads, but for any under the cover: a change of look, after which
+   * the screen has let go of the lettering it drew (layout.ts relayout).
+   */
+  repaint(c1: number, r1: number, c2: number, r2: number): void {
+    this.redraw(c1, r1, c2, r2);
+  }
+
   /** Draw cells (c1, r1)-(c2, r2) again from the record, but for any under the cover. */
   private redraw(c1: number, r1: number, c2: number, r2: number): void {
     for (let r = r1; r <= r2; r++)
