@@ -700,7 +700,7 @@ other hurt in the game kills as it always did.
   down: how the quest stands, a line for each part with its count - shrine
   quests done and ordained, dungeons unsealed, shards held, Shadowlords
   slain, the Passwords (the Resistance's and Blackthorn's, each on its
-  line once heard, and never before), the Equipment (Lord British's Crown,
+  line once heard; until then "Mystery...", whose it is unsaid), the Equipment (Lord British's Crown,
   Amulet and Sceptre among it), and the Companions who may join - each opening onto a line for each.
   The quest's own things - the Crown, Amulet and Sceptre, the magic carpet,
   skull keys and Black Badge - are each "Mystery...?" until someone speaks

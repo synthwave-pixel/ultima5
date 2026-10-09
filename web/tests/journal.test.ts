@@ -128,11 +128,11 @@ describe('the journal', () => {
     expect(lords()[0].about).toBe(`${shown}. Slain.`);
   });
 
-  it('shows each password on its line once heard, and never before', () => {
+  it('shows each password on its line once heard, and before that a mystery', () => {
     const { g } = newGame();
     const lines = (): { label: string; about?: string }[] => journalTop(g)[5].open!.lines;
     expect(journalTop(g)[5].label).toBe('Passwords         0/2');
-    expect(lines().map((l) => l.label)).toEqual(['Resistance           ', "Blackthorn's         "]);
+    expect(lines().map((l) => l.label)).toEqual(['Mystery...           ', 'Mystery...           ']);
     expect(lines()[0].about).toBe('Not yet heard.');
     // Chamfort's words, as talk.ts learns what is said: the Resistance's password, read from the player's files.
     const word = 'DAWN';
@@ -140,6 +140,7 @@ describe('the journal', () => {
     expect(journalTop(g)[5].label).toBe('Passwords         1/2');
     expect(lines()[0].label).toBe(`Resistance${word.padStart(11)}`);
     expect(lines()[0].about).toBe(`The password: ${word}.`);
+    expect(lines()[1].label).toBe('Mystery...           ');
     expect(lines()[1].about).toBe('Not yet heard.');
   });
 

@@ -408,10 +408,11 @@ export function journalTop(g: Game): JournalLine[] {
     };
   });
   const shards = [0, 1, 2].filter((i) => s.shards[i] !== 0).length;
-  // The passwords, each on its line once heard (as a mantra or a Word is on its card), and never before.
+  // The passwords, each on its line once heard (as a mantra or a Word is on its card), and never before: until then
+  // a mystery, whose password it is not said either (its hint, asked for, tells).
   const known = passwords(g);
   const passwordLines = known.map((p) => ({
-    label: row(p.label, p.known ? p.word : ''),
+    label: p.known ? row(p.label, p.word) : row('Mystery...', ''),
     about: p.known ? `The password: ${p.word}.` : 'Not yet heard.',
     hint: p.hint,
   }));
