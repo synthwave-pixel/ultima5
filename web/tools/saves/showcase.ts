@@ -4,7 +4,7 @@
  * Saved games to import (Settings, Import saved game) at the game's interesting places, each with a party of the
  * level, gear and quest progress a player would have there: for screenshots, trailers and testing. Built from INIT.GAM
  * with the developer's own DOS files (gamedata/), as the tests are, and written as exported games into
- * screenshots/saves/ (not kept in the repository).
+ * showcase/ at the top of the repository, kept there for anyone to play (its README lists them).
  *
  *   npm run saves
  *
@@ -24,7 +24,7 @@ import { tileAt } from '../../src/game/world.ts';
 import { exportText } from '../../src/game/transfer.ts';
 import { newGame } from '../../tests/helpers.ts';
 
-const OUT = fileURLToPath(new URL('../../../screenshots/saves/', import.meta.url));
+const OUT = fileURLToPath(new URL('../../../showcase/', import.meta.url));
 
 /** Companions to join the party (INIT.GAM's records, waiting to be met). */
 type Companion = 'Mariah' | 'Geoffrey' | 'Jaana' | 'Julia' | 'Dupre' | 'Katrina' | 'Gwenno' | 'Johne';

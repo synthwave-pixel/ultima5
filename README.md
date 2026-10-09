@@ -116,7 +116,9 @@ game with everything else. To remove the game and its saved data:
 The game saves itself in the browser's storage (the desktop and Android
 apps each keep their own), and resumes on the next visit. Export saved
 game and Import saved game (Settings) carry a game between browsers,
-devices and the apps, as text on the clipboard or in a file.
+devices and the apps, as text on the clipboard or in a file. To jump
+straight to one of the game's sights - Britain, a frigate at sea, the
+Underworld, Doom - import one of the [showcase saves](showcase/README.md).
 
 **Back up your saved game.** Browsers can clear a site's storage on their
 own: Safari and every other iOS browser delete it after seven days without
