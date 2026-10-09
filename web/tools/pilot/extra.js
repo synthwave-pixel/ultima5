@@ -286,7 +286,7 @@
     const s = g.s;
     const log = [];
     let stuck = 0;
-    if (g.options.autoCombat) await B.pause(/^Auto combat/);
+    if (g.options.autoCombat !== 'off') await B.autoCombat('off');
     for (let n = 0; n < maxTurns; n++) {
       const me = await myTurn();
       if (me === null) return [...log, 'off the field'];

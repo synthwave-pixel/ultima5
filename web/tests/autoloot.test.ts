@@ -11,7 +11,7 @@ describe('auto combat with a last spear', () => {
     const { g } = newGame();
     journeyOnward(g);
     const s = g.s;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.options.rules = 'modern';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
@@ -34,7 +34,7 @@ describe('auto combat closing with a foe', () => {
     const { g } = newGame();
     journeyOnward(g);
     const s = g.s;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
     // A wall two deep across the arena at rows 6 and 7, with one gap at x = 1; the member at (5, 8), the foe at (5, 3).
@@ -61,7 +61,7 @@ describe('auto combat at range', () => {
     const { g } = newGame();
     journeyOnward(g);
     const s = g.s;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
     g.combatMap.fill(0x04);
@@ -91,7 +91,7 @@ describe('auto combat hemmed in', () => {
     const { g } = newGame();
     journeyOnward(g);
     const s = g.s;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
     // The member walled in on all four sides; the foe beyond reach.
@@ -123,7 +123,7 @@ describe('auto combat on a won field', () => {
     const made = newGame();
     const { g } = made;
     journeyOnward(g);
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
     g.combat[0].flags = CF.Player;
@@ -143,7 +143,7 @@ describe('auto combat on a won field', () => {
     expect(await autoKey(g)).toBe(0);
     expect(await autoKey(g)).toBe(0);
     expect(p.log.match(/treasure\s+lies\s+here/g)?.length).toBe(1);
-    expect(g.options.autoCombat).toBe(true);
+    expect(g.options.autoCombat).toBe('all');
   });
 
   it('waits as well for what came out of a chest - a sack of gold, a potion - and not only for chests', async () => {
@@ -159,7 +159,7 @@ describe('auto combat with a friend charmed', () => {
     const { g } = newGame();
     journeyOnward(g);
     const s = g.s;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.options.rules = 'modern';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.flags = 0;
@@ -176,12 +176,12 @@ describe('auto combat with a friend charmed', () => {
     const g = field(false);
     g.combat[8].flags = 0;
     expect(await autoKey(g)).toBe(K.Space);
-    expect(g.options.autoCombat).toBe(true);
+    expect(g.options.autoCombat).toBe('all');
   });
 
   it('hands the fight back where the charmer stands unseen, rather than passing while the charmed strike on', async () => {
     const g = field(true);
     expect(await autoKey(g)).toBe(0);
-    expect(g.options.autoCombat).toBe(false);
+    expect(g.options.autoCombat).toBe('off');
   });
 });

@@ -138,6 +138,12 @@
     if (resume) await B.closeMenus();
     return ok;
   };
+  // Auto combat set to `mode` ('off', 'allies' or 'all'): the Pause menu's line pressed till it says so (each press
+  // turns it on through Off, Allies and All).
+  B.autoCombat = async (mode) => {
+    for (let i = 0; i < 3 && g.options.autoCombat !== mode; i++) await B.pause(/^Auto combat/);
+    return g.options.autoCombat === mode;
+  };
   // A turn passed: B, with no menu up (on a won field with nothing to take, B leaves it, as the game has it).
   B.pass = async () => {
     await B.ready();
@@ -1146,8 +1152,8 @@
   // whichever member can reach its square (the others stand where they are and pass).
   B.room.deceitBottom = async () => {
     const log = [];
-    if (g.options.autoCombat) {
-      await B.pause(/^Auto combat/);
+    if (g.options.autoCombat !== 'off') {
+      await B.autoCombat('off');
       await B.ready();
     }
     let who = -1;
@@ -1297,10 +1303,10 @@
     let fleeing = !!B.fleeAtOnce; // (B.fleeAtOnce: every fight run from, a member at a time off the field)
     let lootGivenUp = false;
     const ranged = new Set();
-    if (!g.options.autoCombat) {
+    if (g.options.autoCombat === 'off') {
       await B.ready();
       if (g.commandPrompt === 'combat') {
-        await B.pause(/^Auto combat/);
+        await B.autoCombat('all');
         log.push('auto on');
       }
     }
@@ -1357,13 +1363,13 @@
       if (s.battleWon === 0 && foes > 0 && !fleeing && performance.now() - t0 > (B.fleeAfter ?? 90000)) {
         fleeing = true;
         log.push('fleeing');
-        if (g.options.autoCombat) {
-          await B.pause(/^Auto combat/);
+        if (g.options.autoCombat !== 'off') {
+          await B.autoCombat('off');
         }
       }
       if (s.battleWon === 0 && foes > 0 && fleeing) {
-        if (g.options.autoCombat) {
-          await B.pause(/^Auto combat/);
+        if (g.options.autoCombat !== 'off') {
+          await B.autoCombat('off');
           continue;
         }
         await B.flee();
@@ -1371,7 +1377,7 @@
       }
       if (s.battleWon === 0 && foes > 0) {
         await sleep(80);
-        if (SC.waiter && g.commandPrompt === 'combat' && !g.options.autoCombat) {
+        if (SC.waiter && g.commandPrompt === 'combat' && g.options.autoCombat === 'off') {
           // Handed back with foes out of reach (sharks about the ship): whoever has the turn takes up a sling or
           // the oil from the pack, so there is something to throw; then auto combat again.
           const me = g.combat[s.combatTurn];
@@ -1380,7 +1386,7 @@
             log.push(me.who + ' arms: ' + (await B.readyItem(me.who, s.equipment[0x11] > 0 ? 'Sling' : 'Flaming Oil')));
             if (g.commandPrompt !== 'combat' || B.menu()) continue;
           }
-          await B.pause(/^Auto combat/);
+          await B.autoCombat('all');
           log.push('auto back on');
         }
         continue;

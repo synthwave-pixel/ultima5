@@ -263,7 +263,8 @@ has the whole list; the highlights:
 - **A fight that tells you more**: what each bow or thrown weapon has
   left ("Bow x23:"), a warning before a shot that might hit an ally,
   Switch Weapon to swap between a member's melee and ranged arms, and
-  Auto combat that knows a charmed friend from a foe.
+  Auto combat that knows a charmed friend from a foe - for the whole party,
+  or for everyone but the Avatar while you play the Avatar yourself.
 - **Some old bugs fixed**: armour protects (in the 1988 DOS game it did
   nothing), a creature's blow is rolled as on the Apple II rather than
   always its whole attack, the regalia no longer lose their power to a

@@ -49,6 +49,7 @@ import {
   type Offer,
 } from './targets.ts';
 import {
+  AUTO_COMBAT,
   RULES,
   LEVELS,
   MUSIC_VOICES,
@@ -56,6 +57,7 @@ import {
   saveOptions,
   TILES,
   TILES_NAMES,
+  type AutoCombat,
   type DungeonMap,
   type InputMode,
   type MusicVoice,
@@ -1402,6 +1404,14 @@ export async function commandMenu(g: Game): Promise<number> {
  * journal, the maps, Auto combat, the settings, the help, and the saving
  * and leaving of the game. The game goes on again when it closes.
  */
+/** Auto combat's choices as the Pause menu names them, and what each does. */
+const AUTO_COMBAT_NAMES: Record<AutoCombat, string> = { off: 'Off', allies: 'Allies', all: 'All' };
+const AUTO_COMBAT_NOTES: Record<AutoCombat, string> = {
+  off: 'Off: you play every turn of the party.',
+  allies: 'Allies: you play the Avatar, the game plays the rest of the party, summoned and charmed creatures too.',
+  all: 'All: the game plays the whole party until a key is pressed.',
+};
+
 /**
  * The Pause menu. `midCommand`: opened from a prompt or a menu inside a command (Start, Select), where the game is not
  * saved - a command part done is no game to keep - nor the dungeon's view switched under the command's prompt.
@@ -1431,11 +1441,12 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
         // The journal and the map are the command menu's, where play is (everything below).
         { label: 'Resume' },
         {
-          // At hand wherever the next fight may be (the ultima3 port's). Turned on in the thick of a fight, it takes
-          // up the member's turn when the menu closes; turning it on or off spends no turn.
-          label: `Auto combat: ${onOff(g.options.autoCombat)}`,
+          // At hand wherever the next fight may be (the ultima3 port's). A press turns it on through Off, Allies and
+          // All. Turned on in the thick of a fight, it takes up the turn when the menu closes; changing it spends no turn.
+          label: `Auto combat: ${AUTO_COMBAT_NAMES[g.options.autoCombat]}`,
+          note: AUTO_COMBAT_NOTES[g.options.autoCombat],
           act: () => {
-            g.options.autoCombat = !g.options.autoCombat;
+            g.options.autoCombat = AUTO_COMBAT[(AUTO_COMBAT.indexOf(g.options.autoCombat) + 1) % AUTO_COMBAT.length];
             saveOptions(g.options);
           },
         },

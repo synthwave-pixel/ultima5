@@ -94,7 +94,7 @@ describe('the Pause menu', () => {
   it('holds Auto combat, turned on and off in place; the command menu no longer offers it, Pass, Pause or saving', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
-    g.options.autoCombat = false;
+    g.options.autoCombat = 'off';
     const labels: string[][] = [];
     let step = 0;
     p.next = () => {
@@ -106,9 +106,9 @@ describe('the Pause menu', () => {
       return Pad.B;
     };
     expect(await pauseMenu(g)).toBe(0);
-    expect(g.options.autoCombat).toBe(true);
+    expect(g.options.autoCombat).toBe('allies'); // Off, then Allies, then All
     expect(labels[0]).toContain('Auto combat: Off');
-    expect(labels.at(-1)).toContain('Auto combat: On');
+    expect(labels.at(-1)).toContain('Auto combat: Allies');
     expect(labels.at(-1)).toEqual(expect.arrayContaining(['Resume', 'Save game', 'Save and quit']));
 
     const { commandMenu } = await import('../src/game/menu.ts');

@@ -244,7 +244,7 @@ describe('auto combat and Switch Weapon', () => {
   /** The Avatar's turn in a fight on open grass, a rat `away` squares north. */
   async function fight(away: number, ...arms: number[]) {
     const g = bare();
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     g.combatMap.fill(0x04);
     for (const c of g.combat) c.flags = 0;

@@ -14,7 +14,7 @@ describe("auto combat's patience", () => {
     const { g } = newGame();
     journeyOnward(g);
     g.s.mapId = 0xff;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     g.s.combatTurn = 0;
     g.s.crosshair = 0;
@@ -26,11 +26,11 @@ describe("auto combat's patience", () => {
   it('hands back after 30 party turns with the foes no worse off, though it strikes every turn', async () => {
     const g = fight();
     let turns = 0;
-    while (g.options.autoCombat && turns < 100) {
+    while (g.options.autoCombat !== 'off' && turns < 100) {
       await autoKey(g);
       turns++;
     }
-    expect(g.options.autoCombat).toBe(false);
+    expect(g.options.autoCombat).toBe('off');
     expect(turns).toBeGreaterThan(30);
     expect(turns).toBeLessThan(40);
   });
@@ -41,7 +41,7 @@ describe("auto combat's patience", () => {
       await autoKey(g);
       if (turn % 10 === 0) g.combat[1].hp--;
     }
-    expect(g.options.autoCombat).toBe(true);
+    expect(g.options.autoCombat).toBe('all');
   });
 });
 
@@ -52,7 +52,7 @@ describe('auto combat and a charmed friend', () => {
     const { g } = newGame();
     journeyOnward(g);
     g.s.mapId = 0xff;
-    Object.assign(g.options, { autoCombat: true, rules: effects });
+    Object.assign(g.options, { autoCombat: 'all', rules: effects });
     g.commandPrompt = 'combat';
     Object.assign(g.s, { combatTurn: 1, crosshair: 0, weapon: 0 });
     for (const c of g.combat) c.flags = 0;
@@ -91,7 +91,7 @@ describe('auto combat over rubble', () => {
     const { g } = newGame();
     journeyOnward(g);
     g.s.mapId = 0xff;
-    g.options.autoCombat = true;
+    g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     Object.assign(g.s, { combatTurn: 0, crosshair: 0 });
     for (const c of g.combat) c.flags = 0;

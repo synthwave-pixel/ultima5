@@ -527,6 +527,8 @@ export class Game {
    */
   autoProgress = Infinity;
   autoIdle = 0;
+  /** Auto combat (Allies) handed back to the player for the rest of this fight (autocombat.ts handBack). */
+  autoHeld = false;
 
   /** Print a DATA.OVL string. */
   say(address: number): void {

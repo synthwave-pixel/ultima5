@@ -41,7 +41,7 @@ async function fights(kind: number, effects: 'modern' | 'classic', n: number, au
   for (let k = 1; k <= n; k++) {
     const { g, p } = newGame(k * 7919 + kind);
     journeyOnward(g);
-    Object.assign(g.options, { rules: effects, input: 'letters', autoCombat: auto });
+    Object.assign(g.options, { rules: effects, input: 'letters', autoCombat: auto ? 'all' : 'off' });
     const s = g.s;
     Object.assign(s, { mapId: 0, level: 0, x: 86, y: 110 });
     const foe = freeActor(g);
@@ -56,7 +56,7 @@ async function fights(kind: number, effects: 'modern' | 'classic', n: number, au
         // Won, with treasure lying there, which auto combat leaves to the player: the field left. Else handed back
         // (autocombat.ts), and taken up again.
         if (s.battleWon) return K.Escape;
-        g.options.autoCombat = true;
+        g.options.autoCombat = 'all';
         return K.Space;
       }
       return play();

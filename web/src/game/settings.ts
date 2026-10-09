@@ -9,9 +9,16 @@
 import { SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
 import { charKey, chosenCharacter } from './characters.ts';
 
+/** Auto combat's choices, in the order the Pause menu's line turns through them. */
+export const AUTO_COMBAT = ['off', 'allies', 'all'] as const;
+export type AutoCombat = (typeof AUTO_COMBAT)[number];
+
 export interface Options {
-  /** The party fights its own battles until a key is pressed. */
-  autoCombat: boolean;
+  /**
+   * Auto combat: Off; Allies, every turn on the party's side played for the player but the Avatar's (the members, and
+   * the creatures summoned or charmed to its side); or All, every turn of the party's until a key is pressed.
+   */
+  autoCombat: AutoCombat;
   /** Dark bands over the picture, as a CRT showed it. */
   /** Scanlines in the Modern look; the PC (1988) look keeps its own (pcScanlines). */
   scanlines: boolean;
@@ -188,7 +195,7 @@ function settingsKey(): string {
 }
 
 export const DEFAULTS: Options = {
-  autoCombat: false,
+  autoCombat: 'off',
   scanlines: false,
   pcScanlines: true,
   soundSet: 'standard',
@@ -209,7 +216,13 @@ export const DEFAULTS: Options = {
 };
 
 /** What settings kept by an earlier build may carry besides the Options they became. */
-type Saved = Partial<Options> & { sound?: boolean; music?: boolean; autoAimY?: boolean; notes?: boolean };
+type Saved = Omit<Partial<Options>, 'autoCombat'> & {
+  autoCombat?: AutoCombat | boolean;
+  sound?: boolean;
+  music?: boolean;
+  autoAimY?: boolean;
+  notes?: boolean;
+};
 
 /**
  * Settings as kept by this or an earlier build - the browser's, or a game's exported file - made what Options are
@@ -218,6 +231,9 @@ type Saved = Partial<Options> & { sound?: boolean; music?: boolean; autoAimY?: b
  */
 export function normaliseOptions(from: Saved): Partial<Options> {
   const saved = { ...from };
+  // Settings from when Auto combat was on or off: on was every turn of the party's (All).
+  if (typeof saved.autoCombat === 'boolean') saved.autoCombat = saved.autoCombat ? 'all' : 'off';
+  if (saved.autoCombat !== undefined && !AUTO_COMBAT.includes(saved.autoCombat)) delete saved.autoCombat;
   // Clues are always noted now: the setting that could stop it is gone.
   delete saved.notes;
   // Settings from when it was Y's alone.
@@ -255,7 +271,7 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;
-  return saved;
+  return saved as Partial<Options>;
 }
 
 /**

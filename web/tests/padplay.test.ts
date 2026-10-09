@@ -363,7 +363,7 @@ describe('a controller plays', () => {
       p.log = '';
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
       Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
-      g.options.autoCombat = auto;
+      g.options.autoCombat = auto ? 'all' : 'off';
       // The tests' usual fighter decides; its keys are given as a pad gives them. Attack is chosen from the menu,
       // and the crosshair, which a d-pad cannot move on the slant, goes across and then up or down.
       const brain = fighter(g);

@@ -1471,7 +1471,7 @@ export async function aim(g: Game, i: number, range: number, friend = false): Pr
   }
   // The crosshair is moved by the d-pad and A strikes, as A chooses everywhere (and X, which attacks, or Y a spell's
   // aim, which casts): the border says only what is asked.
-  const hint = g.options.input === 'controller' && !g.options.autoCombat;
+  const hint = g.options.input === 'controller' && !autoPlaysTurn(g);
   if (hint) borderTitle(g, 'Aim');
   while (!fire && !cancel) {
     let dx = 0;
@@ -2916,6 +2916,19 @@ function wakeAfterAmbush(g: Game): void {
   for (let m = 0; m < s.partySize; m++) if (s.members[m].status === Status.Sleeping) s.members[m].status = Status.Good;
 }
 
+/** The Avatar's place in the fight, or -1 where they are not on the field. */
+export const avatarAt = (g: Game): number => g.combat.findIndex((c) => (c.flags & CF.Player) !== 0 && c.who === 0);
+
+/**
+ * Whether auto combat (autocombat.ts) plays the turn the fight is on: any of the party's side with All; with Allies,
+ * any but the Avatar's, until it is handed back for the fight (Game.autoHeld).
+ */
+export function autoPlaysTurn(g: Game): boolean {
+  const mode = g.options.autoCombat;
+  if (mode === 'all') return true;
+  return mode === 'allies' && !g.autoHeld && g.s.combatTurn !== avatarAt(g);
+}
+
 /** ULTIMA_5f86: to the arena and back: actors put aside, combat or camping, then everything restored. */
 export async function specialMap(g: Game, flags: number, a: number, b: number): Promise<void> {
   const s = g.s;
@@ -2930,6 +2943,7 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
   newSpawns(g);
   g.autoProgress = Infinity;
   g.autoIdle = 0;
+  g.autoHeld = false;
   g.savedActorBytes.set(s.b.subarray(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100));
   let fight = true;
   if (flags === 0) {

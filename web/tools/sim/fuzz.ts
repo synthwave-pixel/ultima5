@@ -251,7 +251,7 @@ async function one(seed: number): Promise<Outcome> {
   const s = g.s;
   const rules = pick(RULES);
   const input = r() < 0.5 ? 'controller' : 'letters';
-  Object.assign(g.options, { rules, input, autoCombat: false, autoAim: r() < 0.5 });
+  Object.assign(g.options, { rules, input, autoCombat: 'off', autoAim: r() < 0.5 });
   party(g, r, pick);
   const room = ROOMS === 'only' || (ROOMS === 'mix' && r() < 0.4);
   const out: Outcome = { seed, where: '', rules, input, end: 'won', broken: [], keys: 0 };
@@ -319,7 +319,7 @@ async function one(seed: number): Promise<Outcome> {
     const x = r();
     if (x < 0.6) {
       const k = await autoKey(g);
-      g.options.autoCombat = false;
+      g.options.autoCombat = 'off';
       if (k) return k;
     }
     if (x < 0.8) return pick([K.Up, K.Down, K.Left, K.Right]);

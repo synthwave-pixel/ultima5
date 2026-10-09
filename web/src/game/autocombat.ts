@@ -1,18 +1,22 @@
 /**
  * autocombat.ts
  *
- * Auto combat (a Setting, and a choice in the combat menu): each member's
- * turn is played for the player, as keys the combat code reads like any
- * other: strike a foe in reach (with the weapon's reach), aim a missile at
- * the nearest in range, else close with the nearest foe, stepping round
- * whatever blocks the way; with the field won, leave it. Any key pressed
- * hands the party back. One of the party charmed against it is struck as a
- * foe with the Classic rules, as in 1988, and let alone with the Modern,
- * the charm wearing off.
+ * Auto combat (the Pause menu's line): each turn on the party's side is
+ * played for the player, as keys the combat code reads like any other:
+ * strike a foe in reach (with the weapon's reach), aim a missile at the
+ * nearest in range, else close with the nearest foe, stepping round
+ * whatever blocks the way; with the field won, leave it. All plays every
+ * such turn, and any key pressed hands the party back. Allies plays every
+ * one but the Avatar's - the other members, and the creatures summoned or
+ * charmed to the party's side - while the player plays the Avatar: keys
+ * are the player's then, and one pressed in an ally's turn is let go; the
+ * field won, the allies wait for the Avatar to leave it. One of the party
+ * charmed against it is struck as a foe with the Classic rules, as in
+ * 1988, and let alone with the Modern, the charm wearing off.
  */
 
 import { actorTileAtRev, treasureLies } from './actors.ts';
-import { arenaFree, canStrike, combatantAt, distance, keepsLastThrown, onMonsterSide } from './combat.ts';
+import { arenaFree, autoPlaysTurn, avatarAt, canStrike, combatantAt, distance, keepsLastThrown, onMonsterSide } from './combat.ts';
 import { CF, Game } from './game.ts';
 import { K } from './io.ts';
 import { eased, saveOptions } from './settings.ts';
@@ -77,11 +81,33 @@ function switchWanted(g: Game, me: (typeof g.combat)[number], foes: { x: number;
   return true;
 }
 
+/** Whether the Avatar is on the field and can take a turn: alive, awake, and not charmed or possessed against the party. */
+function avatarActs(g: Game): boolean {
+  const i = avatarAt(g);
+  return i >= 0 && (g.combat[i].flags & (CF.Dead | CF.Asleep | CF.Charmed)) === 0 && !onMonsterSide(g, i);
+}
+
+/**
+ * The fight going nowhere, or somewhere only the player can take it: All is turned off (saved so), and the player
+ * plays from here; Allies is held for the rest of this fight, and is there for the next.
+ */
+function handBack(g: Game): void {
+  if (g.options.autoCombat === 'allies') {
+    g.autoHeld = true;
+    return;
+  }
+  g.options.autoCombat = 'off';
+  saveOptions(g.options);
+}
+
 /** The key auto combat presses now, or 0 to leave it to the player. */
 export async function autoKey(g: Game): Promise<number> {
   const s = g.s;
-  if (g.p.pollKey() !== 0) {
-    g.options.autoCombat = false;
+  const allies = g.options.autoCombat === 'allies';
+  // With Allies the player plays the Avatar, the keys theirs: nothing is taken from them on the Avatar's turn.
+  if (allies && (s.combatTurn > 0x1f || !autoPlaysTurn(g))) return 0;
+  if (g.p.pollKey() !== 0 && !allies) {
+    g.options.autoCombat = 'off';
     saveOptions(g.options);
     return 0;
   }
@@ -104,8 +130,7 @@ export async function autoKey(g: Game): Promise<number> {
     // Aiming that goes nowhere (a foe the crosshair cannot be brought to) is given up, and the fight handed back.
     if (++aiming > MAX_AIMING) {
       aiming = 0;
-      g.options.autoCombat = false;
-      saveOptions(g.options);
+      handBack(g);
       return K.Escape;
     }
     // Loosed only at a foe: not at a creature summoned or charmed to the party's side the crosshair lies on or passes.
@@ -135,15 +160,16 @@ export async function autoKey(g: Game): Promise<number> {
       (c, i) => c.flags !== 0 && (c.flags & (CF.Dead | CF.Invisible)) === CF.Invisible && onMonsterSide(g, i) && !spared(i),
     );
     if (!unseen) return K.Space;
-    g.options.autoCombat = false;
-    saveOptions(g.options);
+    handBack(g);
     return 0;
   }
   if (foes.length === 0) {
+    // With Allies, the field won is the Avatar's to leave - by Leave combat, Loot and Leave, or a room's exit - and the
+    // allies pass till their turn comes; with no Avatar to take it (fallen, asleep, charmed), as All does.
+    if (allies && avatarActs(g)) return K.Space;
     if ((s.combatFlags & 0x80) !== 0) {
       // A dungeon room is left by its exits, which the player chooses: hand the party back.
-      g.options.autoCombat = false;
-      saveOptions(g.options);
+      handBack(g);
       return 0;
     }
     // Treasure on the field is the player's to open or to leave (a chest may be trapped): the party waits for
@@ -166,8 +192,7 @@ export async function autoKey(g: Game): Promise<number> {
   } else if (++g.autoIdle > MAX_IDLE) {
     g.autoIdle = 0;
     g.autoProgress = Infinity;
-    g.options.autoCombat = false;
-    saveOptions(g.options);
+    handBack(g);
     return 0;
   }
   const f = foes[0];

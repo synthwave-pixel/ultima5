@@ -449,7 +449,7 @@ function firesHere(g: Game): boolean {
 
 /** Auto combat plays a member's turn (autocombat.ts); a real key press stops it. */
 async function autoCombatKey(g: Game): Promise<number> {
-  if (!g.options.autoCombat || g.s.mapId !== 0xff) return 0;
+  if (g.options.autoCombat === 'off' || g.s.mapId !== 0xff) return 0;
   const { autoKey } = await import('./autocombat.ts');
   return autoKey(g);
 }

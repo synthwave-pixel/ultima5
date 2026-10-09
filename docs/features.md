@@ -644,8 +644,14 @@ other hurt in the game kills as it always did.
   nowhere, and reaches a foe over a wall or tree as aiming by hand does);
   where every foe in reach has, it says "Iolo might hit ally, confirm?" and
   X again, straight away, shoots. Off, every blow is aimed by hand.
-- **Auto combat** (Pause menu) plays the party, and the creatures summoned
-  or charmed to its side. One of the party charmed against it is a foe to
+- **Auto combat** (Pause menu): Off, Allies or All, a press turning it on
+  through them. *All* plays the party, and the creatures summoned or
+  charmed to its side, until a key is pressed. *Allies* plays all of them
+  but the Avatar, whom the player plays: keys are the player's then, and
+  one pressed in an ally's turn is let go rather than handing the party
+  back; once the field is won the allies pass, and the Avatar leaves it
+  (Leave combat, Loot and Leave, a room's exit) - or, with the Avatar
+  fallen, asleep or charmed, the allies leave it as All does. One of the party charmed against it is a foe to
   strike with the Classic rules, as in 1988; with the Story or Modern it is
   let alone, auto combat fighting the creatures and waiting while the charm
   wears off - never a blow at the charmed Avatar; but where the one who
@@ -659,7 +665,8 @@ other hurt in the game kills as it always did.
   where Attack would reach a foe, a shot or a throw along a clear line -
   and with the hand Attack asks first, where none reaches a creature (a
   spiked helm swung before the axe at a charmed friend), else it closes
-  in. Fights it goes nowhere in for thirty turns are handed back.
+  in. Fights it goes nowhere in for thirty turns are handed back: All is
+  turned off, and Allies held for the rest of that fight alone.
 - **Gameplay** (Pause menu): input, Auto Pause, the rules and auto aim.
 - **Settings** (Pause menu): the look and its tiles, outlines, status
   letters, scanlines (each look its own: on in the PC (1988) look until

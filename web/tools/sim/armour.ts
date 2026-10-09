@@ -147,7 +147,7 @@ function equip(g: Game, stage: Stage): void {
 async function fight(stage: Stage, kind: number, rules: Rules, tactics: boolean, seed: number): Promise<Result> {
   const { g, p } = newGame(seed);
   journeyOnward(g);
-  Object.assign(g.options, { input: 'letters', autoCombat: false, rules, autoAim: true });
+  Object.assign(g.options, { input: 'letters', autoCombat: 'off', rules, autoAim: true });
   const s = g.s;
   Object.assign(s, { mapId: 0, level: 0, x: 86, y: 110 });
   equip(g, stage);
