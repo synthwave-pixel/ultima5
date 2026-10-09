@@ -273,6 +273,43 @@ export function drawMoons(g: Game): void {
   t.font = 0;
 }
 
+/** The map's top border's middle, where "Auto" stands: the cells of its caps and its word (autoTitle). */
+const AUTO_CELLS = [9, 14];
+
+/**
+ * "Auto" centred on the map's top border while auto combat plays a turn (the port's), over the sun and moons a fight
+ * out of doors keeps there (whose redrawing each round waits meanwhile, combat.ts); taken down (`on` false), the border
+ * there drawn again, and the sky where the place has one.
+ */
+export function autoTitle(g: Game, on: boolean): void {
+  const t = g.text;
+  const was = t.current;
+  t.select(Win.screen);
+  const [c1, c2] = AUTO_CELLS;
+  if (on) {
+    t.moveTo(c1, 0);
+    leftArrow(g);
+    g.print('Auto');
+    rightArrow(g);
+    t.select(was);
+    return;
+  }
+  t.clearArea(c1, 0, c2, 0);
+  const d = g.draw;
+  d.pen = Colour.blue;
+  d.fill(c1 * 8, 0, c2 * 8 + 7, 6);
+  d.pen = Colour.brightWhite;
+  d.line(c1 * 8, 7, c2 * 8 + 7, 7);
+  t.select(was);
+  // The sky again: in a fight, that of where it was fought (as the fight's own rounds draw it).
+  const s = g.s;
+  if (s.mapId === 0xff && s.savedMapId < 0x21) {
+    s.mapId = s.savedMapId;
+    drawMoons(g);
+    s.mapId = 0xff;
+  } else drawMoons(g);
+}
+
 /** ULTIMA_4be8: the map's name on the top border. */
 export function drawMapName(g: Game): void {
   const t = g.text;

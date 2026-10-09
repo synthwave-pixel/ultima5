@@ -3162,7 +3162,8 @@ async function camp(g: Game, flags: number, guard: number, hours: number): Promi
     passTime(g, 5);
     if (s.hour !== lastHour && timer.hourPassed()) drawVitals(g);
     await g.p.sleep(1000 / 18.2);
-    if (s.savedMapId < 0x21) {
+    // The sky, but under "Auto" while auto combat plays the turn (frame.ts autoTitle), which puts it back after.
+    if (s.savedMapId < 0x21 && !g.autoShown) {
       s.mapId = s.savedMapId;
       const { drawMoons } = await import('./frame.ts');
       drawMoons(g);

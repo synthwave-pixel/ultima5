@@ -8,7 +8,7 @@
  */
 
 import { treasureLies } from './actors.ts';
-import { clearBorderTitle, borderTitle, drawVitals, invertMember, markTurn, updateFrame } from './frame.ts';
+import { autoTitle, clearBorderTitle, borderTitle, drawVitals, invertMember, markTurn, updateFrame } from './frame.ts';
 import { liftDungeonMap } from './dungeonMap.ts';
 import { Game } from './game.ts';
 import { K, LOST_FOCUS, Pad } from './io.ts';
@@ -454,10 +454,11 @@ function firesHere(g: Game): boolean {
  */
 async function autoCombatKey(g: Game): Promise<number> {
   const key = g.options.autoCombat === 'off' || g.s.mapId !== 0xff ? 0 : await autoTurnKey(g);
-  // The turn the player's: "Auto" taken down from the party box's border, the regalia worn named there again.
+  // The turn the player's, or the fight over: "Auto" taken down from the map's top border, the sky back there. Not in a
+  // dungeon, whose view (its level on the border) is drawn again as the party comes back to it.
   if (key === 0 && g.autoShown) {
     g.autoShown = false;
-    if (g.s.mapId === 0xff) clearBorderTitle(g);
+    if (g.s.mapId === 0xff || g.s.mapId < 0x21) autoTitle(g, false);
   }
   return key;
 }

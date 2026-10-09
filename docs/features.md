@@ -654,7 +654,8 @@ other hurt in the game kills as it always did.
   back; once the field is won the allies pass, and the Avatar leaves it
   (Leave combat, Loot and Leave, a room's exit) - or, with the Avatar
   fallen, asleep or charmed, the allies leave it as All does. While it
-  plays a turn, in either, "Auto" stands on the party box's top border;
+  plays a turn, in either, "Auto" stands in the middle of the map's top
+  border, over the sun and moons a fight out of doors shows there;
   Start, Select or Escape opens the Pause menu, where Auto combat can be
   turned off or changed; B twice in quick succession turns it off ("Auto
   combat off"); and every other button pressed is let go, so none is left

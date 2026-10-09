@@ -17,7 +17,7 @@
 
 import { actorTileAtRev, treasureLies } from './actors.ts';
 import { arenaFree, autoPlaysTurn, avatarAt, canStrike, combatantAt, distance, keepsLastThrown, onMonsterSide } from './combat.ts';
-import { borderTitle } from './frame.ts';
+import { autoTitle } from './frame.ts';
 import { CF, Game } from './game.ts';
 import { K } from './io.ts';
 import { eased, saveOptions } from './settings.ts';
@@ -153,8 +153,8 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   // The party's own - its members, and the creatures summoned or charmed to its side, whose turns are asked as a
   // member's are (they waited on a press, every one of them, where auto combat played the members).
   if (onMonsterSide(g, s.combatTurn)) return 0;
-  // "Auto" over the party box while the turn is played for the player (taken down as it is theirs: input.ts).
-  borderTitle(g, 'Auto');
+  // "Auto" on the map's top border while the turn is played for the player (taken down as it is theirs: input.ts).
+  autoTitle(g, true);
   g.autoShown = true;
   const member = (me.flags & CF.Player) !== 0;
   // One of the party charmed against it: a foe with the Classic rules, as 1988's player had to strike them; with the
