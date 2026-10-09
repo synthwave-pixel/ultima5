@@ -15,6 +15,7 @@ import { tileAt } from './world.ts';
 import { somethingBeside, thingUnderfoot } from './items.ts';
 import { Status } from './save.ts';
 import { K } from './io.ts';
+import { counter } from './talk.ts';
 
 /** Offered, offered greyed, or left out. */
 export type Offer = 'show' | 'grey' | 'hide';
@@ -173,10 +174,20 @@ export function klimbOffer(g: Game): Offer {
 /** Talk: someone in reach in a town (beside, or across a counter). Elsewhere nobody answers. */
 export function talkOffer(g: Game): Offer {
   if (!inTown(g)) return 'hide';
+  return SIDES.some(([dx, dy]) => talkReaches(g, dx, dy)) ? 'show' : 'hide';
+}
+
+/**
+ * Whether Talk that way finds someone to talk to, as the command looks (talk.ts talkCommand, TALK_041c): whoever
+ * stands beside the party - or, with no one there and a counter, table, fence or windowed door between (talk.ts
+ * counter), whoever stands beyond it. Never two squares off across anything else: a ladder, a wall, open floor.
+ */
+function talkReaches(g: Game, dx: number, dy: number): boolean {
   const s = g.s;
-  for (const [dx, dy] of SIDES)
-    for (let d = 1; d <= 2; d++) if (actorsOn(g, s.x + dx * d, s.y + dy * d).some((t) => t >= 0x40 && t !== 0xfc)) return 'show';
-  return 'hide';
+  const person = (x: number, y: number): boolean => actorsOn(g, x, y).some((t) => t >= 0x40 && t !== 0xfc);
+  const [x, y] = [s.x + dx, s.y + dy];
+  if (actorsOn(g, x, y).length > 0) return person(x, y);
+  return counter(g, x, y) && person(x + dx, y + dy);
 }
 
 /** Attack: a creature beside the party, or in a town anyone (or a mirror); in a fight, always. */
@@ -432,7 +443,7 @@ export function onlySide(g: Game, command: 'talk' | 'open' | 'jimmy'): number {
     const [t, actors] = at(1);
     const fits =
       command === 'talk'
-        ? inTown(g) && [1, 2].some((d) => at(d)[1].some((a) => a >= 0x40 && a !== 0xfc))
+        ? inTown(g) && talkReaches(g, dx, dy)
         : command === 'open'
           ? DOORS.includes(t) || actors.includes(1)
           : t === 0xb9 || t === 0xbb || actors.includes(1) || ((t === 0x84 || t === 0x85) && actors.length > 0);

@@ -976,23 +976,6 @@ function around(g: Game): [number, number][] {
   ];
 }
 
-/** Someone to talk to beside the party, or across a counter. */
-function someoneNear(g: Game): boolean {
-  const s = g.s;
-  for (const [dx, dy] of [
-    [0, -1],
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-  ]) {
-    for (let d = 1; d <= 2; d++) {
-      const t = actorTileAt(g, s.x + dx * d, s.y + dy * d, s.level);
-      if (t >= 0x40 && t !== 0xfc) return true;
-    }
-  }
-  return false;
-}
-
 /**
  * Whether Board is to be had where the party is, `under` the actor there - as Board itself takes it (cmds.ts
  * boardCommand): on foot, a horse, a carpet lying where it was left (0x1b), a skiff or a ship; from a skiff or a
@@ -1093,7 +1076,8 @@ export function contextual(g: Game): Item[] {
     if ((s.partyTile & 0xf8) === 0x20) out.push({ label: 'Fire cannons', key: c('F') });
     if (s.grapple !== 0 && near.some(([x, y]) => tileAt(g, x, y) === 0xc)) out.push({ label: 'Klimb', key: c('K') });
   } else if (where === 'town') {
-    if (someoneNear(g)) out.push({ label: 'Talk', key: c('T') });
+    // Whoever Talk would reach (targets.ts talkOffer): beside the party, or across a counter - as the list below has it.
+    if (talkOffer(g) === 'show') out.push({ label: 'Talk', key: c('T') });
     const doors = near.map(([x, y]) => tileAt(g, x, y));
     if (doors.some((t) => t >= 0xb8 && t <= 0xbb)) out.push({ label: 'Open', key: c('O') });
     if (doors.some((t) => t === 0xb9 || t === 0xbb)) out.push({ label: 'Jimmy', key: c('J'), enabled: s.keys !== 0 });
