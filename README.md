@@ -115,7 +115,8 @@ game with everything else. To remove the game and its saved data:
 
 The game saves itself in the browser's storage (the desktop and Android
 apps each keep their own), and resumes on the next visit. Export saved
-game and Import saved game (Settings) carry a game between browsers,
+game and Import saved game (Manage Saves on the title menu, or Settings
+in play) carry a game between browsers,
 devices and the apps, as text on the clipboard or in a file. To jump
 straight to one of the game's sights - Britain, a frigate at sea, the
 Underworld, Doom - import one of the [showcase saves](showcase/README.md).
@@ -219,8 +220,8 @@ back to any of them.
 **More than one character.** Create New Character adds a character
 beside any you have; it never replaces one. With two or more, Journey
 Onward asks whose journey it is, the one played last first, and that
-list can also delete a character; so can Delete Character on the title
-menu, even the only one. Up to eight characters are kept. Each character has their own saves
+list can also delete a character; so can Delete Character under Manage
+Saves on the title menu, even the only one. Up to eight characters are kept. Each character has their own saves
 and their own settings, so people sharing a device each play their own
 game their own way.
 

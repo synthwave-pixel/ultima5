@@ -208,12 +208,18 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Scanlines',
       'Export saved game',
       'Import saved game',
-      'Remove game files',
     ]);
     // At the title there is no Pause menu: Settings holds the music, the sound and Gameplay.
     expect(settingLines(g, true).map(name)).toEqual(
       expect.arrayContaining(['Music', 'Music level', 'Sound FX', 'Sound FX level', 'Gameplay']),
     );
+    // And not the saves', which are Manage Saves' there (characterMenu.ts).
+    expect(settingLines(g, true).map(name)).not.toEqual(expect.arrayContaining(['Export saved game']));
+    expect(
+      settingLines(g, true)
+        .map(name)
+        .filter((n) => /saved game|game files/.test(n)),
+    ).toEqual([]);
   });
 
   it('dials Music down to Off from Pause, heard as it turns, kept and taken up', async () => {

@@ -1730,6 +1730,15 @@ export function settingLines(g: Game, title = false): Setting[] {
           },
         ]
       : []),
+    // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
+    // Character and Remove game files.
+    ...(title ? [] : transferLines(g)),
+  ];
+}
+
+/** Export and Import saved game (transfer.ts): in play, Settings' lines; at the title, Manage Saves'. */
+export function transferLines(g: Game): Setting[] {
+  return [
     {
       label: 'Export saved game',
       key: c('E'),
@@ -1750,17 +1759,6 @@ export function settingLines(g: Game, title = false): Setting[] {
         if (!(await importGame(g))) return;
         // Taken up from the title, as a game loaded is.
         location.reload();
-        return 0;
-      },
-    },
-    {
-      label: 'Remove game files',
-      note: 'Forget the installed game files; the saved game is kept.',
-      enabled: !!g.hooks.uninstall,
-      act: async () => {
-        if (!(await confirm(g, 'Forget the installed Ultima V files? The saved game is kept; the files must be installed again to play.')))
-          return;
-        await g.hooks.uninstall?.();
         return 0;
       },
     },

@@ -421,27 +421,38 @@ describe('the picker’s edges', () => {
   });
 });
 
-describe('the title’s Delete Character', () => {
+describe('the title’s Manage Saves', () => {
   // (A keyboard read as a controller takes the letters as WASD's or as nothing: the line is reached as the title's
-  // last, up from Journey Onward; and each run ends at a menu waiting for keys, or taking up a game.)
-  it('is a line of the title whenever a character is kept, and not without', async () => {
-    expect((await atTitle(Pad.A)).lines).not.toContain('D'); // none kept (A: Create New Character, to end there)
+  // last, up from Journey Onward; and each run ends at a menu waiting for keys, or taking up a game.) In Manage Saves
+  // the bar starts on Export saved game; Delete Character is two lines down.
+  it('is a line of the title always, a character kept or none (Import brings in the first)', async () => {
+    expect((await atTitle(Pad.A)).lines).toMatch(/SM$/); // none kept (A: Create New Character, to end there)
     make('Iolo', 7);
     chooseCharacter(null);
-    expect((await atTitle(Pad.A)).lines).toMatch(/D$/); // (A: Journey Onward, straight in)
+    expect((await atTitle(Pad.A)).lines).toMatch(/SM$/); // (A: Journey Onward, straight in)
   });
 
-  it('deletes the only character, after which Journey Onward is grey and the line gone, the settings as they were', async () => {
+  it('offers Export, Import, Delete Character and Remove game files; with none kept, Export and Delete grey', async () => {
+    const { g } = await atTitle(K.Up, Pad.A);
+    expect(g.menuShown?.title).toBe('Manage Saves');
+    expect(g.menuShown?.labels).toEqual(['Export saved game', 'Import saved game', 'Delete Character', 'Remove game files']);
+    // Nothing kept to export or delete. (Import and Remove game files follow the page's hooks, which the test
+    // platform has not.)
+    const enabled = g.menuShown?.enabled ?? [];
+    expect([enabled[0], enabled[2]]).toEqual([false, false]);
+  });
+
+  it('deletes the only character, after which Journey Onward is grey, the settings as they were', async () => {
     make('Iolo', 7);
     saveOptions({ ...loadOptions(), scanlines: true });
     chooseCharacter(null);
-    // Delete Character; Iolo; Yes; then up from Create New Character (Journey Onward grey) to Settings, to end there.
-    const { g, lines } = await atTitle(K.Up, Pad.A, Pad.A, K.Down, Pad.A, K.Up, Pad.A);
+    // Manage Saves; Delete Character; Iolo; Yes; out (B); then up from Create New Character (Journey Onward grey)
+    // past Manage Saves to Settings, to end there.
+    const { g } = await atTitle(K.Up, Pad.A, K.Down, K.Down, Pad.A, Pad.A, K.Down, Pad.A, Pad.B, K.Up, K.Up, Pad.A);
     expect(g.menuShown?.title).toBe('Settings');
     expect(characters()).toEqual([]);
     expect(characterIds()).toEqual([]);
     expect([...store.keys()].filter((k) => k.startsWith('ultima5.char.'))).toEqual([]);
-    expect(lines).not.toContain('D');
     expect(g.options.scanlines).toBe(true); // the machine's now: as Iolo's were
     expect(loadOptions().scanlines).toBe(true);
   });
@@ -454,8 +465,8 @@ describe('the title’s Delete Character', () => {
     chooseCharacter(characters().find((c) => avatarName(c.data) === 'Dupre')!.id);
     saveOptions({ ...loadOptions(), musicLevel: 0 });
     chooseCharacter(null);
-    // Delete Character; Jaana (first); Yes; Journey Onward, the picker (to end there).
-    const { g } = await atTitle(K.Up, Pad.A, Pad.A, K.Down, Pad.A, Pad.A);
+    // Manage Saves; Delete Character; Jaana (first); Yes; out; Journey Onward, the picker (to end there).
+    const { g } = await atTitle(K.Up, Pad.A, K.Down, K.Down, Pad.A, Pad.A, K.Down, Pad.A, Pad.B, Pad.A);
     expect(g.menuShown?.title).toBe('Whose journey?');
     expect(names()).toEqual(['Dupre', 'Iolo']);
     expect(g.options.musicLevel).toBe(0); // Dupre's, the latest now
@@ -464,8 +475,8 @@ describe('the title’s Delete Character', () => {
   it('keeps everyone on B or No', async () => {
     make('Iolo', 7);
     chooseCharacter(null);
-    // Delete Character, back; again, Iolo, No; then Journey Onward, straight in.
-    const { done, p } = await atTitle(K.Up, Pad.A, Pad.B, K.Up, Pad.A, Pad.A, Pad.A, Pad.A);
+    // Manage Saves; Delete Character, back; again, Iolo, No; out; then Journey Onward, straight in.
+    const { done, p } = await atTitle(K.Up, Pad.A, K.Down, K.Down, Pad.A, Pad.B, Pad.A, Pad.A, Pad.A, Pad.B, Pad.A);
     expect(p.log.split('Delete whom?')).toHaveLength(3); // asked whom, both times
     expect(p.log).toContain('Delete Iolo and all');
     expect(names()).toEqual(['Iolo']);
@@ -934,7 +945,7 @@ describe('an update at the title', () => {
     // Later; then up from Journey Onward to the last line, Quit, the menu scrolled to its foot.
     const { p, lines } = await atTitleWith(setup, K.Down, Pad.A, K.Up);
     expect(calls).toEqual({ applied: 0, told: 1 });
-    expect(lines).toBe('JCUARSD!Q');
+    expect(lines).toBe('JCUARSM!Q');
     const shown = screen(p);
     expect(shown).toContain('Update (1.1.44)');
     expect(shown).toContain('Quit');
@@ -963,7 +974,7 @@ describe('an update at the title', () => {
       );
       endWhenDone(g);
     });
-    expect(lines).toBe('JCUARSD!');
+    expect(lines).toBe('JCUARSM!');
     const shown = screen(p);
     expect(shown).toContain('Journey Onward');
     expect(shown).toMatch(/ Update /);

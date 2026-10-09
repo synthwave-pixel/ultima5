@@ -3,11 +3,12 @@
  *
  * The title's choice of character (the port's), where more than one is kept: Journey Onward's list of them, the
  * newest last save first, each by name and level, where they are and when they last saved - and at its foot, Delete a
- * character..., asked twice.
+ * character..., asked twice. And the title's Manage Saves: Export and Import saved game, Delete Character, and Remove
+ * game files.
  */
 
 import type { Game } from './game.ts';
-import { choose, confirm, type Item } from './menu.ts';
+import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
 import { Save } from './save.ts';
 import { avatarName, characters, deleteCharacter, fromBase64, savedWhen, savedWhere, type Character } from './storage.ts';
 
@@ -84,5 +85,59 @@ export async function pickCharacter(g: Game, redraw: () => Promise<void>): Promi
     if (i < 0) return null;
     if (i < all.length * LINES) return all[Math.floor(i / LINES)];
     await deleteOne(g, all, box);
+  }
+}
+
+/**
+ * The title's Manage Saves (the port's): Export and Import saved game (menu.ts transferLines), Delete Character, and
+ * Remove game files, in a box of its own over the title's picture, which `redraw` puts back under each box after the
+ * first. Export and Delete want a character kept; Import does not, so a new machine's first game can come in here.
+ * Returns 'deleted' where a character went (the title then forgets whose game it had), 'left' where the game is to be
+ * taken up anew (an import, the files removed), else null.
+ */
+export async function manageSavesMenu(g: Game, redraw: () => Promise<void>): Promise<'deleted' | 'left' | null> {
+  const box = boxes(redraw);
+  let deleted = false;
+  let at = 0;
+  for (;;) {
+    const kept = characters().length > 0;
+    const [exporting, importing] = transferLines(g);
+    const lines: Setting[] = [
+      // Notes short enough for the box's three lines (Settings' are wider).
+      { ...exporting, note: 'A game, to the clipboard or a file.', enabled: exporting.enabled !== false && kept },
+      { ...importing, note: 'A game from the clipboard or a file.' },
+      {
+        label: 'Delete Character',
+        key: 0x44,
+        note: 'A character, and all their saves.',
+        enabled: kept,
+        act: async () => {
+          if (await deleteCharacterMenu(g, redraw)) deleted = true;
+        },
+      },
+      {
+        label: 'Remove game files',
+        key: 0x52,
+        note: 'Forget the game files. Saves are kept.',
+        enabled: !!g.hooks.uninstall,
+        act: async () => {
+          if (
+            !(await confirm(
+              g,
+              'Forget the installed Ultima V files? The saved games are kept; the files must be installed again to play.',
+              true,
+            ))
+          )
+            return;
+          await g.hooks.uninstall?.();
+          return 0;
+        },
+      },
+    ];
+    await box();
+    at = await choose(g, 'Manage Saves', lines, at, true);
+    if (at === -2) continue; // to be drawn anew
+    if (at < 0) return deleted ? 'deleted' : null;
+    if (typeof (await lines[at].act?.()) === 'number') return 'left';
   }
 }

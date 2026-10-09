@@ -201,8 +201,8 @@ platform:
 - **Android**: Choose folder..., the system's own picker, instead.
 
 A copy whose every file is a known one is installed at once; anything
-else is named, for the player to decide. Remove game files (Settings)
-forgets the installed copy.
+else is named, for the player to decide. Remove game files (Manage Saves,
+on the title menu) forgets the installed copy.
 
 ## Builds and releases
 

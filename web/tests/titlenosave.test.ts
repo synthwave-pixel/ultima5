@@ -33,6 +33,6 @@ describe('the title with no game saved', () => {
     const { g, p } = newGame();
     p.keys.push(K.Escape, K.Escape, K.Escape, K.Up, Pad.A);
     await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
-    expect(g.menuShown?.title).toBe('Settings');
+    expect(g.menuShown?.title).toBe('Manage Saves');
   });
 });

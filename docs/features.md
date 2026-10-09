@@ -56,7 +56,7 @@ describes how the Modern look is drawn.
   only from a key, click or tap, so there Choose files... wants Enter or
   a tap; Scan needs neither.)
 - **Kept in the game's storage**: the files are copied in once and
-  checked at every start; Remove game files (Settings) forgets them, and
+  checked at every start; Remove game files (Manage Saves, on the title menu) forgets them, and
   the installer comes up on the next start.
 - **Its own boot screen and Steam artwork**: while it loads, the game
   shows its key art (the ankh before three Shadowlords) at its own
@@ -904,7 +904,7 @@ also checks its own code as it loads (Electron's ASAR integrity and
 load-only-from-ASAR fuses, with running as Node, NODE_OPTIONS and the
 inspector turned off): an altered copy refuses to start.
 
-Export and Import (Settings) work all on the screen, so a controller can
+Export and Import (Manage Saves on the title menu, Settings in play) work all on the screen, so a controller can
 do them, a character at a time: the game in play, or at the title the
 one chosen (*Export whose game?*, where there are more), goes with its
 settings to the clipboard or to a file (`ultima5-Name-YYYYMMDD-HHMM.json`),

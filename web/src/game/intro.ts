@@ -582,12 +582,11 @@ export class Intro {
       [0xb, 0x315e],
       [10, 0x316f],
     ];
-    // The port's own lines under the game's five: its settings, deleting a character, a newer version (ui/updates.ts),
-    // and Quit in the apps.
+    // The port's own lines under the game's five: its settings, managing the saves (characterMenu.ts), a newer
+    // version (ui/updates.ts), and Quit in the apps.
     const version = this.g.hooks.update?.offer()?.version;
     for (const k of this.menuKeys().slice(MENU.length)) {
-      const label =
-        k === 'S' ? 'Settings' : k === 'D' ? 'Delete Character' : k === 'Q' ? 'Quit' : version ? `Update (${version})` : 'Update';
+      const label = k === 'S' ? 'Settings' : k === 'M' ? 'Manage Saves' : k === 'Q' ? 'Quit' : version ? `Update (${version})` : 'Update';
       items.push([(0x28 - label.length - 2) >> 1, label]);
     }
     // The box holds eight lines: more, and they scroll with the bar, an arrow at the box's edge where there are more
@@ -678,19 +677,12 @@ export class Intro {
   private noSave = false;
 
   /**
-   * The title menu's keys: the game's five, Settings, '!' while an update waits to be restarted into, and Quit in an
-   * app that can (the desktop app, where full screen and Steam's Game Mode leave no close button; the Android app).
-   * Quit and the update never come together - the apps have no service worker, their updates being new builds - so
-   * the list is seven lines at most, which the box holds.
-   */
-  /**
-   * The title's lines' keys: the game's five, then the port's - Settings, Delete Character where any character is
-   * kept, a waiting update, Quit in the apps. The box holds eight: where an update waits in an app, Delete Character
-   * stands aside for it (the picker's Delete a character... still offers it, with two or more).
+   * The title's lines' keys: the game's five, then the port's - Settings, Manage Saves (always: Import is how a new
+   * machine's first game may come), a waiting update, Quit in the apps. More than the box's eight scroll.
    */
   private menuKeys(): string {
     const after = (this.g.hooks.update?.offer() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
-    return MENU + 'S' + (this.noSave ? '' : 'D') + after;
+    return MENU + 'SM' + after;
   }
 
   /** Whether a newer version waits to be told of (updateBox). */
@@ -1640,14 +1632,14 @@ export class Intro {
           await this.title(false);
           break;
         }
-        case 0x44: {
-          // Delete Character: whom, of every character kept - the last one too (characterMenu.ts).
-          const { deleteCharacterMenu } = await import('./characterMenu.ts');
+        case 0x4d: {
+          // Manage Saves: Export and Import saved game, Delete Character, Remove game files (characterMenu.ts).
+          const { manageSavesMenu } = await import('./characterMenu.ts');
           const redraw = async (): Promise<void> => {
             await this.title(false);
-            this.titleMenu(keys.indexOf('D'));
+            this.titleMenu(keys.indexOf('M'));
           };
-          if (await deleteCharacterMenu(g, redraw)) this.useCharacter(null);
+          if ((await manageSavesMenu(g, redraw)) === 'deleted') this.useCharacter(null);
           await this.title(false);
           break;
         }

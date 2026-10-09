@@ -5,7 +5,8 @@ level, gear, spells and quest items a player would have there. They are for
 trying the game out, taking screenshots and video, and testing.
 
 **To play one:** download its `.json` file, then in the game open
-**Settings → Import saved game → From a file** and pick it. Choose
+**Manage Saves → Import saved game → From a file** on the title menu
+(or **Settings → Import saved game** in play) and pick it. Choose
 **Add Showcase** the first time, or **Replace Showcase's game** after
 that, then **Journey Onward**. They all belong to the same Avatar,
 *Showcase*, so they take up one of the game's eight character places, and
