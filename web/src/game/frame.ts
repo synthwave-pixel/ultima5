@@ -273,41 +273,53 @@ export function drawMoons(g: Game): void {
   t.font = 0;
 }
 
-/** The map's top border's middle, where "Auto" stands: the cells of its caps and its word (autoTitle). */
-const AUTO_CELLS = [9, 14];
+/**
+ * The map's top border's middle: the cells the place's name and the sky take (drawMapName, drawMoons, 5 to 18) - a
+ * dungeon's level among them - which "Auto" is given whole (autoTitle).
+ */
+const SKY_CELLS = [5, 18];
 
 /**
- * "Auto" centred on the map's top border while auto combat plays a turn (the port's), over the sun and moons a fight
- * out of doors keeps there (whose redrawing each round waits meanwhile, combat.ts); taken down (`on` false), the border
- * there drawn again, and the sky where the place has one.
+ * "Auto" centred on the map's top border while auto combat plays a turn (the port's): the border's middle made plain
+ * chrome under it - the sky a fight out of doors shows there (whose redrawing each round waits meanwhile, combat.ts),
+ * or a dungeon's level - and "Auto" in its caps in the middle. Taken down (`on` false), what was there is drawn again:
+ * the place's name line and its sun and moons, or the dungeon's level.
  */
 export function autoTitle(g: Game, on: boolean): void {
   const t = g.text;
   const was = t.current;
   t.select(Win.screen);
-  const [c1, c2] = AUTO_CELLS;
-  if (on) {
-    t.moveTo(c1, 0);
-    leftArrow(g);
-    g.print('Auto');
-    rightArrow(g);
-    t.select(was);
-    return;
-  }
+  const [c1, c2] = SKY_CELLS;
   t.clearArea(c1, 0, c2, 0);
   const d = g.draw;
   d.pen = Colour.blue;
   d.fill(c1 * 8, 0, c2 * 8 + 7, 6);
   d.pen = Colour.brightWhite;
   d.line(c1 * 8, 7, c2 * 8 + 7, 7);
-  t.select(was);
-  // The sky again: in a fight, that of where it was fought (as the fight's own rounds draw it).
   const s = g.s;
-  if (s.mapId === 0xff && s.savedMapId < 0x21) {
-    s.mapId = s.savedMapId;
-    drawMoons(g);
-    s.mapId = 0xff;
-  } else drawMoons(g);
+  if (on) {
+    t.moveTo(9, 0);
+    leftArrow(g);
+    g.print('Auto');
+    rightArrow(g);
+  } else {
+    // Where the fight is fought - the place it was entered from - or, the fight over, where the party is.
+    const place = s.mapId === 0xff ? s.savedMapId : s.mapId;
+    if (place < 0x21) {
+      const map = s.mapId;
+      s.mapId = place;
+      drawMapName(g);
+      drawMoons(g);
+      s.mapId = map;
+    } else if (place < 0x29) {
+      // A dungeon's level, as its view puts it on the border (dungeon.ts borders, printWalkDir).
+      t.moveTo(10, 0);
+      leftArrow(g);
+      g.print(`L${s.level + 1}`);
+      rightArrow(g);
+    }
+  }
+  t.select(was);
 }
 
 /** ULTIMA_4be8: the map's name on the top border. */
