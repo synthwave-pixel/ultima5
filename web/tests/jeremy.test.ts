@@ -60,8 +60,8 @@ const askKeys = (answer: 'Y' | 'N', times: number): (number | string)[] => [
 
 /**
  * Jeremy, Yew's chef (talk.ts JEREMY): "Have five!" - the keys given before he asks 50 gold for them. One who pays
- * gets five each time; one who cannot keeps no more than five of all held, however often asked (issue #4); one who
- * refuses keeps them, as 1988 has it, for karma.
+ * gets five each time; one who cannot, or refuses ("Scoundrel!", karma lost), keeps no more than five of all held,
+ * however often asked (issue #4).
  */
 describe("Jeremy's keys", () => {
   it('gives a broke prisoner five, enough for the cell door, and no more however often asked', async () => {
@@ -96,7 +96,7 @@ describe("Jeremy's keys", () => {
     expect(g.s.gold).toBe(400);
   });
 
-  it('lets one who refuses keep them, for karma, as 1988 has it', async () => {
+  it('lets one who refuses keep five, for karma, and no more however often refused', async () => {
     const { g, p } = await inCell(500, 0);
     const karma = g.s.karma;
     await say(g, p, askKeys('N', 1));
@@ -104,5 +104,17 @@ describe("Jeremy's keys", () => {
     expect(g.s.keys).toBe(5);
     expect(g.s.karma).toBe(karma - 3);
     expect(g.s.gold).toBe(500);
+    // He ends the talk at "Scoundrel!": talked to again, and refused again, he gives no more.
+    await say(g, p, [...askKeys('N', 1), ...askKeys('N', 1)]);
+    expect(heard(p).match(/Scoundrel/g)).toHaveLength(3);
+    expect(g.s.keys).toBe(5);
+    expect(g.s.karma).toBe(karma - 9);
+  });
+
+  it('caps unpaid keys at five of all held, paid ones on top: bought, then refused, none more', async () => {
+    const { g, p } = await inCell(500, 0);
+    await say(g, p, [TALK, K.Down, 'KEY\r', 'Y', 'BYE\r', ...askKeys('N', 1)]);
+    expect(g.s.keys).toBe(5);
+    expect(g.s.gold).toBe(450);
   });
 });

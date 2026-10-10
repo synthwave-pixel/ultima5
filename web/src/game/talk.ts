@@ -77,11 +77,19 @@ export class TalkState {
 
 /**
  * Jeremy, Yew's chef (TOWNE.TLK 20): "Have five!" - five keys given before he asks 50 gold for them, kept whatever the
- * answer (1988's order). The port's: one who cannot pay keeps no more than five, so a broke prisoner still has the
- * way out of Yew's cell, but asking again and again is no longer a store of keys (issue #4).
+ * answer (1988's order). The port's: keys not paid for - he could not be paid, or was refused ("Scoundrel!") - leave
+ * no more than five of all held, so a broke prisoner still has the way out of Yew's cell, but asking again and again
+ * is no longer a store of keys (issue #4).
  */
 const JEREMY = '0:20:';
-const BROKE_KEYS = 5;
+const UNPAID_KEYS = 5;
+
+/** Jeremy's keys not paid for: no more than UNPAID_KEYS of all held, the gift forgotten (JEREMY). */
+function settleKeys(g: Game): void {
+  const t = g.talk;
+  if (t.keysBefore !== null) g.s.keys = Math.max(t.keysBefore, Math.min(UNPAID_KEYS, g.s.keys));
+  t.keysBefore = null;
+}
 
 export type Talk = { g: Game; t: TalkState; /** Being asked their name. */ naming?: boolean };
 
@@ -278,8 +286,7 @@ async function payGold(k: Talk): Promise<number> {
     return 0;
   }
   // Jeremy's keys, given already: one who cannot pay for them keeps up to five of all held (JEREMY).
-  if (t.keysBefore !== null) s.keys = Math.max(t.keysBefore, Math.min(BROKE_KEYS, s.keys));
-  t.keysBefore = null;
+  settleKeys(g);
   t.word = [];
   g.printChar('"');
   g.say(0x9328); // "Thou hast not enough gold!"
@@ -509,7 +516,8 @@ async function interest(k: Talk): Promise<number> {
   const { g, t } = k;
   for (;;) {
     t.responding = 0;
-    t.keysBefore = null;
+    // A gift of Jeremy's keys not paid for by the time he asks what else (JEREMY).
+    settleKeys(g);
     g.say(0x9408); // "Your interest?\n:"
     await readWords(k);
     if (t.typed.length === 0) {
@@ -922,6 +930,8 @@ async function conversation(g: Game, n: number): Promise<void> {
   try {
     if ((await greet(k)) === 0 && (await interest(k)) === 0) await farewell(k);
   } finally {
+    // Or by the time the talk ends: refused, he ends it ("Scoundrel!").
+    settleKeys(g);
     const heard = g.recording;
     g.recording = null;
     g.recordWindow = null;

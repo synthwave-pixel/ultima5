@@ -829,11 +829,10 @@ settled on the original Apple II disks - is told in
 - **Jeremy's keys are no longer a store of them.** Yew's chef says "Have
   five!" and gives five keys before he asks 50 gold for them, so in 1988
   one who could not pay kept them anyway, and could ask again and again, to
-  99. One who cannot pay now keeps no more than five of all held: enough
-  for a prisoner taken to Yew's jail, keys gone, to open the cell, as he
-  waits by its door each morning and evening. One who pays gets five each
-  time; one who refuses ("Scoundrel!") still keeps them, for karma, as 1988
-  has it.
+  99 - or refuse him ("Scoundrel!", 3 karma), and keep them too. Keys not
+  paid for now leave no more than five of all held: enough for a prisoner
+  taken to Yew's jail, keys gone, to open the cell, as he waits by its door
+  each morning and evening. One who pays gets five each time.
 
 ## Saving
 
