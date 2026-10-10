@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Game } from '../src/game/game.ts';
-import { K } from '../src/game/io.ts';
+import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkOffer } from '../src/game/targets.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
@@ -28,6 +28,41 @@ describe('Smith the talking horse', () => {
   it('is offered Talk beside him', async () => {
     const { g } = await bySmith();
     expect(talkOffer(g)).toBe('show');
+  });
+
+  it('is offered Board beside him, and will not be ridden: "Nay!", as 1988 has him', async () => {
+    const { commandMenu } = await import('../src/game/menu.ts');
+    const { g, p } = await bySmith();
+    let shown: string[] = [];
+    p.next = () => {
+      shown = [...(g.menuShown?.labels ?? [])];
+      return Pad.B;
+    };
+    g.commandPrompt = 'town';
+    await commandMenu(g).catch(() => undefined);
+    expect(shown).toContain('Board');
+    expect(shown).toContain('Talk');
+    // Board, typed (B) or chosen: he refuses, and stays where he is.
+    const { boardCommand } = await import('../src/game/cmds.ts');
+    const before = p.log.length;
+    await boardCommand(g);
+    expect(p.log.slice(before)).toMatch(/Nay!/);
+    expect(g.s.partyTile).toBe(0x1c);
+  });
+
+  it('offers no Board beside a horse who has nothing to say: one is boarded where it stands', async () => {
+    const { commandMenu } = await import('../src/game/menu.ts');
+    const { g, p } = await bySmith();
+    const smith = g.s.npcs.findIndex((n) => n.fa === 13);
+    g.s.npcs[smith].fa = 0;
+    let shown: string[] = [];
+    p.next = () => {
+      shown = [...(g.menuShown?.labels ?? [])];
+      return Pad.B;
+    };
+    g.commandPrompt = 'town';
+    await commandMenu(g).catch(() => undefined);
+    expect(shown).not.toContain('Board');
   });
 
   it('is talked to when walked into', async () => {

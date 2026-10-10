@@ -8,7 +8,7 @@
  * letter picker that lets a controller type names and words.
  */
 
-import { saysWord } from './cmds.ts';
+import { saysWord, talkingHorseBeside } from './cmds.ts';
 import { actorTileAt } from './actors.ts';
 import { foesAbout } from './bumpAct.ts';
 import { clearBorderTitle, drawVitals, updateFrame, Win } from './frame.ts';
@@ -1069,7 +1069,8 @@ export function contextual(g: Game): Item[] {
   // are for towne and country both.
   if (where === 'outdoors' || where === 'town') {
     const under = actorTileAt(g, s.x, s.y, s.level);
-    if (canBoard(g, under)) out.push({ label: 'Board', key: c('B') });
+    // Board also beside Smith, who will not be ridden: "Nay!" (cmds.ts talkingHorseBeside).
+    if (canBoard(g, under) || (where === 'town' && talkingHorseBeside(g))) out.push({ label: 'Board', key: c('B') });
     if (s.partyTile !== A.Avatar) out.push({ label: 'X-it', key: c('X') });
   }
   if (where === 'outdoors') {
@@ -1199,7 +1200,10 @@ function everything(g: Game): Item[] {
     ...offered({ label: 'View a gem', key: c('V') }, combat ? 'hide' : has(s.gems !== 0)),
     ...offered({ label: 'Yell', key: c('Y') }, yellOffer(g)),
     ...offered({ label: 'Enter', key: c('E') }, only(outdoors && ENTRANCES.includes(tileAt(g, s.x, s.y)))),
-    ...offered({ label: 'Board', key: c('B') }, only((outdoors || where === 'town') && canBoard(g, under))),
+    ...offered(
+      { label: 'Board', key: c('B') },
+      only((outdoors || where === 'town') && (canBoard(g, under) || (where === 'town' && talkingHorseBeside(g)))),
+    ),
     ...offered({ label: 'X-it', key: c('X') }, only((outdoors || where === 'town') && !onFoot)),
     ...offered({ label: 'Fire', key: c('F') }, fireOffer(g)),
     ...offered({ label: 'New order', key: c('N') }, newOrderOffer(g)),

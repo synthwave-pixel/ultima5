@@ -89,6 +89,12 @@ export async function boardCommand(g: Game): Promise<number> {
   }
   const tile = actorTileAt(g, s.x, s.y, s.level);
   const i = s.dx;
+  // Smith beside the party, who will not be ridden (the port's): in 1988 he was stood on and Board said "Nay!"; walked
+  // into, he is talked to now (town.ts move), and Board says it from beside him.
+  if (tile === 0 && talkingHorseBeside(g)) {
+    g.say(0x425e); // "\"Nay!\"\n"
+    return 1;
+  }
   if ((tile & 0xfe) === 0x10) {
     if (s.mapId !== 0) {
       const npc = npcOfActor(g, i);
@@ -130,6 +136,22 @@ export async function boardCommand(g: Game): Promise<number> {
   g.viewDirty |= 2;
   musicForMap(g);
   return 1;
+}
+
+/**
+ * Whether a horse who is one of the place's people with something to say stands beside the party, in a settlement:
+ * Smith, the talking horse at Iolo's hut (issue #3), whom Board asks and who answers "Nay!" (boardCommand).
+ */
+export function talkingHorseBeside(g: Game): boolean {
+  const s = g.s;
+  if (s.mapId === 0 || s.mapId > 0x20) return false;
+  for (let i = 1; i < 32; i++) {
+    const a = s.actors[i];
+    if ((a.tile & 0xfe) !== 0x10 || a.z !== s.level || Math.abs(a.x - s.x) + Math.abs(a.y - s.y) !== 1) continue;
+    const npc = npcOfActor(g, i);
+    if (npc >= 0 && s.npcs[npc].fa !== 0) return true;
+  }
+  return false;
 }
 
 /** CMDS_0eb4: X-it: step off or out of whatever carries the party. */
