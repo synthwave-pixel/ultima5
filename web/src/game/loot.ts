@@ -112,18 +112,16 @@ export function sayTaken(lines: string[]): string {
     .join(', ');
 }
 
+/** What a trap's burst runs on past the wait the game gives an effect, before the party leaves (lootField). */
+const TRAP_TAIL_MS = 250;
+
 /**
  * Take everything the field holds that can be taken safely; whether all of it was (the party then leaves). What each
  * chest's search, unlocking and opening says is held back and said once, together (the port's): who searched, who
- * opened, a trap that went off, and all that was taken - not a run of lines for every chest scrolling past. And each
- * sound it makes sounds once.
+ * opened, a trap that went off, and all that was taken - not a run of lines for every chest scrolling past. Its only
+ * sound is a trap's burst, where one went off, after the summary.
  */
 export async function lootField(g: Game): Promise<boolean> {
-  // Each sound once, however many chests: one An Sanct's sparkle, one trap's burst, one cry of hurt (the port's).
-  return g.onceEach(() => lootAll(g));
-}
-
-async function lootAll(g: Game): Promise<boolean> {
   const s = g.s;
   const name = (m: number): string => s.members[m].name;
   /** Who did each thing, and how often: by name, in the order they first did it. */
@@ -134,6 +132,10 @@ async function lootAll(g: Game): Promise<boolean> {
     opened: new Map<string, number>(),
   };
   const tally = (what: Map<string, number>, m: number): void => void what.set(name(m), (what.get(name(m)) ?? 0) + 1);
+  // Each thing done with its words held back for the summary, and without its sound: a run of chests made at once
+  // sounded every search's, cast's, broken key's and opening's together (the port's). A trap that went off sounds
+  // once, after the summary says so.
+  const quiet = (work: () => unknown): Promise<string> => g.hush(() => g.quietly(work));
   let broke = 0;
   const traps: string[] = [];
   let left = 0;
@@ -149,7 +151,7 @@ async function lootAll(g: Game): Promise<boolean> {
         left++;
         continue;
       }
-      await g.quietly(() => searchChest(g, i, who));
+      await quiet(() => searchChest(g, i, who));
       tally(did.searched, who);
       read = g.bumped.get(key);
     }
@@ -157,13 +159,13 @@ async function lootAll(g: Game): Promise<boolean> {
     if (read === 'trap') {
       const caster = unlockAnyCaster(g);
       if (caster >= 0) {
-        await g.quietly(() => unlockChest(g, i, caster));
+        await quiet(() => unlockChest(g, i, caster));
         tally(did.cast, caster);
         safe = true;
       } else if (s.keys > 0) {
         const who = best(able(g), (m) => s.members[m].dex);
         if (who >= 0) {
-          await g.quietly(async () => (safe = await jimmyChestBy(g, i, who)));
+          await quiet(async () => (safe = await jimmyChestBy(g, i, who)));
           tally(did.jimmied, who);
           if (!safe) broke++;
         }
@@ -178,7 +180,7 @@ async function lootAll(g: Game): Promise<boolean> {
     const m = s.members[opener];
     const [hp, status] = [m.hp, m.status];
     const trapped = a.b5 > 0x7f;
-    await g.quietly(() => openChest(g, a.x, a.y, a.z, { actor: i, who: opener }));
+    await quiet(() => openChest(g, a.x, a.y, a.z, { actor: i, who: opener }));
     tally(did.opened, opener);
     if (trapped) {
       const hurt = m.status === Status.Dead ? ', and falls' : m.status !== status ? ', poisoned' : hp > m.hp ? ` (-${hp - m.hp})` : '';
@@ -190,7 +192,7 @@ async function lootAll(g: Game): Promise<boolean> {
   const taken: string[] = [];
   for (const i of lying(g).things) {
     const a = s.actors[i];
-    taken.push(await g.quietly(() => getObject(g, a.tile, a.b5, i)));
+    taken.push(await quiet(() => getObject(g, a.tile, a.b5, i)));
   }
   g.viewDirty |= 2;
   updateFrame(g);
@@ -208,5 +210,11 @@ async function lootAll(g: Game): Promise<boolean> {
   for (const trap of traps) say(trap);
   if (taken.length) say(`Taken: ${sayTaken(taken)}.`);
   if (left) say(`${left === 1 ? 'A chest is' : `${left} chests are`} left: no one could open ${left === 1 ? 'it' : 'them'} safely.`);
+  // The one sound the loot makes: a trap's burst (items.ts springTrap), heard out before the party leaves - the
+  // effect is waited for only its first tenth of a second (ui/sound.ts PACE), and the burst runs on past it.
+  if (traps.length && !g.soundOff) {
+    await g.sound.noise(0x28, 3000, 500);
+    await g.p.sleep(TRAP_TAIL_MS);
+  }
   return left === 0;
 }

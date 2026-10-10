@@ -110,6 +110,35 @@ describe('Loot and Leave', () => {
     expect(flat(p.log).match(/jimmied/g)?.length).toBe(1);
   });
 
+  it('makes no sound of its own but a trap that went off, once, after the summary says so', async () => {
+    const { g, p } = won();
+    const s = g.s;
+    s.keys = 3;
+    s.members[0].dex = 25;
+    chest(g, 3, 2, 2, 6, true);
+    chest(g, 4, 4, 4, 6, true);
+    g.bumped.set(thingKey(g, 2, 2), 'trap');
+    g.bumped.set(thingKey(g, 4, 4), 'trap');
+    g.random = (lo, hi) => (lo === 1 && hi === 0x1e ? 1 : hi); // every key breaks
+    const heard: { what: string; at: number }[] = [];
+    const sound = g.p.sound as unknown as Record<string, (...a: number[]) => Promise<void>>;
+    for (const k of ['pulse', 'noise', 'tone', 'sweep'])
+      sound[k] = (...a: number[]) => {
+        heard.push({ what: `${k}(${a.join(',')})`, at: p.log.length });
+        return Promise.resolve();
+      };
+    (g.p.sound as { cue?: (name: string) => Promise<void> }).cue = (name: string) => {
+      heard.push({ what: `cue(${name})`, at: p.log.length });
+      return Promise.resolve();
+    };
+    await lootField(g);
+    expect(flat(p.log)).toContain(flat('2 keys broke'));
+    expect(flat(p.log)).toContain('sprangatrap');
+    // No broken key's sweep, no search's or opening's sound: the trap's burst alone, once, with the summary all said.
+    expect(heard.map((h) => h.what)).toEqual(['noise(40,3000,500)']);
+    expect(heard[0].at).toBe(p.log.length);
+  });
+
   it('leaves a chest no one can open without risking a life, stays, and says so', async () => {
     const { g, p } = won();
     const s = g.s;
@@ -167,7 +196,7 @@ describe('Loot and Leave', () => {
     expect(Number(said?.[1])).toBe(s.gold - gold);
   });
 
-  it('makes each sound once, however many chests: one An Sanct, not one for every chest', async () => {
+  it('casts An Sanct on every trapped chest without its sparkle, and sounds again after', async () => {
     const { g, p } = won();
     const s = g.s;
     g.soundOff = false;
@@ -184,8 +213,7 @@ describe('Loot and Leave', () => {
     p.sound.noise = (...a) => (noises.push(a.join(',')), real(...a));
     expect(await lootField(g)).toBe(true);
     expect(s.mixtures[AN_SANCT]).toBe(0); // three cast
-    expect(noises.length).toBe(1); // the sparkle, once
-    noises.length = 0;
+    expect(noises.length).toBe(0); // no sparkle: the loot is silent but for a trap that goes off
     await g.sound.noise(1, 2, 3); // and after, every sound again
     await g.sound.noise(1, 2, 3);
     expect(noises.length).toBe(2);

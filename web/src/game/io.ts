@@ -354,9 +354,10 @@ export interface Sound {
   music(tune: number, occasion?: Occasion): void;
   /**
    * One of the ultima3 port's sounds by name (game/cues.ts), where the Standard set gives one the DOS game had
-   * not; a moment's wait at most. Absent where there is no such set.
+   * not; a moment's wait at most - or, `whole`, until it has sounded out (what follows it is not to sound over it).
+   * Absent where there is no such set.
    */
-  cue?(name: string): Promise<void>;
+  cue?(name: string, whole?: boolean): Promise<void>;
   /**
    * How near what the next ambient call sounds is - a waterfall, a fountain, a clock - in squares, squared (frame.ts
    * ambientSound), told just before it; where its level follows it. Absent where nothing does.

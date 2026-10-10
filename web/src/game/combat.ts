@@ -2497,7 +2497,8 @@ async function escape(g: Game): Promise<number> {
         updateFrame(g);
       }
     }
-    await cue(g, 'Withdraw', () => g.sound.sweep(0x4b0, 2000, 1, 0x28));
+    // Sounded out before the party is back where it was, so the place's music does not come in over it (the port's).
+    await cue(g, 'Withdraw', () => g.sound.sweep(0x4b0, 2000, 1, 0x28), true);
   }
   g.vitalsDirty = 1;
   return stay ? 1 : 0;

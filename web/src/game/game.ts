@@ -341,35 +341,8 @@ export class Game {
     return this.p.draw;
   }
   get sound(): Sound {
-    const heard = this.soundsHeard;
-    if (!heard) return this.p.sound;
-    // Each sound once (onceEach): one asked for again, the same in every way, is let go.
-    const real = this.p.sound;
-    const once =
-      <A extends number[]>(name: string, play: (...a: A) => Promise<void>) =>
-      (...a: A): Promise<void> => {
-        const key = `${name}:${a.join(',')}`;
-        if (heard.has(key)) return Promise.resolve();
-        heard.add(key);
-        return play(...a);
-      };
-    const cue = real.cue?.bind(real);
-    return {
-      pulse: once('pulse', real.pulse.bind(real)),
-      noise: once('noise', real.noise.bind(real)),
-      tone: once('tone', real.tone.bind(real)),
-      sweep: once('sweep', real.sweep.bind(real)),
-      music: (tune, occasion) => real.music(tune, occasion),
-      ...(cue && {
-        cue: (name: string): Promise<void> => {
-          if (heard.has(`cue:${name}`)) return Promise.resolve();
-          heard.add(`cue:${name}`);
-          return cue(name);
-        },
-      }),
-      setHeld: (reason, held) => real.setHeld(reason, held),
-      hearMusic: (on: boolean) => real.hearMusic?.(on),
-    };
+    if (this.hushed) return this.silence;
+    return this.p.sound;
   }
 
   /** A string from DATA.OVL. */
@@ -423,17 +396,33 @@ export class Game {
     return this.heldText !== null && this.p.text.current === 2;
   }
 
-  /** The sounds already made while each is to sound once (onceEach); null, as ever, for every sound every time. */
-  private soundsHeard: Set<string> | null = null;
+  /** No sound made while this is so (hush), the music and its holds apart. */
+  private hushed = false;
 
-  /** `work` done with each sound in it made once: a sound asked for again, the same in every way, is let go. */
-  async onceEach<T>(work: () => Promise<T>): Promise<T> {
-    const was = this.soundsHeard;
-    this.soundsHeard = was ?? new Set();
+  /** The sound while hushed: nothing made, at once; the music and its holds as ever. */
+  private get silence(): Sound {
+    const real = this.p.sound;
+    const none = (): Promise<void> => Promise.resolve();
+    return {
+      pulse: none,
+      noise: none,
+      tone: none,
+      sweep: none,
+      music: (tune, occasion) => real.music(tune, occasion),
+      cue: none,
+      setHeld: (reason, held) => real.setHeld(reason, held),
+      hearMusic: (on: boolean) => real.hearMusic?.(on),
+    };
+  }
+
+  /** `work` done without a sound of its own (Loot and Leave's run of chests: loot.ts). */
+  async hush<T>(work: () => Promise<T>): Promise<T> {
+    const was = this.hushed;
+    this.hushed = true;
     try {
       return await work();
     } finally {
-      this.soundsHeard = was;
+      this.hushed = was;
     }
   }
 

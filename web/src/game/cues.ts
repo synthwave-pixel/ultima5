@@ -42,9 +42,9 @@ export type Cue =
  * Sound cue `name` in the Standard set; in the Original, the DOS game's own sound for the moment (`original`), or
  * none. Waits as an effect does: a moment at most.
  */
-export async function cue(g: Game, name: Cue, original?: () => Promise<void>): Promise<void> {
+export async function cue(g: Game, name: Cue, original?: () => Promise<void>, whole = false): Promise<void> {
   if (g.soundOff) return;
-  if (g.options.soundSet === 'standard' && g.sound.cue) return g.sound.cue(name);
+  if (g.options.soundSet === 'standard' && g.sound.cue) return g.sound.cue(name, whole);
   if (original) return original();
 }
 

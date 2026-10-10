@@ -374,8 +374,11 @@ describes how the Modern look is drawn.
   is spent. However many chests there are, it is said once, together - who
   searched and opened them, a trap that went off, and one line of all that
   was taken ("Taken: 312 gold, 2 potions: Heal, Leather armour") - rather
-  than each chest's lines scrolling past; and each sound sounds once, one
-  An Sanct's sparkle or one trap's burst however many chests.
+  than each chest's lines scrolling past. It makes no sound of its own - no
+  search's, cast's, broken key's or opening's, which together sounded as
+  one jumble - but a trap's burst, once, where one went off, after the
+  summary; then the party's Withdraw, heard out before the place's music
+  comes back.
 - **Rations and reagents**, with a controller, are dialled: how many,
   the dial saying what one is (25 food; a lot of so many of a reagent),
   what the number on it costs of the gold there is, and for a reagent how

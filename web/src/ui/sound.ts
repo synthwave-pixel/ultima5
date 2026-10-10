@@ -237,7 +237,7 @@ export class PcSound implements Sound {
    * One of the ultima3 port's sounds by name (game/cues.ts), in the Standard set: started at once, as an effect is,
    * and waited a moment at most. The footfalls a turn repeats are a little different each time.
    */
-  async cue(name: string): Promise<void> {
+  async cue(name: string, whole = false): Promise<void> {
     if (this.effects !== 'standard' || this.effectsLevel === 0) return;
     const varies = name === 'HorseWalk';
     let pcm = varies ? null : (this.cues.get(name) ?? null);
@@ -247,7 +247,7 @@ export class PcSound implements Sound {
     }
     const ctx = this.ctx;
     if (ctx && this.out) this.play(ctx, pcm, `cue:${name}`);
-    await this.wait(Math.min(pcm.length / RATE, PACE) * 1000);
+    await this.wait((whole ? pcm.length / RATE : Math.min(pcm.length / RATE, PACE)) * 1000);
   }
 
   nearby(d2: number): void {
