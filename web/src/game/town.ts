@@ -279,6 +279,8 @@ function bump(g: Game, other: number, ahead: number, dir: number, dx: number, dy
   else if (other >= 0x80 && someone) bumpInto(g, 0x54, dir);
   else if (other === 0 && beyond >= 0x40 && beyond < 0x80 && counter(g, s.x + dx, s.y + dy)) bumpInto(g, 0x54, dir);
   else if (other >= 0x40 && other < 0x80) bumpInto(g, 0x54, dir);
+  // One of the place's people who looks like no one (Smith, the talking horse at Iolo's hut: issue #3) is talked to.
+  else if (other !== 0 && someone) bumpInto(g, 0x54, dir);
   else if ((ahead === T.DoorB9 || ahead === T.DoorBB) && other === 0 && g.s.keys > 0) {
     jimmyWho(g);
     bumpInto(g, 0x4a, dir);
@@ -291,6 +293,13 @@ function bump(g: Game, other: number, ahead: number, dir: number, dx: number, dy
   }
   return true;
 }
+
+/**
+ * A walk into something queued its command (bump): that command is the turn, run at once - the walk that found it
+ * spends none, or the place's people would move first, and one who wanders (Smith in his pen) be gone from where the
+ * party walked into him (issue #3).
+ */
+let bumped = false;
 
 /** TOWN_0600: move the party; true if it walked off the edge and chose to leave. */
 async function move(g: Game, key: number): Promise<boolean> {
@@ -339,6 +348,10 @@ async function move(g: Game, key: number): Promise<boolean> {
     if (s.partyTile >= 0x30 || s.partyTile < 0x20) {
       // A corpse (0x1f) is walked into, and searched (bumpAct.ts); a fallen member's (0x1e) is walked over.
       if ((other >= 0x24 && other < 0x2c) || other === 0x1b || (other & 0xfe) === 0x10 || other === 0x1e) free = true;
+      // But not a horse that is one of the place's people with something to say - Smith, at Iolo's hut: walked into,
+      // he is talked to (bump), not stood on (issue #3). actorTileAt left the actor's index in dx.
+      const npc = (other & 0xfe) === 0x10 ? npcOfActor(g, s.dx) : -1;
+      if (npc >= 0 && s.npcs[npc].fa !== 0) free = false;
     } else if (s.partyTile >= 0x28 && other >= 0x24 && other < 0x28) {
       free = true;
     }
@@ -377,6 +390,7 @@ async function move(g: Game, key: number): Promise<boolean> {
     }
   } else if (bump(g, other, tileAt(g, s.x + dx, s.y + dy), key, dx, dy)) {
     edge = false;
+    bumped = true;
   } else {
     g.say(0x26d6); // "Blocked!\n"
     if (!g.soundOff) void g.sound.tone(0xa5, 200);
@@ -852,8 +866,9 @@ export async function townLoop(g: Game): Promise<void> {
             case K.Right:
             case K.Up:
             case K.Down:
+              bumped = false;
               left = await move(g, key);
-              result = left ? 0 : 1;
+              result = left ? 0 : bumped ? 3 : 1;
               break;
             default:
               g.say(0x28be); // "What?\n"

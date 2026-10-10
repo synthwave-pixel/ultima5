@@ -43,10 +43,15 @@ describe('the one way a command could go', () => {
     setTileAt(g, 10, 9, 0xa5); // a counter (the desk) between: talked to across it, as 1988 has it
     expect(talkOffer(g)).toBe('show');
     expect(onlySide(g, 'talk')).toBe(K.Up);
-    // Someone on the counter's square itself is the one talked to; a chest there, no one (Talk stops at it).
+    // Someone on the counter's square itself is the one talked to; a chest there, no one (Talk stops at it). The chest
+    // in an actor's place no townsperson has: in one of theirs it would be them, whatever it looked like (Smith).
     person(g, 2, 10, 9);
     expect(onlySide(g, 'talk')).toBe(K.Up);
-    Object.assign(g.s.actors[2], { tile: 0x01, anim: 0x01 });
+    g.s.actors[2].tile = 0;
+    const free = [...Array(32).keys()].find(
+      (i) => i > 0 && !g.s.npcs.some((n, k) => n.actor === i && g.s.npcTypes[k] !== 0 && n.f0 !== 0),
+    )!;
+    Object.assign(g.s.actors[free], { tile: 0x01, anim: 0x01, x: 10, y: 9, z: 0 });
     expect(talkOffer(g)).toBe('hide');
   });
 

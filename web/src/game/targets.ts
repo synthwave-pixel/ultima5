@@ -184,10 +184,24 @@ export function talkOffer(g: Game): Offer {
  */
 function talkReaches(g: Game, dx: number, dy: number): boolean {
   const s = g.s;
-  const person = (x: number, y: number): boolean => actorsOn(g, x, y).some((t) => t >= 0x40 && t !== 0xfc);
+  // A person's figure, or one of the place's people with a conversation whatever they look like: Smith, the talking
+  // horse at Iolo's hut, is a horse to look at (issue #3).
+  const person = (x: number, y: number): boolean => actorsOn(g, x, y).some((t) => t >= 0x40 && t !== 0xfc) || talker(g, x, y);
   const [x, y] = [s.x + dx, s.y + dy];
   if (actorsOn(g, x, y).length > 0) return person(x, y);
   return counter(g, x, y) && person(x + dx, y + dy);
+}
+
+/** Whether one of the place's people with something to say stands at (x, y) (town.ts npcOfActor, as Talk finds them). */
+function talker(g: Game, x: number, y: number): boolean {
+  const s = g.s;
+  for (let i = 1; i < 32; i++) {
+    const a = s.actors[i];
+    if (a.tile === 0 || a.x !== (x & 0xff) || a.y !== (y & 0xff) || a.z !== s.level) continue;
+    const npc = s.npcs.findIndex((n, k) => n.actor === i && s.npcTypes[k] !== 0 && n.f0 !== 0);
+    if (npc >= 0 && s.npcs[npc].fa !== 0) return true;
+  }
+  return false;
 }
 
 /** Attack: a creature beside the party, or in a town anyone (or a mirror); in a fight, always. */
