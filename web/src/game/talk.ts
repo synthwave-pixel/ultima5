@@ -71,7 +71,17 @@ export class TalkState {
   own = new Set<string>();
   /** This conversation's key in keywordLabels.ts: its file and number ("0:1:"), a keyword after it. */
   labels = '';
+  /** The keys held before Jeremy's gift of them, for his asking to be paid after it (payGold); null with none given. */
+  keysBefore: number | null = null;
 }
+
+/**
+ * Jeremy, Yew's chef (TOWNE.TLK 20): "Have five!" - five keys given before he asks 50 gold for them, kept whatever the
+ * answer (1988's order). The port's: one who cannot pay keeps no more than five, so a broke prisoner still has the
+ * way out of Yew's cell, but asking again and again is no longer a store of keys (issue #4).
+ */
+const JEREMY = '0:20:';
+const BROKE_KEYS = 5;
 
 export type Talk = { g: Game; t: TalkState; /** Being asked their name. */ naming?: boolean };
 
@@ -258,6 +268,7 @@ async function payGold(k: Talk): Promise<number> {
   const amount = (t.args[0] & 0x7f) * 100 + (t.args[1] & 0x7f) * 10 + (t.args[2] & 0x7f) - 0x14d0;
   if (s.gold >= amount) {
     s.gold -= amount;
+    t.keysBefore = null;
     drawVitals(g);
     if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c && s.turn >= 100) {
       s.turn = 0;
@@ -266,6 +277,9 @@ async function payGold(k: Talk): Promise<number> {
     }
     return 0;
   }
+  // Jeremy's keys, given already: one who cannot pay for them keeps up to five of all held (JEREMY).
+  if (t.keysBefore !== null) s.keys = Math.max(t.keysBefore, Math.min(BROKE_KEYS, s.keys));
+  t.keysBefore = null;
   t.word = [];
   g.printChar('"');
   g.say(0x9328); // "Thou hast not enough gold!"
@@ -495,6 +509,7 @@ async function interest(k: Talk): Promise<number> {
   const { g, t } = k;
   for (;;) {
     t.responding = 0;
+    t.keysBefore = null;
     g.say(0x9408); // "Your interest?\n:"
     await readWords(k);
     if (t.typed.length === 0) {
@@ -656,6 +671,7 @@ async function actionArg(k: Talk, b: number): Promise<number> {
       t.pending = t.argCount = 0;
       return 0;
     case 0x86:
+      if ((b & 0x7f) === 0x43 && t.labels === JEREMY && t.keysBefore === null) t.keysBefore = g.s.keys;
       give(g, b & 0x7f);
       t.pending = t.argCount = 0;
       return 0;
