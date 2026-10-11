@@ -378,7 +378,8 @@ describes how the Modern look is drawn.
   search's, cast's, broken key's or opening's, which together sounded as
   one jumble - but a trap's burst, once, where one went off, after the
   summary; then the party's Withdraw, heard out before the place's music
-  comes back.
+  comes back. Nor does An Sanct flash the view for each chest it opens:
+  cast on chest after chest, the flashes came some ten a second.
 - **Rations and reagents**, with a controller, are dialled: how many,
   the dial saying what one is (25 food; a lot of so many of a reagent),
   what the number on it costs of the gold there is, and for a reagent how

@@ -219,6 +219,33 @@ describe('Loot and Leave', () => {
     expect(noises.length).toBe(2);
   });
 
+  it('casts An Sanct chest after chest without the spell flash, which still flashes a cast outside it', async () => {
+    const { castEffect } = await import('../src/game/magic.ts');
+    for (const look of ['standard', 'original'] as const) {
+      const { g } = won();
+      const s = g.s;
+      g.options.tileSet = look;
+      s.mixtures[AN_SANCT] = 4;
+      Object.assign(s.members[2], { mp: 20, level: 4 });
+      for (let c = 0; c < 4; c++) chest(g, 3 + c, 2 + c, 2, 6, true);
+      let flashes = 0;
+      let waited = 0;
+      const draw = g.draw as unknown as Record<string, ((...a: unknown[]) => void) | undefined>;
+      draw.pulse = () => void flashes++;
+      draw.unpulse = () => undefined;
+      const invert = draw.invert?.bind(g.draw);
+      draw.invert = (...a: unknown[]) => (flashes++, invert?.(...a));
+      const sleep = g.p.sleep.bind(g.p);
+      g.p.sleep = (ms: number) => ((waited += ms), sleep(ms));
+      expect(await lootField(g)).toBe(true);
+      expect(s.mixtures[AN_SANCT]).toBe(0); // four cast
+      expect(flashes).toBe(0); // and the view never flashed: no strobe
+      expect(waited).toBe(0);
+      await castEffect(g, 1); // a spell cast as ever: it flashes
+      expect(flashes).toBeGreaterThan(0);
+    }
+  });
+
   it('counts what was taken together', async () => {
     const { sayTaken } = await import('../src/game/loot.ts');
     expect(

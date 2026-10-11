@@ -90,6 +90,8 @@ export async function castEffect(g: Game, n: number): Promise<void> {
     // whole view, washed half white; the EGA look inverts the view, as the DOS game did.
     const on = g.spellOn;
     g.spellOn = -1;
+    // Hushed (Loot and Leave's run of chests), no flash either: one An Sanct after another strobed the view.
+    if (g.isHushed) return;
     if (g.options.tileSet === 'standard' && g.draw.pulse && g.draw.unpulse) {
       g.draw.pulse(on >= 0 ? memberSquare(g, on) : null);
       await g.p.sleep(SPELL_FLASH_MS);

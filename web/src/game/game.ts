@@ -415,7 +415,15 @@ export class Game {
     };
   }
 
-  /** `work` done without a sound of its own (Loot and Leave's run of chests: loot.ts). */
+  /** Whether work is hushed now (hush): no sound made, and no spell's flash (magic.ts castEffect). */
+  get isHushed(): boolean {
+    return this.hushed;
+  }
+
+  /**
+   * `work` done without a sound or a spell's flash of its own (Loot and Leave's run of chests: loot.ts) - An Sanct
+   * cast on chest after chest flashed the view as fast as it was cast, some ten times a second.
+   */
   async hush<T>(work: () => Promise<T>): Promise<T> {
     const was = this.hushed;
     this.hushed = true;
