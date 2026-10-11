@@ -346,8 +346,11 @@ describes how the Modern look is drawn.
   sign (from either square of a shop's two) or mirror looked at. A bumped
   command is made by whoever suits it: a chest searched by the cleverest,
   jimmied by the most dexterous and opened by the hardiest. While foes are
-  about, nothing lying about is taken, searched, opened or pushed at a
-  bump - in a fight a body, and with the Story and Modern rules loot, is
+  about (a monster within five squares, or in a fight one still standing),
+  nothing lying about is taken, searched, opened or pushed at a bump, and
+  the bump says so - "Cannot search with foes near!", or push, take, open -
+  rather than "Blocked!", which a wall says; the commands themselves still
+  do it. In a fight a body, and with the Story and Modern rules loot, is
   stepped over then. Push leads the command menu beside furniture that
   moves, or a room's trigger wall. On a fight's field a fallen member's
   body is drawn over loot, loot over a slain foe's corpse, and whoever

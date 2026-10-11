@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bumpCommand, foesAbout } from '../src/game/bumpAct.ts';
+import { bumpCommand, foesAbout, NOT_NOW } from '../src/game/bumpAct.ts';
 import { processCommand } from '../src/game/commands.ts';
 import { bumpInto, getChar } from '../src/game/input.ts';
 import { AN_SANCT } from '../src/game/magic.ts';
@@ -274,20 +274,67 @@ describe('bump to act, for things', () => {
     for (const t of said) expect(t).not.toMatch(/Blocked!/);
   });
 
-  it('leaves what lies about alone while foes are about, but still opens, climbs and looks', () => {
+  it('leaves what lies about alone while foes are about, saying why, but still opens, climbs and looks', () => {
     const g = game(0);
+    const log = (): string => (g.p as unknown as { log: string }).log.replace(/\s+/g, ' ');
     // A monster in view of the party, out in the world.
     Object.assign(g.s.actors[5], { tile: 0x90, anim: 0x90, x: g.s.x + 3, y: g.s.y, z: g.s.level });
     expect(foesAbout(g, 'outdoors')).toBe(true);
-    expect(bump(g, 0x02, T.Grass, 'outdoors')).toBe(0); // gold, not taken
-    expect(bump(g, 0x01, T.Grass, 'outdoors')).toBe(0); // a chest, not searched
-    expect(bump(g, 0x1f, T.Grass, 'outdoors')).toBe(0); // a corpse, not searched
-    expect(bump(g, 0, T.Barrel, 'outdoors')).toBe(0);
+    // Not "Blocked!", which a wall says too (issue #5): what was not done, and why.
+    expect(bump(g, 0x02, T.Grass, 'outdoors')).toBe(NOT_NOW); // gold, not taken
+    expect(log()).toMatch(/Cannot take with foes near!\s*$/);
+    expect(bump(g, 0x01, T.Grass, 'outdoors')).toBe(NOT_NOW); // a chest, not opened
+    expect(log()).toMatch(/Cannot open with foes near!\s*$/);
+    expect(bump(g, 0x1f, T.Grass, 'outdoors')).toBe(NOT_NOW); // a corpse, not searched
+    expect(log()).toMatch(/Cannot search with foes near!\s*$/);
+    expect(bump(g, 0, T.Barrel, 'outdoors')).toBe(NOT_NOW);
+    expect(log()).toMatch(/Cannot search with foes near!\s*$/);
+    expect(bump(g, 0, T.Desk, 'outdoors')).toBe(NOT_NOW);
+    expect(log()).toMatch(/Cannot push with foes near!\s*$/);
+    expect(bump(g, 0, 0xb0, 'outdoors')).toBe(NOT_NOW); // a wall torch
+    expect(log()).toMatch(/Cannot take with foes near!\s*$/);
     expect(bump(g, 0, 0x97, 'outdoors')).toBe(OPEN); // an odd door still says why it will not open
     // Out of sight, the monster is no matter.
     g.s.actors[5].x = g.s.x + 8;
     expect(foesAbout(g, 'outdoors')).toBe(false);
     expect(bump(g, 0x02, T.Grass, 'outdoors')).toBe(GET);
+  });
+
+  it('says, walked into a barrel in a towne with a rat about, that it cannot be searched - or pushed, searched already', async () => {
+    const { setTileAt, tileAt } = await import('../src/game/world.ts');
+    const { updateFrame } = await import('../src/game/frame.ts');
+    const { g, p } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 1, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    const s = g.s;
+    for (const a of s.actors.slice(1)) a.tile = 0;
+    Object.assign(s, { x: 10, y: 10, activeMember: 0 });
+    for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) setTileAt(g, 10 + dx, 10 + dy, 0x44);
+    setTileAt(g, 10, 9, T.Barrel);
+    g.options.input = 'controller';
+    const rat = (near: boolean): void => void Object.assign(s.actors[5], { tile: near ? 0x90 : 0, anim: 0x90, x: 13, y: 10, z: 0 });
+    const walk = async (): Promise<string> => {
+      g.viewDirty = 1;
+      updateFrame(g);
+      const before = p.log.length;
+      p.keys.push(K.Up);
+      await townLoop(g).catch((e: Error) => {
+        if (!e.message.includes('ran out')) throw e;
+      });
+      return p.log.slice(before).replace(/\s+/g, ''); // (the message window's wrapping takes the space where it breaks)
+    };
+    rat(true);
+    let said = await walk();
+    expect(said).toMatch(/Cannotsearchwithfoesnear!/);
+    expect(said).not.toMatch(/Blocked|Search-/);
+    rat(false);
+    expect(await walk()).toMatch(/Search-North/); // no foe: searched, as ever
+    rat(true);
+    said = await walk(); // its next step would be the push
+    expect(said).toMatch(/Cannotpushwithfoesnear!/);
+    expect(tileAt(g, 10, 9)).toBe(T.Barrel); // where it was
+    expect([s.x, s.y]).toEqual([10, 10]);
   });
 
   it('counts as foes about in a fight only those still standing on the monsters’ side', () => {
@@ -296,7 +343,7 @@ describe('bump to act, for things', () => {
     g.combat[0].flags = CF.Player;
     g.combat[6].flags = CF.Monster;
     expect(foesAbout(g, 'combat')).toBe(true);
-    expect(bump(g, 0x01, T.Grass, 'combat')).toBe(0);
+    expect(bump(g, 0x01, T.Grass, 'combat')).toBe(NOT_NOW);
     g.combat[6].flags = CF.Monster | CF.Charmed; // on the party's side now
     expect(foesAbout(g, 'combat')).toBe(false);
     g.combat[6].flags = CF.Monster | CF.Dead;

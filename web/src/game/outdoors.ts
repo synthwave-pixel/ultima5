@@ -12,7 +12,7 @@ import { attackCombat, shoot } from './combat.ts';
 import { processCommand, setActivePlayer } from './commands.ts';
 import { commandPrompt, drawVitals, drawMoons, drawMapName, leftArrow, setWind, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
-import { bumpCommand } from './bumpAct.ts';
+import { bumpCommand, NOT_NOW } from './bumpAct.ts';
 import { asPad, bumpInto, getCharYN, getCommandKey, queueKeys, selectDirection } from './input.ts';
 import { K } from './io.ts';
 import { moongateTravel } from './moongate.ts';
@@ -157,6 +157,7 @@ function bumpOther(g: Game, other: number, dx: number, dy: number): boolean {
   const s = g.s;
   const command = bumpCommand(g, 'outdoors', other, tileAt(g, s.x + dx, s.y + dy), s.x + dx, s.y + dy);
   if (command === 0) return false;
+  if (command === NOT_NOW) return true; // foes near: said why, nothing queued
   bumpInto(g, command, dx < 0 ? K.Left : dx > 0 ? K.Right : dy < 0 ? K.Up : K.Down);
   return true;
 }

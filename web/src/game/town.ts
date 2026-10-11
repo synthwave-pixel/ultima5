@@ -12,7 +12,7 @@ import { attackCombat } from './combat.ts';
 import { processCommand, setActivePlayer } from './commands.ts';
 import { commandPrompt, drawVitals, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
-import { bumpCommand, jimmyWho } from './bumpAct.ts';
+import { bumpCommand, jimmyWho, NOT_NOW } from './bumpAct.ts';
 import { bumpInto, getCharYN, getCommandKey, selectDirection } from './input.ts';
 import { HARPSICHORD, K } from './io.ts';
 import { HARPSICHORD_TILE, openTheWay, strike } from './harpsichord.ts';
@@ -289,6 +289,7 @@ function bump(g: Game, other: number, ahead: number, dir: number, dx: number, dy
     // Anything else there is to do with it (bumpAct.ts), or "Blocked!".
     const command = bumpCommand(g, 'town', other, ahead, s.x + dx, s.y + dy);
     if (command === 0) return false;
+    if (command === NOT_NOW) return true; // foes near: said why, nothing queued, no turn spent
     bumpInto(g, command, dir);
   }
   return true;

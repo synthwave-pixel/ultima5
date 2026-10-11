@@ -123,6 +123,22 @@ export function foesAbout(g: Game, where: BumpPlace): boolean {
   return false;
 }
 
+/** bumpCommand's answer where foes near keep a bump from searching, pushing, taking or opening: it has said why. */
+export const NOT_NOW = -1;
+
+/**
+ * What a bump would have done, not done with foes near (foesAbout): said, where it was a bare "Blocked!" that a wall
+ * says too - so a barrel seemed no longer searchable (the port's, issue #5). The "Blocked!" tone, and the keys
+ * typed ahead let go, as a bump that does nothing.
+ */
+function notNow(g: Game, verb: 'search' | 'push' | 'take' | 'open'): number {
+  if (g.text.win.x !== 0) g.printChar('\n'); // the move's line ended already
+  g.print(`Cannot ${verb} with foes near!\n`);
+  if (!g.soundOff) void g.sound.tone(0xa5, 200);
+  g.p.flushKeys();
+  return NOT_NOW;
+}
+
 /** Whether a corpse is walked into, not over (it is searched): towns, the outdoors and combat alike. */
 export const corpseBlocks = (actor: number): boolean => actor === CORPSE;
 
@@ -131,7 +147,8 @@ export const isLoot = (actor: number): boolean => actor >= CHEST && actor <= 0x0
 
 /**
  * The command walking into (x, y) does: `actor` the actor's tile there (0 none) and `tile` the map's; 0 for none
- * ("Blocked!"). Two-step things remember the first bump on `g`, for the party.
+ * ("Blocked!"), NOT_NOW where foes near keep it from being done (said). Two-step things remember the first bump on
+ * `g`, for the party.
  */
 export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: number, x: number, y: number): number {
   // The thing is known by where it stands: its first step done by one member, the next bump by any does the second.
@@ -146,12 +163,12 @@ export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: numb
   if (actor !== 0) {
     if (actor === CHEST) {
       if (settlement(g)) return L;
-      if (busy()) return 0;
+      if (busy()) return notNow(g, 'open');
       return chestStep(g, where, key);
     }
-    if (TAKEN(actor)) return busy() ? 0 : G;
+    if (TAKEN(actor)) return busy() ? notNow(g, 'take') : G;
     if (actor === CORPSE) {
-      if (busy()) return 0;
+      if (busy()) return notNow(g, 'search');
       doneBy(g, where, hardiest(g));
       return S;
     }
@@ -165,8 +182,12 @@ export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: numb
     else x--;
     tile = tileAt(g, x, y);
   }
-  if ((SEARCH_PUSH.has(tile) || SEARCH.has(tile) || tile === T.HiddenDoor || PUSH.has(tile) || tile === 0xb0 || tile === 0xb1) && busy())
-    return 0;
+  if ((SEARCH_PUSH.has(tile) || SEARCH.has(tile) || tile === T.HiddenDoor || PUSH.has(tile) || tile === 0xb0 || tile === 0xb1) && busy()) {
+    // What it would have been: a barrel's push where its search was done (twoStep's), a torch taken.
+    if (tile === 0xb0 || tile === 0xb1) return where === 'combat' ? 0 : notNow(g, 'take');
+    if (PUSH.has(tile) || (SEARCH_PUSH.has(tile) && g.bumped.has(key))) return notNow(g, 'push');
+    return notNow(g, 'search');
+  }
   if (SEARCH_PUSH.has(tile)) return searching(g, twoStep(S, P));
   if (SEARCH.has(tile)) return searching(g, S);
   if (tile === T.HiddenDoor && where !== 'combat') return searching(g, twoStep(L, S));

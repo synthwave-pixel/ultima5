@@ -18,7 +18,7 @@ import { reveal, sleepTicks } from './effects.ts';
 import { borderTitle, clearBorderTitle, commandPrompt, drawVitals, invertMember, markTurn, turnColour, updateFrame } from './frame.ts';
 import { liftDungeonMap } from './dungeonMap.ts';
 import { CF, Game } from './game.ts';
-import { bumpCommand, corpseBlocks, foesAbout, isLoot } from './bumpAct.ts';
+import { bumpCommand, corpseBlocks, foesAbout, isLoot, NOT_NOW } from './bumpAct.ts';
 import { bumpInto, getChar, getCharYN, getCommandKey, getHours, queueKeys, selectDirection, upOrDown } from './input.ts';
 import { restOutcome, restTimer } from './rest.ts';
 import { K, Pad } from './io.ts';
@@ -2311,6 +2311,7 @@ async function movePlayer(g: Game, i: number, key: number): Promise<boolean> {
   // Walking into a chest, a thing lying there, a corpse or rocks: what there is to do with it (bumpAct.ts).
   if (pad && at < 0) {
     const command = bumpCommand(g, 'combat', thingAt(g, x, y), tileAt(g, x, y), x, y);
+    if (command === NOT_NOW) return false; // foes still standing: said why, as "Blocked!" would have been
     if (command !== 0) {
       if (g.text.win.x !== 0) g.printChar('\n'); // the move's line ended already: no empty line after it
       bumpInto(g, command, key);
