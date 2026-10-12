@@ -264,7 +264,10 @@ describes how the Modern look is drawn.
   letters either way, and Y and N answer a yes-or-no question either way.
   With no letters shown, the commands 1988 spelt for theirs read plainly:
   Climb (Klimb), Stats (Ztats), Pick lock (Jimmy), and Dismount, or
-  Disembark from a ship (X-it); Classic keeps 1988's names.
+  Disembark from a ship (X-it); Classic keeps 1988's names. The lines that
+  spend torches, gems and keys say how many the party has - Ignite torch
+  (x3), View a gem (x5), Pick lock (x8) - in either; with none the line is
+  greyed and says no count.
 
   ![The keyboard as a controller](controls.svg)
 

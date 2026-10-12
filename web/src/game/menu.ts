@@ -1266,6 +1266,18 @@ export async function commandMenu(g: Game): Promise<number> {
   // With a controller the letters are not shown, and 1988's names spelt for them (K for Klimb, Z for Ztats) read as
   // misspellings: the plain word. Classic input keeps both.
   if (g.options.input === 'controller') for (const it of items) it.label = plainName(g, it.label);
+  // How many torches, gems and keys the party has, on the lines that spend them: "Ignite torch (x3)", "View a gem
+  // (x5)", "Pick lock (x8)" (the port's). A greyed line has none, and says no count. At most "Pick chest lock (x99)",
+  // the menu's width.
+  const held = new Map<number, number>([
+    [c('I'), g.s.torches],
+    [c('V'), g.s.gems],
+    [c('J'), g.s.keys],
+  ]);
+  for (const it of items) {
+    const n = it.key === undefined ? 0 : (held.get(it.key) ?? 0);
+    if (n > 0) it.label += ` (x${n})`;
+  }
   // With the bar on a spell to cast or on Mix, the party panel shows mana (magicPanel.ts), and hit points again after.
   const magic = (k: number | undefined): boolean =>
     k === c('C') || k === c('M') || k === 0x100 + 7 || (k !== undefined && k >= SHORTCUT && k < SHORTCUT + 8);

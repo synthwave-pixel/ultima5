@@ -59,7 +59,7 @@ describe("a dungeon's cells", () => {
     const made = room([[0, 0, 0x10]]); // a ladder up, here
     Object.assign(made.g.s, { d58a7: 0, d58a6: 0, torches: 3 }); // dark
     const { labels: l } = await labels(made);
-    expect(l[0]).toBe('Ignite torch');
+    expect(l[0]).toBe('Ignite torch (x3)'); // with how many there are
     expect(l).toContain('Climb');
   });
 
