@@ -37,6 +37,26 @@ describe('the title behind the new character’s questions', () => {
     expect(turns()).toBeGreaterThan(0);
   });
 
+  it('turns while the page’s box is open for a name to be typed, and stops when it closes', async () => {
+    const { g, p, turns } = watched();
+    let whileOpen = 0;
+    let atClose = 0;
+    g.hooks.askText = async () => {
+      const before = turns();
+      await new Promise((r) => setTimeout(r, 400)); // the player typing
+      whileOpen = turns() - before;
+      atClose = turns();
+      return 'Mirelle';
+    };
+    p.keys.push(K.Up, Pad.A, Pad.A); // "Type a name" (up from "Suggest a name"), then Continue
+    expect(await askName(g, 8, 15)).toBe('Mirelle');
+    expect(whileOpen).toBeGreaterThanOrEqual(2); // about one every two ticks, as a key's wait keeps them
+    const after = turns();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(turns()).toBe(after); // and none once it has closed
+    expect(atClose).toBeGreaterThan(0);
+  });
+
   it('turns while how the Avatar is addressed is asked', async () => {
     const { g, p, turns } = watched();
     p.keys.push(K.Left, Pad.A);

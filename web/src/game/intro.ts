@@ -318,7 +318,15 @@ export async function askName(g: Game, max: number, at: number, start = ''): Pro
       if (typed) setName(typed);
       return;
     }
-    const typed = await g.hooks.askText('By what name shalt thou be known?', s, max);
+    // The flames burn on behind the page's box (and around it, where it covers them): it waits for its own keys, not
+    // the game's, so the title's idle is kept going here, at the pace a key's wait keeps it.
+    const burning = g.titleIdle ? setInterval(() => g.titleIdle?.(), TICK_MS * 2) : null;
+    let typed: string | null;
+    try {
+      typed = await g.hooks.askText('By what name shalt thou be known?', s, max);
+    } finally {
+      if (burning !== null) clearInterval(burning);
+    }
     if (typed?.trim()) setName(typed.trim());
   };
   for (;;) {
