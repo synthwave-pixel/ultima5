@@ -17,18 +17,25 @@ const K = 4;
 const W = 320;
 const H = 200;
 
-/** A run of text to draw: its words, where its baseline starts (colour page pixels), its size, face and colour. */
+/** A face a run is set in: the story's body and its initials, or the game's own lettering (the gypsy's choices). */
+export type RunFace = 'body' | 'initial' | 'mono';
+
+/**
+ * A run of text to draw: its words, where its baseline starts (colour page pixels), its size, face and colour. Or,
+ * with `panel`, no words but a dark box (colour page pixels, x1 y1 x2 y2) for the words after it to stand on.
+ */
 export interface Run {
   text: string;
   x: number;
   y: number;
   size: number;
-  face: 'body' | 'initial';
+  face: RunFace;
   colour: number;
+  panel?: [number, number, number, number];
 }
 
 /** How wide `text` is at `size` in `face`, in colour page pixels (the screen's canvas measures). */
-export type Measure = (text: string, size: number, face: 'body' | 'initial') => number;
+export type Measure = (text: string, size: number, face: RunFace) => number;
 
 /** A paragraph: its words, each in the pieces the game marks where it may be broken ('_'). */
 interface Para {
@@ -76,8 +83,15 @@ interface Line {
 }
 
 /** A paragraph broken into lines of `width(i)` for line i, a word broken at a mark (with a hyphen) only when it must. */
-function breakLines(measure: Measure, size: number, para: Para, width: (i: number) => number, indent: number): Line[] {
-  const m = (s: string): number => measure(s, size, 'body');
+function breakLines(
+  measure: Measure,
+  size: number,
+  para: Para,
+  width: (i: number) => number,
+  indent: number,
+  face: RunFace = 'body',
+): Line[] {
+  const m = (s: string): number => measure(s, size, face);
   const space = m(' ');
   const lines: Line[] = [];
   let cur: string[] = [];
@@ -259,67 +273,95 @@ export function setProse(texts: string[], lit: Uint8Array, measure: Measure): Ru
   return runs;
 }
 
-/** The gypsy's bowls' columns (EGA pixels), left and right: the answers are set under them. */
-export const CHOICE_COLUMNS: [number, number][] = [
-  [6, 154],
-  [166, 314],
-];
 /**
- * How far the Standard look lowers the gypsy's braziers on every question (EGA pixels), the same each time so they
- * never move: the question goes in the band above them, the answers under the bowls (intro.ts dilemma, the stage).
+ * The gypsy's bowls' columns (EGA pixels), left and right: the answers are set under them, each centred on its
+ * brazier (the braziers' rims span 35-97 and 219-281: centres 66 and 250), as wide as the screen's edge allows.
  */
-export const GYPSY_DROP = 26;
-/** The band under the bowls the answers go in, and the band above the braziers the question does (EGA pixels). */
-const CHOICE_TOP = 150 + GYPSY_DROP;
+export const CHOICE_COLUMNS: [number, number][] = [
+  [6, 126],
+  [190, 310],
+];
+/** The band under the bowls the answers go in (EGA pixels). */
+const CHOICE_TOP = 150;
 const CHOICE_BOTTOM = 197;
-const QUESTION_TOP = 2;
-const QUESTION_BOTTOM = GYPSY_DROP - 1;
+/**
+ * The column between the bowls' smoke the question goes in, and its band above the Avatar (EGA pixels): a little
+ * wider than the gap between the smoke, its dark panel just over the smoke's inner edges (the port's).
+ */
+const QUESTION_LEFT = 106;
+const QUESTION_RIGHT = 214;
+const QUESTION_TOP = 4;
+const QUESTION_BOTTOM = 104;
+/** The panel's margin about the question's lines (EGA pixels). */
+const PANEL_MARGIN = 3;
+/** The largest the choices are set in the game's lettering, and the smallest before they give up (colour page pixels). */
+const CHOICE_LARGEST = 24;
+const CHOICE_SMALLEST = 14;
 
 /** The narrowest width a paragraph keeps its number of lines in: its lines as even as they go (no word left alone). */
-function balanced(measure: Measure, size: number, para: Para, width: number): Line[] {
-  const lines = breakLines(measure, size, para, () => width, 0);
+function balanced(measure: Measure, size: number, para: Para, width: number, face: RunFace = 'body'): Line[] {
+  const lines = breakLines(measure, size, para, () => width, 0, face);
   if (lines.length < 2) return lines;
   let best = lines;
   for (let w = width - 8; w > width / 2; w -= 8) {
-    const tried = breakLines(measure, size, para, () => w, 0);
+    const tried = breakLines(measure, size, para, () => w, 0, face);
     if (tried.length !== lines.length) break;
     best = tried;
   }
   return best;
 }
 
+/** A question that runs on into its answers ("...Dost thou"), trailing off as it does: "Dost thou...". */
+const trailing = (t: string): string => (/[.?!:]$/.test(t.trimEnd()) ? t : `${t.trimEnd()}...`);
+
 /** An answer set on its own: its first letter capital, the punctuation that ran it on into the question gone. */
 const answer = (t: string): string => t.replace(/[\s?;,.]+$/, '').replace(/^./, (c) => c.toUpperCase());
 
 /**
- * The gypsy's question as the Standard look sets it: the question across the top of the page, over the braziers, and
- * each answer centred under its bowl - grey, or white for the one the Avatar stands at (`lit`: 0 the left, 1 the
- * right, -1 neither) - both at the one size, the largest at which each fits its band.
+ * The gypsy's question as the Standard look sets it, in the game's own lettering: the question in the column between
+ * the bowls, above the Avatar, on a dark panel over the smoke's inner edges; and each answer centred under its bowl -
+ * grey, or white for the one the Avatar stands at (`lit`: 0 the left, 1 the right, -1 neither) - all at the one
+ * size, the largest at which each fits its band.
  */
 export function setChoice(question: string, left: string, right: string, lit: number, measure: Measure): Run[] {
   const answers = [left, right].map((t) => ({ indent: false, words: words(answer(t)) }));
-  const q = { indent: false, words: words(question) };
-  for (let size = 26; ; size--) {
+  const q = { indent: false, words: words(trailing(question)) };
+  for (let size = CHOICE_LARGEST; ; size--) {
     const lh = size * LEADING;
-    const cols = answers.map((a, i) => balanced(measure, size, a, (CHOICE_COLUMNS[i][1] - CHOICE_COLUMNS[i][0]) * K));
-    const ql = balanced(measure, size, q, (W - 12) * K);
+    const cols = answers.map((a, i) => balanced(measure, size, a, (CHOICE_COLUMNS[i][1] - CHOICE_COLUMNS[i][0]) * K, 'mono'));
+    const ql = balanced(measure, size, q, (QUESTION_RIGHT - QUESTION_LEFT - 2 * PANEL_MARGIN) * K, 'mono');
     const answerLines = Math.max(...cols.map((c) => c.length));
-    const fits = answerLines * lh <= (CHOICE_BOTTOM - CHOICE_TOP) * K && ql.length * lh <= (QUESTION_BOTTOM - QUESTION_TOP) * K;
-    if (!fits && size > 12) continue;
+    const fits =
+      answerLines * lh <= (CHOICE_BOTTOM - CHOICE_TOP) * K && ql.length * lh <= (QUESTION_BOTTOM - QUESTION_TOP - 2 * PANEL_MARGIN) * K;
+    if (!fits && size > CHOICE_SMALLEST) continue;
     const runs: Run[] = [];
     const centred = (text: string, c1: number, c2: number, y: number, colour: number): void => {
-      const w = measure(text, size, 'body');
-      runs.push({ text, x: ((c1 + c2) * K) / 2 - w / 2, y, size, face: 'body', colour });
+      const w = measure(text, size, 'mono');
+      runs.push({ text, x: ((c1 + c2) * K) / 2 - w / 2, y, size, face: 'mono', colour });
     };
+    // The question in the middle of its band, on its panel: as wide as its widest line, and its lines' height.
+    const qHeight = ql.length * lh;
+    const qTop = QUESTION_TOP * K + Math.max(0, ((QUESTION_BOTTOM - QUESTION_TOP) * K - qHeight) / 2);
+    const widest = Math.max(...ql.map((ln) => measure(ln.pieces.join(' '), size, 'mono')));
+    const mid = ((QUESTION_LEFT + QUESTION_RIGHT) * K) / 2;
+    const m = PANEL_MARGIN * K;
+    runs.push({
+      text: '',
+      x: 0,
+      y: 0,
+      size,
+      face: 'mono',
+      colour: 0,
+      panel: [mid - widest / 2 - m, qTop - m, mid + widest / 2 + m, qTop + qHeight + m],
+    });
+    ql.forEach((ln, j) => centred(ln.pieces.join(' '), QUESTION_LEFT, QUESTION_RIGHT, qTop + j * lh + size, WHITE));
+    // Each answer under its bowl, at the top of its band.
     const top = CHOICE_TOP * K;
     cols.forEach((lines, i) =>
       lines.forEach((ln, j) =>
         centred(ln.pieces.join(' '), CHOICE_COLUMNS[i][0], CHOICE_COLUMNS[i][1], top + j * lh + size, lit === i ? WHITE : GREY),
       ),
     );
-    // The question in the middle of its band.
-    const qTop = QUESTION_TOP * K + Math.max(0, ((QUESTION_BOTTOM - QUESTION_TOP) * K - ql.length * lh) / 2);
-    ql.forEach((ln, j) => centred(ln.pieces.join(' '), 6, W - 6, qTop + j * lh + size, WHITE));
     return runs;
   }
 }

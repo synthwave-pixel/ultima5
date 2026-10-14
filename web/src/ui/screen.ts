@@ -38,7 +38,7 @@ import {
 import { type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
 import type { Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
-import { GYPSY_DROP, setChoice, setProse, type Measure, type Run } from './storyText.ts';
+import { setChoice, setProse, type Measure, type Run, type RunFace } from './storyText.ts';
 import { Text, type TextTarget } from './text.ts';
 
 /** The DOS timer's tick; the game animated about once per tick while waiting for a key. */
@@ -68,6 +68,11 @@ const FACES: Record<Face, { family: string; file: string; share: number; bold: n
   // Not a font: the game's own symbols, filled from their outlines (symbolPath).
   symbol: { family: '', file: '', share: 1, bold: 0 },
 };
+
+/** The family a run of words is set in: the story's body or initials, or the game's lettering (FACES.mono). */
+const runFamily = (face: RunFace): string => (face === 'body' ? BODY_FACE : face === 'initial' ? INITIAL_FACE : FACES.mono.family);
+/** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
+const PANEL = 'rgba(0, 0, 0, 0.72)';
 
 /** The picture enlarged by the sharpened smoothing (?scale=smooth), to compare with the nearest pixel (show). */
 const SMOOTH = typeof location !== 'undefined' && new URLSearchParams(location.search).get('scale') === 'smooth';
@@ -392,7 +397,14 @@ export class Screen implements Platform {
     for (const { run, alpha } of words) {
       if (alpha <= 0) continue;
       ctx.globalAlpha = Math.min(1, alpha);
-      ctx.font = `${run.size}px "${run.face === 'body' ? BODY_FACE : INITIAL_FACE}"`;
+      if (run.panel) {
+        // A dark box for the words after it (the gypsy's question over the smoke).
+        const [x1, y1, x2, y2] = run.panel;
+        ctx.fillStyle = PANEL;
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        continue;
+      }
+      ctx.font = `${run.size}px "${runFamily(run.face)}"`;
       ctx.fillStyle = `#${run.colour.toString(16).padStart(6, '0')}`;
       ctx.fillText(run.text, run.x, run.y);
     }
@@ -653,7 +665,7 @@ export class Screen implements Platform {
     const ctx = this.storyCanvas;
     if (!ctx) return null;
     const measure: Measure = (text, size, face) => {
-      ctx.font = `${size}px "${face === 'body' ? BODY_FACE : INITIAL_FACE}"`;
+      ctx.font = `${size}px "${runFamily(face)}"`;
       return ctx.measureText(text).width;
     };
     return { ctx, measure };
@@ -663,7 +675,7 @@ export class Screen implements Platform {
   private drawRuns(measure: Measure, runs: Run[], page: number): void {
     const words: Words[] = runs.map((run) => ({
       run,
-      box: [run.x, run.y - run.size * 1.1, run.x + measure(run.text, run.size, run.face), run.y + run.size * 0.45],
+      box: run.panel ?? [run.x, run.y - run.size * 1.1, run.x + measure(run.text, run.size, run.face), run.y + run.size * 0.45],
       alpha: 1,
     }));
     this.fb.addWords(page, words);
@@ -732,9 +744,8 @@ export class Screen implements Platform {
         if (!story) return false;
         const was = fb.page;
         fb.page = 0;
-        // The band under the bowls, and the band above the braziers, as the picture leaves them: black.
-        fb.fill(0, 149 + GYPSY_DROP, WIDTH - 1, HEIGHT - 1, 0);
-        fb.fill(0, 0, WIDTH - 1, GYPSY_DROP - 1, 0);
+        // The band under the bowls, as the picture leaves it: black.
+        fb.fill(0, 149, WIDTH - 1, HEIGHT - 1, 0);
         fb.page = was;
         this.drawRuns(story.measure, setChoice(question, left, right, lit, story.measure), 0);
         return true;

@@ -10,7 +10,6 @@
 
 import { loadResource } from '../data/images.ts';
 import { Colour } from '../ui/colours.ts';
-import { GYPSY_DROP } from '../ui/storyText.ts';
 import { blinker, waitMark } from './waitMark.ts';
 import { leftArrow, rightArrow, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
@@ -130,15 +129,15 @@ const walking = (now: number): number => AVATAR_WALKING + (Math.floor(now / (TIC
 
 /**
  * The gypsy's stage (EGA pixels): the Avatar between the bowls, at each bowl, and each bowl's flame - on the braziers
- * as the Standard look lowers them (GYPSY_DROP), the only look the stage is.
+ * where 1988 has them, in the Standard look, the only look the stage is (its question between the bowls above it).
  */
 const STAGE = {
-  y: 112 + GYPSY_DROP,
+  y: 112,
   centre: 150,
   bowls: [58, 242],
   fires: [
-    [44, 86 + GYPSY_DROP, 50, 42],
-    [228, 86 + GYPSY_DROP, 50, 42],
+    [44, 86, 50, 42],
+    [228, 86, 50, 42],
   ] as [number, number, number, number][],
 };
 
@@ -989,27 +988,25 @@ export class Intro {
     const [lo, hi, first] = a > b ? [b, a, 0x42] : [a, b, 0x41];
     const cx = g.data.bytes(0x51fc, 8);
     const cy = g.data.bytes(0x5204, 8);
-    // The braziers and their virtues, lowered by `drop` (the Standard look's page, its question over them).
-    const page = (drop: number): void => {
+    // The braziers and their virtues, where 1988 has them.
+    const page = (): void => {
       fx.page(1);
       g.printChar(0xff);
-      fx.image(cards, 1, 0x10, drop);
-      fx.image(cards, 1, 200, drop);
-      fx.image(cards, lo + 2, cx[lo], cy[lo] + drop);
-      fx.image(cards, hi + 2, cx[hi] + 0xb8, cy[hi] + drop);
+      fx.image(cards, 1, 0x10, 0);
+      fx.image(cards, 1, 200, 0);
+      fx.image(cards, lo + 2, cx[lo], cy[lo]);
+      fx.image(cards, hi + 2, cx[hi] + 0xb8, cy[hi]);
       fx.transfer(1, 0, 0, 0, 319, 199);
     };
     const words = this.fileText('QUESTION.DAT', g.data.words(0x517c + a * 16, 8)[b]);
     // A is always the left card's answer - the lower virtue's, whichever of the two was drawn first - and B the right.
     const split = splitQuestion(words.replace(/_/g, ''));
-    const standard = !!split && g.options.tileSet === 'standard';
-    page(standard ? GYPSY_DROP : 0);
+    page();
     let k: number;
     if (split && fx.choice?.(split.question, split.a, split.b, -1)) {
       // The Standard look: the Avatar walked to a bowl, and A taken there.
       k = (await this.chooseBowl(split.question, split.a, split.b)) === 0 ? 0x41 : 0x42;
     } else {
-      if (standard) page(0); // the words set as 1988 set them, under the braziers where 1988 had them
       this.proseText(words);
       fx.transfer(1, 0, 0, 0, 319, 199);
       do {

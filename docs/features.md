@@ -248,11 +248,13 @@ describes how the Modern look is drawn.
   colour as enamel would, the shield the trim's.
 - **Thine Adventure**: Modern, Classic (as in 1988) or Story, the rules
   (see Difficulty and options), changed afterwards in Gameplay.
-- **The gypsy's questions** are answered on the screen: each answer under
-  the bowl of its virtue's card; the d-pad walks the Avatar from between
-  the bowls to one, its fire stirring and its answer turning white, and A
-  (or Return, or Z) takes it. The PC (1988) look keeps 1988's pages and its
-  A and B.
+- **The gypsy's questions** are answered on the screen, in the game's own
+  lettering: the question between the two braziers, on a dark panel above
+  the Avatar, trailing off ("...dost thou...") where it runs on into its
+  answers; each answer centred under its virtue's brazier, on as many lines
+  as it needs; the d-pad walks the Avatar from between the bowls to one,
+  its fire stirring and its answer turning white, and A (or Return, or Z)
+  takes it. The PC (1988) look keeps 1988's pages and its A and B.
 
 ## Controls and menus
 
