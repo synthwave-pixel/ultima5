@@ -97,7 +97,9 @@ games.
   on the device, or add `https://github.com/synthwave-pixel/ultima5` in
   Obtainium by hand. iOS has no app on purpose: use the browser.
 - **Linux without Flatpak**: the `AppImage` on the Releases page. Make it
-  executable and run it; it keeps itself up to date.
+  executable and run it; it keeps itself up to date. On Ubuntu 22.04 or
+  newer (and Mint, Pop!_OS...), if it won't start, install libfuse2 first:
+  `sudo apt install libfuse2t64` (`libfuse2` before Ubuntu 24.04).
 
 ### Installing from a terminal
 
