@@ -117,6 +117,9 @@
         }
       }
     },
+    "appImage": {
+      "artifactName": "Ultima-V-${version}-${arch}.${ext}"
+    },
     "flatpak": {
       "runtimeVersion": "25.08",
       "baseVersion": "25.08",
