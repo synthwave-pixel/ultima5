@@ -3,3 +3,4 @@ app/
 dist/
 smoke.png
 smoke-built.png
+build-meta/

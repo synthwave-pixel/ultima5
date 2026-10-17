@@ -121,6 +121,12 @@
       "artifactName": "Ultima-V-${version}-${arch}.${ext}"
     },
     "flatpak": {
+      "files": [
+        [
+          "build-meta/com.synthwavepixel.ultima5.metainfo.xml",
+          "/share/metainfo/com.synthwavepixel.ultima5.metainfo.xml"
+        ]
+      ],
       "runtimeVersion": "25.08",
       "baseVersion": "25.08",
       "finishArgs": [
