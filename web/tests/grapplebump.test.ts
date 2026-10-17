@@ -45,6 +45,15 @@ describe('a mountain walked into with the grapple', () => {
     expect(g.s.x).toBe(at[0] + 1);
   });
 
+  it('climbs on unasked from a mountain the party stands on', async () => {
+    const { g, p, at } = beside(0x1c, 1);
+    setTileAt(g, at[0], at[1], 0x0c);
+    await walk(g, p);
+    expect(p.log).not.toContain('Confirm climb?');
+    expect(p.log).toMatch(/Klimb/);
+    expect(g.s.x).toBe(at[0] + 1);
+  });
+
   it('asks again where the bump that would confirm comes later than the next turn', async () => {
     const { g, p, at } = beside(0x1c, 1);
     await walk(g, p);

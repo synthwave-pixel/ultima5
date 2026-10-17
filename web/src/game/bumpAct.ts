@@ -143,11 +143,13 @@ function notNow(g: Game, verb: 'search' | 'push' | 'take' | 'open'): number {
 }
 
 /**
- * The grapple's mountain bumped into: climbed (Klimb) where this is the bump that confirms it - into the same mountain,
- * from the same square, the turn it was asked on or the next - else asked, "Confirm climb?", and nothing done. Keys
+ * The grapple's mountain bumped into: climbed (Klimb) from a mountain the party stands on, or where this is the bump
+ * that confirms it - into the same mountain, from the same square, the turn it was asked on or the next - else asked, "Confirm climb?", and nothing done. Keys
  * typed ahead are let go with the asking, so a held direction does not answer it.
  */
 function climbOrAsk(g: Game, mountain: string): number {
+  // Already on the mountains, the party goes on over them unasked: it climbed onto them once, knowing.
+  if (tileAt(g, g.s.x, g.s.y) === 0x0c) return K_;
   const key = `${g.s.x},${g.s.y}>${mountain}`;
   const asked = g.climbAsked;
   g.climbAsked = null;
