@@ -1926,6 +1926,25 @@ async function cheatsMenu(g: Game): Promise<void> {
  * that says what a thing is for (a piece of equipment's use), prints that; Y on any line, and Y alone, prints its hint
  * in the log - a hint is asked for, never given by the button that opens. B goes back, and out.
  */
+/** The most letters a card's title has on the panel's border, its colon among them (frame.ts borderTitle). */
+const CARD_TITLE = 13;
+
+/**
+ * A journal card's title, fitted to the panel's border: the name and a colon; else the name; else as many of its words
+ * as fit, with the colon ("Buccaneer's:", "Sandalwood:"). Longer, it ran past the border's end and was left there.
+ */
+export function cardTitle(name: string): string {
+  if (name.length + 1 <= CARD_TITLE) return `${name}:`;
+  if (name.length <= CARD_TITLE) return name;
+  let out = '';
+  for (const word of name.split(' ')) {
+    const next = out ? `${out} ${word}` : word;
+    if (next.length + 1 > CARD_TITLE) break;
+    out = next;
+  }
+  return out ? `${out}:` : `${name.slice(0, CARD_TITLE - 1)}:`;
+}
+
 export async function journalScreen(g: Game): Promise<number> {
   /**
    * Whether text fits the log as it stands, a line or two kept clear (the log's width, letters; its height, rows):
@@ -1983,7 +2002,7 @@ export async function journalScreen(g: Game): Promise<number> {
       if (line?.about || line?.hint) {
         // Headed by its page's title where it opens one, short enough for the panel's border ("Shadowlords", not
         // "Shadowlords slain").
-        drawTextCard(g, `${line.open?.title ?? nameOf(line)}:`, line.about ?? '', line.hint ? 'Y: Hint' : '');
+        drawTextCard(g, cardTitle(line.card ?? line.open?.title ?? nameOf(line)), line.about ?? '', line.hint ? 'Y: Hint' : '');
         carded = true;
       } else if (carded) {
         clearBorderTitle(g);

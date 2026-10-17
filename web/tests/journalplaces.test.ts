@@ -90,3 +90,22 @@ describe("the journal's places", () => {
     expect(dungeon().label).toBe('Despise              ');
   });
 });
+
+describe("the journal's cards' titles", () => {
+  it('fit the panel border, every place and every piece of equipment', async () => {
+    const { cardTitle } = await import('../src/game/menu.ts');
+    expect(cardTitle('Shrines')).toBe('Shrines:');
+    expect(cardTitle("Buccaneer's Den")).toBe("Buccaneer's:");
+    expect(cardTitle('Sandalwood box')).toBe('Sandalwood:');
+    const { g } = newGame();
+    for (let id = 1; id <= 32; id++) {
+      g.fog.named.add(`place:${id}`);
+      g.fog.place(id, 0);
+    }
+    const lines = journalTop(g).flatMap((l) => [l, ...(l.open?.lines ?? []).flatMap((k) => [k, ...(k.open?.lines ?? [])])]);
+    for (const l of lines) {
+      const title = cardTitle(l.card ?? l.open?.title ?? thing(l.label));
+      expect(title.length, l.label).toBeLessThanOrEqual(13);
+    }
+  });
+});

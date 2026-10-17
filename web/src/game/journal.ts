@@ -97,6 +97,8 @@ export interface JournalLine {
   hint: string;
   /** What A prints on it, where that is not its hint (a piece of equipment's use). */
   about?: string;
+  /** Its card's title on the panel's border, where its name is too long for it (menu.ts cardTitle). */
+  card?: string;
   /** The lines under it (a shrine's each, a dungeon's each, the clues' topics). */
   open?: { title: string; lines: JournalLine[] };
   /** What A opens to read, a page of its own (a topic's clues): each line's text, and whether it is greyed. */
@@ -350,11 +352,11 @@ function equipmentCount(g: Game): { held: number; of: number } {
 }
 
 /** The settlements by kind, as Places opens them: each kind's map ids, and what the map calls one not yet named. */
-const PLACE_GROUPS: { name: string; ids: number[] }[] = [
-  { name: 'Townes', ids: [1, 2, 3, 4, 5, 6, 7, 8] },
-  { name: 'Castles, villages', ids: [17, 18, 19, 20, 21, 22, 23, 24] },
-  { name: 'Keeps', ids: [25, 26, 27, 28, 29, 30, 31, 32] },
-  { name: 'Lighthouses, huts', ids: [9, 10, 11, 12, 13, 14, 15, 16] },
+const PLACE_GROUPS: { name: string; ids: number[]; about: string }[] = [
+  { name: 'Townes', ids: [1, 2, 3, 4, 5, 6, 7, 8], about: 'The eight townes.' },
+  { name: 'Castles', ids: [17, 18, 19, 20, 21, 22, 23, 24], about: "Lord British's castle, Blackthorn's palace, and the villages." },
+  { name: 'Keeps', ids: [25, 26, 27, 28, 29, 30, 31, 32], about: 'The keeps, the Lycaeum and Empath Abbey among them.' },
+  { name: 'Dwellings', ids: [9, 10, 11, 12, 13, 14, 15, 16], about: 'The lighthouses and the huts.' },
 ];
 
 /** What a place is, by its map id: as the map calls one it has not named ("Towne?"), and as its hint says it. */
@@ -375,6 +377,9 @@ const placeKind = (id: number): string =>
 
 /** A place's name on its line, where the files' is too long for it beside a count. */
 const PLACE_SHORT: Record<number, string> = { 17: 'Castle British', 18: "Blackthorn's" };
+
+/** A place's card title, where its name shortened by words (menu.ts cardTitle) would say too little. */
+const PLACE_CARD: Record<number, string> = { 17: 'Castle', 19: 'W. Britanny', 20: 'N. Britanny', 21: 'E. Britanny' };
 
 /** The landmarks a place's hint says it lies by: the townes and Lord British's castle. */
 const LANDMARKS = [1, 2, 3, 4, 5, 6, 7, 8, 17];
@@ -446,7 +451,9 @@ function placeLine(g: Game, id: number): JournalLine {
   const seen = placeSeen(g, id);
   if (!known && !seen) return { label: row('Mystery...', ''), about: MYSTERY, hint };
   const name = known ? (PLACE_SHORT[id] ?? placeTitle(g, id)) : `${placeKind(id)}?`;
-  if (!entered) return { label: row(name, seen ? 'seen' : ''), about: seen ? 'Found, not yet entered.' : 'Heard of, not yet found.', hint };
+  const card = known && PLACE_CARD[id] ? { card: PLACE_CARD[id] } : {};
+  if (!entered)
+    return { label: row(name, seen ? 'seen' : ''), ...card, about: seen ? 'Found, not yet entered.' : 'Heard of, not yet found.', hint };
   const { heard, all } = placeCount(g, id);
   const here = placeTitle(g, id);
   const read: { text: string; dim: boolean }[] = [];
@@ -459,6 +466,7 @@ function placeLine(g: Game, id: number): JournalLine {
   if (!read.length) read.push({ text: all ? 'Nothing noted here yet.' : 'Nothing here bears on the quest.', dim: true });
   return {
     label: row(name, all ? `${heard}/${all}` : 'visited'),
+    ...card,
     about: !all
       ? 'Entered. Nothing here bears on the quest.'
       : heard === all
@@ -473,7 +481,7 @@ function placeLine(g: Game, id: number): JournalLine {
 function placeGroups(g: Game): JournalLine[] {
   return PLACE_GROUPS.map((k) => ({
     label: row(k.name, `${k.ids.filter((id) => placeDone(g, id)).length}/${k.ids.length}`),
-    about: `${k.name}: each one been in, and all its clues heard.`,
+    about: k.about,
     hint: '',
     open: { title: k.name, lines: k.ids.map((id) => placeLine(g, id)) },
   }));

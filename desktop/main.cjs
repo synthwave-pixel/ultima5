@@ -187,13 +187,19 @@ app.whenReady().then(() => {
   }, 3000);
   // Newer releases looked for once the game is up (updates.cjs); no page offered under Game Mode. Never in a smoke test.
   if (!process.env.ULTIMA5_SMOKE) setTimeout(() => void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile }), 5000);
-  // A smoke test (smoke.cjs): screenshot after the game has drawn, then quit.
+  // A smoke test (smoke.cjs): screenshot once the game is up, then quit. Looked for every half second, from six seconds
+  // after the page loads, for up to thirty: a slow runner (Windows CI's, once) was not up at a single look at six.
   const shot = process.env.ULTIMA5_SMOKE;
   if (shot) {
     win.webContents.on('did-finish-load', () => {
-      setTimeout(async () => {
+      const until = Date.now() + 30_000;
+      const look = async () => {
         try {
           const ok = await win.webContents.executeJavaScript("!!(window.u5 || document.getElementById('installer'))");
+          if (!ok && Date.now() < until) {
+            setTimeout(() => void look(), 500);
+            return;
+          }
           const image = await win.webContents.capturePage();
           writeFileSync(shot, image.toPNG());
           console.log(`smoke: ${ok ? 'running' : 'NOT running'}, screenshot ${shot}`);
@@ -202,7 +208,8 @@ app.whenReady().then(() => {
           console.error('smoke failed', e);
           app.exit(1);
         }
-      }, 6000);
+      };
+      setTimeout(() => void look(), 6000);
     });
   }
   app.on('activate', () => {
