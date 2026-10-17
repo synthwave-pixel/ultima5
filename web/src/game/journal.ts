@@ -13,45 +13,9 @@ import { Game, type Note } from './game.ts';
 import { Save } from './save.ts';
 import { DUNGEON_HINTS, EQUIPMENT, PASSWORDS, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
 import { scriptAnswers } from './words.ts';
-
-/** What makes a thing said worth noting. */
-const CLUES = [
-  'MANTRA',
-  'WORD OF POWER',
-  'WORDS OF POWER',
-  'SHARD',
-  'SHADOWLORD',
-  'CODEX',
-  'CROWN',
-  'SCEPTRE',
-  'AMULET',
-  'SANDALWOOD',
-  'DOOM',
-  'UNDERWORLD',
-  'LORD BRITISH',
-  'RESISTANCE',
-  'PASSWORD',
-  'MOONSTONE',
-  'FLAME',
-  'GLASS SWORD',
-  'GRAPPLE',
-  'SHRINE',
-  // The harpsichord: the tune's phrase, given as notes, as the composer teaches it.
-  'HARPSICHORD',
-  'PHRASE',
-];
+import { CLUES, clueHeard, lordNames, placeClues } from './placeClues.ts';
 
 const MAX_NOTES = 200;
-
-/**
- * The Shadowlords' names, from the player's files, upper case: a clue too, and under the Shadowlords' topic, where they
- * are said without the word Shadowlord ("I once served the mighty Astaroth").
- */
-const lordNames = (g: Game): string[] =>
-  g.data
-    .table(0x444a, 3)
-    .map((n) => n.trim().toUpperCase())
-    .filter(Boolean);
 
 /** The day as the stats show it. */
 const today = (g: Game): string => `${g.s.month}-${g.s.day}-${g.s.year}`;
@@ -143,7 +107,11 @@ export interface JournalLine {
 
 /** The menu's width, in letters: a count or a state is set against its right edge. */
 const WIDTH = 21;
-const row = (name: string, right: string): string => `${name}${right.padStart(WIDTH - name.length)}`;
+const row = (name: string, right: string): string => {
+  const room = right ? WIDTH - right.length - 1 : WIDTH;
+  const shown = name.length > room ? name.slice(0, room) : name;
+  return `${shown}${right.padStart(WIDTH - shown.length)}`;
+};
 
 /** A name from the files, as a name ("DECEIT" as "Deceit"). */
 const named = (name: string): string => name.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, a: string, b: string) => a + b.toUpperCase());
@@ -241,7 +209,11 @@ const GATED: Record<string, RegExp> = {
   carpet: /\bcarpets?\b/i,
   skullkeys: /\bskull ?keys?\b/i,
   badge: /\bbadge\b/i,
+  moongates: /\bmoongates?\b/i,
 };
+
+/** The moongates the party has stepped through (Fog.gates, the map's), of the eight. */
+const gatesThrough = (g: Game): number => Math.min(8, g.fog.gates.size);
 
 /** Whether the party holds a gated thing (EQUIPMENT's `gate`). */
 function holds(g: Game, gate: string): boolean {
@@ -253,6 +225,7 @@ function holds(g: Game, gate: string): boolean {
     carpet: s.carpets,
     skullkeys: s.skullKeys,
     badge: s.blackBadge,
+    moongates: gatesThrough(g),
   };
   return (held[gate] ?? 0) !== 0;
 }
@@ -347,6 +320,7 @@ function equipmentHeld(g: Game): Record<string, { n: number; counted?: boolean; 
     'Pocket watch': { n: s.pocketWatch },
     'Black Badge': { n: s.blackBadge },
     'Sandalwood box': { n: s.sandalwoodBox },
+    Moongates: { n: gatesThrough(g), of: 8 },
     Moonstones: { n: [...s.moonstoneHeld].filter((m) => m === 0xff).length, of: 8 },
     Crown: { n: s.crown },
     Amulet: { n: s.amulet },
@@ -373,6 +347,136 @@ function equipment(g: Game): JournalLine[] {
 function equipmentCount(g: Game): { held: number; of: number } {
   const held = equipmentHeld(g);
   return { held: EQUIPMENT.filter((e) => (held[e.name]?.n ?? 0) !== 0).length, of: EQUIPMENT.length };
+}
+
+/** The settlements by kind, as Places opens them: each kind's map ids, and what the map calls one not yet named. */
+const PLACE_GROUPS: { name: string; ids: number[] }[] = [
+  { name: 'Townes', ids: [1, 2, 3, 4, 5, 6, 7, 8] },
+  { name: 'Castles, villages', ids: [17, 18, 19, 20, 21, 22, 23, 24] },
+  { name: 'Keeps', ids: [25, 26, 27, 28, 29, 30, 31, 32] },
+  { name: 'Lighthouses, huts', ids: [9, 10, 11, 12, 13, 14, 15, 16] },
+];
+
+/** What a place is, by its map id: as the map calls one it has not named ("Towne?"), and as its hint says it. */
+const placeKind = (id: number): string =>
+  id <= 8
+    ? 'Towne'
+    : id <= 12
+      ? 'Lighthouse'
+      : id <= 16
+        ? 'Hut'
+        : id === 17
+          ? 'Castle'
+          : id === 18
+            ? 'Palace'
+            : id <= 24
+              ? 'Village'
+              : 'Keep';
+
+/** A place's name on its line, where the files' is too long for it beside a count. */
+const PLACE_SHORT: Record<number, string> = { 17: 'Castle British', 18: "Blackthorn's" };
+
+/** The landmarks a place's hint says it lies by: the townes and Lord British's castle. */
+const LANDMARKS = [1, 2, 3, 4, 5, 6, 7, 8, 17];
+
+/** Where a place lies, said by the nearest landmark ("A hut, north-west of Yew."), and what more there is to know. */
+function placeHint(g: Game, id: number): string {
+  const here = g.data.locations[id - 1];
+  if (!here) return '';
+  const wrapped = (d: number): number => ((((d + 128) % 256) + 256) % 256) - 128;
+  let best = -1;
+  let far = Infinity;
+  for (const l of LANDMARKS) {
+    const there = g.data.locations[l - 1];
+    if (l === id || !there) continue;
+    const d = Math.hypot(wrapped(here.x - there.x), wrapped(here.y - there.y));
+    if (d < far) [best, far] = [l, d];
+  }
+  const there = g.data.locations[best - 1];
+  const dx = wrapped(here.x - there.x);
+  const dy = wrapped(here.y - there.y);
+  const ns = dy < -Math.abs(dx) / 2 ? 'north' : dy > Math.abs(dx) / 2 ? 'south' : '';
+  const ew = dx < -Math.abs(dy) / 2 ? 'west' : dx > Math.abs(dy) / 2 ? 'east' : '';
+  const way = far < 4 ? 'beside' : `${[ns, ew].filter(Boolean).join('-')} of`;
+  const kind = placeKind(id).toLowerCase();
+  const more = PLACE_MORE[id] ? ` ${PLACE_MORE[id]}` : '';
+  const by = best === 17 ? "Lord British's castle" : placeTitle(g, best);
+  return `A${/^[aeiou]/.test(kind) ? 'n' : ''} ${kind}, ${way} ${by}.${more}`;
+}
+
+/** What a place's hint adds to where it lies. */
+const PLACE_MORE: Record<number, string> = {
+  18: 'On an isle in the far south-east: a ship is needed.',
+  28: 'In the far north-east.',
+  29: 'Among mountains no horse crosses: the grapple climbs them, on foot.',
+};
+
+/** Whether the party has set foot in a place (any of its levels, Fog.places). */
+const beenIn = (g: Game, id: number): boolean => [...g.fog.places.keys()].some((k) => k.startsWith(`${id}.`));
+
+/** Whether a place's door has been seen, in either world. */
+function placeSeen(g: Game, id: number): boolean {
+  const l = g.data.locations[id - 1];
+  return !!l && (g.fog.seen(false, l.x, l.y) || g.fog.seen(true, l.x, l.y));
+}
+
+/** A place's clues: how many heard, of all (placeClues.ts). */
+function placeCount(g: Game, id: number): { heard: number; all: number } {
+  const clues = placeClues(g).get(id) ?? [];
+  const here = placeTitle(g, id);
+  const notes = g.notes.filter((n) => n.where === here);
+  return { heard: clues.filter((c) => clueHeard(g, c, notes)).length, all: clues.length };
+}
+
+/** Whether a place is done with: been in, and all its clues heard. */
+function placeDone(g: Game, id: number): boolean {
+  const { heard, all } = placeCount(g, id);
+  return beenIn(g, id) && heard === all;
+}
+
+/**
+ * A place's line (the port's, after the ultima3 port's Towns): a mystery till it is seen, named in someone's hearing or
+ * been in (the map's own reckoning, placeNames.ts); seen and not named, what the map calls it ("Towne?"); been in, its
+ * clues heard of all, A on it the clues heard there.
+ */
+function placeLine(g: Game, id: number): JournalLine {
+  const hint = placeHint(g, id);
+  const entered = beenIn(g, id);
+  const known = g.fog.named.has(`place:${id}`) || entered;
+  const seen = placeSeen(g, id);
+  if (!known && !seen) return { label: row('Mystery...', ''), about: MYSTERY, hint };
+  const name = known ? (PLACE_SHORT[id] ?? placeTitle(g, id)) : `${placeKind(id)}?`;
+  if (!entered) return { label: row(name, seen ? 'seen' : ''), about: seen ? 'Found, not yet entered.' : 'Heard of, not yet found.', hint };
+  const { heard, all } = placeCount(g, id);
+  const here = placeTitle(g, id);
+  const read: { text: string; dim: boolean }[] = [];
+  for (const n of [...g.notes].reverse().filter((n) => n.where === here)) {
+    read.push({ text: `${n.who !== here ? n.who : here}, ${n.date}:`, dim: false });
+    read.push({ text: n.text, dim: false });
+    read.push({ text: '', dim: false });
+  }
+  if (all > heard) read.push({ text: `${all - heard} more to hear.`, dim: true });
+  if (!read.length) read.push({ text: all ? 'Nothing noted here yet.' : 'Nothing here bears on the quest.', dim: true });
+  return {
+    label: row(name, all ? `${heard}/${all}` : 'visited'),
+    about: !all
+      ? 'Entered. Nothing here bears on the quest.'
+      : heard === all
+        ? 'Entered. All its clues heard.'
+        : `Entered. ${heard} of its ${all} clues heard.`,
+    hint,
+    read,
+  };
+}
+
+/** The places, by kind: each kind's places done of all, opening to their lines. */
+function placeGroups(g: Game): JournalLine[] {
+  return PLACE_GROUPS.map((k) => ({
+    label: row(k.name, `${k.ids.filter((id) => placeDone(g, id)).length}/${k.ids.length}`),
+    about: `${k.name}: each one been in, and all its clues heard.`,
+    hint: '',
+    open: { title: k.name, lines: k.ids.map((id) => placeLine(g, id)) },
+  }));
 }
 
 /** A member's calling, by the class letter the roster keeps. */
@@ -421,11 +525,20 @@ export function journalTop(g: Game): JournalLine[] {
   });
   const begun = [0, 1, 2, 3, 4, 5, 6, 7].filter((v) => questState(g, v) === 'ordained' || questState(g, v) === 'answered');
   const done = [0, 1, 2, 3, 4, 5, 6, 7].filter((v) => questState(g, v) === 'done');
-  const dungeons = [0, 1, 2, 3, 4, 5, 6, 7].map((d) => ({
-    label: row(named(g.data.locations[0x20 + d]?.name ?? ''), s.d58d0[d] !== 0 ? 'unsealed' : ''),
-    about: dungeonStatus(g, d),
-    hint: DUNGEON_HINTS[d],
-  }));
+  // A dungeon a mystery till its mouth is seen, its Word or its name is heard, it is been in or unsealed (the ultima3
+  // port's): most are named with their Word.
+  const dungeons = [0, 1, 2, 3, 4, 5, 6, 7].map((d) => {
+    const id = 0x21 + d;
+    const known = dungeonStatus(g, d) !== MYSTERY || g.fog.named.has(`place:${id}`) || beenIn(g, id) || placeSeen(g, id);
+    if (!known) return { label: row('Mystery...', ''), about: MYSTERY, hint: DUNGEON_HINTS[d] };
+    return {
+      label: row(named(g.data.locations[0x20 + d]?.name ?? ''), s.d58d0[d] !== 0 ? 'unsealed' : ''),
+      about: dungeonStatus(g, d),
+      hint: DUNGEON_HINTS[d],
+    };
+  });
+  const groups = placeGroups(g);
+  const placesDone = PLACE_GROUPS.reduce((n, k) => n + k.ids.filter((id) => placeDone(g, id)).length, 0);
   // The Shadowlords by what each is - Falsehood, Hatred, Cowardice, as the game names their shards (items.ts) - and by
   // name only once it has been heard (words.ts): the names are for the player to find, since to be called up at a
   // flame they must be known. The name stands at the right of its line until the Shadowlord is slain, and on its card.
@@ -467,6 +580,12 @@ export function journalTop(g: Game): JournalLine[] {
       label: row('Dungeons unsealed', `${dungeons.filter((_, d) => s.d58d0[d] !== 0).length}/8`),
       hint: 'A sealed dungeon opens to its Word of Power, yelled at its entrance.',
       open: { title: 'Dungeons', lines: dungeons },
+    },
+    {
+      label: row('Places', `${placesDone}/32`),
+      about: 'Each been in, and all its clues heard.',
+      hint: 'Every towne, castle, keep and hut, each been in and all its clues heard. Talk to everyone: ask of what they say.',
+      open: { title: 'Places', lines: groups },
     },
     {
       label: row('Shards held', `${shards}`),

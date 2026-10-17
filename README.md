@@ -202,8 +202,9 @@ and Iolo beside you.
 
 **When you are stuck**, look in the command menu (A, or Enter or Tab):
 
-- **Journal**: how the quest stands, and the clues townsfolk have given.
-  Y on a line gives a hint.
+- **Journal**: how the quest stands, every place with how many of its
+  clues you have heard, and the clues townsfolk have given. Y on a line
+  gives a hint.
 - **Map**: the cloth map, with what you have seen painted over it.
 
 or open the Pause menu (Escape, Start, or the pause button on the touch

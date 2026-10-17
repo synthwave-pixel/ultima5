@@ -710,12 +710,20 @@ other hurt in the game kills as it always did.
 
 - **The journal**, which says "Journal updated" when it takes something
   down: how the quest stands, a line for each part with its count - shrine
-  quests done and ordained, dungeons unsealed, shards held, Shadowlords
-  slain, the Passwords (the Resistance's and Blackthorn's, each on its
+  quests done and ordained, dungeons unsealed, the Places done (below),
+  shards held, Shadowlords slain, the Passwords (the Resistance's and Blackthorn's, each on its
   line once heard; until then "Mystery...", whose it is unsaid), the Equipment (Lord British's Crown,
-  Amulet and Sceptre among it), and the Companions who may join - each opening onto a line for each.
+  Amulet and Sceptre among it, each set against what is held of it: a count, the moonstones and the moongates
+  stepped through of eight, or held), and the Companions who may join - each opening onto a line for each.
+  **Places** (after the Ultima III port's Towns) opens onto the townes, the castles and villages, the keeps, and the
+  lighthouses and huts, each kind with how many of its places are done: a place is "Mystery..." until it is seen on
+  the map or someone names it, then what the map calls it ("Towne?", "Keep?") until it is named, then, once the party
+  has been in, its clues heard of all ("Britain 3/7"), A on it the clues heard there. A place's clues are read from the
+  player's own TLK files: every line its townsfolk can say that names a quest thing, as the clues below are kept,
+  counting only what is told, never a question; one is heard when it is spoken. A dungeon too is "Mystery..." until
+  its mouth is seen, its name or its Word heard, or the party has been in.
   The quest's own things - the Crown, Amulet and Sceptre, the magic carpet,
-  skull keys and Black Badge - are each "Mystery...?" until someone speaks
+  skull keys, Black Badge and the moongates - are each "Mystery...?" until someone speaks
   of it or the party holds it, and a companion the party has not met goes
   by their calling ("Mage...?") until talked to or named; Y still gives
   the hint. The line under the bar

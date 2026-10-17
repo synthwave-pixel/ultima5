@@ -124,6 +124,12 @@ export const EQUIPMENT: { name: string; use?: string; rumored?: string; where: s
     where: "Play the harpsichord in Lord British's chamber. Learn the tune in Greyhaven.",
   },
   {
+    name: 'Moongates',
+    gate: 'moongates',
+    use: 'Rise by night over buried moonstones; where each leads turns with the moons.',
+    where: 'By night, on open ground where the cloth map marks a moongate. Lady Janell at the Lycaeum tells of the one at midnight.',
+  },
+  {
     name: 'Moonstones',
     where: 'Each lies buried under its moongate. Goeth in Jhelom tells how: search where a gate sank, by day.',
   },

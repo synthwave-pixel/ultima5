@@ -4,7 +4,14 @@ import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 
 /** A journal line's name, without the count or the state set against its right edge. */
-const thing = (label: string): string => label.replace(/\s{2,}\S+$/, '').trimEnd();
+const thing = (label: string): string =>
+  label
+    .replace(/\s{2,}\S+$/, '')
+    .replace(/\s+\d+(\/\d+)?$/, '')
+    .trimEnd();
+
+/** A part of the journal's top, by its name. */
+const part = (g: ReturnType<typeof newGame>['g'], name: string) => journalTop(g).find((l) => thing(l.label) === name)!;
 
 /** The journal's clues: who said it and where, and what was said - not the prompts the player answered. */
 describe('a clue in the journal', () => {
@@ -84,10 +91,11 @@ describe('the journal', () => {
       'Shrines           1/8',
       'Ordained          2/8',
       'Dungeons unsealed 1/8',
+      'Places           0/32',
       'Shards held         1',
       'Shadowlords slain 1/3',
       'Passwords         0/2',
-      'Equipment        3/15',
+      'Equipment        3/16',
       'Companions',
       `Clues heard ${String(g.notes.length).padStart(9)}`,
     ]);
@@ -105,8 +113,8 @@ describe('the journal', () => {
     ]);
     expect(lines(1)).toEqual(['Compassion   ordained', 'Valour       answered']); // the quests begun and not done
     expect(lines(2)[2]).toBe('Destard      unsealed');
-    expect(lines(4)).toEqual(['Falsehood            ', 'Hatred          slain', 'Cowardice            ']);
-    expect(top[8].open?.title).toBe('Clues heard');
+    expect(lines(5)).toEqual(['Falsehood            ', 'Hatred          slain', 'Cowardice            ']);
+    expect(top[9].open?.title).toBe('Clues heard');
   });
 
   it('names a Shadowlord once its name is heard - on its line until it is slain, and on its card', () => {
@@ -114,7 +122,7 @@ describe('the journal', () => {
     const s = g.s;
     s.shadowlords.fill(0);
     s.shards.fill(0);
-    const lords = (): { label: string; about?: string }[] => journalTop(g)[4].open!.lines;
+    const lords = (): { label: string; about?: string }[] => part(g, 'Shadowlords slain').open!.lines;
     const name = g.data.table(0x444a, 3)[0].trim(); // the Shadowlord of Falsehood
     const shown = name[0] + name.slice(1).toLowerCase();
     expect(lords()[0].label).toBe('Falsehood            ');
@@ -133,14 +141,14 @@ describe('the journal', () => {
 
   it('shows each password on its line once heard, and before that a mystery', () => {
     const { g } = newGame();
-    const lines = (): { label: string; about?: string }[] => journalTop(g)[5].open!.lines;
-    expect(journalTop(g)[5].label).toBe('Passwords         0/2');
+    const lines = (): { label: string; about?: string }[] => part(g, 'Passwords').open!.lines;
+    expect(part(g, 'Passwords').label).toBe('Passwords         0/2');
     expect(lines().map((l) => l.label)).toEqual(['Mystery...           ', 'Mystery...           ']);
     expect(lines()[0].about).toBe('Not yet heard.');
     // Chamfort's words, as talk.ts learns what is said: the Resistance's password, read from the player's files.
     const word = 'DAWN';
     g.words.learn(g, `"The password is ${word}."`);
-    expect(journalTop(g)[5].label).toBe('Passwords         1/2');
+    expect(part(g, 'Passwords').label).toBe('Passwords         1/2');
     expect(lines()[0].label).toBe(`Resistance${word.padStart(11)}`);
     expect(lines()[0].about).toBe(`The password: ${word}.`);
     expect(lines()[1].label).toBe('Mystery...           ');
@@ -154,7 +162,7 @@ describe('the journal', () => {
     const shown = lord[0] + lord.slice(1).toLowerCase();
     noteConversation(g, `You see a hermit.\n\n"I once served the mighty ${shown}, but that was long ago."`);
     expect(g.notes.some((n) => n.text.includes(shown))).toBe(true);
-    const topics = journalTop(g)[8].open!.lines.map((l) => l.label.replace(/\s+/g, ' '));
+    const topics = part(g, 'Clues heard').open!.lines.map((l) => l.label.replace(/\s+/g, ' '));
     expect(topics).toContain('Shadowlords 1');
   });
 
@@ -316,7 +324,7 @@ describe("the journal's cards", () => {
     const shot = (): string => p.rows.map((r) => r.join('')).join('\n');
     // Into the shrines (A), a look at the first, down to the second, a look, then back out to the journal's lines, a
     // look, and down to the clues heard (no hint, nothing to say), a look.
-    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(8).fill(K.Down), 'shot', Pad.B];
+    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(9).fill(K.Down), 'shot', Pad.B];
     fly(g, p, [
       () => {
         const k = keys.shift();
@@ -388,8 +396,8 @@ describe("the journal's long hints", () => {
     let read = false;
     const titles: string[] = [];
     fly(g, p, [
-      // The Crown, last of the Equipment, the journal's seventh line.
-      press(K.Down, K.Down, K.Down, K.Down, K.Down, K.Down, Pad.A, ...Array<number>(12).fill(K.Down), Pad.Y),
+      // The Crown, among the last of the Equipment, the journal's eighth line.
+      press(...Array<number>(7).fill(K.Down), Pad.A, ...Array<number>(13).fill(K.Down), Pad.Y),
       () => {
         if (read) return undefined;
         read = true;
@@ -453,8 +461,9 @@ describe("the journal's equipment", () => {
     const open = top.find((l) => thing(l.label) === 'Equipment')!.open;
     const lines = open ? open.lines : [];
     expect(lines.map((l) => thing(l.label))).toContain('Grapple');
-    // The quest's things a mystery, Y still saying where: Skull keys, Magic carpet, Black Badge, Crown, Amulet, Sceptre.
-    expect(lines.filter((l) => l.label === 'Mystery...?')).toHaveLength(6);
+    // The quest's things a mystery, Y still saying where: Skull keys, Magic carpet, Black Badge, Moongates, Crown, Amulet,
+    // Sceptre.
+    expect(lines.filter((l) => l.label === 'Mystery...?')).toHaveLength(7);
     expect(lines.map((l) => thing(l.label))).not.toContain('Black Badge');
     g.fog.named.add('item:badge'); // heard of
     const badge = journalTop(g)
@@ -497,7 +506,7 @@ describe("the journal's equipment counts", () => {
     expect(at(top, 'Grapple')).toBe('Grapple          held');
     const n = (label: string): number[] => label.trim().split(/\s+/).pop()!.split('/').map(Number);
     expect(n(kit())[0]).toBe(n(before)[0] + 1);
-    expect(n(kit())[1]).toBe(15);
+    expect(n(kit())[1]).toBe(16);
     expect(top.every((l) => l.label.length <= 21)).toBe(true);
     expect(top.find((l) => thing(l.label) === 'Equipment')!.open!.lines.every((l) => l.label.length <= 21)).toBe(true);
   });

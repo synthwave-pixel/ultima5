@@ -2026,6 +2026,16 @@ export async function journalScreen(g: Game): Promise<number> {
       }
     }
   };
+  /** A line's page of lines, and A on one of them its page in turn (Places' kinds, their places) or its page to read. */
+  const openPage = async (page: NonNullable<JournalLine['open']>): Promise<void> => {
+    const lines = page.lines;
+    for (let i = 0; (i = await list(page.title, lines, i)) >= 0; ) {
+      const open = lines[i].open;
+      const read = lines[i].read;
+      if (open) await openPage(open);
+      else if (read) await readPage(nameOf(lines[i]), read);
+    }
+  };
   let at = 0;
   for (;;) {
     const top = journalTop(g);
@@ -2036,11 +2046,7 @@ export async function journalScreen(g: Game): Promise<number> {
     if (line.open) {
       // A on a line of the list opens its page to read (a topic's clues, the greyed ones dim); what a line says is on
       // the panel as the bar comes to it (its hint is Y's). The list stays, and B goes back.
-      const lines = line.open.lines;
-      for (let i = 0; (i = await list(line.open.title, lines, i)) >= 0; ) {
-        const read = lines[i].read;
-        if (read) await readPage(nameOf(lines[i]), read);
-      }
+      await openPage(line.open);
     } else await tell(nameOf(line), line.about ?? '');
   }
   await restoreView(g);

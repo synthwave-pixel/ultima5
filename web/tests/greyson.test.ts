@@ -32,7 +32,10 @@ function findNpc(g: Game, name: string): number {
  * A talk with Greyson of Britain by controller: each word of the Say list asked in turn, then Mantra, every menu
  * written down; at an answer, the first line not "I know not".
  */
-async function greyson(known: string[], unknown: string[] = []): Promise<{ menus: { title: string; labels: string[] }[]; log: string }> {
+async function greyson(
+  known: string[],
+  unknown: string[] = [],
+): Promise<{ menus: { title: string; labels: string[] }[]; log: string; g: Game }> {
   const { g, p } = newGame();
   const s = g.s;
   g.options.input = 'controller';
@@ -73,7 +76,7 @@ async function greyson(known: string[], unknown: string[] = []): Promise<{ menus
     return queue.shift();
   };
   await talkToNpc(g, npc);
-  return { menus, log: p.log.replace(/\s+/g, ' ') };
+  return { menus, log: p.log.replace(/\s+/g, ' '), g };
 }
 
 describe('Greyson of Britain, by controller', () => {
@@ -95,6 +98,21 @@ describe('Greyson of Britain, by controller', () => {
       ['Compassion', 'I know not'],
     ]);
     expect(log).toContain('The Mantra of Compassion is MU!');
+  });
+
+  it("keeps the clues he spoke heard, for the journal's Places: the mantra's among them", async () => {
+    const { placeClues } = await import('../src/game/placeClues.ts');
+    const { g } = await greyson(['MANTRA', 'BRITISH', 'COMPASSION']);
+    const his = placeClues(g)
+      .get(2)!
+      .filter((c) => c.who === 'Greyson');
+    const heard = his.filter((c) => g.fog.named.has(`clue:${c.id}`));
+    expect(heard.some((c) => /Mantra of Compassion is MU/.test(c.text))).toBe(true);
+    // Only what he said: no one else's in Britain.
+    const others = placeClues(g)
+      .get(2)!
+      .filter((c) => c.who !== 'Greyson');
+    expect(others.some((c) => g.fog.named.has(`clue:${c.id}`))).toBe(false);
   });
 
   it('keeps Things as Things once his question has said "think"', async () => {

@@ -25,6 +25,7 @@ import { merchant } from './shops.ts';
 import { RUNE_INK, runeKind, runesRead } from './runeWords.ts';
 import { scriptSpeech } from './words.ts';
 import { heardPlaces } from './placeNames.ts';
+import { heardLines } from './placeClues.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -73,6 +74,8 @@ export class TalkState {
   labels = '';
   /** The keys held before Jeremy's gift of them, for his asking to be paid after it (payGold); null with none given. */
   keysBefore: number | null = null;
+  /** Where in the script each line spoken this conversation began: its clues heard, for the journal (placeClues.ts). */
+  spokeAt = new Set<number>();
 }
 
 /**
@@ -193,6 +196,7 @@ function seek(k: Talk, n: number): void {
 /** TALK_0788: say the string from here; true if the conversation ends. */
 async function speak(k: Talk): Promise<boolean> {
   const t = k.t;
+  t.spokeAt.add(t.at);
   while (t.script[t.at] !== 0) {
     if ((await processChar(k, t.script[t.at++])) !== 0) return true;
   }
@@ -925,6 +929,7 @@ async function conversation(g: Game, n: number): Promise<void> {
   const k: Talk = { g, t: g.talk };
   loadScript(g, n);
   g.talk.tried.clear();
+  g.talk.spokeAt.clear();
   g.recording = '';
   g.recordWindow = g.text.current; // what the borders print while they talk is nobody's words
   try {
@@ -938,6 +943,7 @@ async function conversation(g: Game, n: number): Promise<void> {
     g.words.learn(g, heard ?? '');
     heardPlaces(g, heard ?? ''); // the places named, for the map (the port's)
     heardOfThings(g, heard ?? '', scriptName(g.talk.script)); // the journal's mysteries
+    heardLines(g, g.talk.labels, g.talk.spokeAt); // the place's clues heard (the journal's Places)
     noteConversation(g, heard, scriptName(g.talk.script));
   }
   await pickpocket(g);
