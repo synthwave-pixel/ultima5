@@ -348,7 +348,14 @@ describes how the Modern look is drawn.
   there is a key), a wall with a nick in a fight's room searched (one a
   trigger raises - Wrong's trap), the wall that carries a room's trigger
   pushed (it opens a secret way), and a well, fountain, clock,
-  sign (from either square of a shop's two) or mirror looked at. A bumped
+  sign (from either square of a shop's two) or mirror looked at. A
+  mountain the grapple climbs, walked into on foot, asks "Confirm climb?"
+  and is climbed at the next bump - into the same mountain, from the same
+  square, that turn or the next - since a fall hurts; ridden, flown or
+  sailed into, "Blocked" says why ("Blocked - dismount!", "Blocked - off
+  the carpet!", "Blocked - go ashore!"). Those who fall climbing, and the
+  poisoned at a turn's end, are hurt together under one flash and one hit,
+  where 1988 flashed each in turn. A bumped
   command is made by whoever suits it: a chest searched by the cleverest,
   jimmied by the most dexterous and opened by the hardiest. While foes are
   about (a monster within five squares, or in a fight one still standing),

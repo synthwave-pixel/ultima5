@@ -118,19 +118,19 @@ export async function damageMember(g: Game, i: number, damage: number, floor = 0
 }
 
 /**
- * Members `who` each take `damage` at once (the port's, for poison at a turn's end): their rows flashed together under
- * one hit, where 1988 flashed and sounded each in turn - a whole party poisoned held every step outdoors for most of
+ * Members `who` each take `damage` at once - the same, or each their own (by their place in `who`) - (the port's, for
+ * poison at a turn's end and falls from a mountain climbed): their rows flashed together under one hit, where 1988 flashed and sounded each in turn - a whole party poisoned held every step outdoors for most of
  * a second.
  */
-export async function damageMembers(g: Game, who: number[], damage: number, floor = 0): Promise<void> {
+export async function damageMembers(g: Game, who: number[], damage: number | number[], floor = 0): Promise<void> {
   if (!who.length) return;
   const s = g.s;
   for (const i of who) invertMember(g, i);
   if (!g.soundOff) await g.sound.noise(10, 0x640, 2000);
   for (const i of who) invertMember(g, i);
-  for (const i of who) {
+  for (const [k, i] of who.entries()) {
     const m = s.members[i];
-    m.hp = Math.max(m.hp - damage, floor);
+    m.hp = Math.max(m.hp - (typeof damage === 'number' ? damage : (damage[k] ?? 0)), floor);
     if (m.hp <= 0) {
       m.hp = 0;
       m.status = Status.Dead;
@@ -174,6 +174,7 @@ async function starve(g: Game): Promise<void> {
 /** ULTIMA_2ae8: the end of a turn. */
 export async function endTurn(g: Game): Promise<void> {
   const s = g.s;
+  g.turnsTaken++;
   const spare = poisonKills(g.options) ? 0 : 1;
   let awake = 0;
   const poisoned: number[] = [];

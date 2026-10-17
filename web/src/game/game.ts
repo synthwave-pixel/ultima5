@@ -231,6 +231,13 @@ export class Game {
   readonly bumped = new Map<string, Bumped>();
   /** The member a bumped command is done by, chosen for it (bumpAct.ts): -1 for whoever the command asks for. */
   bumpWho = -1;
+  /**
+   * A grapple's climb asked with a bump ("Confirm climb?", bumpAct.ts): from where to where, and the turn it was asked
+   * on (turnsTaken). The next bump into the same mountain from the same square, on that turn or the next, climbs it.
+   */
+  climbAsked: { key: string; turn: number } | null = null;
+  /** Every turn's end (time.ts endTurn), counted: what "the next turn" is measured by. */
+  turnsTaken = 0;
   /** The member a spell falls on (onWho), for its pulse (castEffect); -1 for none, the whole view. */
   spellOn = -1;
   /**

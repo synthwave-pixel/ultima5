@@ -123,7 +123,10 @@ export function foesAbout(g: Game, where: BumpPlace): boolean {
   return false;
 }
 
-/** bumpCommand's answer where foes near keep a bump from searching, pushing, taking or opening: it has said why. */
+/**
+ * bumpCommand's answer where a bump does nothing but say so: foes near keep it from searching, pushing, taking or
+ * opening, or a climb is asked first (climbOrAsk).
+ */
 export const NOT_NOW = -1;
 
 /**
@@ -135,6 +138,23 @@ function notNow(g: Game, verb: 'search' | 'push' | 'take' | 'open'): number {
   if (g.text.win.x !== 0) g.printChar('\n'); // the move's line ended already
   g.print(`Cannot ${verb} with foes near!\n`);
   if (!g.soundOff) void g.sound.tone(0xa5, 200);
+  g.p.flushKeys();
+  return NOT_NOW;
+}
+
+/**
+ * The grapple's mountain bumped into: climbed (Klimb) where this is the bump that confirms it - into the same mountain,
+ * from the same square, the turn it was asked on or the next - else asked, "Confirm climb?", and nothing done. Keys
+ * typed ahead are let go with the asking, so a held direction does not answer it.
+ */
+function climbOrAsk(g: Game, mountain: string): number {
+  const key = `${g.s.x},${g.s.y}>${mountain}`;
+  const asked = g.climbAsked;
+  g.climbAsked = null;
+  if (asked && asked.key === key && g.turnsTaken - asked.turn <= 1) return K_;
+  g.climbAsked = { key, turn: g.turnsTaken };
+  if (g.text.win.x !== 0) g.printChar('\n'); // the move's line ended already
+  g.print('Confirm climb?\n');
   g.p.flushKeys();
   return NOT_NOW;
 }
@@ -207,9 +227,10 @@ export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: numb
   // as 1988's player would Push it, rather than met with "Blocked!".
   if (where === 'combat') return tile === 0x4c ? K_ : isTrigger(g, x, y) ? P : 0;
   if (KLIMB.has(tile) && where !== 'outdoors') return mounted(g) || onLadder(g) ? 0 : K_;
-  // A mountain the grapple climbs (cmds.ts klimbOutdoors), on foot: climbed, as Klimb would. Ridden or sailed into, it
-  // is "Blocked!" with why (outdoors.ts grappleBlocked).
-  if (where === 'outdoors' && tile === 0x0c && g.s.grapple !== 0 && g.s.partyTile === 0x1c) return K_;
+  // A mountain the grapple climbs (cmds.ts klimbOutdoors), on foot: asked first, climbed at the next bump, as Klimb
+  // would - a fall may hurt, so not by a step taken unawares. Ridden or sailed into, it is "Blocked!" with why
+  // (outdoors.ts grappleBlocked).
+  if (where === 'outdoors' && tile === 0x0c && g.s.grapple !== 0 && g.s.partyTile === 0x1c) return climbOrAsk(g, key);
   if (LOOK.has(tile)) return L;
   return 0;
 }

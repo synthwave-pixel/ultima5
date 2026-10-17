@@ -33,12 +33,45 @@ describe('a mountain walked into with the grapple', () => {
     });
   };
 
-  it('climbs it on foot', async () => {
+  it('asks at the first bump on foot, and climbs at the next', async () => {
     const { g, p, at } = beside(0x1c, 1);
+    await walk(g, p);
+    expect(p.log).toContain('Confirm climb?');
+    expect(p.log).not.toMatch(/Klimb|Blocked/);
+    expect(g.s.x).toBe(at[0]);
     await walk(g, p);
     expect(p.log).toMatch(/Klimb/);
     expect(p.log).not.toMatch(/Blocked/);
     expect(g.s.x).toBe(at[0] + 1);
+  });
+
+  it('asks again where the bump that would confirm comes later than the next turn', async () => {
+    const { g, p, at } = beside(0x1c, 1);
+    await walk(g, p);
+    g.turnsTaken += 2; // turns gone by: a pass, a look about
+    await walk(g, p);
+    expect(p.log.match(/Confirm climb\?/g)).toHaveLength(2);
+    expect(g.s.x).toBe(at[0]);
+  });
+
+  it('hurts all who fall under one hit, each by their own fall', async () => {
+    const { g, p, at } = beside(0x1c, 1);
+    g.s.members.forEach((m) => (m.dex = 0)); // every one falls
+    g.soundOff = false;
+    let hits = 0;
+    const noise = g.sound.noise.bind(g.sound);
+    g.sound.noise = (...a: Parameters<typeof noise>) => {
+      if (a.join() === '10,1600,2000') hits++; // the damage hit (time.ts damageMembers)
+      return noise(...a);
+    };
+    const before = g.s.members.slice(0, g.s.partySize).map((m) => m.hp);
+    await walk(g, p);
+    await walk(g, p);
+    expect(g.s.x).toBe(at[0] + 1);
+    expect(p.log.match(/Fell!/g)).toHaveLength(g.s.partySize);
+    const lost = g.s.members.slice(0, g.s.partySize).map((m, i) => before[i] - m.hp);
+    for (const n of lost) expect(n >= 1 && n <= 5).toBe(true);
+    expect(hits).toBe(1);
   });
 
   it('says to dismount on horseback, and to leave the carpet', async () => {
