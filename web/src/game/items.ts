@@ -378,6 +378,12 @@ async function jimmyInDungeon(g: Game): Promise<void> {
   }
 }
 
+/**
+ * A prisoner freed from the stocks or manacles (jimmyCommand), by the settlement and their place in its people: kept
+ * in Fog.named, with the save, for their "Thank ye!" (the port's) where 1988 gave "No response!".
+ */
+export const freedKey = (mapId: number, npc: number): string => `freed:${mapId}:${npc}`;
+
 /** SJOG_0d4a: Jimmy: locked doors, stocks and manacles (freeing prisoners), chests. */
 export async function jimmyCommand(g: Game): Promise<number> {
   const s = g.s;
@@ -434,6 +440,8 @@ export async function jimmyCommand(g: Game): Promise<number> {
           break;
         }
         if (s.npcs[npc].fa !== 0) s.npcs[npc].fa = 0;
+        // Their conversation is gone, as in 1988; but they have a word for the party still (talk.ts talkToNpc).
+        g.fog.named.add(freedKey(s.mapId, npc));
         if (!npcKilled(g, npc)) {
           for (let k = 0; k < 3; k++) s.schedules[npc].setType(k, 5);
           g.say(0x8b36); // "\n\"I thank thee!\"\n"

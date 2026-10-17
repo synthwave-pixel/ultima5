@@ -26,6 +26,7 @@ import { RUNE_INK, runeKind, runesRead } from './runeWords.ts';
 import { scriptSpeech } from './words.ts';
 import { heardPlaces } from './placeNames.ts';
 import { heardLines } from './placeClues.ts';
+import { freedKey } from './items.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -1028,7 +1029,9 @@ export async function talkToNpc(g: Game, npc: number): Promise<number> {
   }
   const talk = me.fa;
   if (talk === 0) {
-    g.say(0x9168); // "No response!\n"
+    // A prisoner the party freed (items.ts jimmyCommand), who has no conversation since, as in 1988: their thanks.
+    if (g.fog.named.has(freedKey(s.mapId, npc))) g.print('"Thank ye!"\n');
+    else g.say(0x9168); // "No response!\n"
     return 0;
   }
   if (talk < 0x80) {

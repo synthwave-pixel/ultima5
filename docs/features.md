@@ -861,6 +861,11 @@ settled on the original Apple II disks - is told in
   paid for now leave no more than five of all held: enough for a prisoner
   taken to Yew's jail, keys gone, to open the cell, as he waits by its door
   each morning and evening. One who pays gets five each time.
+- **A prisoner freed has a word of thanks.** Freed from the stocks or
+  manacles ("I thank thee!", 2 karma), a prisoner loses their
+  conversation and wanders the town, as in 1988, which then answered
+  "No response!" ever after; they now say "Thank ye!". Walking into one
+  talks to them, never attacks.
 
 ## Saving
 

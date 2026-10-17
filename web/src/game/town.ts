@@ -16,6 +16,7 @@ import { bumpCommand, jimmyWho, NOT_NOW } from './bumpAct.ts';
 import { bumpInto, getCharYN, getCommandKey, selectDirection } from './input.ts';
 import { HARPSICHORD, K } from './io.ts';
 import { HARPSICHORD_TILE, openTheWay, strike } from './harpsichord.ts';
+import { freedKey } from './items.ts';
 import { moongateTravel } from './moongate.ts';
 import { loadNpcs, moveNpcs, placeNpcs, putNpc, scheduleSlot } from './npc.ts';
 import { Status } from './save.ts';
@@ -268,7 +269,8 @@ function bump(g: Game, other: number, ahead: number, dir: number, dx: number, dy
   // a settlement calls the guards (attackInTown). The place's rats, bats and gargoyles, and a creature that is nobody's,
   // are fought. actorTileAt leaves the actor's index in dx.
   const npc = other !== 0 ? npcOfActor(g, s.dx) : -1;
-  const someone = npc >= 0 && (s.npcs[npc].fa !== 0 || (other & 0xfc) === 0xd8);
+  // (A prisoner the party freed, who has no conversation since, is someone too: their thanks, talk.ts talkToNpc.)
+  const someone = npc >= 0 && (s.npcs[npc].fa !== 0 || (other & 0xfc) === 0xd8 || g.fog.named.has(freedKey(s.mapId, npc)));
   const beyond = actorTileAt(g, s.x + dx * 2, s.y + dy * 2, s.level);
   // The Crown where it lies (an actor of the place, as the shards are outdoors) is picked up, not attacked.
   const field = other >= 0xe8 && other <= 0xef;
