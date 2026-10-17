@@ -524,6 +524,11 @@ export class Game {
   possessedBy = new Map<number, { hp: number; int: number; summoned: boolean; margin?: number }>();
   /** The combat slots of the creatures gated in or summoned in this fight (combat.ts spawned), not split off. */
   summoned = new Set<number>();
+  /**
+   * What each combat slot taken off the field last held (combat.ts removeCombatant): its kind, by slot - for the report
+   * of a creature that leaves no body, made after it is gone ("Insect Swarm killed!", not the empty slot's "Mage").
+   */
+  gone = new Map<number, number>();
   /** Switch Weapon's memory (switchWeapon.ts): by member, their last melee and ranged arms, and their style. */
   armsMemory = new Map<string, { melee?: number[]; ranged?: number[]; style?: 'dual' | 'shield' | 'twoHanded' }>();
   castOutDue: number[] = [];

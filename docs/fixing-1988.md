@@ -151,6 +151,17 @@ until it was struck down. A field filled by gargoyles dividing without
 bound, as the Classic rules let them, found it. The port gives the
 place back.
 
+## Killed, by the wrong name
+
+A creature that leaves no body when it dies - an insect swarm, a
+gargoyle turning to stone, anything slain over water - is taken off the
+field (its place in the fight emptied) before the blow's report
+(`COMSUBS_0312`) tells of it. The report then names the empty place's
+kind, the first of all: "Mage killed!". A gazer, slain, lets out an
+insect swarm where it fell, as it always has, so a gazer fight ended on
+a Mage nobody had seen. The port keeps the kind of each place it empties
+until the place is filled again, and the report names that.
+
 ## Random numbers that were not
 
 While tuning how often daemons are summoned, a new roll of 1 in 6 came

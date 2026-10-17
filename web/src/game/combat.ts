@@ -98,6 +98,9 @@ export function onMonsterSide(g: Game, i: number): boolean {
 /** COMSUBS_0094. */
 export function sayName(g: Game, i: number): void {
   const c = g.combat[i];
+  // A slot emptied (a creature that leaves no body, already off the field when its death is told): who it held. 1988
+  // named the empty slot's kind, the first - "Mage killed!" for an insect swarm or a gargoyle.
+  if (c.flags === 0 && g.gone.has(i)) return g.print(creatureName(g, g.gone.get(i)!));
   g.print(c.flags & CF.Player ? g.s.members[c.who].name : creatureName(g, c.who));
 }
 
@@ -190,6 +193,7 @@ export function placeCombatant(g: Game, what: number, kind: 0 | 1 | 2, x: number
       g.splitLimit.delete(i);
       g.splits.delete(i);
       g.summoned.delete(i);
+      g.gone.delete(i);
       g.charmedBy.delete(i); // a charm on the slot's last occupant, fallen, is not this one's
       if (kind === 1 && s.members[what].status !== Status.Dead) {
         c.dex = s.members[what].dex;
@@ -951,6 +955,7 @@ export function newSpawns(g: Game): void {
   g.splitLimit.clear();
   g.splits.clear();
   g.summoned.clear();
+  g.gone.clear();
   g.spawnLeft = g.options.rules === 'classic' ? 0 : SPAWN_ALLOWANCE[g.options.rules];
   g.possessedBy.clear();
   g.castOutDue = [];
@@ -2178,6 +2183,7 @@ export function removeCombatant(g: Game, n: number): void {
   if (n < 0) {
     const c = g.combat[-n - 1];
     actor = c.actor;
+    if (!(c.flags & CF.Player)) g.gone.set(-n - 1, c.who);
     c.clear();
     g.charmedBy.delete(-n - 1); // one charmed who leaves the field - escapes, or is taken off it - is charmed no more
   } else {
