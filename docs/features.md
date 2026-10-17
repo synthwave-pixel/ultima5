@@ -351,7 +351,8 @@ describes how the Modern look is drawn.
   sign (from either square of a shop's two) or mirror looked at. A
   mountain the grapple climbs, walked into on foot, asks "Confirm climb?"
   and is climbed at the next bump - into the same mountain, from the same
-  square, that turn or the next - since a fall hurts; ridden, flown or
+  square, that turn or the next - since a fall hurts (from mountains the party already stands on, it
+  climbs on unasked); ridden, flown or
   sailed into, "Blocked" says why ("Blocked - dismount!", "Blocked - off
   the carpet!", "Blocked - go ashore!"). Those who fall climbing, and the
   poisoned at a turn's end, are hurt together under one flash and one hit,
