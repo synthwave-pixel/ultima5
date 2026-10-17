@@ -176,6 +176,7 @@ lays them (Z is A, X is B):
 | Controller | Keyboard | What it does |
 |---|---|---|
 | D-pad, left stick | Arrows, W A S D | Walk; move through a menu (left and right turn a page in a long list) |
+| Right stick | | In a dungeon, turn left or right where you stand |
 | A | Enter, Z (Tab at the prompt) | Open the menu of what you can do here; choose |
 | B | Space, X, B (Escape in a menu) | Back out; at the prompt, pass a turn; leave a won fight |
 | X | Q, C, / | Attack (Fire aboard a ship or beside a cannon) |

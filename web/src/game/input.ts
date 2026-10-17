@@ -11,7 +11,7 @@ import { treasureLies } from './actors.ts';
 import { autoTitle, clearBorderTitle, borderTitle, drawVitals, invertMember, markTurn, updateFrame } from './frame.ts';
 import { liftDungeonMap } from './dungeonMap.ts';
 import { Game } from './game.ts';
-import { K, LOST_FOCUS, Pad } from './io.ts';
+import { K, LOST_FOCUS, Pad, TURN_LEFT, TURN_RIGHT } from './io.ts';
 import { Status } from './save.ts';
 
 export const upper = (c: number): number => (c >= 0x61 && c <= 0x7a ? c - 0x20 : c);
@@ -163,6 +163,8 @@ async function rawKey(g: Game, idle?: () => void, literal = false, command = fal
       .finally(() => (g.awaitingCommand = false));
     // A lost focus is for the command prompt alone (io.ts LOST_FOCUS); anywhere else it passes.
     if (key === LOST_FOCUS && !command) continue;
+    // The right stick's turns likewise (io.ts TURN_LEFT): a flick of it answers no other question.
+    if ((key === TURN_LEFT || key === TURN_RIGHT) && !command) continue;
     const k = literal ? key : asPad(g, key);
     // Start or Select holds the game from any prompt, as from the command prompt (which answers them itself).
     if ((k === Pad.Start || k === Pad.Select) && !command && g.inPlay && !g.paused) {
@@ -414,6 +416,8 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
       }
       // Y: cast, wherever the party is (Look and Ztats are in the menu).
       else if (k === Pad.Y) key = 0x43;
+      // The right stick: a turn in a dungeon (dungeon.ts dungeonCommand), nothing anywhere else.
+      else if (k === TURN_LEFT || k === TURN_RIGHT) key = where === 'dungeon' ? k : 0;
       // Both system buttons, either side of a controller's logo, hold the game (the u3 port's), and Escape on a
       // keyboard - in a fight too, for a keyboard read as a controller, whose B leaves a won field; Classic's Escape
       // there is 1988's, which leaves it.

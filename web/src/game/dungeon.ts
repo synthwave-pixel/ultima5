@@ -26,7 +26,7 @@ import { signAhead, signIndex } from './targets.ts';
 import { inTheDark, revealCells } from './fog.ts';
 import { Game } from './game.ts';
 import { getChar, getCharYN, getCommandKey, queueKeys, upOrDown, whoActs } from './input.ts';
-import { K } from './io.ts';
+import { K, TURN_LEFT, TURN_RIGHT } from './io.ts';
 import { musicForMap } from './music.ts';
 import { Status } from './save.ts';
 import { damageMember, damageParty, endTurn, firstActive, passTime } from './time.ts';
@@ -1335,6 +1335,11 @@ export async function dungeonCommand(g: Game, key: number): Promise<number> {
     case K.Enter:
     case 0x2e:
       return move(g, key, s.dungeon[cellIndex(s.x, s.y, s.level)]);
+    case TURN_LEFT:
+    case TURN_RIGHT:
+      // The right stick: turned where it stands, as the first-person view's Left and Right turn it, whatever the
+      // view - with the whole-level map up too, where the d-pad walks by the compass.
+      return move(g, key === TURN_LEFT ? K.Left : K.Right, s.dungeon[cellIndex(s.x, s.y, s.level)]);
     case K.CtrlS:
       g.say(0x2d43); // "Sound "
       g.say(g.soundOff ? 0x2d4a : 0x2d4f); // "Off\n" : "On\n"

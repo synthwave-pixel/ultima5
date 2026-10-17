@@ -223,7 +223,7 @@ const LETTERS: Page[] = [
 
 /**
  * A dungeon, for the input set and the look in use: a controller's player is told of the Standard look's Map (the
- * walking is the d-pad's, as anywhere); the keyboard's, the keys that walk it. The EGA look's map is a setting.
+ * walking is the d-pad's, as anywhere) and the right stick's turns; the keyboard's, the keys that walk it. The EGA look's map is a setting.
  */
 function dungeonPage(g: Game): Page {
   const pad = g.options.input === 'controller';
@@ -232,7 +232,8 @@ function dungeonPage(g: Game): Page {
     ? ['Map, in the menu:', ' the whole level, the', ' d-pad walking by', ' the compass; Map', ' again for the view.']
     : ['The map over the', 'view: Settings,', 'Dungeon map.'];
   const walk = ['Up: step ahead', 'Down: step back', 'Left, right: turn', 'Enter: turn about', 'I: light a torch'];
-  return { title: 'Dungeons', lines: pad ? map : standard ? walk : [...walk, '', ...map] };
+  // The right stick turns where the party stands, in either view (ui/gamepad.ts).
+  return { title: 'Dungeons', lines: pad ? [...map, '', 'Right stick: turn'] : standard ? walk : [...walk, '', ...map] };
 }
 
 /** How the look in use shows the party (and, for the keyboard's player, the active player and saving). */

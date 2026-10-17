@@ -71,6 +71,14 @@ export interface HarpView {
  */
 export const LOST_FOCUS = 0x1f0;
 
+/**
+ * A controller's right stick, left or right (ui/gamepad.ts): in a dungeon the party turns where it stands, as the
+ * first-person view's Left and Right turn it - with the whole-level map up too, where the d-pad walks by the compass.
+ * Anywhere else, and at any prompt but the dungeon's command prompt, nothing (input.ts).
+ */
+export const TURN_LEFT = 0x1e0;
+export const TURN_RIGHT = 0x1e1;
+
 /** A member drawn on the map: the figure's tile (an actor's, 0x100 on) and its tint, 0xRRGGBB (0 none). */
 export interface Figure {
   tile: number;
