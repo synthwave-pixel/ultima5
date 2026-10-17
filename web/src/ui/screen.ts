@@ -366,6 +366,9 @@ export class Screen implements Platform {
       }
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // The letters' cells are set from the alphabetic baseline (setLetter): set each frame, whatever drew last.
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'start';
     ctx.imageSmoothingEnabled = !whole;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(from, 0, 0, w, h);
@@ -426,6 +429,9 @@ export class Screen implements Platform {
    */
   private drawHarp(ctx: CanvasRenderingContext2D, w: number, h: number, v: HarpView, now: number): void {
     const ega = this.look !== 'standard';
+    // Its own transform, alignment and baseline, and the context's given back after: the baseline left at the top
+    // dropped every letter drawn after it by most of a row.
+    ctx.save();
     ctx.setTransform(w / 320, 0, 0, h / 200, 0, 0);
     const KW = 10;
     const KH = 28;
@@ -505,8 +511,7 @@ export class Screen implements Platform {
       }
       ctx.globalAlpha = 1;
     }
-    ctx.textAlign = 'start';
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.restore();
   }
 
   /** Whether the story pages' fonts are to hand; until they are (or if they never are) the pages are set as in 1988. */
