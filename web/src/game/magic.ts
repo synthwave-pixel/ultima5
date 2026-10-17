@@ -320,7 +320,7 @@ export function scrollEffect(g: Game, n: number): string {
 const SCROLL_SHORT: Record<string, string> = {
   'Great light': 'Light',
   'Wind change': 'Wind',
-  Protection: 'Protect',
+  Protection: 'Ward',
   'Negate magic': 'Negate',
   'Summon daemon': 'Daemon',
   Resurrect: 'Raise',
@@ -341,7 +341,7 @@ export function scrollWords(g: Game, n: number): string {
 }
 
 /** What each potion does, by its colour's number (the port's words for the Use list), and the colour to draw its flask. */
-export const POTION_EFFECTS = ['Awaken', 'Heal', 'Cure', 'Poison', 'Sleep', 'Rat', 'Vanish', 'See all'];
+export const POTION_EFFECTS = ['Awaken', 'Heal', 'Cure', 'Poison', 'Sleep', 'Rat', 'Vanish', 'Reveal'];
 /** The same at full length, for a menu with room for it. */
 export const POTION_LONG = ['Awaken', 'Heal', 'Cure poison', 'Poison', 'Sleep', 'Turn to rat', 'Invisibility', 'See all'];
 export const POTION_COLOURS = [9, 14, 12, 10, 6, 13, 8, 15]; // blue, yellow, red, green, orange, purple, black, white

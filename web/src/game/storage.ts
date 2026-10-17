@@ -631,6 +631,14 @@ export async function chooseSave(g: Game, title: string, saves: Kept[]): Promise
  * to the main loop (run.ts) to go on from where it was saved.
  */
 export async function takeUp(g: Game, d: SaveData): Promise<never> {
+  // Out of a fight (the Pause menu's, in one), what its own end puts right (combat.ts finishLoop): no key pressed in it
+  // carried over, the lighthouse's beam and the fight's music stopped.
+  if (g.s.mapId === 0xff) {
+    g.p.flushKeys();
+    g.lighthouse.step = 0xff;
+    g.sound.music(0);
+    g.autoShown = false;
+  }
   restore(g, d);
   const { drawFrame, gameWindows } = await import('./run.ts');
   const { drawVitals } = await import('./frame.ts');

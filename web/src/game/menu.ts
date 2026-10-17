@@ -1484,10 +1484,11 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
         },
         {
           // The last save or one of the seven before it, taken up again (storage.ts), as All is lost offers them: asked
-          // first, all played since being undone. Not in a fight, nor inside a command.
+          // first, all played since being undone. In a fight too - a fight going badly is when it is wanted - but not
+          // inside a command.
           label: 'Load a save',
-          enabled: g.s.mapId !== 0xff && !midCommand,
-          ...noSave(g.s.mapId !== 0xff && !midCommand, 'Load a save'),
+          enabled: !midCommand,
+          ...noSave(!midCommand, 'Load a save'),
           act: async () => {
             const { chooseSave, localSave, savedWhen, takeUp } = await import('./storage.ts');
             const kept = localSave.all();

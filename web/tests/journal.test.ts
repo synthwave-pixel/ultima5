@@ -3,6 +3,9 @@ import { journalLines, journalTop, noteConversation } from '../src/game/journal.
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 
+/** A journal line's name, without the count or the state set against its right edge. */
+const thing = (label: string): string => label.replace(/\s{2,}\S+$/, '').trimEnd();
+
 /** The journal's clues: who said it and where, and what was said - not the prompts the player answered. */
 describe('a clue in the journal', () => {
   it('names the speaker and the place, and leaves out the prompt and its echo', () => {
@@ -84,7 +87,7 @@ describe('the journal', () => {
       'Shards held         1',
       'Shadowlords slain 1/3',
       'Passwords         0/2',
-      'Equipment',
+      'Equipment        3/15',
       'Companions',
       `Clues heard ${String(g.notes.length).padStart(9)}`,
     ]);
@@ -447,19 +450,19 @@ describe("the journal's equipment", () => {
     const { fly, Landed } = await import('./pilot.ts');
     const { g, p } = newGame();
     const top = journalTop(g);
-    const open = top.find((l) => l.label === 'Equipment')!.open;
+    const open = top.find((l) => thing(l.label) === 'Equipment')!.open;
     const lines = open ? open.lines : [];
-    expect(lines.map((l) => l.label)).toContain('Grapple');
+    expect(lines.map((l) => thing(l.label))).toContain('Grapple');
     // The quest's things a mystery, Y still saying where: Skull keys, Magic carpet, Black Badge, Crown, Amulet, Sceptre.
     expect(lines.filter((l) => l.label === 'Mystery...?')).toHaveLength(6);
-    expect(lines.map((l) => l.label)).not.toContain('Black Badge');
+    expect(lines.map((l) => thing(l.label))).not.toContain('Black Badge');
     g.fog.named.add('item:badge'); // heard of
     const badge = journalTop(g)
-      .find((l) => l.label === 'Equipment')!
-      .open!.lines.find((l) => l.label === 'Black Badge')!;
+      .find((l) => thing(l.label) === 'Equipment')!
+      .open!.lines.find((l) => thing(l.label) === 'Black Badge')!;
     expect(badge.about).toBe('Rumors of the Black Badge abound.');
     // Down to Equipment, open it (the Grapple's card on the panel), A on it (nothing more), Y, then out.
-    const at = top.findIndex((l) => l.label === 'Equipment');
+    const at = top.findIndex((l) => thing(l.label) === 'Equipment');
     const script = [...Array<number>(at).fill(K.Down), Pad.A, Pad.A, Pad.Y, Pad.B, Pad.B];
     fly(g, p, [() => script.shift()]);
     await journalScreen(g).catch((e: unknown) => {
@@ -471,12 +474,41 @@ describe("the journal's equipment", () => {
   });
 });
 
+describe("the journal's equipment counts", () => {
+  it('sets what is held against each line, and how many pieces of the whole are held against Equipment', () => {
+    const { g } = newGame();
+    const s = g.s;
+    Object.assign(s, { grapple: 0, sextants: 0, spyglasses: 0, pocketWatch: 0xff, gems: 5, torches: 0, keys: 12, sandalwoodBox: 0 });
+    s.moonstoneHeld.fill(0);
+    s.moonstoneHeld[0] = s.moonstoneHeld[3] = 0xff;
+    const at = (top: ReturnType<typeof journalTop>, name: string) =>
+      top.find((l) => thing(l.label) === 'Equipment')!.open!.lines.find((l) => thing(l.label) === name)!.label;
+    let top = journalTop(g);
+    expect(at(top, 'Grapple')).toBe('Grapple'.padEnd(21));
+    expect(at(top, 'Gems')).toBe('Gems                5');
+    expect(at(top, 'Torches')).toBe('Torches             0');
+    expect(at(top, 'Keys')).toBe('Keys               12');
+    expect(at(top, 'Pocket watch')).toBe('Pocket watch     held');
+    expect(at(top, 'Moonstones')).toBe('Moonstones        2/8');
+    const kit = (): string => journalTop(g).find((l) => thing(l.label) === 'Equipment')!.label;
+    const before = kit();
+    s.grapple = 1; // Lord Michael's gift
+    top = journalTop(g);
+    expect(at(top, 'Grapple')).toBe('Grapple          held');
+    const n = (label: string): number[] => label.trim().split(/\s+/).pop()!.split('/').map(Number);
+    expect(n(kit())[0]).toBe(n(before)[0] + 1);
+    expect(n(kit())[1]).toBe(15);
+    expect(top.every((l) => l.label.length <= 21)).toBe(true);
+    expect(top.find((l) => thing(l.label) === 'Equipment')!.open!.lines.every((l) => l.label.length <= 21)).toBe(true);
+  });
+});
+
 describe("the journal's mysteries", () => {
   const equipment = async (g: ReturnType<typeof newGame>['g']): Promise<string[]> => {
     const { journalTop } = await import('../src/game/journal.ts');
     return journalTop(g)
-      .find((l) => l.label === 'Equipment')!
-      .open!.lines.map((l) => l.label);
+      .find((l) => thing(l.label) === 'Equipment')!
+      .open!.lines.map((l) => thing(l.label));
   };
 
   it('a thing becomes known when named in conversation, held, or named in a clue already kept', async () => {

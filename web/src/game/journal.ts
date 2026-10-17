@@ -330,16 +330,49 @@ export function heardOfThings(g: Game, text: string, who: string): void {
 }
 
 /**
- * The equipment worth knowing of, held or not (no counts): A says what it is for - of the quest's own things, only
- * that there are rumours of them - and Y where it is to be had (journalHints.ts). A gated thing not yet heard of or
- * held is a mystery, but for Y.
+ * How much of each piece of equipment (EQUIPMENT, by name) the party holds: a count for what is spent or many, else
+ * held or not (a quest's thing is kept as 0xff, items.ts).
+ */
+function equipmentHeld(g: Game): Record<string, { n: number; counted?: boolean; of?: number }> {
+  const s = g.s;
+  return {
+    Grapple: { n: s.grapple },
+    Sextant: { n: s.sextants },
+    Gems: { n: s.gems, counted: true },
+    Torches: { n: s.torches, counted: true },
+    Keys: { n: s.keys, counted: true },
+    'Skull keys': { n: s.skullKeys, counted: true },
+    'Magic carpet': { n: s.carpets, counted: true },
+    Spyglass: { n: s.spyglasses },
+    'Pocket watch': { n: s.pocketWatch },
+    'Black Badge': { n: s.blackBadge },
+    'Sandalwood box': { n: s.sandalwoodBox },
+    Moonstones: { n: [...s.moonstoneHeld].filter((m) => m === 0xff).length, of: 8 },
+    Crown: { n: s.crown },
+    Amulet: { n: s.amulet },
+    Sceptre: { n: s.sceptre },
+  };
+}
+
+/**
+ * The equipment worth knowing of, held or not, each with what of it is held at its right - a count, the moonstones of
+ * eight, or "held": A says what it is for - of the quest's own things, only that there are rumours of them - and Y
+ * where it is to be had (journalHints.ts). A gated thing not yet heard of or held is a mystery, but for Y.
  */
 function equipment(g: Game): JournalLine[] {
-  return EQUIPMENT.map((e) =>
-    e.gate && !knowsOf(g, e.gate)
-      ? { label: 'Mystery...?', about: MYSTERY, hint: e.where }
-      : { label: e.name, about: e.use ?? `Rumors of the ${e.rumored ?? e.name.toLowerCase()} abound.`, hint: e.where },
-  );
+  const held = equipmentHeld(g);
+  return EQUIPMENT.map((e) => {
+    if (e.gate && !knowsOf(g, e.gate)) return { label: 'Mystery...?', about: MYSTERY, hint: e.where };
+    const h = held[e.name];
+    const right = !h ? '' : h.of ? `${h.n}/${h.of}` : h.counted ? `${h.n}` : h.n !== 0 ? 'held' : '';
+    return { label: row(e.name, right), about: e.use ?? `Rumors of the ${e.rumored ?? e.name.toLowerCase()} abound.`, hint: e.where };
+  });
+}
+
+/** How many pieces of equipment the party holds any of, and how many there are (EQUIPMENT). */
+function equipmentCount(g: Game): { held: number; of: number } {
+  const held = equipmentHeld(g);
+  return { held: EQUIPMENT.filter((e) => (held[e.name]?.n ?? 0) !== 0).length, of: EQUIPMENT.length };
 }
 
 /** A member's calling, by the class letter the roster keeps. */
@@ -417,6 +450,7 @@ export function journalTop(g: Game): JournalLine[] {
     hint: p.hint,
   }));
   const none = (what: string): JournalLine[] => [{ label: what, hint: '', enabled: false }];
+  const kit = equipmentCount(g);
   return [
     {
       label: row('Shrines', `${done.length}/8`),
@@ -449,7 +483,7 @@ export function journalTop(g: Game): JournalLine[] {
       open: { title: 'Passwords', lines: passwordLines },
     },
     {
-      label: 'Equipment',
+      label: row('Equipment', `${kit.held}/${kit.of}`),
       hint: 'Guilds sell keys, gems and torches; the rest is found, or given.',
       open: { title: 'Equipment', lines: equipment(g) },
     },

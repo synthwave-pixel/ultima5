@@ -49,6 +49,27 @@ describe('the Pause menu', () => {
     expect(seen).toEqual(['Paused']);
   });
 
+  it('offers Load a save in a fight, where saving is greyed, and not inside a command', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    g.options.input = 'controller';
+    const offered = (): Record<string, boolean> => {
+      const m = g.menuShown!;
+      return Object.fromEntries(m.labels.map((l, i) => [l, m.enabled[i]]));
+    };
+    let seen: Record<string, boolean> = {};
+    p.next = () => {
+      seen = offered();
+      return Pad.B;
+    };
+    g.s.mapId = 0xff;
+    await pauseMenu(g);
+    expect(seen['Load a save']).toBe(true);
+    expect(seen['Save game']).toBe(false);
+    await pauseMenu(g, true);
+    expect(seen['Load a save']).toBe(false);
+  });
+
   it("saves from Save game there and then, without 1988's Quit prompt, which Q keeps", async () => {
     const { g, p } = newGame();
     journeyOnward(g);

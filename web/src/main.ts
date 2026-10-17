@@ -359,10 +359,19 @@ async function start(): Promise<void> {
   }
   const battle = import.meta.env.DEV ? /^(arena|room):(\d+)(?::(\d+))?(?::(\d+))?$/.exec(params.get('at') ?? '') : null;
   let room = false;
+  let relocated = false;
   if (battle) {
     const dev = await import('./game/devStarts.ts');
-    if (battle[1] === 'arena') await dev.startArena(g, Number(battle[2]));
-    else {
+    if (battle[1] === 'arena') {
+      // A save loaded in the fight (the Pause menu's) is gone on from, as the main loop goes on from it (run.ts).
+      const { Relocate } = await import('./game/cheats.ts');
+      try {
+        await dev.startArena(g, Number(battle[2]));
+      } catch (e) {
+        if (!(e instanceof Relocate)) throw e;
+        relocated = true;
+      }
+    } else {
       const { stashWorldActors } = await import('./game/outdoors.ts');
       stashWorldActors(g);
       const level = battle[4] === undefined ? undefined : Number(battle[4]);
@@ -371,7 +380,7 @@ async function start(): Promise<void> {
   }
   // A dungeon start is met as an arrival from outside (its creature placed), a town's as enterTown has met it above; a
   // room's door, so entered, is gone through.
-  await runGame(g, at?.[1] === 'dungeon' || room);
+  await runGame(g, at?.[1] === 'dungeon' || room || relocated);
 }
 
 // A game that cannot start, or that breaks in its running (runGame's loop is start's own), gets the crash box.

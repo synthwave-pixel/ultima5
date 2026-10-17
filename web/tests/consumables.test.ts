@@ -22,10 +22,11 @@ describe('scrolls and potions', () => {
     expect(scrollEffect(g, 5)).toBe('Summon daemon');
     expect(scrollWords(g, 5)).toBe('Kal Xen Corp');
     for (let n = 0; n < 8; n++) expect(scrollEffect(g, n)).not.toMatch(/^[A-Z]{1,4}$/); // every one has a name
-    // The list's row is fifteen wide: the count, the icon and the dash take seven of it, and a row is fourteen.
-    for (let n = 0; n < 8; n++) expect(scrollShort(g, n).length).toBeLessThanOrEqual(7);
+    // The keyboard's list box is fifteen wide, its borders two of it: thirteen inside, the count, the icon and the dash
+    // taking seven of them. A seven-letter name ran over the box's right edge.
+    for (let n = 0; n < 8; n++) expect(scrollShort(g, n).length).toBeLessThanOrEqual(6);
     expect(POTION_EFFECTS).toHaveLength(8);
-    for (const e of POTION_EFFECTS) expect(e.length).toBeLessThanOrEqual(7);
+    for (const e of POTION_EFFECTS) expect(e.length).toBeLessThanOrEqual(6);
   });
 
   it('lists them by effect in a menu over the map, and reads the scroll aloud', async () => {
