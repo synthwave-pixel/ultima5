@@ -114,17 +114,29 @@ function regenerate(g: Game): void {
  * kills as it always did.
  */
 export async function damageMember(g: Game, i: number, damage: number, floor = 0): Promise<void> {
+  await damageMembers(g, [i], damage, floor);
+}
+
+/**
+ * Members `who` each take `damage` at once (the port's, for poison at a turn's end): their rows flashed together under
+ * one hit, where 1988 flashed and sounded each in turn - a whole party poisoned held every step outdoors for most of
+ * a second.
+ */
+export async function damageMembers(g: Game, who: number[], damage: number, floor = 0): Promise<void> {
+  if (!who.length) return;
   const s = g.s;
-  invertMember(g, i);
+  for (const i of who) invertMember(g, i);
   if (!g.soundOff) await g.sound.noise(10, 0x640, 2000);
-  invertMember(g, i);
-  const m = s.members[i];
-  m.hp = Math.max(m.hp - damage, floor);
-  if (m.hp <= 0) {
-    m.hp = 0;
-    m.status = Status.Dead;
-    void cue(g, deathCue(m.gender));
-    if (i === s.activeMember) s.activeMember = 0xff;
+  for (const i of who) invertMember(g, i);
+  for (const i of who) {
+    const m = s.members[i];
+    m.hp = Math.max(m.hp - damage, floor);
+    if (m.hp <= 0) {
+      m.hp = 0;
+      m.status = Status.Dead;
+      void cue(g, deathCue(m.gender));
+      if (i === s.activeMember) s.activeMember = 0xff;
+    }
   }
   drawVitals(g);
 }
@@ -164,14 +176,17 @@ export async function endTurn(g: Game): Promise<void> {
   const s = g.s;
   const spare = poisonKills(g.options) ? 0 : 1;
   let awake = 0;
+  const poisoned: number[] = [];
   for (let i = 0; i < s.partySize; i++) {
     const st = s.members[i].status;
     if (st === Status.Dead && i === s.activeMember) s.activeMember = 0xff;
     if (st !== Status.Dead && st !== Status.Sleeping) {
-      if (st === Status.Poisoned && s.members[i].hp > spare) await damageMember(g, i, 1, spare);
+      if (st === Status.Poisoned && s.members[i].hp > spare) poisoned.push(i);
       awake++;
     }
   }
+  // The poisoned hurt together: one flash and one hit for all of them (damageMembers).
+  await damageMembers(g, poisoned, 1, spare);
   if (s.hour !== s.lastHour) {
     if (s.food === 0) {
       await starve(g);
