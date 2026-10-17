@@ -162,6 +162,19 @@ function bumpOther(g: Game, other: number, dx: number, dy: number): boolean {
   return true;
 }
 
+/**
+ * A mountain the grapple would climb, met not on foot (cmds.ts klimbOutdoors asks it): what is in the way of the climb,
+ * said with "Blocked" (the port's) - else nothing, and "Blocked!" alone.
+ */
+function grappleBlocked(g: Game, ahead: number): string {
+  const s = g.s;
+  if (ahead !== 0x0c || s.grapple === 0 || s.partyTile === 0x1c) return '';
+  if ((s.partyTile & 0xfe) === 0x12) return 'dismount';
+  if ((s.partyTile & 0xfe) === 0x14) return 'off the carpet';
+  if (s.partyTile >= 0x20 && s.partyTile < 0x2c) return 'go ashore';
+  return '';
+}
+
 /** MAINOUT_01fe: may the party move by (dx, dy): boats and mounts can be boarded, ships run aground. */
 async function mayMove(g: Game, dx: number, dy: number): Promise<boolean> {
   const s = g.s;
@@ -204,7 +217,9 @@ async function mayMove(g: Game, dx: number, dy: number): Promise<boolean> {
     } else if ((s.partyTile < 0x20 || s.partyTile >= 0x2c) && bumpOther(g, other, dx, dy)) {
       // Bump to act (the port's): anything else there is to do with it, off the water (bumpAct.ts).
     } else if (s.partyTile < 0x20 || (other & 0xfc) !== 0xec) {
-      g.say(0x29ae); // "Blocked!\n"
+      const why = grappleBlocked(g, ahead);
+      if (why) g.print(`Blocked - ${why}!\n`);
+      else g.say(0x29ae); // "Blocked!\n"
       if (ahead === T.T2F) {
         g.say(0x29b8); // "OUCH!\n"
         await cue(g, 'Ouch');

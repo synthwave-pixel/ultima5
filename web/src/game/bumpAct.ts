@@ -207,6 +207,9 @@ export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: numb
   // as 1988's player would Push it, rather than met with "Blocked!".
   if (where === 'combat') return tile === 0x4c ? K_ : isTrigger(g, x, y) ? P : 0;
   if (KLIMB.has(tile) && where !== 'outdoors') return mounted(g) || onLadder(g) ? 0 : K_;
+  // A mountain the grapple climbs (cmds.ts klimbOutdoors), on foot: climbed, as Klimb would. Ridden or sailed into, it
+  // is "Blocked!" with why (outdoors.ts grappleBlocked).
+  if (where === 'outdoors' && tile === 0x0c && g.s.grapple !== 0 && g.s.partyTile === 0x1c) return K_;
   if (LOOK.has(tile)) return L;
   return 0;
 }
