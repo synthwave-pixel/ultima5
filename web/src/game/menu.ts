@@ -246,12 +246,47 @@ function framed(g: Game, x1: number, y1: number, x2: number, y2: number): void {
 /** How many pixels a frame's corner leaves bare on each of its first rows, from the outside in. */
 const CORNER = [5, 3, 2, 1, 1];
 
-/** Draw a menu panel's frame and title; the text window is left selected. */
-function panel(g: Game, title: string): void {
+/**
+ * Half the map's square, top or bottom, for a menu that must leave its middle in sight (the port's): the five rows of
+ * squares above the party, or the five below - the party at the middle and whoever it talks to, beside it or across a
+ * counter, seen on the other side. Ten rows of text: the title, a blank, and eight lines before the list scrolls.
+ */
+export type Band = 'top' | 'bottom';
+const BAND_ROWS = 10;
+/** The band's text rows (in the menus' window, from TOP) and its pixels: the top's above the middle row, the bottom's below. */
+const bandTop = (band: Band): number => (band === 'top' ? TOP : TOP + HEIGHT - BAND_ROWS);
+
+/**
+ * The half of the map's square away from whoever the party talks to (talk.ts): the bottom for one to the north, or
+ * to the east or west; the top for one to the south.
+ */
+export function talkBand(g: Game): Band {
+  const s = g.s;
+  const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
+  return a && a.y > s.y ? 'top' : 'bottom';
+}
+
+/** Draw a menu panel's frame and title - the map's square, or half of it (`band`); the text window is left selected. */
+function panel(g: Game, title: string, band?: Band): void {
   const d = g.draw;
   const t = g.text;
   cols = WIDTH;
   d.pen = 0;
+  if (band && g.inPlay) {
+    // Half the square, over the map, a line between it and what is left in sight.
+    const top = bandTop(band);
+    const [y1, y2] = band === 'top' ? [VIEW_EDGE[0], (top + BAND_ROWS) * 8 - 1] : [top * 8, VIEW_EDGE[1]];
+    d.fill(VIEW_EDGE[0], y1, VIEW_EDGE[1], y2);
+    d.pen = Colour.blue;
+    const edge = band === 'top' ? y2 : y1;
+    d.line(VIEW_EDGE[0], edge, VIEW_EDGE[1], edge);
+    d.chromeBox?.([VIEW_EDGE[0], y1, VIEW_EDGE[1], y2]);
+    t.setWindow(WIN, LEFT, top, LEFT + WIDTH - 1, top + BAND_ROWS - 1);
+    t.select(WIN);
+    put(g, 0, 0, ' '.repeat(WIDTH));
+    put(g, Math.max(0, (WIDTH - title.length) >> 1), 0, title);
+    return;
+  }
   // In play, the map's square in the screen's frame: the frame is the panel's. At the title, where there is no frame,
   // the same square in the same frame, centred on the screen - Settings as it is in the game.
   const left = g.inPlay ? LEFT : TITLE_LEFT;
@@ -335,7 +370,8 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   lines.sort((a, b) => rank(a) - rank(b));
   const items = lines.map((l) => l.item);
   items.push({ label: 'Take leave' });
-  const at = await choose(g, 'Say', items);
+  // Half the view, away from whom they talk to: the party and they in sight between the lines (talkBand).
+  const at = await choose(g, 'Say', items, 0, false, talkBand(g));
   if (at < 0 || at >= lines.length) return 'BYE';
   g.talk.chosen = lines[at].mark;
   return lines[at].word;
@@ -512,6 +548,9 @@ export async function answerMenu(
     g,
     'Answer',
     lines.map((l) => ({ label: l.label, dim: l.dim })),
+    0,
+    false,
+    talkBand(g),
   );
   if (riddle) {
     if (at < 0) return LEAVE;
@@ -606,11 +645,13 @@ export async function askWord(
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
-export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false): Promise<number> {
+export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, band?: Band): Promise<number> {
   const t = g.text;
   const was = t.current;
-  const noted = !boxed && items.some((it) => it.note);
-  const rows = boxed ? Math.min(items.length, HEIGHT - 6) : HEIGHT - 3 - (noted ? NOTE_ROWS + 1 : 0);
+  // (A band - half the square - holds its title, a blank and its lines; it has no notes.)
+  const banded = !boxed && band !== undefined && g.inPlay;
+  const noted = !boxed && !banded && items.some((it) => it.note);
+  const rows = boxed ? Math.min(items.length, HEIGHT - 6) : banded ? BAND_ROWS - 2 : HEIGHT - 3 - (noted ? NOTE_ROWS + 1 : 0);
   // A box's notes (the port's): under its lines, after a blank row, as many rows as its longest note wants (three at
   // most), the box as wide as the view's square to hold them.
   const boxNotes = boxed ? Math.min(BOX_NOTE_ROWS, Math.max(0, ...items.map((it) => (it.note ? wrap(it.note).length : 0)))) : 0;
@@ -627,7 +668,7 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
         boxNotes ? WIDTH : Math.max(title.length, ...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1,
         rows + (boxNotes ? boxNotes + 1 : 0),
       );
-    else panel(g, title);
+    else panel(g, title, banded ? band : undefined);
   };
   frame();
   const draw = (): void => {
