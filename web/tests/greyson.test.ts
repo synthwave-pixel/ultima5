@@ -120,6 +120,10 @@ describe('Greyson of Britain, by controller', () => {
     expect(g.path.done.has('w:0:6:91')).toBe(true);
     expect(g.path.families.loyalty).toBe(1);
     expect(g.path.tally.words.Honor).toBe(1);
+    // Told by a tint on his reply (modernKarma.ts tint), the Standard look's faint blue, not a line of its own.
+    const { Colour } = await import('../src/ui/colours.ts');
+    const cells = (g.text as unknown as { cells: { fg: number }[][] }).cells;
+    expect(cells.some((row) => row.some((c) => c.fg === Colour.virtueUp))).toBe(true);
   });
 
   it('keeps Things as Things once his question has said "think"', async () => {

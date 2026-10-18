@@ -123,11 +123,11 @@ async function shrineOfVirtue(g: Game): Promise<void> {
     s.gold -= hundreds * 100;
     drawVitals(g);
     s.karma = Math.min(s.karma + hundreds, 99);
-    modern.deed(g, 'deeds', Math.min(hundreds, 5), 'Sacrifice'); // gold offered: +1 a hundred, +5 a visit (modernKarma.ts)
     g.text.font = 1;
     g.say(0x95aa); // "ALAKAZAM"
     g.text.font = 0;
     g.say(0x95b4); // "!\n"
+    modern.deed(g, 'deeds', Math.min(hundreds, 5), 'Sacrifice'); // gold offered: +1 a hundred, +5 a visit (modernKarma.ts)
     g.draw.pen = Colour.brightWhite;
     g.draw.invert(8, 8, 0xb7, 0xb7);
     await chime(g, 0xa8c, 200);

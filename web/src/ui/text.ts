@@ -280,6 +280,23 @@ export class Text {
     return y >= 0 ? y : -1;
   }
 
+  /**
+   * Recolour what window `id` has written since its row count was `since` (TextWindow.started) - those rows still in
+   * sight - from colour `from` to `to`: its letters only, drawn again (the Modern karma's tint on the words of a deed).
+   */
+  recolourSince(id: number, since: number, from: number, to: number): void {
+    const w = this.windows[id];
+    const first = w.y - (w.started - since);
+    const r1 = w.top + Math.max(0, first);
+    const r2 = w.top + w.y;
+    for (let r = r1; r <= Math.min(r2, w.bottom); r++)
+      for (let c = w.left; c <= w.right; c++) {
+        const cell = this.cells[r][c];
+        if (cell.font >= 0 && cell.fg === from) cell.fg = to;
+      }
+    this.redraw(w.left, r1, w.right, Math.min(r2, w.bottom), true);
+  }
+
   /** What cells (c1..c2) of screen row `row` read as drawn (a cleared cell a space): the Standard look's marks check it. */
   screenText(row: number, c1: number, c2: number): string {
     let text = '';

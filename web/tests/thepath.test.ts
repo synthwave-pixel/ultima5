@@ -26,8 +26,8 @@ describe('the Path', () => {
   it('stands in the journal as a word, never the number, a new Avatar Wise - the karma the rules read', () => {
     const { g } = newGame();
     const line = () => journalTop(g).find((l) => l.label.startsWith('The Path'))!;
-    // The Story's (and the Classic's): 1988's karma.
-    g.options.rules = 'story';
+    // The Classic's: 1988's karma.
+    g.options.rules = 'classic';
     expect(g.s.karma).toBe(75);
     expect(line().label).toBe(`The Path${'Wise'.padStart(13)}`);
     g.s.karma = 74; // one sin

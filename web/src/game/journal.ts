@@ -515,7 +515,7 @@ const POOL_LINES: Record<modern.Pool, { name: string; hint: string }> = {
  */
 function pathLine(g: Game): JournalLine {
   const tier = modern.pathTier(modern.karmaInUse(g));
-  const isModern = g.options.rules === 'modern';
+  const isModern = g.options.rules !== 'classic'; // the rules that read the Modern karma (modernKarma.ts karmaInUse)
   const line: JournalLine = {
     label: row('The Path', tier.word),
     about: tier.about,

@@ -2897,6 +2897,8 @@ export async function combatLoop(g: Game): Promise<boolean> {
       if (s.dx === 0 && s.battleWon === 0) {
         g.say(0x6f00); // "\nVICTORY!\n"
         s.battleWon = 1;
+        // The Modern karma's Battle, at the victory, its words tinted (modernKarma.ts); a fight fled, at its end.
+        modern.battleOutcome(g, 'won', g.fightOdds.foes, g.fightOdds.party);
         await victoryTune(g);
         g.p.flushKeys();
       }
@@ -2995,8 +2997,7 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
     await combatLoop(g);
     // The Modern karma (modernKarma.ts): won, or left with foes standing - a party all fallen counts neither.
     const standing = s.members.slice(0, s.partySize).some((m) => m.status !== Status.Dead);
-    const outcome = s.battleWon !== 0 ? 'won' : standing ? 'fled' : 'fell';
-    modern.battleOutcome(g, outcome, g.fightOdds.foes, g.fightOdds.party);
+    if (s.battleWon === 0) modern.battleOutcome(g, standing ? 'fled' : 'fell', g.fightOdds.foes, g.fightOdds.party);
     if (flags & 4) wakeAfterAmbush(g);
   }
   if (g.bb16 !== 0) g.bb16 = 0;

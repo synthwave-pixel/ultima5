@@ -629,8 +629,23 @@ async function replyOtherwise(k: Talk): Promise<boolean> {
   return speak(k);
 }
 
-/** TALK_0c5c: a question: its answer, the reply, then back to "Your interest?". */
+/**
+ * A question, and the Modern karma's tint on it (modernKarma.ts): where the answer - or the alms in its reply - moved
+ * the karma, the words since the question was asked are tinted, a rise faintly blue, a fall faintly red.
+ */
 async function question(k: Talk): Promise<number> {
+  const { g } = k;
+  const since = modern.lineMark(g);
+  const before = { ...g.karmaMoves };
+  try {
+    return await asked(k);
+  } finally {
+    modern.tint(g, modern.movedSince(g, before), since);
+  }
+}
+
+/** TALK_0c5c: a question: its answer, the reply, then back to "Your interest?". */
+async function asked(k: Talk): Promise<number> {
   const { g, t } = k;
   // The Modern karma: the question asked (one that counts by being reached), and below, the answer.
   modern.asked(g, t.labels, t.label);

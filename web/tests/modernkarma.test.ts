@@ -44,13 +44,13 @@ describe('the Modern karma', () => {
     expect(modernKarma(p)).toBe(76); // the Quest's own low start holds nothing back
   });
 
-  it('is kept beside 1988 karma, and the rules choose which the game reads', () => {
+  it('is kept beside 1988 karma, and the rules choose which the game reads: the Classic 1988s', () => {
     const { g } = newGame();
     g.s.karma = 40;
-    g.options.rules = 'story';
-    expect(karmaInUse(g)).toBe(40);
     g.options.rules = 'classic';
     expect(karmaInUse(g)).toBe(40);
+    g.options.rules = 'story';
+    expect(karmaInUse(g)).toBe(75);
     g.options.rules = 'modern';
     expect(karmaInUse(g)).toBe(75);
   });
@@ -180,52 +180,81 @@ describe('the Modern karma', () => {
     expect(g.s.karma).toBe(75);
     expect(g.path.pools.deeds).toBe(75);
   });
-
-  it('speaks only under the Modern rules: a real rise, every fall, and a tier changed', () => {
-    const { g, p } = modernGame();
-    deed(g, 'deeds', 1, 'Compassion');
-    expect(p.log).not.toMatch(/Compassion/);
-    deed(g, 'deeds', 3, 'Compassion');
-    expect(p.log).toContain('Thy Compassion grows.');
-    deed(g, 'deeds', -1, 'Justice');
-    expect(p.log).toContain('Thy Justice is tarnished.');
-    deed(g, 'deeds', -40, 'Compassion');
-    expect(p.log).toContain('Thou hast strayed from the Path.');
-    expect(p.log).toContain('Journal updated');
-    const quiet = newGame();
-    quiet.g.options.rules = 'story';
-    deed(quiet.g, 'deeds', -40, 'Compassion');
-    expect(quiet.p.log).not.toMatch(/strayed|Journal updated/);
-    expect(quiet.g.path.pools.deeds).toBe(35); // kept all the same
-  });
 });
 
-describe("the Modern karma's words in the log, never a flood", () => {
-  const lines = (log: string): string[] =>
-    log.replace(/\s+/g, ' ').match(/Thy \w+ (grows|is tarnished)\.|Thou hast strayed from the Path\.|Journal updated/g) ?? [];
+describe("the Modern karma, told only by a tint on the deed's own words", () => {
+  /** The colours of the message window's letters on its last written rows (TextWindow.started from `since`). */
+  const inks = (g: G, since: number): Set<number> => {
+    const w = g.text.windows[2];
+    const out = new Set<number>();
+    const cells = (g.text as unknown as { cells: { fg: number; font: number }[][] }).cells;
+    for (let r = w.top + Math.max(0, w.y - (w.started - since)); r <= w.top + w.y; r++)
+      for (let c = w.left; c <= w.right; c++) if (cells[r][c].font >= 0) out.add(cells[r][c].fg);
+    return out;
+  };
 
-  it('says the same line once in ten turns: a field of crops, a fight fled again and again', async () => {
-    const { endTurn } = await import('../src/game/time.ts');
+  it('says nothing of it, ever: no line for a rise, a fall, a tier changed, or a cheat', async () => {
     const { g, p } = modernGame();
-    for (let i = 0; i < 10; i++) deed(g, 'deeds', -2, 'Honesty'); // ten crops, one after another
-    expect(lines(p.log).filter((l) => /tarnished/.test(l))).toHaveLength(1);
-    for (let i = 0; i < 10; i++) await endTurn(g);
-    deed(g, 'deeds', -2, 'Honesty');
-    expect(lines(p.log).filter((l) => /tarnished/.test(l))).toHaveLength(2); // ten turns on: said again
+    const before = p.log;
+    deed(g, 'deeds', 5, 'Compassion');
+    deed(g, 'deeds', -60, 'Compassion');
+    for (const c of CHEATS) chargeCheat(g, c);
+    expect(p.log).toBe(before);
   });
 
-  it('says "Journal updated" once a turn, however many tiers change or clues are noted, and nothing for a cheat', async () => {
-    const { noteConversation } = await import('../src/game/journal.ts');
-    const { g, p } = modernGame();
-    for (let i = 0; i < 20; i++) {
-      deed(g, 'deeds', 1, 'Compassion'); // across Wise and Seeker and back
-      deed(g, 'deeds', -1, 'Honesty');
-    }
-    noteConversation(g, 'You see a sage.\n\n"The Mantra of Honesty is AHM."');
-    expect(lines(p.log).filter((l) => l === 'Journal updated').length).toBeLessThanOrEqual(1);
-    const cheated = modernGame();
-    for (let k = 0; k < 5; k++) for (const c of CHEATS) chargeCheat(cheated.g, c);
-    expect(lines(cheated.p.log)).toEqual([]);
+  it('tints the line of a deed that moved the karma: faintly blue for a rise, red for a fall - Standard look only', async () => {
+    const { Colour } = await import('../src/ui/colours.ts');
+    const { g } = modernGame();
+    g.options.tileSet = 'standard';
+    g.text.select(2);
+    const since = g.text.windows[2].started;
+    g.print('Crops picked!\n');
+    deed(g, 'deeds', -2, 'Honesty');
+    expect(inks(g, since)).toEqual(new Set([Colour.virtueDown]));
+    const next = g.text.windows[2].started;
+    g.print('Bless ye!\n');
+    deed(g, 'deeds', 3, 'Compassion');
+    expect(inks(g, next)).toEqual(new Set([Colour.virtueUp]));
+  });
+
+  it('leaves the words as they are where nothing moved, in the PC look, and under the Classic rules', async () => {
+    const { Colour } = await import('../src/ui/colours.ts');
+    const check = (setup: (g: G) => void, act: (g: G) => void): Set<number> => {
+      const { g } = modernGame();
+      g.options.tileSet = 'standard';
+      setup(g);
+      g.text.select(2);
+      const since = g.text.windows[2].started;
+      g.print('Crops picked!\n');
+      act(g);
+      return inks(g, since);
+    };
+    const white = new Set([Colour.brightWhite]);
+    expect(
+      check(
+        (g) => (g.path.pools.deeds = 0),
+        (g) => deed(g, 'deeds', -2, 'Honesty'),
+      ),
+    ).toEqual(white); // at its floor
+    // A choice counted already: nothing moves.
+    expect(
+      check(
+        (g) => deed(g, 'words', 2, 'Honor', 'w:x'),
+        (g) => deed(g, 'words', 2, 'Honor', 'w:x'),
+      ),
+    ).toEqual(white);
+    expect(
+      check(
+        (g) => (g.options.tileSet = 'original'),
+        (g) => deed(g, 'deeds', -2, 'Honesty'),
+      ),
+    ).toEqual(white);
+    expect(
+      check(
+        (g) => (g.options.rules = 'classic'),
+        (g) => deed(g, 'deeds', -2, 'Honesty'),
+      ),
+    ).toEqual(white);
   });
 });
 

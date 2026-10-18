@@ -245,6 +245,8 @@ export class Game {
   cheatedFight = false;
   /** This fight is against the place's own people, attacked by the party: no Battle karma for winning it. */
   fightingTownsfolk = false;
+  /** How often the karma the game reads has risen and fallen (modernKarma.ts deed): which way a stretch of play moved it. */
+  karmaMoves = { up: 0, down: 0 };
   /** The sides as the fight began (combat.ts combatLoop): foes against the party, for the Battle karma. */
   fightOdds = { foes: 0, party: 0 };
   /** The member a spell falls on (onWho), for its pulse (castEffect); -1 for none, the whole view. */

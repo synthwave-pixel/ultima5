@@ -14,6 +14,7 @@
  */
 
 import type { Game } from './game.ts';
+import { Colour } from '../ui/colours.ts';
 
 export type Pool = 'words' | 'deeds' | 'battle' | 'quest';
 export const POOLS: Pool[] = ['words', 'deeds', 'battle', 'quest'];
@@ -94,9 +95,9 @@ export function modernKarma(p: PathState): number {
   return karma;
 }
 
-/** The karma the game reads: the Modern one under the Modern rules, 1988's under the Story and the Classic. */
+/** The karma the game reads: the Modern one under the Modern and the Story rules, 1988's under the Classic. */
 export function karmaInUse(g: Game): number {
-  return g.options.rules === 'modern' ? modernKarma(g.path) : g.s.karma;
+  return g.options.rules === 'classic' ? g.s.karma : modernKarma(g.path);
 }
 
 /**
@@ -138,57 +139,65 @@ export function strongest(p: PathState, pool: Pool): Virtue | null {
 
 /**
  * A deed: `delta` to `pool`, for `virtue`. `once`, a key counted once a game (a choice, a milestone, a beneficiary):
- * counted already, nothing. Kept always, whatever the rules; said, and "Journal updated" where a tier changes, only
- * under the Modern rules, which read it - and never by `quiet` (a cheat's cost). True if it counted.
+ * counted already, nothing. Kept always, whatever the rules. Nothing is said of it: where the number moved, the words
+ * of the deed are tinted instead (tint) - at once for an act, at the end of the reply for a conversation's (talk.ts) -
+ * and never for `quiet` (a cheat's cost). Returns how far the pool moved (0: not at all, already at its end).
  */
-export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: string, quiet = false): boolean {
+export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: string, quiet = false): number {
   const p = g.path;
   if (once !== undefined) {
-    if (p.done.has(once)) return false;
+    if (p.done.has(once)) return 0;
     p.done.add(once);
   }
-  if (delta === 0) return true;
-  const tiersBefore = tiersOf(p);
-  p.pools[pool] = clamp(p.pools[pool] + delta);
-  if (delta > 0) p.tally[pool][virtue] = (p.tally[pool][virtue] ?? 0) + delta;
-  if (g.options.rules !== 'modern' || quiet) return true;
-  // Said where it matters: a real rise, and every fall; smaller rises show in The Path. The same words not again
-  // for a while (QUIET_TURNS): a field of crops picked is one "tarnished", not one a crop.
-  if (delta <= -20) say(g, 'Thou hast strayed from the Path.');
-  else if (delta < 0) say(g, `Thy ${virtue} is tarnished.`);
-  else if (delta >= 3) say(g, `Thy ${virtue} grows.`);
-  if (tiersOf(p) !== tiersBefore) journalUpdated(g);
-  return true;
+  const was = p.pools[pool];
+  p.pools[pool] = clamp(was + delta);
+  const moved = p.pools[pool] - was;
+  if (moved > 0) p.tally[pool][virtue] = (p.tally[pool][virtue] ?? 0) + moved;
+  if (moved === 0 || quiet) return moved;
+  if (moved > 0) g.karmaMoves.up++;
+  else g.karmaMoves.down++;
+  // In conversation the reply to come is the deed's words (talk.ts question tints them); else the line just written.
+  if (g.recording === null) tint(g, moved, lastLine(g));
+  return moved;
 }
 
-/** Every tier at once - the whole's and each pool's - to see if one changed. */
-const tiersOf = (p: PathState): string =>
-  [pathTier(modernKarma(p)).word, ...POOLS.map((pool) => poolTier(pool, p.pools[pool]).word)].join(',');
+/** The message window (frame.ts Win.messages: not imported, as game.ts imports this). */
+const MESSAGES = 2;
 
-/** How long the same line keeps quiet after it is said, in turns (Game.turnsTaken). */
-const QUIET_TURNS = 10;
-
-/** The turn each line was last said, by game (not saved: a game taken up again may say it once more). */
-const lastSaid = new WeakMap<Game, Map<string, number>>();
-
-/** A line in the log - unless the same was said within QUIET_TURNS. */
-function say(g: Game, line: string, quietTurns = QUIET_TURNS): void {
-  let said = lastSaid.get(g);
-  if (!said) lastSaid.set(g, (said = new Map<string, number>()));
-  const at = said.get(line);
-  if (at !== undefined && g.turnsTaken - at < quietTurns) return;
-  said.set(line, g.turnsTaken);
-  if (g.text.win.x !== 0) g.printChar('\n');
-  g.print(`${line}\n`);
+/** The message window's row count (TextWindow.started) at the line last written: the one the cursor is on, or above. */
+export function lastLine(g: Game): number {
+  const w = g.text.windows[MESSAGES];
+  return w.started - (w.x === 0 ? 1 : 0);
 }
+
+/** The message window's row count now: what is written after this is "since" it (tint). */
+export const lineMark = (g: Game): number => g.text.windows[MESSAGES].started;
 
 /**
- * "Journal updated": for a clue taken down (journal.ts) and a tier of The Path changed alike, said once a turn
- * however many there are - a conversation that both notes a clue and moves the Path says it once.
+ * The words of a deed that moved the karma the game reads, tinted - from row `since` (TextWindow.started) on - a
+ * white just blue for a rise, just red for a fall: in the Standard look alone (the PC look's EGA page draws the tint's
+ * own white), and under the rules that read the Modern karma (all but the Classic).
  */
-export function journalUpdated(g: Game): void {
-  say(g, 'Journal updated', 1);
+export function tint(g: Game, direction: number, since: number): void {
+  if (direction === 0 || g.options.rules === 'classic' || g.options.tileSet !== 'standard') return;
+  g.text.recolourSince(MESSAGES, since, Colour.brightWhite, direction > 0 ? Colour.virtueUp : Colour.virtueDown);
 }
+
+/** The karma's moves so far (Game.karmaMoves), to tell which way a stretch of play moved it: a fall outweighs a rise. */
+export function movedSince(g: Game, before: { up: number; down: number }): number {
+  const m = g.karmaMoves;
+  return m.down > before.down ? -1 : m.up > before.up ? 1 : 0;
+}
+
+/** "Journal updated", for a clue taken down (journal.ts): said once a turn, however many are. */
+export function journalUpdated(g: Game): void {
+  const said = journalSaid.get(g);
+  if (said === g.turnsTaken) return;
+  journalSaid.set(g, g.turnsTaken);
+  if (g.text.win.x !== 0) g.printChar('\n');
+  g.print('Journal updated\n');
+}
+const journalSaid = new WeakMap<Game, number>();
 
 // --- Words: the choices in conversation ----------------------------------------------------------------------
 

@@ -491,8 +491,8 @@ async function meditate(g: Game, i: number, x: number, y: number): Promise<void>
   }
   if (right && g.data.bytes(0x1f6e, 8)[i] === (x & 0xff) && g.data.bytes(0x1f76, 8)[i] === (y & 0xff)) {
     s.d58d8[i] &= 0x7f;
-    modern.deed(g, 'quest', 2, 'Spirituality', `q:restored:${i}`); // a ruined shrine restored (modernKarma.ts)
     g.say(0x4482); // "\n\nThe Shrine is\nrestored!\n"
+    modern.deed(g, 'quest', 2, 'Spirituality', `q:restored:${i}`); // a ruined shrine restored (modernKarma.ts)
     await shakeScreen(g);
     setTileAt(g, x, y, T.Shrine);
     g.viewDirty |= 2;

@@ -23,10 +23,10 @@ player can see where they stand (The Path) without seeing a number.
   on by 1988's own code under every rules, unchanged. The Modern karma (the
   four pools) is kept at the same time, by the deed table, under every rules.
   Nothing converts one into the other.
-- **The rules choose which one the game reads.** Under the Modern rules the
-  gates (Gruman 50, Annon 75, the healer's 98), Lord British's and the camp's
-  old man's messages, The Path and Ctrl-K read the Modern karma; under Story
-  and Classic, 1988's, exactly as before. Switching rules switches the
+- **The rules choose which one the game reads.** Under the Modern and Story
+  rules the gates (Gruman 50, Annon 75, the healer's 98), Lord British's and
+  the camp's old man's messages, The Path and Ctrl-K read the Modern karma;
+  under Classic, 1988's, exactly as before. Switching rules switches the
   reader; both stay right because both were kept all along.
 - **No new text from the game's files is altered.** Choices are read from the
   conversations as they stand; the port's own lines are the log's feedback
@@ -222,12 +222,14 @@ line, no page).
 
 ## Feedback
 
-- A change of 3 or more in a pool, and every fall, prints one line in the log,
-  in the game's voice and naming the virtue: "Thy Compassion grows.", "Thy
-  Honor is tarnished.", "Thou hast strayed from the Path." Smaller rises are
-  silent; they show in The Path.
-- When the overall tier or a pool's tier changes, the log also says "Journal
-  updated", as a clue heard does.
+Nothing is said. Where a deed actually moved the karma the game reads (not a
+choice counted already, not a pool at its end, not a family at its cap), the
+game's own words for it are tinted: a white just blue for a rise, just red
+for a fall - an act's own line ("Crops picked!", "Murdered!", "VICTORY!",
+"WELL DONE!"), a conversation's reply to the answer (alms included, the
+beggar's "Bless ye!"). In the Standard look only (the PC look draws the
+tint's EGA white), and under the rules that read the Modern karma. A tier
+changing says nothing either: The Path shows it.
 
 ## Architecture
 
