@@ -22,11 +22,14 @@ export const POOLS: Pool[] = ['words', 'deeds', 'battle', 'quest'];
 export const VIRTUES = ['Honesty', 'Compassion', 'Valor', 'Justice', 'Sacrifice', 'Honor', 'Spirituality', 'Humility'] as const;
 export type Virtue = (typeof VIRTUES)[number];
 
-/** Where each pool starts: 1988's own start, a new game's karma. */
+/** Where the conduct pools start (Words, Deeds, Battle): 1988's own start, a new game's karma. The Quest starts at 0. */
 export const FRESH = 75;
 
-/** How much each pool weighs in the whole. */
-const WEIGHTS: Record<Pool, number> = { words: 0.3, deeds: 0.3, quest: 0.25, battle: 0.15 };
+/** The conduct pools, which make the whole and hold it back; the Quest, the journey, only adds to it. */
+export const CONDUCT: Pool[] = ['words', 'deeds', 'battle'];
+
+/** How much each conduct pool weighs in the whole. */
+const WEIGHTS: Record<'words' | 'deeds' | 'battle', number> = { words: 0.425, deeds: 0.425, battle: 0.15 };
 
 /** What the Modern karma keeps, with the save. */
 export interface PathData {
@@ -42,7 +45,7 @@ export interface PathData {
 }
 
 export class PathState {
-  pools: Record<Pool, number> = { words: FRESH, deeds: FRESH, battle: FRESH, quest: FRESH };
+  pools: Record<Pool, number> = { words: FRESH, deeds: FRESH, battle: FRESH, quest: 0 };
   tally: Record<Pool, Partial<Record<Virtue, number>>> = { words: {}, deeds: {}, battle: {}, quest: {} };
   done = new Set<string>();
   families: Record<string, number> = {};
@@ -78,12 +81,14 @@ export class PathState {
 
 const clamp = (v: number): number => Math.max(0, Math.min(99, Math.round(v)));
 
-/** The Modern karma: the pools combined, capped by the weakest. */
+/**
+ * The Modern karma: the conduct pools combined (Words and Deeds 42.5% each, Battle 15%), the Quest adding a point for
+ * every ten of its own (+10 at the journey's end), capped by the weakest conduct pool.
+ */
 export function modernKarma(p: PathState): number {
-  let all = 0;
-  for (const pool of POOLS) all += WEIGHTS[pool] * p.pools[pool];
-  let karma = clamp(all);
-  const weakest = Math.min(...POOLS.map((pool) => p.pools[pool]));
+  const base = WEIGHTS.words * p.pools.words + WEIGHTS.deeds * p.pools.deeds + WEIGHTS.battle * p.pools.battle;
+  let karma = clamp(base + p.pools.quest / 10);
+  const weakest = Math.min(...CONDUCT.map((pool) => p.pools[pool]));
   if (weakest < 10) karma = Math.min(karma, 49);
   else if (weakest < 25) karma = Math.min(karma, 74);
   return karma;
@@ -110,6 +115,19 @@ export const PATH_TIERS: { from: number; word: string; about: string }[] = [
 
 /** The Path's tier for a karma (PATH_TIERS). */
 export const pathTier = (karma: number): { word: string; about: string } => PATH_TIERS.find((t) => karma >= t.from) ?? PATH_TIERS[4];
+
+/** The Quest's tiers: the hero's journey, from nothing at a new game to the end (each word short, for its line). */
+export const QUEST_TIERS: { from: number; word: string; about: string }[] = [
+  { from: 90, word: 'Legend', about: 'Thy deeds shall be sung for an age.' },
+  { from: 65, word: 'Champion', about: 'Few have walked so far.' },
+  { from: 40, word: 'Proven', about: 'Britannia begins to speak thy name.' },
+  { from: 15, word: 'Wayfarer', about: 'The road is long, and thou art upon it.' },
+  { from: 0, word: 'Untried', about: 'Thy journey hath only begun.' },
+];
+
+/** A pool's tier: the Quest's by the journey (QUEST_TIERS), the others by the Path (PATH_TIERS). */
+export const poolTier = (pool: Pool, value: number): { word: string; about: string } =>
+  pool === 'quest' ? (QUEST_TIERS.find((t) => value >= t.from) ?? QUEST_TIERS[4]) : pathTier(value);
 
 /** The virtue a pool has shown most (its tally), or none yet. */
 export function strongest(p: PathState, pool: Pool): Virtue | null {
@@ -143,7 +161,8 @@ export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: 
 }
 
 /** Every tier at once - the whole's and each pool's - to see if one changed. */
-const tiersOf = (p: PathState): string => [pathTier(modernKarma(p)).word, ...POOLS.map((pool) => pathTier(p.pools[pool]).word)].join(',');
+const tiersOf = (p: PathState): string =>
+  [pathTier(modernKarma(p)).word, ...POOLS.map((pool) => poolTier(pool, p.pools[pool]).word)].join(',');
 
 function say(g: Game, line: string): void {
   if (g.text.win.x !== 0) g.printChar('\n');

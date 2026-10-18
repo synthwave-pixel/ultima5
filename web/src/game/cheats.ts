@@ -177,10 +177,11 @@ export const CHEATS: Cheat[] = [
       // (KARMA.DAT: "Seek now to renew a life of Virtue") - with no number: the game never shows one.
       // Both karmas, 1988's and the Modern's every pool (modernKarma.ts): whichever the rules read is renewed.
       const s = g.s;
-      const pools = modern.POOLS.map((p) => g.path.pools[p]);
+      // (The Quest is the journey, not virtue: never given.)
+      const pools = modern.CONDUCT.map((p) => g.path.pools[p]);
       if (s.karma >= 75 && pools.every((v) => v >= 75)) return 'Thou walkest the path of the Avatar already.';
       s.karma = Math.max(s.karma, 75);
-      for (const p of modern.POOLS) g.path.pools[p] = Math.max(g.path.pools[p], 75);
+      for (const p of modern.CONDUCT) g.path.pools[p] = Math.max(g.path.pools[p], 75);
       return 'Thy life of Virtue is renewed.';
     },
   },

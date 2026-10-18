@@ -63,9 +63,10 @@ async function talkWith({ town, who, hour, words, karma }: Visit): Promise<strin
   if (!loc) throw new Error(`no place called ${town}`);
   Object.assign(s, { mapId: loc.id, level: 0, x: 15, y: 30, hour });
   if (karma !== undefined) {
-    // Both karmas (modernKarma.ts): 1988's, and every pool of the Modern's, which the Modern rules read.
+    // Both karmas (modernKarma.ts): 1988's, and the Modern's conduct (the journey not begun), which the Modern rules read.
     s.karma = karma;
-    for (const p of ['words', 'deeds', 'battle', 'quest'] as const) g.path.pools[p] = karma;
+    for (const p of ['words', 'deeds', 'battle'] as const) g.path.pools[p] = karma;
+    g.path.pools.quest = 0;
   }
   await enterTown(g, true);
   const npc = findNpc(g, who);

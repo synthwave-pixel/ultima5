@@ -738,9 +738,11 @@ other hurt in the game kills as it always did.
   virtue shown most there. Choices in conversation count once each (the
   dilemmas growing the virtue chosen - "Art thou afraid?" yes for Honesty, no
   for Valor), deeds again and again (alms, prisoners freed, theft, harm),
-  battle by fights won and fled, the quest by its milestones; the whole
-  weighs words and deeds most, battle least, and the weakest pool holds it
-  back. A real rise, and every fall, is said in the log, naming the virtue;
+  battle by fights won and fled; the whole weighs words and deeds most,
+  battle least, and the weakest of them holds it back. The quest is the
+  journey: from nothing at a new game to about 99 at its end, by its
+  milestones - Untried, Wayfarer, Proven, Champion, Legend - adding up to 10
+  to the whole. A real rise, and every fall, is said in the log, naming the virtue;
   a tier changed, "Journal updated". The design is
   docs/superpowers/specs/2026-10-17-modern-karma-design.md.
   **Places** (after the Ultima III port's Towns) opens onto the townes, the castles and villages, the keeps, and the

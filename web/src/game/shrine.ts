@@ -139,7 +139,7 @@ async function shrineOfVirtue(g: Game): Promise<void> {
     await chime(g, 0xc1c, 0x96);
     await shakeScreen(g);
     s.karma = Math.min(s.karma + 3, 99);
-    modern.deed(g, 'quest', 4, modern.VIRTUES[v], `q:shrine:${v}`); // a shrine's quest done (modernKarma.ts)
+    modern.deed(g, 'quest', 6, modern.VIRTUES[v], `q:shrine:${v}`); // a shrine's quest done (modernKarma.ts)
     const p = s.members[0];
     if (g.data.bytes(0x4b7e, 8)[v] !== 0) {
       p.str = Math.min(p.str + 1, 0x1e);

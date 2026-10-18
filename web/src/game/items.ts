@@ -721,7 +721,7 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       break;
     case 0xb5: {
       s.crown = 0xff;
-      modern.deed(g, 'quest', 2, 'Honor', 'q:crown');
+      modern.deed(g, 'quest', 3, 'Honor', 'q:crown');
       g.say(0x8d3a); // "The Crown of Lord British!\n"
       const n = npcOfActor(g, actor);
       setNpcKilled(g, n);
@@ -730,12 +730,12 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
     }
     case 0xb6:
       s.sceptre = 0xff;
-      modern.deed(g, 'quest', 2, 'Honor', 'q:sceptre');
+      modern.deed(g, 'quest', 3, 'Honor', 'q:sceptre');
       g.say(0x8d56); // "The Sceptre of Lord British!\n"
       break;
     case 0xb7:
       s.amulet = 0xff;
-      modern.deed(g, 'quest', 2, 'Honor', 'q:amulet');
+      modern.deed(g, 'quest', 3, 'Honor', 'q:amulet');
       g.say(0x8d74); // "The Amulet of Lord British!\n"
       break;
     default:

@@ -45,7 +45,22 @@ describe('the Path', () => {
       `In word${'Wise'.padStart(14)}`,
       `In deed${'Misguided'.padStart(14)}`,
       `In battle${'Wise'.padStart(12)}`,
-      `In the quest${'Wise'.padStart(9)}`,
+      `In the quest${'Untried'.padStart(9)}`,
     ]);
+    // The journey, by its own words - each fitting beside the line's name.
+    for (const [q, word] of [
+      [20, 'Wayfarer'],
+      [50, 'Proven'],
+      [70, 'Champion'],
+      [95, 'Legend'],
+    ] as const) {
+      g.path.pools.quest = q;
+      expect(line().open!.lines[3].label).toBe(`In the quest${word.padStart(9)}`);
+    }
+    // Every pool's every word fits its line, a space apart.
+    for (const v of [0, 20, 50, 75, 98]) {
+      for (const p of ['words', 'deeds', 'battle', 'quest'] as const) g.path.pools[p] = v;
+      for (const l of line().open!.lines) expect(l.label, l.label).toMatch(/^\S.*\S \s*\S+$/);
+    }
   });
 });

@@ -28,15 +28,20 @@ const modernGame = (): ReturnType<typeof newGame> => {
  * game reads; words counted once, deeds again and again, battle by fights won and fled, the quest by its milestones.
  */
 describe('the Modern karma', () => {
-  it('combines the pools - words and deeds 30%, the quest 25%, battle 15% - capped by the weakest', () => {
+  it('combines the conduct - words and deeds 42.5% each, battle 15% - the quest adding to it, the weakest holding it', () => {
     const p = new PathState();
+    expect(POOLS.map((pool) => p.pools[pool])).toEqual([75, 75, 75, 0]); // the journey not yet begun
     expect(modernKarma(p)).toBe(75); // a new game's, as 1988's
-    Object.assign(p.pools, { words: 99, deeds: 99, quest: 99, battle: 0 });
-    expect(modernKarma(p)).toBe(49); // battle alone can't make the whole - but at 0 it holds it to Misguided
-    Object.assign(p.pools, { words: 99, deeds: 99, quest: 99, battle: 30 });
+    p.pools.quest = 99;
+    expect(modernKarma(p)).toBe(85); // the journey's end: +10 at most
+    Object.assign(p.pools, { words: 99, deeds: 99, battle: 30, quest: 0 });
     expect(modernKarma(p)).toBe(89); // 0.85 * 99 + 0.15 * 30
-    Object.assign(p.pools, { words: 99, deeds: 20, quest: 99, battle: 99 });
-    expect(modernKarma(p)).toBe(74); // one pool under 25: Seeker at best
+    Object.assign(p.pools, { words: 99, deeds: 99, battle: 0 });
+    expect(modernKarma(p)).toBe(49); // battle can't make the whole - but at 0 it holds it to Misguided
+    Object.assign(p.pools, { words: 99, deeds: 20, battle: 99, quest: 99 });
+    expect(modernKarma(p)).toBe(74); // a conduct pool under 25: Seeker at best, whatever the journey
+    Object.assign(p.pools, { words: 75, deeds: 75, battle: 75, quest: 5 });
+    expect(modernKarma(p)).toBe(76); // the Quest's own low start holds nothing back
   });
 
   it('is kept beside 1988 karma, and the rules choose which the game reads', () => {
@@ -61,7 +66,7 @@ describe('the Modern karma', () => {
     const old = { ...data };
     delete old.path;
     restore(back, old);
-    expect(POOLS.map((p) => back.path.pools[p])).toEqual([75, 75, 75, 75]);
+    expect(POOLS.map((p) => back.path.pools[p])).toEqual([75, 75, 75, 0]);
   });
 
   it('counts a choice at its first answer only, a dilemma growing the virtue chosen', () => {

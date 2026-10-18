@@ -45,22 +45,28 @@ player can see where they stand (The Path) without seeing a number.
 | Battle | In battle | fights won and fled; harm in a fight | bounces |
 | Quest | In the quest | the quest's milestones | rises (a mantra betrayed aside) |
 
-**Starting values.** A new game: every pool 75, as 1988's karma begins. A
-save from before the Modern karma (1988's karma only): the pools begin afresh
-at 75 each - not copied from 1988's karma, which goes on as it was.
+**Starting values.** A new game: Words, Deeds and Battle at 75, as 1988's
+karma begins; the Quest at 0 - the journey not yet begun. A save from before
+the Modern karma (1988's karma only) begins the same, afresh - not copied from
+1988's karma, which goes on as it was.
 
 ### Overall karma
 
+Words, Deeds and Battle are the party's conduct; the Quest is its journey.
+
 ```
-modern = round(0.30 Words + 0.30 Deeds + 0.25 Quest + 0.15 Battle)
+modern = round(0.425 Words + 0.425 Deeds + 0.15 Battle + Quest / 10)
 ```
 
-then capped by the weakest pool: any pool below 25 caps it at 74 (Seeker at
-best); below 10, at 49 (Misguided).
+so a new game is 75 exactly, and the journey adds up to +10 by its end. Then
+capped by the weakest conduct pool: any below 25 caps it at 74 (Seeker at
+best); below 10, at 49 (Misguided). The Quest holds nothing back: its low
+start is no failing.
 
 ### Cheats
 
-- **Renew virtue** raises both karmas to at least 75: 1988's, and each pool.
+- **Renew virtue** raises both karmas to at least 75: 1988's, and each conduct
+  pool (never the Quest: the journey is not given).
 - Under the **Modern rules only**, the cheats that give for nothing cost
   Deeds (tagged Honesty): Full restore −1, Food −1, Gold −2, Gems/keys/torches
   −2, Reagents −2, Glass swords −2. Story and Classic charge nothing (a
@@ -184,14 +190,20 @@ only what this table says.
 
 | Milestone | Quest | Virtue |
 |---|---|---|
-| A shrine's quest completed (each of 8) | +4 | the shrine's virtue |
-| A Shadowlord destroyed (each of 3) | +5 | Valor |
+| A shrine's quest completed (each of 8) | +6 | the shrine's virtue |
+| A Shadowlord destroyed (each of 3) | +10 | Valor |
 | A dungeon first entered (each of 8) | +1 | Valor |
 | A ruined shrine restored (each) | +2 | Spirituality |
-| A piece of Lord British's regalia recovered (each of 3) | +2 | Honor |
+| A piece of Lord British's regalia recovered (each of 3) | +3 | Honor |
 | A mantra given away under Blackthorn's interrogation | −15 | Spirituality |
 
 ## The Path
+
+The Quest's milestones come to about 99 over the whole game (8 shrine quests
+48, 3 Shadowlords 30, the regalia 9, 8 dungeons 8, shrines restored besides),
+and it is told in the hero's journey's words, not the Path's: Untried (0-14),
+Wayfarer (15-39), Proven (40-64), Champion (65-89), Legend (90+), each card
+saying where the road has led ("Britannia begins to speak thy name.").
 
 The journal's line is unchanged: the overall tier ("The Path        Wise").
 Under Modern, A on it opens four lines, each its pool's tier, never a number:
@@ -200,7 +212,7 @@ Under Modern, A on it opens four lines, each its pool's tier, never a number:
 In word              Wise
 In deed            Seeker
 In battle            Wise
-In the quest  Enlightened
+In the quest     Champion
 ```
 
 Each card says what the tier means, and the virtue shown most in that pool

@@ -527,11 +527,12 @@ function pathLine(g: Game): JournalLine {
     line.open = {
       title: 'The Path',
       lines: modern.POOLS.map((pool) => {
-        const t = modern.pathTier(g.path.pools[pool]);
+        const t = modern.poolTier(pool, g.path.pools[pool]);
         const shown = modern.strongest(g.path, pool);
         return {
           label: row(POOL_LINES[pool].name, t.word),
-          about: `${t.word}.${shown ? ` Thy ${shown} is known.` : ''}`,
+          // The journey's tier says where the road has led; the others, the tier's word.
+          about: `${pool === 'quest' ? t.about : `${t.word}.`}${shown ? ` Thy ${shown} is known.` : ''}`,
           hint: POOL_LINES[pool].hint,
         };
       }),
