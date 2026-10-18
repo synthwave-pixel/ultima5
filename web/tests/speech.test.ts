@@ -78,6 +78,12 @@ describe('what is said, in the play area', () => {
       queue.push(Pad.A);
       return queue.shift();
     };
+    const shownPages: string[][] = [];
+    const showStaged = g.text.showStaged.bind(g.text);
+    g.text.showStaged = (f, count, column, row, width) => {
+      shownPages.push(g.text.stagedLines().slice(f, f + count));
+      showStaged(f, count, column, row, width);
+    };
     const from = p.log.length;
     await talkToNpc(g, npc);
     const said = p.log.slice(from).replace(/\s+/g, '');
@@ -91,6 +97,8 @@ describe('what is said, in the play area', () => {
       at = next + 1;
     }
     expect(pages).toBeGreaterThan(2); // a page at a time, and the last read before the panel goes
+    // Each box full - all six rows it has room for - or its speech ended: none broken off short of a line that fitted.
+    for (const lines of shownPages) expect(lines.length === 6 || /"$/.test(lines[lines.length - 1]), lines.join(' / ')).toBe(true);
     // Each box above her, its last row clear of her square, centred over her (but where the view's edge holds it in).
     for (const b of boxes) {
       expect(b.top + b.height - 1).toBe(7);
@@ -116,5 +124,32 @@ describe('what is said, in the play area', () => {
     expect(SPEECH).toBe(4);
     // What is heard (the journal's, the words') heard as ever.
     expect(g.words.knows('VISION')).toBe(true);
+  });
+  it("keeps a speech's last line with it where a row ends at the box's edge (Greyson's Codex, Britain)", async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    Object.assign(g.options, { input: 'controller', dialog: 'play' });
+    journeyOnward(g);
+    stashWorldActors(g);
+    Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    g.words.add('SACRED');
+    const npc = findNpc(g, 'Greyson');
+    const a = s.actors[s.npcs[npc].actor];
+    Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 }); // south of him: six rows above him
+    loadLevel(g, true);
+    const shownPages: string[][] = [];
+    const showStaged = g.text.showStaged.bind(g.text);
+    g.text.showStaged = (f, count, column, row, width) => {
+      shownPages.push(g.text.stagedLines().slice(f, f + count));
+      showStaged(f, count, column, row, width);
+    };
+    const queue = [K.Down, K.Down, K.Down, Pad.A];
+    p.next = () => (g.menuShown?.title === 'Say' ? (queue.shift() ?? Pad.B) : Pad.A);
+    await talkToNpc(g, npc);
+    // "...then canst thou enter / the Shrine of the" fills its row to the edge, the next word on the sixth: one box.
+    const meditate = shownPages.find((l) => l[0].startsWith('"Meditate'));
+    expect(meditate, shownPages.map((l) => l.join(' / ')).join(' | ')).toHaveLength(6);
+    expect(meditate![5]).toBe('Codex!"');
   });
 });

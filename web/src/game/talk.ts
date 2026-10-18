@@ -97,7 +97,14 @@ function settleKeys(g: Game): void {
   t.keysBefore = null;
 }
 
-export type Talk = { g: Game; t: TalkState; /** Being asked their name. */ naming?: boolean };
+export type Talk = {
+  g: Game;
+  t: TalkState;
+  /** Being asked their name. */
+  naming?: boolean;
+  /** The townsman described ("You see ..."), their words not yet begun: the first quote they say begins them (speech.ts). */
+  describing?: boolean;
+};
 
 /**
  * The port's corrections to the scripts as the DOS files have them, each for one NPC (by their name, the script's
@@ -181,11 +188,22 @@ function addLetter(k: Talk, b: number): void {
  */
 const wrapAt = (g: Game): number => g.text.win.right - g.text.win.left + 3;
 
-/** A letter added (addLetter), the panel paged first where the line it may break would run past it (speech.ts). */
+/** A letter added (addLetter), the box paged first where the word it ends would be written past it (speech.ts). */
 async function addSpoken(k: Talk, b: number): Promise<void> {
   const { g, t } = k;
-  const breaks = b === 0x8a || (b === 0xa0 && t.word.length !== 0 && g.text.win.x + t.word.length >= wrapAt(g));
-  if (breaks) await speech.room(g, true);
+  // A script whose description goes on to its greeting and its first "Your interest?" itself (Gwenno's, knowing the
+  // party): their words begin at their first quote, in the Dialog setting's box.
+  if (k.describing && b === 0xa2) {
+    k.describing = false;
+    flushWord(k);
+    speech.begin(g);
+  }
+  // A word ended: the row it is to be written on - this one, or the next where it will not fit - room in the box made
+  // for it first (speech.ts).
+  if (b === 0x8a || (b === 0xa0 && t.word.length !== 0)) {
+    const w = g.text.win;
+    await speech.room(g, w.x !== 0 && w.x + t.word.length >= wrapAt(g) ? 1 : 0);
+  }
   addLetter(k, b);
 }
 
@@ -251,6 +269,16 @@ function sameName(a: number[], b: number[]): boolean {
   }
 }
 
+/**
+ * The party's panel drawn again in the midst of the townsman's words: the window they were written in chosen again
+ * after (drawVitals leaves the log chosen, as 1988 did - where the Dialog setting's box is wanted, not there).
+ */
+function vitals(g: Game): void {
+  const was = g.text.current;
+  drawVitals(g);
+  g.text.select(was);
+}
+
 /** TALK_080a: the NPC joins the party (found in the roster by the first three letters of its name). */
 async function join(k: Talk): Promise<number> {
   const { g, t } = k;
@@ -284,7 +312,7 @@ async function join(k: Talk): Promise<number> {
   s.partySize++;
   setNpcKilled(g, t.npc);
   removeNpc(g, t.npc);
-  drawVitals(g);
+  vitals(g);
   flushWord(k);
   t.at = back;
   return 1;
@@ -298,7 +326,7 @@ async function payGold(k: Talk): Promise<number> {
   if (s.gold >= amount) {
     s.gold -= amount;
     t.keysBefore = null;
-    drawVitals(g);
+    vitals(g);
     // The Modern karma: alms to a beggar, each once a game day (modernKarma.ts); 1988's, below, as ever.
     if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c) modern.alms(g, t.npc);
     if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c && s.turn >= 100) {
@@ -329,11 +357,11 @@ function give(g: Game, item: number): void {
   switch (item) {
     case 0x41:
       s.food = inc(s.food, 1, 9999);
-      drawVitals(g);
+      vitals(g);
       break;
     case 0x42:
       s.gold = inc(s.gold, 1, 9999);
-      drawVitals(g);
+      vitals(g);
       break;
     case 0x43:
       s.keys = inc(s.keys, 1, 99);
@@ -549,6 +577,7 @@ async function tryStandard(k: Talk): Promise<number> {
 /** TALK_0b04: "Your interest?" until the player says nothing (bye). */
 async function interest(k: Talk): Promise<number> {
   const { g, t } = k;
+  k.describing = false;
   for (;;) {
     t.responding = 0;
     // A gift of Jeremy's keys not paid for by the time he asks what else (JEREMY).
@@ -882,11 +911,13 @@ async function processChar(k: Talk, b: number): Promise<number> {
 async function greet(k: Talk): Promise<number> {
   const { g, t } = k;
   g.say(0x94c4); // "You see "
+  k.describing = true;
   if (await speakNth(k, 1)) return 1;
   await printCr(k);
   await printCr(k);
-  // The townsman's words from here in the Dialog setting's box (speech.ts).
-  speech.begin(g);
+  // The townsman's words from here in the Dialog setting's box (speech.ts) - or from their first quote, begun already.
+  if (k.describing) speech.begin(g);
+  k.describing = false;
   if (!hasMet(g, t.npc)) {
     if (g.random(0, 1) !== 0) {
       g.say(0x94ce); // "\"I am called "

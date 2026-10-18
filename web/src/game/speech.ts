@@ -13,7 +13,7 @@
 import type { Game } from './game.ts';
 import { Colour } from '../ui/colours.ts';
 import { CLEAR_WINDOW } from '../ui/text.ts';
-import { drawVitals, updateFrame } from './frame.ts';
+import { updateFrame } from './frame.ts';
 import { blinker, waitMark } from './waitMark.ts';
 
 /** The text window the townsman's words are written in, off the screen (frame.ts's are 0-2, the menus' 3). */
@@ -90,9 +90,10 @@ function putAway(g: Game, always = false): void {
   if (b) g.text.clearArea(b.left, b.top, b.left + b.width - 1, b.top + b.height - 1);
   if (k) k.shown = null;
   g.draw.chromeSpeech?.(null);
+  const was = g.text.current;
   g.viewDirty = 1;
   updateFrame(g);
-  drawVitals(g);
+  g.text.select(was);
 }
 
 /** The townsman speaks: their window chosen (after the log had the party's words). */
@@ -197,15 +198,15 @@ export const boxShown = (g: Game): { left: number; top: number; width: number; h
 };
 
 /**
- * Before a line is broken (talk.ts, `breaking`): where the new line would be one more than the box has room for, the
- * box so far is shown and waits for a key, the words to go on in the next.
+ * Before a word is written (talk.ts): where the row it goes on - the cursor's, or `ahead` the next - lies past the
+ * room the box has, the box so far is shown and waits for a key, the word to go on at the top of the next.
  */
-export async function room(g: Game, breaking: boolean): Promise<void> {
-  if (!breaking || !speaking(g)) return;
+export async function room(g: Game, ahead: number): Promise<void> {
+  if (!speaking(g)) return;
   const k = talks.get(g)!;
   const w = g.text.windows[SPEECH];
   const { from } = unshown(g);
-  if (w.y - from + 1 < k.place.rows) return;
+  if (w.y + ahead - from < k.place.rows) return;
   await showPage(g, true);
 }
 
