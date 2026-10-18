@@ -27,6 +27,7 @@ import { scriptSpeech } from './words.ts';
 import { heardPlaces } from './placeNames.ts';
 import { heardLines } from './placeClues.ts';
 import { freedKey } from './items.ts';
+import * as modern from './modernKarma.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -283,6 +284,8 @@ async function payGold(k: Talk): Promise<number> {
     s.gold -= amount;
     t.keysBefore = null;
     drawVitals(g);
+    // The Modern karma: alms to a beggar, each once a game day (modernKarma.ts); 1988's, below, as ever.
+    if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c) modern.alms(g, t.npc);
     if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c && s.turn >= 100) {
       s.turn = 0;
       s.karma = inc(s.karma, 1, 99);
@@ -629,6 +632,8 @@ async function replyOtherwise(k: Talk): Promise<boolean> {
 /** TALK_0c5c: a question: its answer, the reply, then back to "Your interest?". */
 async function question(k: Talk): Promise<number> {
   const { g, t } = k;
+  // The Modern karma: the question asked (one that counts by being reached), and below, the answer.
+  modern.asked(g, t.labels, t.label);
   let r: number;
   do {
     await printQuote(k);
@@ -655,7 +660,9 @@ async function question(k: Talk): Promise<number> {
     if (r === 1) return 1;
   } while (r === 0);
   await printQuote(k);
-  const ended = findAnswer(k) ? await replyToAnswer(k) : await replyOtherwise(k);
+  const found = findAnswer(k);
+  modern.answered(g, t.labels, t.label, found ? scriptWord(k) : null, t.typed);
+  const ended = found ? await replyToAnswer(k) : await replyOtherwise(k);
   if (!ended) {
     await printQuote(k);
     await printCr(k);
@@ -698,7 +705,7 @@ async function actionArg(k: Talk, b: number): Promise<number> {
       t.args[t.argCount++] = b;
       if (t.argCount !== 2) return 0;
       t.pending = t.argCount = 0;
-      if (g.s.karma < t.args[0]) return 0;
+      if (modern.karmaInUse(g) < t.args[0]) return 0; // the karma the rules read (modernKarma.ts)
       t.label = t.args[1];
       return question(k);
     default:

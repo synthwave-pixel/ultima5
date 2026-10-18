@@ -62,7 +62,11 @@ async function talkWith({ town, who, hour, words, karma }: Visit): Promise<strin
   const loc = g.data.locations.find((l) => l.name.toUpperCase() === town.toUpperCase());
   if (!loc) throw new Error(`no place called ${town}`);
   Object.assign(s, { mapId: loc.id, level: 0, x: 15, y: 30, hour });
-  if (karma !== undefined) s.karma = karma;
+  if (karma !== undefined) {
+    // Both karmas (modernKarma.ts): 1988's, and every pool of the Modern's, which the Modern rules read.
+    s.karma = karma;
+    for (const p of ['words', 'deeds', 'battle', 'quest'] as const) g.path.pools[p] = karma;
+  }
   await enterTown(g, true);
   const npc = findNpc(g, who);
   expect(npc, `${who} in ${town}`).toBeGreaterThan(0);

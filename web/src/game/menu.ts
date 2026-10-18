@@ -1549,8 +1549,8 @@ const MAP_NAMES: Record<DungeonMap, string> = { off: 'Off', small: 'Corner', ful
 const SOUND_NAMES = { standard: 'Standard', original: 'Original' } as const;
 const RULES_NAMES: Record<Rules, string> = { story: 'Story', modern: 'Modern', classic: 'Classic' };
 const RULES_NOTES: Record<Rules, string> = {
-  story: 'As Modern, never hungry, fights eased more.',
-  modern: 'Poison, hunger never kill; XP shared; fights eased.',
+  story: "As Modern, never hungry, fights eased more; 1988's karma.",
+  modern: 'Poison, hunger never kill; XP shared; fights eased; a deeper Path.',
   classic: 'As in 1988, as the Apple II has it: deadly.',
 };
 const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller: 'Controller' };
@@ -1914,6 +1914,8 @@ async function cheatsMenu(g: Game): Promise<void> {
       }
       if (at < 0) return;
       const said = await list[at].apply(g);
+      const { chargeCheat } = await import('./cheats.ts');
+      chargeCheat(g, list[at]);
       drawVitals(g);
       await showText(g, 'Cheats', wrap(said));
     }

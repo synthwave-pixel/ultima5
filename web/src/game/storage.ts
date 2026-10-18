@@ -9,6 +9,7 @@
  * eight saves for each of eight characters.
  */
 
+import { type PathData, PathState } from './modernKarma.ts';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import { Fog, type FogData } from './fog.ts';
 import { Vocabulary, type WordData } from './words.ts';
@@ -67,6 +68,8 @@ export interface SaveData {
   companions?: Record<string, Appearance>;
   /** The day the old man last came to camp (Game.oldManDay; older saves have none: not yet). */
   oldManDay?: number;
+  /** The Modern karma's pools and what they have counted (modernKarma.ts; older saves have none: begun afresh). */
+  path?: PathData;
 }
 
 export function toBase64(bytes: Uint8Array): string {
@@ -98,6 +101,7 @@ export function serialize(g: Game): SaveData {
     appearance: g.appearance,
     companions: Object.fromEntries(g.companionLooks),
     oldManDay: g.oldManDay,
+    path: g.path.encode(),
   };
 }
 
@@ -140,6 +144,8 @@ export function restore(g: Game, d: SaveData, fresh = false): void {
   g.words.merge(Vocabulary.decode(d.words));
   g.tipsNudged = d.tipsNudged !== false;
   g.oldManDay = typeof d.oldManDay === 'number' && Number.isFinite(d.oldManDay) ? d.oldManDay : -1;
+  // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
+  g.path = PathState.decode(d.path);
   g.appearance = validAppearance(d.appearance);
   const made = typeof d.companions === 'object' && d.companions !== null ? Object.entries(d.companions) : [];
   g.companionLooks = new Map(made.map(([name, look]) => [name, validAppearance(look)]));

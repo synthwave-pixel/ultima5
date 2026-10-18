@@ -7,6 +7,7 @@
  * the party can pick up.
  */
 
+import * as modern from './modernKarma.ts';
 import { actorTileAt, freeActor, setActor } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
@@ -446,6 +447,7 @@ export async function jimmyCommand(g: Game): Promise<number> {
           for (let k = 0; k < 3; k++) s.schedules[npc].setType(k, 5);
           g.say(0x8b36); // "\n\"I thank thee!\"\n"
           s.karma = inc(s.karma, 2, 99);
+          modern.deed(g, 'deeds', 5, 'Compassion', `freed:${s.mapId}:${npc}`); // a prisoner freed (modernKarma.ts)
         }
         setNpcKilled(g, npc);
         break;
@@ -525,7 +527,10 @@ export async function openChest(g: Game, x: number, y: number, z: number, by?: {
   let level = s.actors[i].b5;
   setActor(g, i, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
-  if (s.mapId >= 1 && s.mapId <= 0x20) s.karma = s.karma > 2 ? s.karma - 2 : 0;
+  if (s.mapId >= 1 && s.mapId <= 0x20) {
+    s.karma = s.karma > 2 ? s.karma - 2 : 0;
+    modern.deed(g, 'deeds', -4, 'Justice'); // a towne's chest opened (modernKarma.ts)
+  }
   if (level > 0x7f) {
     level &= 0x7f;
     g.say(0x8b7e); // "Trapped!\n"
@@ -716,6 +721,7 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       break;
     case 0xb5: {
       s.crown = 0xff;
+      modern.deed(g, 'quest', 2, 'Honor', 'q:crown');
       g.say(0x8d3a); // "The Crown of Lord British!\n"
       const n = npcOfActor(g, actor);
       setNpcKilled(g, n);
@@ -724,10 +730,12 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
     }
     case 0xb6:
       s.sceptre = 0xff;
+      modern.deed(g, 'quest', 2, 'Honor', 'q:sceptre');
       g.say(0x8d56); // "The Sceptre of Lord British!\n"
       break;
     case 0xb7:
       s.amulet = 0xff;
+      modern.deed(g, 'quest', 2, 'Honor', 'q:amulet');
       g.say(0x8d74); // "The Amulet of Lord British!\n"
       break;
     default:
@@ -815,6 +823,7 @@ export async function getCommand(g: Game): Promise<number> {
     s.food = inc(s.food, 1, 9999);
     g.vitalsDirty = 1;
     if (s.karma !== 0) s.karma--;
+    modern.deed(g, 'deeds', -2, 'Honesty'); // another's food taken (modernKarma.ts)
   };
   switch (t) {
     case T.B0:
@@ -834,6 +843,7 @@ export async function getCommand(g: Game): Promise<number> {
       s.food = inc(s.food, 1, 9999);
       g.vitalsDirty = 1;
       if (s.karma !== 0) s.karma--;
+      modern.deed(g, 'deeds', -2, 'Honesty'); // another's crops taken (modernKarma.ts)
       break;
     case T.Table9A:
       if (dy === 1) {

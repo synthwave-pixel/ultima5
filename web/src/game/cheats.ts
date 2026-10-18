@@ -9,6 +9,7 @@
  * offered only in development builds.
  */
 
+import * as modern from './modernKarma.ts';
 import { CF, Game } from './game.ts';
 import { Status } from './save.ts';
 
@@ -18,6 +19,16 @@ export interface Cheat {
   available(g: Game): boolean;
   /** Do it; a line saying what happened. May throw Relocate to move the party. */
   apply(g: Game): Promise<string> | string;
+  /**
+   * What it costs the Modern karma's Deeds, under the Modern rules alone (the Story's cheats are free, and the Classic
+   * is brutal enough): what is had for nothing is not earned.
+   */
+  penalty?: number;
+}
+
+/** A cheat's cost, where it has one: the Modern rules' Deeds (modernKarma.ts), for having for nothing. */
+export function chargeCheat(g: Game, cheat: Cheat): void {
+  if (cheat.penalty && g.options.rules === 'modern') modern.deed(g, 'deeds', -cheat.penalty, 'Honesty');
 }
 
 /** Thrown to move the party to another map: the main loop (run.ts) catches it and goes on from the new place. */
@@ -80,6 +91,7 @@ function outside(g: Game, id: number): Promise<never> {
 export const CHEATS: Cheat[] = [
   {
     label: 'Full restore',
+    penalty: 1,
     available: () => true,
     async apply(g) {
       for (const m of members(g)) {
@@ -107,6 +119,7 @@ export const CHEATS: Cheat[] = [
   },
   {
     label: 'Gold +500',
+    penalty: 2,
     available: () => true,
     apply(g) {
       g.s.gold = cap(g.s.gold, 500, 9999);
@@ -116,6 +129,7 @@ export const CHEATS: Cheat[] = [
   },
   {
     label: 'Food +100',
+    penalty: 1,
     available: () => true,
     apply(g) {
       g.s.food = cap(g.s.food, 100, 9999);
@@ -125,6 +139,7 @@ export const CHEATS: Cheat[] = [
   },
   {
     label: 'Gems, keys, torches',
+    penalty: 2,
     available: () => true,
     apply(g) {
       const s = g.s;
@@ -136,6 +151,7 @@ export const CHEATS: Cheat[] = [
   },
   {
     label: 'Glass swords +5',
+    penalty: 2,
     available: () => true,
     apply(g) {
       // Each strikes once, surely and to the death, and shatters (combat.ts damageRoll).
@@ -145,6 +161,7 @@ export const CHEATS: Cheat[] = [
   },
   {
     label: 'Reagents',
+    penalty: 2,
     available: () => true,
     apply(g) {
       for (let i = 0; i < 8; i++) g.s.reagents[i] = cap(g.s.reagents[i], 30, 99);
@@ -158,9 +175,12 @@ export const CHEATS: Cheat[] = [
       // Karma up to 75, where the party's death would put it (story.ts): every word the townsfolk keep for the virtuous
       // is given at 75 (Annon's VILIS; Gruman's SUMM at 50). Never down. Said in the game's own words - the old man's
       // (KARMA.DAT: "Seek now to renew a life of Virtue") - with no number: the game never shows one.
+      // Both karmas, 1988's and the Modern's every pool (modernKarma.ts): whichever the rules read is renewed.
       const s = g.s;
-      if (s.karma >= 75) return 'Thou walkest the path of the Avatar already.';
-      s.karma = 75;
+      const pools = modern.POOLS.map((p) => g.path.pools[p]);
+      if (s.karma >= 75 && pools.every((v) => v >= 75)) return 'Thou walkest the path of the Avatar already.';
+      s.karma = Math.max(s.karma, 75);
+      for (const p of modern.POOLS) g.path.pools[p] = Math.max(g.path.pools[p], 75);
       return 'Thy life of Virtue is renewed.';
     },
   },
@@ -257,6 +277,7 @@ export const DEV_CHEATS: Cheat[] = [
     label: 'Slay every foe',
     available: (g) => g.s.mapId === 0xff,
     async apply(g) {
+      g.cheatedFight = true; // won by this, the fight earns no Battle karma (modernKarma.ts)
       const n = await slayAll(g);
       return n === 0 ? 'No foe stands.' : `${n} ${n === 1 ? 'foe' : 'foes'} slain.`;
     },

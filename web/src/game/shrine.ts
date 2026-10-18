@@ -8,6 +8,7 @@
  * The words are MISCMSG.DAT's (from 0x3ab) and DATA.OVL's.
  */
 
+import * as modern from './modernKarma.ts';
 import { setActor } from './actors.ts';
 import { shakeScreen, sleepTicks } from './effects.ts';
 import { drawVitals, updateFrame } from './frame.ts';
@@ -122,6 +123,7 @@ async function shrineOfVirtue(g: Game): Promise<void> {
     s.gold -= hundreds * 100;
     drawVitals(g);
     s.karma = Math.min(s.karma + hundreds, 99);
+    modern.deed(g, 'deeds', Math.min(hundreds, 5), 'Sacrifice'); // gold offered: +1 a hundred, +5 a visit (modernKarma.ts)
     g.text.font = 1;
     g.say(0x95aa); // "ALAKAZAM"
     g.text.font = 0;
@@ -137,6 +139,7 @@ async function shrineOfVirtue(g: Game): Promise<void> {
     await chime(g, 0xc1c, 0x96);
     await shakeScreen(g);
     s.karma = Math.min(s.karma + 3, 99);
+    modern.deed(g, 'quest', 4, modern.VIRTUES[v], `q:shrine:${v}`); // a shrine's quest done (modernKarma.ts)
     const p = s.members[0];
     if (g.data.bytes(0x4b7e, 8)[v] !== 0) {
       p.str = Math.min(p.str + 1, 0x1e);

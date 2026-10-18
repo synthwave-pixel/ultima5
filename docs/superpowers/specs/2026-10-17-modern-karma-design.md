@@ -19,12 +19,15 @@ player can see where they stand (The Path) without seeing a number.
 
 ## Scope
 
-- **Modern rules only** (`g.options.rules === 'modern'`). Story and Classic
-  are 1988's karma exactly, as now.
-- **The number stays compatible.** The four pools are combined into the
-  saved game's karma byte whenever they change, so every reader of karma -
-  the gates, Lord British's and the camp's old man's messages, The Path's
-  tiers, Ctrl-K - works unchanged, and switching rules carries it across.
+- **Two karmas, side by side, always.** 1988's karma (the save's byte) goes
+  on by 1988's own code under every rules, unchanged. The Modern karma (the
+  four pools) is kept at the same time, by the deed table, under every rules.
+  Nothing converts one into the other.
+- **The rules choose which one the game reads.** Under the Modern rules the
+  gates (Gruman 50, Annon 75, the healer's 98), Lord British's and the camp's
+  old man's messages, The Path and Ctrl-K read the Modern karma; under Story
+  and Classic, 1988's, exactly as before. Switching rules switches the
+  reader; both stay right because both were kept all along.
 - **No new text from the game's files is altered.** Choices are read from the
   conversations as they stand; the port's own lines are the log's feedback
   and The Path's cards.
@@ -42,23 +45,30 @@ player can see where they stand (The Path) without seeing a number.
 | Battle | In battle | fights won and fled; harm in a fight | bounces |
 | Quest | In the quest | the quest's milestones | rises (a mantra betrayed aside) |
 
-Every pool starts at the karma the game has when the Modern system first sees
-it: 75 for a new game (1988's own start), the saved karma for an older save.
+**Starting values.** A new game: every pool 75, as 1988's karma begins. A
+save from before the Modern karma (1988's karma only): the pools begin afresh
+at 75 each - not copied from 1988's karma, which goes on as it was.
 
 ### Overall karma
 
 ```
-overall = round(0.30 Words + 0.30 Deeds + 0.25 Quest + 0.15 Battle)
+modern = round(0.30 Words + 0.30 Deeds + 0.25 Quest + 0.15 Battle)
 ```
 
-then capped by the weakest pool: any pool below 25 caps overall at 74
-(Seeker at best); below 10, at 49 (Misguided). The result is written to the
-save's karma byte (`s.karma`).
+then capped by the weakest pool: any pool below 25 caps it at 74 (Seeker at
+best); below 10, at 49 (Misguided).
 
-**Rules switched.** Under Story or Classic the byte moves by 1988's rules
-alone. Coming back to Modern, the pools' combined value is compared with the
-byte; any difference is added to all four pools alike (clamped 0–99), so the
-byte is honoured and the pools stay in proportion.
+### Cheats
+
+- **Renew virtue** raises both karmas to at least 75: 1988's, and each pool.
+- Under the **Modern rules only**, the cheats that give for nothing cost
+  Deeds (tagged Honesty): Full restore −1, Food −1, Gold −2, Gems/keys/torches
+  −2, Reagents −2, Glass swords −2. Story and Classic charge nothing (a
+  player may switch to Story to cheat freely; so be it).
+- A fight ended by **Slay every foe**, or with **Auto kill** on, earns no
+  Battle karma. The regalia given by **The quest's items** earn no Quest
+  karma (it sets them without their being found). A dungeon reached by
+  **Go to...** counts as entered.
 
 ### Virtue tags
 
@@ -150,13 +160,15 @@ Blackthorn and his spy (2:10, Saduj 2:7), and Gruman's every answer but L92.
 | Stealing food, picking crops | −2 | Honesty | each time |
 | Opening a chest in a towne | −4 | Justice | each time |
 | Destroying a door with a cannon | −4 | Justice | each time |
-| Theft, pickpocketing | −5 | Justice | each time |
+| One of the place killed by a cannon's shot | −30, and Battle −20 | Compassion | each time |
 | Attacking a townsperson | −10 | Compassion | each time |
 | Killing a townsperson | −30 | Compassion | each time |
 | Murdering a helpless one (stocks, bed) | −50 | Compassion | each time |
 
-Every other 1988 karma change (the pub's "haven't ye had enough to drink?",
-the beggar's hidden cooldown) is dropped under Modern.
+(The party's theft in this game is the food, the crops and the chests above:
+there is no other stealing; "pickpocketing" is a thief robbing the party.)
+1988's own karma changes all go on, in 1988's karma; the Modern karma counts
+only what this table says.
 
 ### Battle
 

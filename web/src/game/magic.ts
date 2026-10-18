@@ -10,6 +10,7 @@
  * `protection` (D_588e) its turns; `d58a6` is the light spell's turns.
  */
 
+import * as modern from './modernKarma.ts';
 import { SETTLEMENTS } from '../data/maps.ts';
 import { actorTileAt } from './actors.ts';
 import {
@@ -1921,6 +1922,7 @@ async function useShard(g: Game, n: number): Promise<void> {
   removeNpc(g, npcOfActor(g, s.dx));
   for (let i = 0; i < 7; i++) await explosion(g, s.x, s.y - 1);
   s.shadowlords[n] = 0xff;
+  modern.deed(g, 'quest', 5, 'Valor', `q:shadowlord:${n}`); // a Shadowlord destroyed (modernKarma.ts)
   s.shards[n] = 0;
   s.npcKilled[0x70] |= g.data.bytes(0x4892, 3)[n];
   g.say(0x483b); // "\nThe doom of the Shadowlord "

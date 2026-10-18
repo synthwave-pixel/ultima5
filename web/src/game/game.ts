@@ -13,6 +13,7 @@ import { TileCycles } from '../ui/animate.ts';
 import type { Text } from '../ui/text.ts';
 import { GameData } from './data.ts';
 import { Fog } from './fog.ts';
+import { PathState } from './modernKarma.ts';
 import { Vocabulary } from './words.ts';
 import type { Draw, Platform, Sound } from './io.ts';
 import { type Random, TrueRandom } from './rng.ts';
@@ -238,6 +239,14 @@ export class Game {
   climbAsked: { key: string; turn: number } | null = null;
   /** Every turn's end (time.ts endTurn), counted: what "the next turn" is measured by. */
   turnsTaken = 0;
+  /** The Modern karma (modernKarma.ts): kept always beside 1988's, saved with the game. */
+  path = new PathState();
+  /** This fight ended by a cheat (Slay every foe): no Battle karma for it (modernKarma.ts battleOutcome). */
+  cheatedFight = false;
+  /** This fight is against the place's own people, attacked by the party: no Battle karma for winning it. */
+  fightingTownsfolk = false;
+  /** The sides as the fight began (combat.ts combatLoop): foes against the party, for the Battle karma. */
+  fightOdds = { foes: 0, party: 0 };
   /** The member a spell falls on (onWho), for its pulse (castEffect); -1 for none, the whole view. */
   spellOn = -1;
   /**

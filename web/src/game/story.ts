@@ -10,6 +10,7 @@
  * interrogation), ENDMSG.DAT and END.DAT (the end), KARMA.DAT.
  */
 
+import * as modern from './modernKarma.ts';
 import { loadResource } from '../data/images.ts';
 import { setActor } from './actors.ts';
 import { reveal, shakeScreen, sleepTicks, TICK_MS } from './effects.ts';
@@ -172,7 +173,7 @@ async function dying(g: Game): Promise<void> {
   a1.tile = a1.anim = 0x74;
   updateFrame(g);
   g.say(0x71be); // "\n\""
-  g.print(fileText(g, 'KARMA.DAT', g.data.words(0x1a74, 5)[Math.min(4, Math.trunc(s.karma / 0x14))]));
+  g.print(fileText(g, 'KARMA.DAT', g.data.words(0x1a74, 5)[Math.min(4, Math.trunc(modern.karmaInUse(g) / 0x14))]));
   g.printChar('"');
   await getChar(g);
   g.say(0x71cc); // "\n\nStrange words are intoned."
@@ -431,6 +432,7 @@ async function interrogation(g: Game, shrine: number, party: number): Promise<vo
     if (await answer(g, shrine)) {
       s.d58d8[shrine] = 0xff;
       s.karma = Math.max(0, s.karma - 5);
+      modern.deed(g, 'quest', -15, 'Spirituality'); // a mantra given away to Blackthorn (modernKarma.ts)
       if (party > 1) await companionDies(g, false);
       else g.print(miscMsg(g, 0x29c));
       await takenAway(g);

@@ -17,6 +17,7 @@
  * passages, 3 skeletons).
  */
 
+import * as modern from './modernKarma.ts';
 import { loadResource } from '../data/images.ts';
 import { combatLoop, newSpawns, placeCombatant, placeParty, specialMap } from './combat.ts';
 import { sleepTicks, TICK_MS } from './effects.ts';
@@ -1322,7 +1323,7 @@ export async function dungeonCommand(g: Game, key: number): Promise<number> {
   const s = g.s;
   switch (key) {
     case 0x0b: // Ctrl-K: karma
-      g.printNumber(s.karma, 1, ' ');
+      g.printNumber(modern.karmaInUse(g), 1, ' '); // the karma the rules read (modernKarma.ts)
       g.printChar('\n');
       return 1;
     case K.Left:
@@ -1361,6 +1362,7 @@ export async function dungeonLoop(g: Game, fromOutside: boolean): Promise<void> 
   let slow = 0;
   let lastActive = 0;
   clearedRooms(g);
+  modern.deed(g, 'quest', 1, 'Valor', `q:dungeon:${s.mapId}`); // a dungeon first entered (modernKarma.ts)
   const kind = s.dungeon[cellIndex(s.x, s.y, s.level)] & 0xf0;
   borders(g);
   printWalkDir(g);

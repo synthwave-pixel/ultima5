@@ -23,9 +23,11 @@ describe('the Path', () => {
     ]);
   });
 
-  it('stands in the journal as a word, never the number, a new Avatar Wise', () => {
+  it('stands in the journal as a word, never the number, a new Avatar Wise - the karma the rules read', () => {
     const { g } = newGame();
     const line = () => journalTop(g).find((l) => l.label.startsWith('The Path'))!;
+    // The Story's (and the Classic's): 1988's karma.
+    g.options.rules = 'story';
     expect(g.s.karma).toBe(75);
     expect(line().label).toBe(`The Path${'Wise'.padStart(13)}`);
     g.s.karma = 74; // one sin
@@ -33,5 +35,17 @@ describe('the Path', () => {
     expect(line().about).toMatch(/unworthy/);
     expect(line().label).not.toMatch(/\d/);
     expect(line().hint).toMatch(/Alms/);
+    expect(line().open).toBeUndefined();
+    // The Modern's: its own karma, the four pools - and a page of them, each by its word.
+    g.options.rules = 'modern';
+    expect(line().label).toBe(`The Path${'Wise'.padStart(13)}`); // a new game's pools, 75 each, whatever 1988's says
+    g.path.pools.deeds = 40;
+    expect(line().label).toBe(`The Path${'Seeker'.padStart(13)}`);
+    expect(line().open!.lines.map((l) => l.label)).toEqual([
+      `In word${'Wise'.padStart(14)}`,
+      `In deed${'Misguided'.padStart(14)}`,
+      `In battle${'Wise'.padStart(12)}`,
+      `In the quest${'Wise'.padStart(9)}`,
+    ]);
   });
 });

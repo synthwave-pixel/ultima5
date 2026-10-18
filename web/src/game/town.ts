@@ -17,6 +17,7 @@ import { bumpInto, getCharYN, getCommandKey, selectDirection } from './input.ts'
 import { HARPSICHORD, K } from './io.ts';
 import { HARPSICHORD_TILE, openTheWay, strike } from './harpsichord.ts';
 import { freedKey } from './items.ts';
+import * as modern from './modernKarma.ts';
 import { moongateTravel } from './moongate.ts';
 import { loadNpcs, moveNpcs, placeNpcs, putNpc, scheduleSlot } from './npc.ts';
 import { Status } from './save.ts';
@@ -449,10 +450,20 @@ export function callGuards(g: Game): void {
   }
 }
 
-/** TOWN_09bc: fight NPC `i`. */
-async function fightNpc(g: Game, i: number): Promise<void> {
+/** TOWN_09bc: fight NPC `i` - `started` by the party's attack, a townsperson's killing counts (modernKarma.ts). */
+async function fightNpc(g: Game, i: number, started = false): Promise<void> {
   setNpcKilled(g, i);
-  await attackCombat(g, g.s.npcs[i].actor);
+  g.fightingTownsfolk = started;
+  try {
+    await attackCombat(g, g.s.npcs[i].actor);
+  } finally {
+    g.fightingTownsfolk = false;
+  }
+  if (started && g.s.battleWon !== 0) {
+    // One of the place's own people, killed in a fight the party began: on top of the attack.
+    modern.deed(g, 'deeds', -20, 'Compassion');
+    modern.deed(g, 'battle', -20, 'Honor');
+  }
   removeNpc(g, i);
   loadLevel(g, false);
   shadowlordArrives(g);
@@ -489,6 +500,7 @@ export async function attackInTown(g: Game): Promise<number> {
   }
   if (target < 0x80) {
     s.karma = decrease(s.karma, 5);
+    modern.deed(g, 'deeds', -10, 'Compassion'); // a townsperson attacked (modernKarma.ts)
     callGuards(g);
   } else if ((target & 0xfc) === 0xd8) {
     callGuards(g);
@@ -503,6 +515,9 @@ export async function attackInTown(g: Game): Promise<number> {
       } else {
         g.say(0x2718); // "Murdered!\n"
         s.karma = decrease(s.karma, 5);
+        // Murder, of one helpless: Deeds and Battle both (modernKarma.ts), on top of the attack.
+        modern.deed(g, 'deeds', -40, 'Compassion');
+        modern.deed(g, 'battle', -30, 'Honor');
         const { explosion } = await import('./effects.ts');
         await explosion(g, x, y);
         if (npc >= 0) {
@@ -514,7 +529,7 @@ export async function attackInTown(g: Game): Promise<number> {
     default:
       if (npc >= 0) {
         setNpcKilled(g, npc);
-        await fightNpc(g, npc);
+        await fightNpc(g, npc, true);
       }
       break;
   }
@@ -850,7 +865,7 @@ export async function townLoop(g: Game): Promise<void> {
         if (key < 0x20) {
           switch (key) {
             case K.CtrlK:
-              g.printNumber(s.karma);
+              g.printNumber(modern.karmaInUse(g)); // the karma the rules read (modernKarma.ts)
               g.printChar('\n');
               result = 0;
               break;

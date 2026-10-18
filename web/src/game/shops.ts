@@ -10,6 +10,7 @@
  * bytes of 0x80 up for dictionary words.
  */
 
+import * as modern from './modernKarma.ts';
 import { withFullPanel } from './layout.ts';
 import { freeActor } from './actors.ts';
 import { borderTitle, clearBorderTitle, clearSpellBar, drawGold, drawVitals, leftArrow, rightArrow, updateFrame } from './frame.ts';
@@ -1070,7 +1071,8 @@ export function resurrect(g: Game, m: number, verbose: boolean): number {
   p.hp = 1;
   if (p.cls === 0x41 || p.cls === 0x4d) p.mp = p.int;
   else if (p.cls === 0x42) p.mp = p.int >> 1;
-  if (s.karma < 0x62) p.exp = Math.trunc((p.exp * s.karma) / 100);
+  const karma = modern.karmaInUse(g); // the karma the rules read (modernKarma.ts)
+  if (karma < 0x62) p.exp = Math.trunc((p.exp * karma) / 100);
   const level = earnedLevel(p.exp);
   p.level = level;
   p.maxHp = level * 0x1e;
@@ -1166,6 +1168,7 @@ async function healer(v: Visit): Promise<void> {
           if (!(await fee(v))) {
             await healingLight(g);
             resurrect(g, m, false);
+            modern.deed(g, 'deeds', 2, 'Sacrifice'); // paid for another's life (modernKarma.ts)
             s.members[m].hp = s.members[m].maxHp;
             drawVitals(g);
           }

@@ -8,6 +8,7 @@
  * Push and pull furniture, Klimb with a grapple, and Hole up in a bed.
  */
 
+import * as modern from './modernKarma.ts';
 import { actorTileAt, actorTileAtRev, canEnter, freeActor, setActor } from './actors.ts';
 import { shoot } from './combat.ts';
 import { reveal, shakeScreen, explosion } from './effects.ts';
@@ -347,6 +348,7 @@ export async function fireCommand(g: Game): Promise<number> {
   if (door || hit) await explosion(g, x, y);
   if (door) {
     g.say(0x42fa); // "Door destroyed!\n"
+    modern.deed(g, 'deeds', -4, 'Justice'); // a door blown in (modernKarma.ts)
     setTileAt(g, x, y, T.T44);
     g.viewDirty = 1;
     s.openDoor = 0;
@@ -355,6 +357,9 @@ export async function fireCommand(g: Game): Promise<number> {
     setActor(g, victim, 0, 0, 0, 0, 0, 0);
     g.viewDirty |= 2;
     s.karma = decrease(s.karma, 5);
+    // One of the place killed by the shot (modernKarma.ts): as a townsperson killed.
+    modern.deed(g, 'deeds', -30, 'Compassion');
+    modern.deed(g, 'battle', -20, 'Honor');
     const npc = npcOfActor(g, victim);
     if (npc === -1) return 1;
     setNpcKilled(g, npc);
@@ -486,6 +491,7 @@ async function meditate(g: Game, i: number, x: number, y: number): Promise<void>
   }
   if (right && g.data.bytes(0x1f6e, 8)[i] === (x & 0xff) && g.data.bytes(0x1f76, 8)[i] === (y & 0xff)) {
     s.d58d8[i] &= 0x7f;
+    modern.deed(g, 'quest', 2, 'Spirituality', `q:restored:${i}`); // a ruined shrine restored (modernKarma.ts)
     g.say(0x4482); // "\n\nThe Shrine is\nrestored!\n"
     await shakeScreen(g);
     setTileAt(g, x, y, T.Shrine);

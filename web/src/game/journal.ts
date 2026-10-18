@@ -9,6 +9,7 @@
  * the place and the day.
  */
 
+import * as modern from './modernKarma.ts';
 import { Game, type Note } from './game.ts';
 import { Save } from './save.ts';
 import { DUNGEON_HINTS, EQUIPMENT, PASSWORDS, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
@@ -487,32 +488,55 @@ function placeGroups(g: Game): JournalLine[] {
   }));
 }
 
+/** The Path's tier for a karma (modernKarma.ts PATH_TIERS), here for the journal's readers. */
+export const pathTier = modern.pathTier;
+
+/** Each pool of the Modern karma as The Path names it, and how it is walked (its Y). */
+const POOL_LINES: Record<modern.Pool, { name: string; hint: string }> = {
+  words: { name: 'In word', hint: 'What thou sayest when it matters: the truth, mercy, loyalty, humility. Each choice counts once.' },
+  deeds: {
+    name: 'In deed',
+    hint: 'Alms to beggars, prisoners freed, gold at a shrine and the fallen raised walk it; theft, chests opened in a towne and harm to its folk stray from it.',
+  },
+  battle: {
+    name: 'In battle',
+    hint: 'Fights won raise it, the more against greater numbers; fleeing with foes standing, and harm to the innocent, lower it.',
+  },
+  quest: {
+    name: 'In the quest',
+    hint: "The shrines' quests, the Shadowlords undone, the dungeons braved, the shrines restored, Lord British's regalia found.",
+  },
+};
+
 /**
- * The Path (the port's): how far the party walks the path of the Avatar - the saved game's karma, which the game never
- * names - as a word, never the number. Each tier ends where something in the game changes: Gruman of Trinsic tells
- * Honor's mantra from 50 (talk.ts, the script's 0xFE), Annon of Britain Despise's Word from 75, a healer's
- * resurrection keeps all a member's experience from 98 (shops.ts); the words are 1988's own, from the messages
- * Lord British and the camp's old man give by it (KARMA.DAT).
+ * The Path's line (the port's): the party's karma - the one the rules read (modernKarma.ts karmaInUse) - as a word,
+ * never the number. Under the Modern rules A opens it on the four pools of the Modern karma, each by its own word, its
+ * card naming the virtue shown most there.
  */
-const PATH_TIERS: { from: number; word: string; about: string }[] = [
-  { from: 98, word: 'Enlightened', about: 'An Avatar in all but name.' },
-  { from: 75, word: 'Wise', about: "Thou walkest the Path. Death's embrace yet costs thee something." },
-  { from: 50, word: 'Seeker', about: 'Some still deem thee unworthy of their deepest secrets.' },
-  { from: 20, word: 'Misguided', about: 'The wise keep their counsel from thee.' },
-  { from: 0, word: 'Strayed', about: 'Thou hast strayed far from the Path. Few will trust thee.' },
-];
-
-/** The Path's tier for the party's karma (PATH_TIERS). */
-export const pathTier = (karma: number): { word: string; about: string } => PATH_TIERS.find((t) => karma >= t.from) ?? PATH_TIERS[4];
-
-/** The Path's line: its tier on the right, what it means on the card, how it is walked for Y. */
 function pathLine(g: Game): JournalLine {
-  const tier = pathTier(g.s.karma);
-  return {
+  const tier = modern.pathTier(modern.karmaInUse(g));
+  const isModern = g.options.rules === 'modern';
+  const line: JournalLine = {
     label: row('The Path', tier.word),
     about: tier.about,
-    hint: 'Alms to beggars, prisoners freed, gold offered at a shrine and its quest done walk the Path; theft, chests opened in a towne, harm done to its folk and debts refused stray from it. Lord British, raising the fallen, sets them back upon it.',
+    hint: isModern
+      ? 'In word, in deed, in battle and in the quest: A shows each. Thy weakest holds thee back.'
+      : 'Alms to beggars, prisoners freed, gold offered at a shrine and its quest done walk the Path; theft, chests opened in a towne, harm done to its folk and debts refused stray from it. Lord British, raising the fallen, sets them back upon it.',
   };
+  if (isModern)
+    line.open = {
+      title: 'The Path',
+      lines: modern.POOLS.map((pool) => {
+        const t = modern.pathTier(g.path.pools[pool]);
+        const shown = modern.strongest(g.path, pool);
+        return {
+          label: row(POOL_LINES[pool].name, t.word),
+          about: `${t.word}.${shown ? ` Thy ${shown} is known.` : ''}`,
+          hint: POOL_LINES[pool].hint,
+        };
+      }),
+    };
+  return line;
 }
 
 /** A member's calling, by the class letter the roster keeps. */

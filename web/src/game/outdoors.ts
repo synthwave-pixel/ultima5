@@ -7,6 +7,7 @@
  * under bridges, waterfalls, and the entrances to everything.
  */
 
+import * as modern from './modernKarma.ts';
 import { actorTileAt, actorTileAtRev, canEnter, freeActor, setActor } from './actors.ts';
 import { attackCombat, shoot } from './combat.ts';
 import { processCommand, setActivePlayer } from './commands.ts';
@@ -1060,7 +1061,7 @@ export async function outdoorsLoop(g: Game): Promise<void> {
       if (key < 0x20) {
         switch (key) {
           case K.CtrlK:
-            g.printNumber(s.karma);
+            g.printNumber(modern.karmaInUse(g)); // the karma the rules read (modernKarma.ts)
             g.printChar('\n');
             spent = false;
             break;

@@ -13,6 +13,7 @@
  * 0x20 grazed.
  */
 
+import * as modern from './modernKarma.ts';
 import { canEnter, freeActor, setActor } from './actors.ts';
 import { reveal, sleepTicks } from './effects.ts';
 import { borderTitle, clearBorderTitle, commandPrompt, drawVitals, invertMember, markTurn, turnColour, updateFrame } from './frame.ts';
@@ -2848,6 +2849,7 @@ export async function combatLoop(g: Game): Promise<boolean> {
   g.p.flushKeys();
   countSides(g);
   s.battleWon = s.dx === 0 ? 1 : 0;
+  g.fightOdds = { foes: s.dx, party: s.dy }; // the sides as it begins (modernKarma.ts battleOutcome)
   musicForMap(g);
   for (;;) {
     for (s.combatTurn = 0; s.combatTurn < 0x20; s.combatTurn++) {
@@ -2989,7 +2991,12 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
   if (fight) {
     s.combatTurn = s.activeMember = 0xff;
     s.battleWon = 0;
+    g.cheatedFight = false;
     await combatLoop(g);
+    // The Modern karma (modernKarma.ts): won, or left with foes standing - a party all fallen counts neither.
+    const standing = s.members.slice(0, s.partySize).some((m) => m.status !== Status.Dead);
+    const outcome = s.battleWon !== 0 ? 'won' : standing ? 'fled' : 'fell';
+    modern.battleOutcome(g, outcome, g.fightOdds.foes, g.fightOdds.party);
     if (flags & 4) wakeAfterAmbush(g);
   }
   if (g.bb16 !== 0) g.bb16 = 0;
@@ -3311,7 +3318,7 @@ async function apparition(g: Game): Promise<void> {
     drawVitals(g);
   }
   g.say(0x77e0); // "\n\""
-  const band = Math.trunc(s.karma / 20);
+  const band = Math.trunc(modern.karmaInUse(g) / 20); // the karma the rules read (modernKarma.ts)
   const karma = g.data.files.get('KARMA.DAT');
   const at = band < 4 ? g.data.words(0x1a74, 5)[band] : 0x29f;
   let text = '';

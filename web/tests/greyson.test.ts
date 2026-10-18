@@ -115,6 +115,13 @@ describe('Greyson of Britain, by controller', () => {
     expect(others.some((c) => g.fog.named.has(`clue:${c.id}`))).toBe(false);
   });
 
+  it('counts his "rightful ruler" answered British once, for the Modern karma (Honor, in the loyalty family)', async () => {
+    const { g } = await greyson(['MANTRA', 'BRITISH', 'COMPASSION']);
+    expect(g.path.done.has('w:0:6:91')).toBe(true);
+    expect(g.path.families.loyalty).toBe(1);
+    expect(g.path.tally.words.Honor).toBe(1);
+  });
+
   it('keeps Things as Things once his question has said "think"', async () => {
     const { menus } = await greyson(['MANTRA', 'BRITISH', 'COMPASSION']);
     const says = menus.filter((m) => m.title === 'Say');
