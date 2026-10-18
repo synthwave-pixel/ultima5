@@ -731,8 +731,8 @@ other hurt in the game kills as it always did.
   Britain Despise's Word from Wise, and a healer raises the dead without
   their losing experience only for the Enlightened. Its card says what the
   tier means; Y, how the Path is walked and strayed from.
-  Under the **Modern rules** The Path reads a karma of the port's own, kept
-  beside 1988's (which goes on as it was, and is the one the Story and
+  Under the **Modern and Story rules** The Path reads a karma of the port's
+  own, kept beside 1988's (which goes on as it was, and is the one the
   Classic rules read): four pools - in word, in deed, in battle, in the
   quest - each 0-99, A on The Path showing each by its word and its card the
   virtue shown most there. Choices in conversation count once each (the
@@ -742,8 +742,9 @@ other hurt in the game kills as it always did.
   battle least, and the weakest of them holds it back. The quest is the
   journey: from nothing at a new game to about 99 at its end, by its
   milestones - Untried, Wayfarer, Proven, Champion, Legend - adding up to 10
-  to the whole. A real rise, and every fall, is said in the log, naming the virtue;
-  a tier changed, "Journal updated". The design is
+  to the whole. Nothing of it is said: where a deed moved it, the game's own
+  words for the deed are tinted in the log, faintly blue for a rise and
+  faintly red for a fall (the Modern look only). The design is
   docs/superpowers/specs/2026-10-17-modern-karma-design.md.
   **Places** (after the Ultima III port's Towns) opens onto the townes, the castles and villages, the keeps, and the
   lighthouses and huts, each kind with how many of its places are done: a place is "Mystery..." until it is seen on
