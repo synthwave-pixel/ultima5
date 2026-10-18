@@ -120,6 +120,16 @@ export class Text {
 
   /** What each screen cell shows, as drawn (a space where empty): a line read back and compared, a cell drawn again. */
   private readonly cells: Cell[][] = Array.from({ length: 25 }, () => Array.from({ length: 40 }, () => blank()));
+  /**
+   * The window written off the screen (the Dialog setting's speech, speech.ts), or -1: what is written in it is kept in
+   * a record of its own and drawn nowhere, till shown where it is wanted (showStaged), sized to what it holds.
+   */
+  stageWindow = -1;
+  private readonly staged: Cell[][] = Array.from({ length: 25 }, () => Array.from({ length: 40 }, () => blank()));
+  /** Whether the window written in now is the one off the screen. */
+  private get staging(): boolean {
+    return this.current >= 0 && this.current === this.stageWindow;
+  }
   /** The overlay laid over part of a window, if one is (cover). */
   private covering: Cover | null = null;
   /** The cap the next glyph is (printCap), or 0. */
@@ -289,12 +299,13 @@ export class Text {
     const first = w.y - (w.started - since);
     const r1 = w.top + Math.max(0, first);
     const r2 = w.top + w.y;
+    const record = id === this.stageWindow ? this.staged : this.cells;
     for (let r = r1; r <= Math.min(r2, w.bottom); r++)
       for (let c = w.left; c <= w.right; c++) {
-        const cell = this.cells[r][c];
+        const cell = record[r][c];
         if (cell.font >= 0 && cell.fg === from) cell.fg = to;
       }
-    this.redraw(w.left, r1, w.right, Math.min(r2, w.bottom), true);
+    if (id !== this.stageWindow) this.redraw(w.left, r1, w.right, Math.min(r2, w.bottom), true);
   }
 
   /** What cells (c1..c2) of screen row `row` read as drawn (a cleared cell a space): the Standard look's marks check it. */
@@ -444,12 +455,17 @@ export class Text {
 
   /** The record of cell (row, column) as the current window sees it: its own under a cover, else the screen's. */
   private at(row: number, column: number): Cell {
+    if (this.staging) return this.staged[row][column];
     const k = this.covering;
     if (k && this.hidden(row, column)) return k.under[row - k.r1][column - k.c1];
     return this.cells[row][column];
   }
 
   private set(row: number, column: number, cell: Cell): void {
+    if (this.staging) {
+      this.staged[row][column] = cell;
+      return;
+    }
     const k = this.covering;
     if (k && this.hidden(row, column)) k.under[row - k.r1][column - k.c1] = cell;
     else this.cells[row][column] = cell;
@@ -486,13 +502,14 @@ export class Text {
   private glyph(font: number, code: number, column: number, row: number, fg: number, bg: number): void {
     const cap = this.capNext;
     this.set(row, column, { ch: String.fromCharCode(code), font, fg, bg, underline: this.underline, cap });
-    if (this.hidden(row, column)) return;
+    if (this.staging || this.hidden(row, column)) return;
     if (cap && this.out.cap) this.out.cap(cap, column, row, fg, bg);
     else this.out.glyph(font, code, column, row, fg, bg, this.underline);
   }
 
   private clearCells(c1: number, r1: number, c2: number, r2: number, colour: number): void {
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) this.set(r, c, blank(colour));
+    if (this.staging) return;
     if (!this.covers(c1, r1, c2, r2)) return this.out.clearCells(c1, r1, c2, r2, colour);
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) if (!this.hidden(r, c)) this.out.clearCells(c, r, c, r, colour);
   }
@@ -500,10 +517,54 @@ export class Text {
   private scrollCells(c1: number, r1: number, c2: number, r2: number, colour: number): void {
     for (let r = r1; r < r2; r++) for (let c = c1; c <= c2; c++) this.set(r, c, this.at(r + 1, c));
     for (let c = c1; c <= c2; c++) this.set(r2, c, blank(colour));
+    if (this.staging) return;
     // Under a cover the screen cannot simply be moved up a row - the overlay would move with it: what shows is drawn
     // again from the record instead.
     if (!this.covers(c1, r1, c2, r2)) return this.out.scrollCells(c1, r1, c2, r2, colour);
     this.redraw(c1, r1, c2, r2);
+  }
+
+  /** The rows of the window off the screen (stageWindow), from its top: each as text, its trailing spaces off. */
+  stagedLines(): string[] {
+    const w = this.windows[this.stageWindow];
+    if (!w) return [];
+    const lines: string[] = [];
+    for (let r = w.top; r <= w.bottom; r++)
+      lines.push(
+        this.staged[r]
+          .slice(w.left, w.right + 1)
+          .map((c) => c.ch)
+          .join('')
+          .trimEnd(),
+      );
+    return lines;
+  }
+
+  /**
+   * Rows `from`..`from + count - 1` of the window off the screen drawn on the screen with their first column at
+   * (`column`, `row`) - each letter in its own font and colour - `width` columns of them.
+   */
+  showStaged(from: number, count: number, column: number, row: number, width: number): void {
+    const w = this.windows[this.stageWindow];
+    for (let r = 0; r < count; r++)
+      for (let c = 0; c < width; c++) {
+        const cell = this.staged[w.top + from + r]?.[w.left + c];
+        const [x, y] = [column + c, row + r];
+        if (!cell || x > 39 || y > 24) continue;
+        this.cells[y][x] = { ...cell };
+        if (cell.font < 0) this.out.clearCells(x, y, x, y, cell.bg);
+        else this.out.glyph(cell.font, cell.ch.charCodeAt(0), x, y, cell.fg, cell.bg, cell.underline);
+      }
+  }
+
+  /** The first `n` rows of the window off the screen let go, those under them moved up in their place. */
+  dropStaged(n: number): void {
+    const w = this.windows[this.stageWindow];
+    if (!w) return;
+    for (let r = w.top; r <= w.bottom; r++)
+      for (let c = w.left; c <= w.right; c++) this.staged[r][c] = r + n <= w.bottom ? this.staged[r + n][c] : blank(w.bg);
+    if (w.y < n) w.x = 0; // its own row gone too: the next begins at the top
+    w.y = Math.max(0, w.y - n);
   }
 
   /** A newline of print's own, wrapping a long message: the message goes on, and a count waits for its end (fold). */

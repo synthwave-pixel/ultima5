@@ -3,7 +3,7 @@ import type { Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { panelRows, panelShown, SPEECH, waitsForKey } from '../src/game/speech.ts';
+import { boxShown, placement, SPEECH, waitsForKey } from '../src/game/speech.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
@@ -27,18 +27,18 @@ function findNpc(g: Game, name: string): number {
 }
 
 /**
- * The Dialog setting's Play (speech.ts): a townsman's words in a panel in the play area, opposite the talk's menu and
- * short of the townsman, the party and they in sight between; a long one a page at a time, the story page's arrow at
- * its corner till a key. The party's words, the prompts and what is seen of them stay in the log.
+ * The Dialog setting's Play (speech.ts): a townsman's words in the play area, in a box only as big as its lines,
+ * centred over the townsman just beyond them from the party; a long one a box at a time, the story page's arrow at its
+ * corner till a key. The party's words, the prompts and what is seen of them stay in the log.
  */
 describe('what is said, in the play area', () => {
-  it('lies opposite the menu, short of whoever is spoken to, a row clear of the squares in sight', () => {
-    expect(panelRows(-1)).toEqual({ side: 'top', first: 1, last: 7 }); // north of the party, the menu below
-    expect(panelRows(-2)).toEqual({ side: 'top', first: 1, last: 5 }); // across a counter
-    expect(panelRows(0)).toEqual({ side: 'top', first: 1, last: 9 }); // east or west: the whole half
-    expect(panelRows(1)).toEqual({ side: 'bottom', first: 16, last: 22 }); // south, the menu above
-    expect(panelRows(2)).toEqual({ side: 'bottom', first: 18, last: 22 });
-    expect(panelRows(7)).toEqual(panelRows(0)); // farther: as beside
+  it('goes just beyond whoever is spoken to, centred over them, half a row clear of their square and the edge', () => {
+    expect(placement(0, -1)).toEqual({ above: true, centre: 12, edge: 7, rows: 6 }); // north of the party
+    expect(placement(0, -2)).toEqual({ above: true, centre: 12, edge: 5, rows: 4 }); // across a counter
+    expect(placement(1, 0)).toEqual({ above: true, centre: 14, edge: 9, rows: 8 }); // east: above them
+    expect(placement(-1, 1)).toEqual({ above: false, centre: 10, edge: 16, rows: 6 }); // south-west: below them
+    expect(placement(0, 2)).toEqual({ above: false, centre: 12, edge: 18, rows: 4 });
+    expect(placement(0, 7)).toEqual(placement(0, 0)); // farther: as beside
   });
 
   it("shows Leona's vision, the game's longest speech, a page at a time - every word of it - and keeps the log for the party", async () => {
@@ -59,12 +59,12 @@ describe('what is said, in the play area', () => {
     g.words.learn(g, 'A vision came unto me.');
     let pages = 0;
     let asked = false;
-    let panel: ReturnType<typeof panelShown> = null;
+    const boxes: NonNullable<ReturnType<typeof boxShown>>[] = [];
     const queue: number[] = [];
     p.next = () => {
       if (waitsForKey(g)) {
         pages++;
-        panel ??= panelShown(g);
+        boxes.push(boxShown(g)!);
         return Pad.A;
       }
       if (queue.length) return queue.shift();
@@ -81,7 +81,7 @@ describe('what is said, in the play area', () => {
     const from = p.log.length;
     await talkToNpc(g, npc);
     const said = p.log.slice(from).replace(/\s+/g, '');
-    // Every word of it, in order, across the pages (the panel's title written again atop each, between).
+    // Every word of it, in order, across the boxes.
     const vision =
       'In the deep of night, many moons ago, a vision came unto my sister and I... We saw the Shard of Falsehood deep below a dungeon named Deceit. The path that was revealed traveled first southwest across many high peaks, opening to a large system of caverns. Then the way led southwest. At a major intersection it turned northwest, soon branching northeast. After a long journey northward, the passage turned west. Here the path went on to rocky hills to the southwest, then turned northwest. Over a lake it ran, unto a massive series of great falls, ending in a larger lake. Here, upon a small isle, lies the Shard of Falsehood!';
     let at = 0;
@@ -91,8 +91,15 @@ describe('what is said, in the play area', () => {
       at = next + 1;
     }
     expect(pages).toBeGreaterThan(2); // a page at a time, and the last read before the panel goes
-    expect(panel).toEqual({ side: 'top', first: 1, last: 7 });
-    expect(panelShown(g)).toBeNull(); // put away at the end
+    // Each box above her, its last row clear of her square, centred over her (but where the view's edge holds it in).
+    for (const b of boxes) {
+      expect(b.top + b.height - 1).toBe(7);
+      expect(b.top).toBeGreaterThanOrEqual(2);
+      expect(b.width).toBeLessThanOrEqual(20);
+      expect(b.left + (b.width >> 1)).toBe(12);
+    }
+    expect(new Set(boxes.map((b) => b.width)).size).toBeGreaterThan(1); // sized to each box's lines
+    expect(boxShown(g)).toBeNull(); // put away at the end
     // The log kept for the party: no line of hers in its window.
     const log = g.text.windows[2];
     const cells = (g.text as unknown as { cells: { ch: string }[][] }).cells;
@@ -107,13 +114,7 @@ describe('what is said, in the play area', () => {
       .join('');
     expect(logText).not.toContain('moons ago');
     expect(SPEECH).toBe(4);
-    // Its title on the panel's top row, and no word of hers: what is heard (the journal's, the words') goes without it.
-    const top = cells[1]
-      .slice(1, 22)
-      .map((c) => c.ch)
-      .join('')
-      .trim();
-    expect(top.length).toBeGreaterThan(0);
+    // What is heard (the journal's, the words') heard as ever.
     expect(g.words.knows('VISION')).toBe(true);
   });
 });

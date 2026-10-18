@@ -509,12 +509,14 @@ or west; the top for one to the south) - so the party and they stay in
 sight at its middle, across a counter too, a row clear of them: a title and
 seven lines before the list scrolls.
 
-What the townsman says goes in the other half (Settings, Dialog: Play, the
-default), under their name or what is seen of them, short of them where
-they stand on that side; the log keeps the party's words and the prompts.
-A speech too long for it is shown a page at a time, and the scripts' own
-pauses wait there too, the story page's blinking arrow at its corner till
-a key. Dialog: Log writes it all in the message log, as 1988 did.
+What the townsman says is shown over them (Settings, Dialog: Play, the
+default): in a box framed as the Yes and No box is, only as big as its
+lines, centred on them just beyond them from the party - above one north,
+east or west of it, below one south - and the log keeps the party's words
+and the prompts. A speech too long for the room there is shown a box at a
+time, and the scripts' own pauses wait too, the story page's blinking
+arrow at its corner till a key. Dialog: Log writes it all in the message
+log, as 1988 did.
 
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)
