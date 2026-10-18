@@ -12,15 +12,18 @@ import type { Game } from './game.ts';
 const X = 306;
 const Y = 190;
 
-/** The arrow drawn (`on`) or rubbed out, on the screen (page 0) whatever page is being drawn behind it. */
-export function waitMark(g: Game, on: boolean): void {
+/**
+ * The arrow drawn (`on`) or rubbed out, on the screen (page 0) whatever page is being drawn behind it - at (x, y), the
+ * story page's corner unless given (speech.ts puts it at its panel's).
+ */
+export function waitMark(g: Game, on: boolean, x = X, y = Y): void {
   const d = g.draw;
   const fx = g.p.fx;
   const page = fx.pageNow?.() ?? 0;
   const pen = d.pen;
   fx.page(0);
   d.pen = on ? 15 : 0;
-  for (let r = 0; r < 4; r++) d.line(X + r, Y + r, X + 6 - r, Y + r);
+  for (let r = 0; r < 4; r++) d.line(x + r, y + r, x + 6 - r, y + r);
   d.pen = pen;
   fx.page(page);
 }
@@ -29,10 +32,10 @@ export function waitMark(g: Game, on: boolean): void {
 const BLINK = 9;
 
 /** A blink: for a wait's idle calls (about 18 a second), the arrow lit and dark by turns. */
-export function blinker(g: Game): () => void {
+export function blinker(g: Game, x = X, y = Y): () => void {
   let n = 0;
   return () => {
-    if (n % BLINK === 0) waitMark(g, n % (2 * BLINK) === 0);
+    if (n % BLINK === 0) waitMark(g, n % (2 * BLINK) === 0, x, y);
     n++;
   };
 }

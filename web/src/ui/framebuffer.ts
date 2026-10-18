@@ -239,6 +239,8 @@ export class Framebuffer {
   chromeFrom = 0;
   /** A dialog's box over the map (EGA pixels, inclusive), whose blue border the chrome takes as the frame's. */
   chromeBox: [number, number, number, number] | null = null;
+  /** The Dialog setting's panel (speech.ts), a box framed as chromeBox's is, beside it. */
+  chromeSpeech: [number, number, number, number] | null = null;
   /**
    * Parts of the screen that are the frame's wherever they have its blue (EGA pixels, inclusive), beside what the
    * rules below allow: the dialogs' own frames at the title, one over another, above the rows the copper runs from.
@@ -1892,8 +1894,8 @@ export class Framebuffer {
       if (hole && x >= hole[0] && x <= hole[2] && y >= hole[1] && y <= hole[3]) return false;
       if (this.chromeFrom === 0 && y >= VIEW_LEFT && y <= VIEW_RIGHT && x >= VIEW_LEFT && x <= VIEW_RIGHT) {
         const ring = Math.min(x - VIEW_LEFT, VIEW_RIGHT - x, y - VIEW_LEFT, VIEW_RIGHT - y);
-        const b = this.chromeBox;
-        const inBox = !!b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
+        const within = (b: [number, number, number, number] | null): boolean => !!b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
+        const inBox = within(this.chromeBox) || within(this.chromeSpeech);
         if (ring >= RING && !inBox) return false;
       }
       return h[y * HI * HI_WIDTH + x * HI] === EGA_RGBA[e];

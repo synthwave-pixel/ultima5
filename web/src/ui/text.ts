@@ -138,7 +138,7 @@ export class Text {
   private soft = false;
 
   constructor(private readonly out: TextTarget) {
-    this.windows = Array.from({ length: 4 }, () => ({
+    this.windows = Array.from({ length: 5 }, () => ({
       left: 0,
       top: 0,
       right: 39,

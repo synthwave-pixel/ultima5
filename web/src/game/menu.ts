@@ -1766,6 +1766,12 @@ export function settingLines(g: Game, title = false): Setting[] {
       act: () => void (o.statusLetters = !o.statusLetters),
     },
     {
+      // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
+      label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
+      note: 'Play: what is said, in the play area. Log: in the message log.',
+      act: () => void (o.dialog = o.dialog === 'play' ? 'log' : 'play'),
+    },
+    {
       // Each look its own: the PC (1988) look's on until turned off.
       label: `Scanlines: ${onOff(pc ? o.pcScanlines : o.scanlines)}`,
       note: 'Dark bands over the picture, as an old monitor had. Each UX keeps its own.',

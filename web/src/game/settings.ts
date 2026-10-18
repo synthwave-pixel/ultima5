@@ -65,7 +65,15 @@ export interface Options {
    * in their name's colour. Off, the colour alone. The EGA look shows the letter in the line, as 1988 did, either way.
    */
   statusLetters: boolean;
+  /**
+   * Where a townsman's words are shown (speech.ts, the port's): Play, a panel in the play area, the party and they in
+   * sight between it and the menu; Log, the message log, as 1988 had it.
+   */
+  dialog: Dialog;
 }
+
+export type Dialog = 'play' | 'log';
+export const DIALOGS: Dialog[] = ['play', 'log'];
 
 /**
  * Letters (named Classic in Settings): every command is a letter, as in 1988. Controller: the
@@ -213,6 +221,7 @@ export const DEFAULTS: Options = {
   input: 'controller',
   autoPause: false,
   statusLetters: false,
+  dialog: 'play',
 };
 
 /** What settings kept by an earlier build may carry besides the Options they became. */
@@ -268,6 +277,7 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   // A set this build does not have (Modern U3, gone 2026-09-30): the default.
   if (saved.tiles !== undefined && !TILES.includes(saved.tiles)) delete saved.tiles;
   if (saved.pcTiles !== undefined && !PC_TILES.includes(saved.pcTiles)) delete saved.pcTiles;
+  if (saved.dialog !== undefined && !DIALOGS.includes(saved.dialog)) delete saved.dialog;
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;

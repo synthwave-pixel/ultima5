@@ -28,6 +28,7 @@ import { heardPlaces } from './placeNames.ts';
 import { heardLines } from './placeClues.ts';
 import { freedKey } from './items.ts';
 import * as modern from './modernKarma.ts';
+import * as speech from './speech.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -169,9 +170,23 @@ function addLetter(k: Talk, b: number): void {
   if (t.word.length !== 0x10) {
     t.word.push(b);
     if (b !== 0x8a && b !== 0xa0) return;
-    if (g.text.win.x + t.word.length >= 0x12) g.printChar('\n');
+    if (g.text.win.x + t.word.length >= wrapAt(g)) g.printChar('\n');
   }
   flushWord(k);
+}
+
+/**
+ * The column a word must end before, or begin a new line (TALK_0574's 0x12: the log's sixteen letters and two): the
+ * window's width and two, for the Dialog setting's panel too (speech.ts).
+ */
+const wrapAt = (g: Game): number => g.text.win.right - g.text.win.left + 3;
+
+/** A letter added (addLetter), the panel paged first where the line it may break would run past it (speech.ts). */
+async function addSpoken(k: Talk, b: number): Promise<void> {
+  const { g, t } = k;
+  const breaks = b === 0x8a || (b === 0xa0 && t.word.length !== 0 && g.text.win.x + t.word.length >= wrapAt(g));
+  if (breaks) await speech.room(g, true);
+  addLetter(k, b);
 }
 
 const printCr = (k: Talk): Promise<number> => processChar(k, 0x80 | 0x0d);
@@ -394,6 +409,18 @@ async function readWords(k: Talk): Promise<void> {
   flushWord(k);
   const { g, t } = k;
   t.chosen = null;
+  // The party's words in the log; the townsman's after them in the Dialog setting's panel (speech.ts).
+  speech.listen(g);
+  try {
+    await partyWords(k);
+  } finally {
+    speech.speak(g);
+  }
+}
+
+/** What the party says: typed, or chosen from the talk's menus. */
+async function partyWords(k: Talk): Promise<void> {
+  const { g, t } = k;
   if (g.options.input !== 'controller') {
     t.typed = await getString(g, 0xf);
     return;
@@ -526,14 +553,19 @@ async function interest(k: Talk): Promise<number> {
     t.responding = 0;
     // A gift of Jeremy's keys not paid for by the time he asks what else (JEREMY).
     settleKeys(g);
+    speech.listen(g); // the prompt and the party's words in the log (speech.ts)
     g.say(0x9408); // "Your interest?\n:"
     await readWords(k);
     if (t.typed.length === 0) {
+      speech.listen(g);
       g.say(0x941a); // "BYE\n\n"
+      speech.begin(g);
       return farewell(k);
     }
+    speech.listen(g);
     await printCr(k);
     await printCr(k);
+    speech.begin(g); // the reply, the panel afresh
     const r = await tryStandard(k);
     if (r === 1) return 1;
     if (r !== 0) {
@@ -658,6 +690,7 @@ async function asked(k: Talk): Promise<number> {
       await printCr(k);
       await printCr(k);
       t.responding = 0xff;
+      speech.listen(g);
       g.say(0x9440); // "You respond-\n:"
       await readWords(k);
       // Walked away from a riddle (menu.ts LEAVE): the conversation ends, as at a farewell.
@@ -669,8 +702,10 @@ async function asked(k: Talk): Promise<number> {
       }
       if (t.typed.length === 0) g.say(0x9450); // "\n\n\"What didst thou say?"
     } while (t.typed.length === 0);
+    speech.listen(g);
     await printCr(k);
     await printCr(k);
+    speech.begin(g); // the reply, the panel afresh
     r = await tryStandard(k);
     if (r === 1) return 1;
   } while (r === 0);
@@ -735,6 +770,7 @@ async function askName(k: Talk): Promise<void> {
   await printQuote(k);
   flushWord(k);
   g.say(0x9468); // "What is thy name?\"\n"
+  speech.listen(g); // the party's answer, in the log (speech.ts)
   g.say(0x947c); // "\nYou respond-\n:"
   k.naming = true;
   try {
@@ -770,6 +806,8 @@ async function processChar(k: Talk, b: number): Promise<number> {
     case 0x82:
       return 1;
     case 0x83:
+      // In the Dialog setting's panel, the story page's arrow till a key (speech.ts); in the log, 1988's moment.
+      if (await speech.pause(g)) return 0;
       for (let i = 0; i < 0x1c; i++) {
         updateFrame(g);
         if (g.p.pollKey() !== 0) break;
@@ -804,7 +842,7 @@ async function processChar(k: Talk, b: number): Promise<number> {
       flushWord(k);
       return interest(k);
     case 0x8f:
-      await getChar(g);
+      if (!(await speech.pause(g))) await getChar(g);
       return 0;
     case 0xfe:
     case 0x85:
@@ -818,11 +856,11 @@ async function processChar(k: Talk, b: number): Promise<number> {
         return question(k);
       }
       if (b < 0x81) {
-        addLetter(k, 0xa0);
+        await addSpoken(k, 0xa0);
         const word = g.data.table(0x24ea, 0x80)[b - 1] ?? '';
-        for (const c of word) addLetter(k, c.charCodeAt(0) | 0x80);
+        for (const c of word) await addSpoken(k, c.charCodeAt(0) | 0x80);
         if (word.length === 0) {
-          addLetter(k, b);
+          await addSpoken(k, b);
           return 0;
         }
         t.afterWord = 1;
@@ -831,8 +869,8 @@ async function processChar(k: Talk, b: number): Promise<number> {
         if (b === 0x8d) b = 0x8a;
         b &= t.runeMask;
         t.lastChar = b;
-        if (t.afterWord !== 0) addLetter(k, 0xa0);
-        addLetter(k, b);
+        if (t.afterWord !== 0) await addSpoken(k, 0xa0);
+        await addSpoken(k, b);
         t.afterWord = 0;
       }
       break;
@@ -847,6 +885,9 @@ async function greet(k: Talk): Promise<number> {
   if (await speakNth(k, 1)) return 1;
   await printCr(k);
   await printCr(k);
+  // The townsman's words from here in the Dialog setting's panel (speech.ts): titled with their name where they know
+  // the Avatar, else what is seen of them.
+  speech.begin(g, hasMet(g, t.npc) ? scriptName(t.script) : seenAs(g.recording ?? ''));
   if (!hasMet(g, t.npc)) {
     if (g.random(0, 1) !== 0) {
       g.say(0x94ce); // "\"I am called "
@@ -948,6 +989,17 @@ function scriptName(script: Uint8Array): string {
 }
 
 /** TALK_127e: a conversation with the NPC whose script is number `n`. */
+/** What is seen of a townsman, from "You see a pale young boy." in what has been written: "A pale young boy". */
+function seenAs(written: string): string {
+  const seen = /You see (.+?)[.!]?\s*$/.exec(written.replace(/\s+/g, ' ').trim())?.[1] ?? '';
+  let out = '';
+  for (const word of seen.split(' ')) {
+    if ((out ? `${out} ${word}` : word).length > 21) break;
+    out = out ? `${out} ${word}` : word;
+  }
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
 async function conversation(g: Game, n: number): Promise<void> {
   const k: Talk = { g, t: g.talk };
   loadScript(g, n);
@@ -955,9 +1007,13 @@ async function conversation(g: Game, n: number): Promise<void> {
   g.talk.spokeAt.clear();
   g.recording = '';
   g.recordWindow = g.text.current; // what the borders print while they talk is nobody's words
+  let ended = false;
   try {
     if ((await greet(k)) === 0 && (await interest(k)) === 0) await farewell(k);
+    ended = true;
   } finally {
+    // The Dialog setting's panel read to its end (a key) and put away (speech.ts) - not where the talk broke off.
+    await speech.end(g, ended);
     // Or by the time the talk ends: refused, he ends it ("Scoundrel!").
     settleKeys(g);
     const heard = g.recording;

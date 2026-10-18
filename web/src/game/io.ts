@@ -162,6 +162,8 @@ export interface Draw {
    * the frame's copper, as it does a menu's at the map's edge; null once the view is drawn again.
    */
   chromeBox?(rect: [number, number, number, number] | null): void;
+  /** The Dialog setting's panel (speech.ts), framed as a box is, beside the menu's own (chromeBox). */
+  chromeSpeech?(rect: [number, number, number, number] | null): void;
   /**
    * A part of the screen that is never the frame, in the EGA's pixels (x1, y1, x2, y2): the attract mode's scene,
    * whose squares, as they come, would each time change the black the copper may curve into; null for none.

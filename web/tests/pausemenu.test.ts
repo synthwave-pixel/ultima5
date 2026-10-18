@@ -226,6 +226,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Tiles',
       'Outlines',
       'Status letters',
+      'Dialog',
       'Scanlines',
       'Export saved game',
       'Import saved game',

@@ -288,6 +288,10 @@ export class Screen implements Platform {
         fb.chromeBox = rect;
         fb.dirty = true;
       },
+      chromeSpeech: (rect) => {
+        fb.chromeSpeech = rect;
+        fb.dirty = true;
+      },
       chromeHole: (rect) => {
         fb.chromeHole = rect;
         fb.dirty = true;

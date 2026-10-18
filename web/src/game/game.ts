@@ -401,7 +401,7 @@ export class Game {
    */
   gap(): void {
     this.remember(' ');
-    if (this.recording !== null && (this.recordWindow === null || this.p.text.current === this.recordWindow)) this.recording += ' ';
+    if (this.recording !== null && this.recorded()) this.recording += ' ';
   }
 
   /**
@@ -471,7 +471,7 @@ export class Game {
       return;
     }
     this.remember(s);
-    if (this.recording !== null && (this.recordWindow === null || this.p.text.current === this.recordWindow)) this.recording += s;
+    if (this.recording !== null && this.recorded()) this.recording += s;
     this.p.text.print(s);
   }
 
@@ -570,13 +570,17 @@ export class Game {
       return;
     }
     if (code === 0x0a || (code >= 0x20 && code < 0x7f)) this.remember(String.fromCharCode(code));
-    if (
-      this.recording !== null &&
-      (this.recordWindow === null || this.p.text.current === this.recordWindow) &&
-      (code === 0x0a || (code >= 0x20 && code < 0x7f))
-    )
+    if (this.recording !== null && this.recorded() && (code === 0x0a || (code >= 0x20 && code < 0x7f)))
       this.recording += String.fromCharCode(code);
     this.p.text.printChar(code);
+  }
+  /**
+   * Whether what is written now is heard (the recording's: a conversation's words): written in the conversation's own
+   * window, or in the Dialog setting's panel the townsman speaks in (speech.ts, window 4).
+   */
+  private recorded(): boolean {
+    const now = this.p.text.current;
+    return this.recordWindow === null || now === this.recordWindow || now === 4;
   }
   /** ULTIMA_1a3e_PrintNumber. */
   printNumber(n: number, minLength = 1, filler = ' '): void {

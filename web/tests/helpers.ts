@@ -127,6 +127,8 @@ export function newGame(seed = 1234): { g: Game; p: FakePlatform } {
   // The tests drive the game by its letter commands, as the original is played; a test about the
   // controller's keys says so itself.
   g.options.input = 'letters';
+  // And read what is said in the log, as 1988 had it: a test of the Dialog setting's panel (speech.ts) says so itself.
+  g.options.dialog = 'log';
   return { g, p };
 }
 
