@@ -43,7 +43,7 @@ describe("the talk's menus, in half the view", () => {
     }
   });
 
-  it("draws the Say list in the band's ten rows, leaving the view's middle - the party's and their rows - as it was", async () => {
+  it("draws the Say list in the band's nine rows, leaving the view's middle - the party's and their rows - as it was", async () => {
     const { g, p, i } = await britain();
     const s = g.s;
     const n = s.npcs[i];
@@ -60,6 +60,6 @@ describe("the talk's menus, in half the view", () => {
       return Pad.A;
     };
     await talkToNpc(g, i).catch(() => undefined);
-    expect(window).toEqual({ top: 13, bottom: 22 }); // the five rows of squares below the party's
+    expect(window).toEqual({ top: 14, bottom: 22 }); // the rows of squares below the party's, a row clear of them
   });
 });

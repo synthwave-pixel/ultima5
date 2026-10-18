@@ -506,8 +506,8 @@ easier than it was, and meant to be.
 The Say and Answer menus take half the view - the five rows of squares
 away from whoever the party talks to (the bottom for one to the north, east
 or west; the top for one to the south) - so the party and they stay in
-sight at its middle, across a counter too: a title and eight lines before
-the list scrolls.
+sight at its middle, across a counter too, a row clear of them: a title and
+seven lines before the list scrolls.
 
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)

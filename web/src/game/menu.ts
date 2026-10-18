@@ -249,10 +249,11 @@ const CORNER = [5, 3, 2, 1, 1];
 /**
  * Half the map's square, top or bottom, for a menu that must leave its middle in sight (the port's): the five rows of
  * squares above the party, or the five below - the party at the middle and whoever it talks to, beside it or across a
- * counter, seen on the other side. Ten rows of text: the title, a blank, and eight lines before the list scrolls.
+ * counter, seen on the other side. Nine rows of text, a row short of the half so as not to touch them: the title, a
+ * blank, and seven lines before the list scrolls.
  */
 export type Band = 'top' | 'bottom';
-const BAND_ROWS = 10;
+const BAND_ROWS = 9;
 /** The band's text rows (in the menus' window, from TOP) and its pixels: the top's above the middle row, the bottom's below. */
 const bandTop = (band: Band): number => (band === 'top' ? TOP : TOP + HEIGHT - BAND_ROWS);
 
