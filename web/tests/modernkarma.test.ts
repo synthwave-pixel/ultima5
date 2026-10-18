@@ -200,6 +200,35 @@ describe('the Modern karma', () => {
   });
 });
 
+describe("the Modern karma's words in the log, never a flood", () => {
+  const lines = (log: string): string[] =>
+    log.replace(/\s+/g, ' ').match(/Thy \w+ (grows|is tarnished)\.|Thou hast strayed from the Path\.|Journal updated/g) ?? [];
+
+  it('says the same line once in ten turns: a field of crops, a fight fled again and again', async () => {
+    const { endTurn } = await import('../src/game/time.ts');
+    const { g, p } = modernGame();
+    for (let i = 0; i < 10; i++) deed(g, 'deeds', -2, 'Honesty'); // ten crops, one after another
+    expect(lines(p.log).filter((l) => /tarnished/.test(l))).toHaveLength(1);
+    for (let i = 0; i < 10; i++) await endTurn(g);
+    deed(g, 'deeds', -2, 'Honesty');
+    expect(lines(p.log).filter((l) => /tarnished/.test(l))).toHaveLength(2); // ten turns on: said again
+  });
+
+  it('says "Journal updated" once a turn, however many tiers change or clues are noted, and nothing for a cheat', async () => {
+    const { noteConversation } = await import('../src/game/journal.ts');
+    const { g, p } = modernGame();
+    for (let i = 0; i < 20; i++) {
+      deed(g, 'deeds', 1, 'Compassion'); // across Wise and Seeker and back
+      deed(g, 'deeds', -1, 'Honesty');
+    }
+    noteConversation(g, 'You see a sage.\n\n"The Mantra of Honesty is AHM."');
+    expect(lines(p.log).filter((l) => l === 'Journal updated').length).toBeLessThanOrEqual(1);
+    const cheated = modernGame();
+    for (let k = 0; k < 5; k++) for (const c of CHEATS) chargeCheat(cheated.g, c);
+    expect(lines(cheated.p.log)).toEqual([]);
+  });
+});
+
 describe("the Modern karma's choices, against the game's own conversations", () => {
   /** Each question's label and the answers it listens for, as talk.ts reads them, by "file:talk". */
   const questions = (g: G): Map<string, Map<number, string[]>> => {

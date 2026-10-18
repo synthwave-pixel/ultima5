@@ -139,9 +139,9 @@ export function strongest(p: PathState, pool: Pool): Virtue | null {
 /**
  * A deed: `delta` to `pool`, for `virtue`. `once`, a key counted once a game (a choice, a milestone, a beneficiary):
  * counted already, nothing. Kept always, whatever the rules; said, and "Journal updated" where a tier changes, only
- * under the Modern rules, which read it. True if it counted.
+ * under the Modern rules, which read it - and never by `quiet` (a cheat's cost). True if it counted.
  */
-export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: string): boolean {
+export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: string, quiet = false): boolean {
   const p = g.path;
   if (once !== undefined) {
     if (p.done.has(once)) return false;
@@ -151,12 +151,13 @@ export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: 
   const tiersBefore = tiersOf(p);
   p.pools[pool] = clamp(p.pools[pool] + delta);
   if (delta > 0) p.tally[pool][virtue] = (p.tally[pool][virtue] ?? 0) + delta;
-  if (g.options.rules !== 'modern') return true;
-  // Said where it matters: a real rise, and every fall; smaller rises show in The Path.
+  if (g.options.rules !== 'modern' || quiet) return true;
+  // Said where it matters: a real rise, and every fall; smaller rises show in The Path. The same words not again
+  // for a while (QUIET_TURNS): a field of crops picked is one "tarnished", not one a crop.
   if (delta <= -20) say(g, 'Thou hast strayed from the Path.');
   else if (delta < 0) say(g, `Thy ${virtue} is tarnished.`);
   else if (delta >= 3) say(g, `Thy ${virtue} grows.`);
-  if (tiersOf(p) !== tiersBefore) say(g, 'Journal updated');
+  if (tiersOf(p) !== tiersBefore) journalUpdated(g);
   return true;
 }
 
@@ -164,9 +165,29 @@ export function deed(g: Game, pool: Pool, delta: number, virtue: Virtue, once?: 
 const tiersOf = (p: PathState): string =>
   [pathTier(modernKarma(p)).word, ...POOLS.map((pool) => poolTier(pool, p.pools[pool]).word)].join(',');
 
-function say(g: Game, line: string): void {
+/** How long the same line keeps quiet after it is said, in turns (Game.turnsTaken). */
+const QUIET_TURNS = 10;
+
+/** The turn each line was last said, by game (not saved: a game taken up again may say it once more). */
+const lastSaid = new WeakMap<Game, Map<string, number>>();
+
+/** A line in the log - unless the same was said within QUIET_TURNS. */
+function say(g: Game, line: string, quietTurns = QUIET_TURNS): void {
+  let said = lastSaid.get(g);
+  if (!said) lastSaid.set(g, (said = new Map<string, number>()));
+  const at = said.get(line);
+  if (at !== undefined && g.turnsTaken - at < quietTurns) return;
+  said.set(line, g.turnsTaken);
   if (g.text.win.x !== 0) g.printChar('\n');
   g.print(`${line}\n`);
+}
+
+/**
+ * "Journal updated": for a clue taken down (journal.ts) and a tier of The Path changed alike, said once a turn
+ * however many there are - a conversation that both notes a clue and moves the Path says it once.
+ */
+export function journalUpdated(g: Game): void {
+  say(g, 'Journal updated', 1);
 }
 
 // --- Words: the choices in conversation ----------------------------------------------------------------------

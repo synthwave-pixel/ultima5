@@ -62,7 +62,7 @@ export function noteConversation(g: Game, transcript: string, name = ''): void {
     }
   }
   // The player is told when something real has been taken down, so they know to go and look.
-  if (noted) g.print('\nJournal updated\n');
+  if (noted) modern.journalUpdated(g);
   if (g.notes.length > MAX_NOTES) g.notes.splice(0, g.notes.length - MAX_NOTES);
 }
 
@@ -88,7 +88,7 @@ export function noteSleeper(g: Game, who: string, up: number[]): void {
   const text = `Asleep. Up and about from ${spans.join(', and from ')}.`;
   if (g.notes.some((n) => n.where === where && n.who === who && n.text === text)) return;
   g.notes.push({ who, where, text, date: today(g) });
-  g.print('\nJournal updated\n');
+  modern.journalUpdated(g);
   if (g.notes.length > MAX_NOTES) g.notes.splice(0, g.notes.length - MAX_NOTES);
 }
 
