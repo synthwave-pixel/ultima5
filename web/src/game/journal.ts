@@ -487,6 +487,34 @@ function placeGroups(g: Game): JournalLine[] {
   }));
 }
 
+/**
+ * The Path (the port's): how far the party walks the path of the Avatar - the saved game's karma, which the game never
+ * names - as a word, never the number. Each tier ends where something in the game changes: Gruman of Trinsic tells
+ * Honor's mantra from 50 (talk.ts, the script's 0xFE), Annon of Britain Despise's Word from 75, a healer's
+ * resurrection keeps all a member's experience from 98 (shops.ts); the words are 1988's own, from the messages
+ * Lord British and the camp's old man give by it (KARMA.DAT).
+ */
+const PATH_TIERS: { from: number; word: string; about: string }[] = [
+  { from: 98, word: 'Enlightened', about: 'An Avatar in all but name.' },
+  { from: 75, word: 'Wise', about: "Thou walkest the Path. Death's embrace yet costs thee something." },
+  { from: 50, word: 'Seeker', about: 'Some still deem thee unworthy of their deepest secrets.' },
+  { from: 20, word: 'Misguided', about: 'The wise keep their counsel from thee.' },
+  { from: 0, word: 'Strayed', about: 'Thou hast strayed far from the Path. Few will trust thee.' },
+];
+
+/** The Path's tier for the party's karma (PATH_TIERS). */
+export const pathTier = (karma: number): { word: string; about: string } => PATH_TIERS.find((t) => karma >= t.from) ?? PATH_TIERS[4];
+
+/** The Path's line: its tier on the right, what it means on the card, how it is walked for Y. */
+function pathLine(g: Game): JournalLine {
+  const tier = pathTier(g.s.karma);
+  return {
+    label: row('The Path', tier.word),
+    about: tier.about,
+    hint: 'Alms to beggars, prisoners freed, gold offered at a shrine and its quest done walk the Path; theft, chests opened in a towne, harm done to its folk and debts refused stray from it. Lord British, raising the fallen, sets them back upon it.',
+  };
+}
+
 /** A member's calling, by the class letter the roster keeps. */
 const CALLINGS: Record<string, string> = { F: 'Fighter', B: 'Bard', M: 'Mage' };
 
@@ -614,6 +642,7 @@ export function journalTop(g: Game): JournalLine[] {
       hint: 'Guilds sell keys, gems and torches; the rest is found, or given.',
       open: { title: 'Equipment', lines: equipment(g) },
     },
+    pathLine(g),
     {
       label: 'Companions',
       hint: 'Those who may join the party: find them, and ask them to join. A party holds six.',

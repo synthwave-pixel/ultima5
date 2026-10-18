@@ -96,6 +96,7 @@ describe('the journal', () => {
       'Shadowlords slain 1/3',
       'Passwords         0/2',
       'Equipment        3/16',
+      `The Path${'Wise'.padStart(13)}`,
       'Companions',
       `Clues heard ${String(g.notes.length).padStart(9)}`,
     ]);
@@ -114,7 +115,7 @@ describe('the journal', () => {
     expect(lines(1)).toEqual(['Compassion   ordained', 'Valour       answered']); // the quests begun and not done
     expect(lines(2)[2]).toBe('Destard      unsealed');
     expect(lines(5)).toEqual(['Falsehood            ', 'Hatred          slain', 'Cowardice            ']);
-    expect(top[9].open?.title).toBe('Clues heard');
+    expect(top[10].open?.title).toBe('Clues heard');
   });
 
   it('names a Shadowlord once its name is heard - on its line until it is slain, and on its card', () => {
@@ -324,7 +325,7 @@ describe("the journal's cards", () => {
     const shot = (): string => p.rows.map((r) => r.join('')).join('\n');
     // Into the shrines (A), a look at the first, down to the second, a look, then back out to the journal's lines, a
     // look, and down to the clues heard (no hint, nothing to say), a look.
-    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(9).fill(K.Down), 'shot', Pad.B];
+    const keys = [Pad.A, 'shot', K.Down, 'shot', Pad.B, 'shot', ...Array<number>(10).fill(K.Down), 'shot', Pad.B];
     fly(g, p, [
       () => {
         const k = keys.shift();

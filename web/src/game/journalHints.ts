@@ -21,7 +21,7 @@ export const SHRINE_HINTS: string[] = [
 /** By dungeon, in the game's order: Deceit, Despise, Destard, Wrong, Covetous, Shame, Hythloth, Doom. */
 export const DUNGEON_HINTS: string[] = [
   'North of Moonglow, by the Shrine of Honesty. Malifora in Moonglow knows its Word.',
-  'North of Britain. Annon in Britain knows its Word.',
+  'North of Britain. Annon in Britain knows its Word, and tells it only to one who walks the Path.',
   'West of Trinsic. Goeth in Jhelom knows its Word, though he says it backwards.',
   "West of Minoc. Felespar in Yew knows its Word, once told the Resistance's password.",
   'Just south of Minoc, on Lost Hope Bay. Fiona in Minoc knows its Word.',

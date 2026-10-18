@@ -723,6 +723,14 @@ other hurt in the game kills as it always did.
   line once heard; until then "Mystery...", whose it is unsaid), the Equipment (Lord British's Crown,
   Amulet and Sceptre among it, each set against what is held of it: a count, the moonstones and the moongates
   stepped through of eight, or held), and the Companions who may join - each opening onto a line for each.
+  **The Path** says how far the party walks the path of the Avatar - the
+  saved game's karma, which the game never names - as a word, never the
+  number, in 1988's own words for it: Strayed, Misguided, Seeker, Wise
+  (where a new Avatar begins) and Enlightened. Each tier ends where the game
+  changes: Gruman of Trinsic tells Honor's mantra from Seeker, Annon of
+  Britain Despise's Word from Wise, and a healer raises the dead without
+  their losing experience only for the Enlightened. Its card says what the
+  tier means; Y, how the Path is walked and strayed from.
   **Places** (after the Ultima III port's Towns) opens onto the townes, the castles and villages, the keeps, and the
   lighthouses and huts, each kind with how many of its places are done: a place is "Mystery..." until it is seen on
   the map or someone names it, then what the map calls it ("Towne?", "Keep?") until it is named, then, once the party
