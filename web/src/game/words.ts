@@ -44,7 +44,9 @@ const key = (word: string): string =>
  * mantras are that short (Mu, Ra, Om) - a word that short is only learnt
  * when it is one the game answers to exactly.
  */
-const wordsIn = (text: string): string[] => text.split(/[^A-Za-z0-9']+/).filter((w) => w.length >= 2);
+const wordsIn = (text: string): string[] =>
+  // A name spelt out with full stops is one word, kept as it is written: "H.M.S." (the Cape, Jimmy of Trinsic's).
+  (text.match(/(?:[A-Za-z]\.){2,}|[A-Za-z0-9']+/g) ?? []).filter((w) => w.length >= 2);
 
 /**
  * Every word the game answers to, from the player's own files: each
@@ -136,7 +138,7 @@ const fitsStub = (stub: string, k: string): boolean => saysWord(stub, k) || (k.i
 
 /** The word to say for a keyword: as heard, or without its apostrophes where only that says it (fitsStub). */
 export function sayable(stub: string, word: string): string {
-  return saysWord(stub, word.toUpperCase()) ? word : word.replace(/'/g, '');
+  return saysWord(stub, word.toUpperCase()) ? word : word.replace(/['.]/g, '');
 }
 
 /**

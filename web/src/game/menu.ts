@@ -317,12 +317,17 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   const backwards = !own?.size || talksBackwards(own, said);
   keywords.forEach(({ stub, dest }, i) => {
     if (stub.length < 3) return; // a stub of a letter or two would answer to half the vocabulary
+    // Nor a stub spelt with full stops (Jimmy of Trinsic's "H.M."): its letters alone are some other word ("hm"), and
+    // its fellow without them ("hms") is offered for the same answer.
+    if (stub.includes('.')) return;
     // Labelled with the townsman's own word for it, where it has been heard (words.ts forStub).
     const word = g.words.forStub(stub, false, { own, said, backwards, reviewed: KEYWORD_LABELS[g.talk.labels + stub.toUpperCase()] });
     if (!word || always.some((w) => saysWord(w, word.toUpperCase()))) return;
     if (offered.has(dest)) return;
     offered.add(dest);
-    add(word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(), sayable(stub, word), i, false, heard.has(dest));
+    // (A name spelt out with full stops, "H.M.S.", is labelled as it is written.)
+    const label = word.includes('.') ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    add(label, sayable(stub, word), i, false, heard.has(dest));
   });
   // What has not been asked comes first, and the two the game always answers lead it: a player who knows
   // nothing of this townsman is nudged towards their name and their trade before anything else.
