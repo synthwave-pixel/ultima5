@@ -1915,9 +1915,12 @@ async function cheatsMenu(g: Game): Promise<void> {
       if (at < 0) return;
       const said = await list[at].apply(g);
       const { chargeCheat } = await import('./cheats.ts');
-      chargeCheat(g, list[at]);
+      // Its cost, where it moved the Modern karma: the answer faintly red, in the Standard look (modernKarma.ts tint).
+      const cost = chargeCheat(g, list[at]);
       drawVitals(g);
-      await showText(g, 'Cheats', wrap(said));
+      const lines = wrap(said);
+      const tinted = cost < 0 && g.options.tileSet === 'standard';
+      await showText(g, 'Cheats', lines, tinted ? lines.map(() => Colour.virtueDown) : undefined);
     }
   } finally {
     g.choiceSeen = seen;

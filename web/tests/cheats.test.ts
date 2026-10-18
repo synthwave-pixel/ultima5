@@ -172,4 +172,50 @@ describe('the Konami code', () => {
       setDevMode(true);
     }
   });
+
+  it("tints a costly cheat's answer faintly red, under the Modern rules in the Standard look - its cost moved", async () => {
+    const { pauseMenu } = await import('../src/game/menu.ts');
+    const { Colour } = await import('../src/ui/colours.ts');
+    const answer = async (rules: 'modern' | 'story', tileSet: 'standard' | 'original'): Promise<Set<number>> => {
+      const { g, p } = game();
+      g.options.rules = rules;
+      g.options.tileSet = tileSet;
+      const inks = new Set<number>();
+      let chose = false;
+      let answered = false;
+      p.next = () => {
+        const m = g.menuShown ?? { title: '', labels: [] as string[], at: 0 }; // the answer's box is no menu
+        if (m.title === 'Paused') {
+          if (chose) return Pad.B;
+          const want = m.labels.indexOf('Cheats');
+          return m.at !== want ? K.Down : Pad.A;
+        }
+        if (m.title === 'Cheats' && !chose) {
+          const want = m.labels.indexOf('Gold +500');
+          if (m.at !== want) return K.Down;
+          chose = true;
+          return Pad.A;
+        }
+        if (chose && !answered) {
+          // The answer, in its box: the colours of the letters that spell it.
+          answered = true;
+          const cells = (g.text as unknown as { cells: { ch: string; fg: number }[][] }).cells;
+          for (const row of cells)
+            if (
+              row
+                .map((c) => c.ch)
+                .join('')
+                .includes('Gold:')
+            )
+              for (const c of row) if (/[A-Za-z0-9]/.test(c.ch)) inks.add(c.fg);
+        }
+        return Pad.B;
+      };
+      await pauseMenu(g);
+      return inks;
+    };
+    expect(await answer('modern', 'standard')).toContain(Colour.virtueDown);
+    expect(await answer('story', 'standard')).not.toContain(Colour.virtueDown); // free under the Story
+    expect(await answer('modern', 'original')).not.toContain(Colour.virtueDown); // the PC look as it was
+  });
 });

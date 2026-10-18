@@ -26,9 +26,13 @@ export interface Cheat {
   penalty?: number;
 }
 
-/** A cheat's cost, where it has one: the Modern rules' Deeds (modernKarma.ts), for having for nothing. */
-export function chargeCheat(g: Game, cheat: Cheat): void {
-  if (cheat.penalty && g.options.rules === 'modern') modern.deed(g, 'deeds', -cheat.penalty, 'Honesty', undefined, true);
+/**
+ * A cheat's cost, where it has one: the Modern rules' Deeds (modernKarma.ts), for having for nothing. How far it moved
+ * them (0: no cost, or already at their end) - the Cheats box tints its answer for it (menu.ts cheatsMenu).
+ */
+export function chargeCheat(g: Game, cheat: Cheat): number {
+  if (!cheat.penalty || g.options.rules !== 'modern') return 0;
+  return modern.deed(g, 'deeds', -cheat.penalty, 'Honesty', undefined, true);
 }
 
 /** Thrown to move the party to another map: the main loop (run.ts) catches it and goes on from the new place. */
