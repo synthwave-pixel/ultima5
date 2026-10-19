@@ -506,7 +506,10 @@ easier than it was, and meant to be.
 The Say and Answer menus sit at the foot of the view, framed as the
 Yes and No box is, only as wide as their longest line and centred, with
 no title: a row clear of the party, and of whoever it talks to where they
-stand to the south (the list scrolls where it is longer than the room).
+stand to the south (the list scrolls where it is longer than the room, a
+grey arrow at its right where there are more lines above or below, as the
+title menu has). Once everything a townsman answers has been heard (every
+line grey), Take leave comes first, the bar on it.
 
 What the townsman says is shown across the top of the view (Settings,
 Dialog: Play, the default): in the same frame, only as big as its lines,

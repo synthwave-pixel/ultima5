@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Pad } from '../src/game/io.ts';
+import { K, Pad } from '../src/game/io.ts';
+import { analyse } from '../tools/talk/analysis.ts';
 import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkMenuRows } from '../src/game/speech.ts';
@@ -59,5 +60,52 @@ describe("the talk's menus, at the view's foot", () => {
     expect(w.right - w.left + 1).toBeLessThan(21); // as wide as its lines, not the view
     expect(Math.abs(w.left + (w.right - w.left + 1) / 2 - 12)).toBeLessThanOrEqual(1); // centred
     expect(first).toBe('Name'); // its first line, not "Say"
+  });
+  it('marks a list too long for its box: an arrow up where lines are above it, down where they are below', async () => {
+    const { g, p, i } = await britain();
+    for (const w of analyse(g).learnable.keys()) g.words.add(w); // every word: a long list
+    const s = g.s;
+    const a = s.actors[s.npcs[i].actor];
+    Object.assign(a, { x: 16, y: 16 }); // in the middle of the towne
+    Object.assign(s, { level: a.z, x: 16, y: 14 }); // two squares north of them, as across a counter: four lines of room
+    const marks: string[] = [];
+    let presses = 0;
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title !== 'Say') return Pad.A;
+      const w = g.text.windows[3];
+      const edge = (y: number): string => g.text.screenText(y, w.right, w.right);
+      marks.push(`${m.at}:${edge(w.top)}${edge(w.bottom)}:${w.bottom - w.top + 1}`);
+      if (++presses <= m.labels.length) return K.Down;
+      return Pad.B;
+    };
+    await talkToNpc(g, i).catch(() => undefined);
+    const [first] = marks;
+    expect(first).toBe(`0: \x19:4`); // at the top: more below, none above
+    expect(marks.some((x) => x.includes('\x18\x19'))).toBe(true); // in the middle: both
+    expect(marks.some((x) => x.endsWith(':\x18 :4'))).toBe(true); // at the foot: more above
+  });
+
+  it('offers to take leave first where everything this townsman answers has been heard', async () => {
+    const { g, p, i } = await britain();
+    const s = g.s;
+    const n = s.npcs[i];
+    Object.assign(s, { level: n.z, x: n.x, y: n.y + 1 });
+    loadLevel(g, true);
+    const firsts: string[] = [];
+    const asked = new Set<string>();
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title !== 'Say') return Pad.A;
+      firsts.push(m.labels[0]);
+      // Each line not yet heard in turn; then leave.
+      const next = m.labels.findIndex((l, k) => !m.dim[k] && l !== 'Take leave' && !asked.has(l));
+      const target = next >= 0 ? next : m.labels.indexOf('Take leave');
+      if (next >= 0 && m.at === next) asked.add(m.labels[next]);
+      return m.at === target ? Pad.A : m.at < target ? K.Down : K.Up;
+    };
+    await talkToNpc(g, i).catch(() => undefined);
+    expect(firsts[0]).toBe('Name'); // all to ask: Name leads
+    expect(firsts[firsts.length - 1]).toBe('Take leave'); // all heard: taking leave leads, the bar on it
   });
 });

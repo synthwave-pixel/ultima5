@@ -297,7 +297,7 @@ function panel(g: Game, title: string): void {
 }
 
 /** One row of a list: its letter (when the list has them), its label, highlighted when chosen, gray when not to be had. */
-function row(g: Game, y: number, item: Item | undefined, chosen: boolean, lettered = true): void {
+function row(g: Game, y: number, item: Item | undefined, chosen: boolean, lettered = true, width = cols): void {
   const t = g.text;
   const w = t.win;
   const letter = item?.key && item.key > 0x20 && item.key < 0x7f ? String.fromCharCode(item.key) : ' ';
@@ -306,7 +306,7 @@ function row(g: Game, y: number, item: Item | undefined, chosen: boolean, letter
   if (item?.colour !== undefined) w.fg = item.colour;
   if (item && (item.enabled === false || item.dim)) w.fg = 8;
   if (chosen) t.inverse = true;
-  put(g, 0, y, text.padEnd(cols));
+  put(g, 0, y, text.padEnd(width));
   t.inverse = false;
   w.fg = fg;
 }
@@ -364,13 +364,16 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   // nothing of this townsman is nudged towards their name and their trade before anything else.
   const rank = (l: Say): number => (l.item.dim ? 2 : 0) + (l.standard ? 0 : 1);
   lines.sort((a, b) => rank(a) - rank(b));
-  const items = lines.map((l) => l.item);
-  items.push({ label: 'Take leave' });
+  // Taking leave last - or first, where everything this townsman answers has been heard: nothing is left to ask.
+  const done = lines.every((l) => l.item.dim);
+  const leave: Item = { label: 'Take leave' };
+  const items = done ? [leave, ...lines.map((l) => l.item)] : [...lines.map((l) => l.item), leave];
   // Low in the view, framed as the townsman's words are above it: the party and they in sight between (speech.ts).
   const at = await choose(g, 'Say', items, 0, false, talkMenu(g));
-  if (at < 0 || at >= lines.length) return 'BYE';
-  g.talk.chosen = lines[at].mark;
-  return lines[at].word;
+  const line = at < 0 ? undefined : lines[done ? at - 1 : at];
+  if (!line) return 'BYE';
+  g.talk.chosen = line.mark;
+  return line.word;
 }
 
 /**
@@ -633,6 +636,19 @@ export async function askWord(
 }
 
 /**
+ * The arrows at the right of a list too long for its box, where there are more lines above (on its first line) and
+ * below (on its last) - in grey, as the title menu has them (intro.ts).
+ */
+function scrollMarks(g: Game, rows: number, above: boolean, below: boolean): void {
+  const t = g.text;
+  const fg = t.win.fg;
+  t.win.fg = Colour.lightGray;
+  put(g, cols - 1, 0, above ? '\x18' : ' ');
+  put(g, cols - 1, rows - 1, below ? '\x19' : ' ');
+  t.win.fg = fg;
+}
+
+/**
  * A list to choose from, over the map. Up and down move (and wrap), left
  * and right a page where the list is longer than it shows (else as up and
  * down), Enter or A chooses, Escape, B or Space goes back; a letter
@@ -669,7 +685,9 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
         boxNotes ? WIDTH : Math.max(title.length, ...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1,
         rows + (boxNotes ? boxNotes + 1 : 0),
       );
-    else if (talking) talkBox(g, Math.max(...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1, rows, talk);
+    // (Two columns more where it scrolls, for the arrows that say there are more lines above or below: drawTalkMarks.)
+    else if (talking)
+      talkBox(g, Math.max(...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1 + (items.length > rows ? 2 : 0), rows, talk);
     else panel(g, title);
   };
   frame();
@@ -677,7 +695,10 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
     if (at < top) top = at;
     if (at >= top + rows) top = at - rows + 1;
     const head = (boxed && !title) || talking ? 0 : 2;
-    for (let r = 0; r < rows; r++) row(g, r + head, items[top + r], top + r === at, lettered);
+    // (A talk's list that scrolls keeps its last two columns for the arrows: the bar stops short of them.)
+    const marked = talking && items.length > rows;
+    for (let r = 0; r < rows; r++) row(g, r + head, items[top + r], top + r === at, lettered, marked ? cols - 2 : cols);
+    if (marked) scrollMarks(g, rows, top > 0, top + rows < items.length);
     if (boxNotes) {
       const lines = wrap(items[at]?.note ?? '');
       const fg = t.win.fg;
