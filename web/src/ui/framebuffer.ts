@@ -242,8 +242,9 @@ export class Framebuffer {
   chromeSpeech: [number, number, number, number] | null = null;
   /**
    * The text windows the frame runs along (the party panel, the log: cells, inclusive), given by the screen: within
-   * them the black beside the frame is none of its, but in their first column (the prompts' arrows, the corners) -
-   * their lines' letters against a bar changed the frame's shape, and it was cut again, at every line the log scrolled.
+   * them the black beside the frame is none of its, and the prompts' arrows down their first column are drawn over
+   * the cut frame rather than cut with it (chromeCells) - their lines against a bar (the log's new line, a fighter's
+   * highlight in the panel) changed the frame's shape, and it was cut again at every one.
    */
   textAreas: () => [number, number, number, number][] = () => [];
   /**
@@ -1820,6 +1821,7 @@ export class Framebuffer {
     out.set(this.hi[0]);
     if (this.chrome) {
       this.copper(out);
+      this.drawTextCaps(out);
       for (const m of this.marks.values()) if (this.markShown(m)) this.drawMark(out, m);
     }
     this.dirty = false;
@@ -1886,13 +1888,26 @@ export class Framebuffer {
    * outside the map's square but for a box over it (a menu's border, the dialog's).
    */
   private chromeCells(): Uint8Array {
-    const p = this.pages[0];
+    // The prompts' arrows down the log's first column are drawn over the cut frame (present), not cut with it: as
+    // black here, so the frame's shape is the same whatever the log's lines are - it was cut again at every line the
+    // log scrolled, a lag a phone felt at every step that turned.
+    this.textCaps = this.capsInText();
+    let p = this.pages[0];
+    const capped = new Uint8Array((WIDTH / 8) * (HEIGHT / 8));
+    if (this.textCaps.length) {
+      p = p.slice();
+      for (const { cx, cy } of this.textCaps) {
+        capped[cy * (WIDTH / 8) + cx] = 1;
+        for (let y = cy * 8; y < cy * 8 + 8; y++) p.fill(0, y * WIDTH + cx * 8, y * WIDTH + cx * 8 + 8);
+      }
+    }
     const h = this.hi[0];
     const cls = new Uint8Array(WIDTH * HEIGHT);
     const hole = this.chromeHole;
     const also = this.chromeAlso;
     const start = this.chromeTop;
     const shown = (x: number, y: number): boolean => {
+      if (capped[(y >> 3) * (WIDTH / 8) + (x >> 3)]) return true; // (black, as said)
       const e = p[y * WIDTH + x];
       if (also.some((r) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3])) return h[y * HI * HI_WIDTH + x * HI] === EGA_RGBA[e];
       if (y < this.chromeFrom) return false;
@@ -1941,9 +1956,60 @@ export class Framebuffer {
     spread((k) => k === 1 || k === 2, 0, 3);
     for (const [c1, r1, c2, r2] of this.textAreas())
       for (let y = Math.max(start, r1 * 8); y < Math.min(HEIGHT, (r2 + 1) * 8); y++)
-        for (let x = (c1 + 1) * 8; x < Math.min(WIDTH, (c2 + 1) * 8); x++) if (cls[y * WIDTH + x] === 3) cls[y * WIDTH + x] = 0;
+        for (let x = c1 * 8; x < Math.min(WIDTH, (c2 + 1) * 8); x++) if (cls[y * WIDTH + x] === 3) cls[y * WIDTH + x] = 0;
     return cls;
   }
+
+  /** The prompts' arrows in the text windows' first column (textAreas), drawn over the cut frame (present). */
+  private textCaps: { cx: number; cy: number; side: number }[] = [];
+
+  /** The cells of the text windows' first column (textAreas) that hold a border's cap, as the colour page has it. */
+  private capsInText(): { cx: number; cy: number; side: number }[] {
+    const p = this.pages[0];
+    const rows = this.fonts[0].rows;
+    const caps: { cx: number; cy: number; side: number }[] = [];
+    for (const [cx, r1, , r2] of this.textAreas())
+      for (let cy = r1; cy <= r2 && cy < HEIGHT / 8; cy++)
+        for (const side of [1, 2]) {
+          // As capIn has it: the glyph's ink the border's blue or the white of its joining lines, none of the blue
+          // beside it, and blue for most of it.
+          let blue = 0;
+          let fits = true;
+          for (let r = 0; r < 8 && fits; r++)
+            for (let c = 0; c < 8; c++) {
+              const k = p[(cy * 8 + r) * WIDTH + cx * 8 + c];
+              const ink = (rows[side * 8 + r] & (0x80 >> c)) !== 0;
+              if (ink ? k !== 1 && k !== 15 : k === 1) {
+                fits = false;
+                break;
+              }
+              if (k === 1) blue++;
+            }
+          if (fits && blue >= 16) {
+            caps.push({ cx, cy, side });
+            break;
+          }
+        }
+    return caps;
+  }
+
+  /** The prompts' arrows over the cut frame, in its tone: as the cut draws an arrow on a bar (cutCopper, capOf). */
+  private drawTextCaps(out: Uint32Array): void {
+    const S = 8 * HI;
+    const key = toneKey(this.chromeTone);
+    for (const { cx, cy, side } of this.textCaps) {
+      const name = `${side}|${key}`;
+      let piece = this.arrows.get(name);
+      if (!piece) {
+        const plain = capOf(ARROW, side, ARROW_LENGTH);
+        if (!plain) continue;
+        piece = key ? toned(plain, this.chromeTone!) : plain;
+        this.arrows.set(name, piece);
+      }
+      for (let y = 0; y < S; y++) out.set(piece.subarray(y * S, y * S + S), (cy * S + y) * HI_WIDTH + cx * S);
+    }
+  }
+  private readonly arrows = new Map<string, Uint32Array>();
 
   /**
    * Which of the border's caps a text cell holds, as the frame's classes have it (chromeCells): 2 the one before a

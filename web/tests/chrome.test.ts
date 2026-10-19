@@ -130,6 +130,27 @@ describe("the frame's shape, steady while the game goes on", () => {
     expect(cells(fb)[44 * 320 + 8]).toBe(1);
   });
 
+  it("is the same with a prompt's arrow down the log's first column or without, the arrow drawn over it", () => {
+    // IBM.CH's cap 2: a wedge pointing right, in the border's blue (frame.ts capArrow).
+    const rows = new Uint8Array(128 * 8);
+    rows.set([0x80, 0xc0, 0xe0, 0xf0, 0xf0, 0xe0, 0xc0, 0x80], 2 * 8);
+    const capFonts = [{ rows }, { rows: new Uint8Array(128 * 8) }];
+    const make = (arrow: boolean): Framebuffer => {
+      const fb = new Framebuffer(new Uint8Array(512 * 128), capFonts);
+      fb.chrome = true;
+      fb.textAreas = () => [[24, 9, 39, 23]];
+      fb.fill(0, 0, 319, 199, 0);
+      fb.fill(184, 60, 191, 199, 1); // the bar down the log's left
+      if (arrow) fb.glyph(0, 2, 24, 12, 1, 0);
+      return fb;
+    };
+    expect(cells(make(true))).toEqual(cells(make(false)));
+    const out = shown(make(true));
+    const at = (12 * 8 + 4) * HI * HI_WIDTH + (24 * 8 + 1) * HI; // inside the wedge, near its base
+    expect(bright(out[at])).toBeGreaterThan(0);
+    expect(out[at]).not.toBe(EGA_RGBA[1]);
+  });
+
   it("is the same whatever the log's lines say against its bar, but for their first column", () => {
     const shape = (letters: boolean): Uint8Array => {
       const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
