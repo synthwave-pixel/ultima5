@@ -185,6 +185,13 @@ export class Screen implements Platform {
     // What each marked row read when its marks were set: a mark shows only while its row still does.
     const markLines = new Map<number, string>();
     fb.markShown = (m) => this.text.screenText(m.row, 24, 38) === markLines.get(m.row);
+    // The party panel and the log (frame.ts Win.stats, Win.messages): their letters are none of the frame's shape.
+    // (A window not yet set is the whole screen: none.)
+    fb.textAreas = () =>
+      [1, 2]
+        .map((i) => this.text.windows[i])
+        .filter((w) => w.right - w.left < 39 || w.bottom - w.top < 24)
+        .map((w) => [w.left, w.top, w.right, w.bottom]);
     const target: TextTarget = {
       glyph: (font, code, column, row, fg, bg, underline, again) => {
         fb.glyph(font, code, column, row, fg, bg, again);

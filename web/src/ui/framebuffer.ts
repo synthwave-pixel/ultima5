@@ -226,7 +226,6 @@ function halfDark(v: number): number {
   const half = (sh: number): number => ((v >>> sh) & 0xff) >> 1;
   return (0xff000000 | (half(16) << 16) | (half(8) << 8) | half(0)) >>> 0;
 }
-const RING = 3;
 
 export class Framebuffer {
   readonly pages = [new Uint8Array(WIDTH * HEIGHT), new Uint8Array(WIDTH * HEIGHT)];
@@ -241,6 +240,12 @@ export class Framebuffer {
   chromeBox: [number, number, number, number] | null = null;
   /** The Dialog setting's panel (speech.ts), a box framed as chromeBox's is, beside it. */
   chromeSpeech: [number, number, number, number] | null = null;
+  /**
+   * The text windows the frame runs along (the party panel, the log: cells, inclusive), given by the screen: within
+   * them the black beside the frame is none of its, but in their first column (the prompts' arrows, the corners) -
+   * their lines' letters against a bar changed the frame's shape, and it was cut again, at every line the log scrolled.
+   */
+  textAreas: () => [number, number, number, number][] = () => [];
   /**
    * Parts of the screen that are the frame's wherever they have its blue (EGA pixels, inclusive), beside what the
    * rules below allow: the dialogs' own frames at the title, one over another, above the rows the copper runs from.
@@ -1878,7 +1883,7 @@ export class Framebuffer {
   /**
    * What each EGA pixel is to the frame: 1 its blue (copper), 2 a white line along it (the rim), 3 black beside it
    * (room for its curves), 0 nothing - only where the colour page still shows the EGA colour, not tile art, and
-   * outside the map's square but for the three pixels round its edge (a menu's border).
+   * outside the map's square but for a box over it (a menu's border, the dialog's).
    */
   private chromeCells(): Uint8Array {
     const p = this.pages[0];
@@ -1893,10 +1898,12 @@ export class Framebuffer {
       if (y < this.chromeFrom) return false;
       if (hole && x >= hole[0] && x <= hole[2] && y >= hole[1] && y <= hole[3]) return false;
       if (this.chromeFrom === 0 && y >= VIEW_LEFT && y <= VIEW_RIGHT && x >= VIEW_LEFT && x <= VIEW_RIGHT) {
-        const ring = Math.min(x - VIEW_LEFT, VIEW_RIGHT - x, y - VIEW_LEFT, VIEW_RIGHT - y);
         const within = (b: [number, number, number, number] | null): boolean => !!b && x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
         const inBox = within(this.chromeBox) || within(this.chromeSpeech);
-        if (ring >= RING && !inBox) return false;
+        // In the map's square only a box's border is the frame's (a menu's, the dialog's): the map's own pixels are
+        // never, though a tile's art at its edge has the frame's very blue or white (it was taken for the frame's, and
+        // the frame cut again, as the party walked).
+        if (!inBox) return false;
       }
       return h[y * HI * HI_WIDTH + x * HI] === EGA_RGBA[e];
     };
@@ -1932,6 +1939,9 @@ export class Framebuffer {
     };
     spread((k) => k === 1, 15, 2);
     spread((k) => k === 1 || k === 2, 0, 3);
+    for (const [c1, r1, c2, r2] of this.textAreas())
+      for (let y = Math.max(start, r1 * 8); y < Math.min(HEIGHT, (r2 + 1) * 8); y++)
+        for (let x = (c1 + 1) * 8; x < Math.min(WIDTH, (c2 + 1) * 8); x++) if (cls[y * WIDTH + x] === 3) cls[y * WIDTH + x] = 0;
     return cls;
   }
 

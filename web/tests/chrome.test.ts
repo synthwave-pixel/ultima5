@@ -16,10 +16,19 @@ function shown(fb: Framebuffer): Uint32Array {
 /** How bright a colour is (the canvas's little-endian RGBA). */
 const bright = (v: number): number => (v & 0xff) + ((v >>> 8) & 0xff) + ((v >>> 16) & 0xff);
 
+/**
+ * The whole screen open to the frame, as the title's dialogs are (chromeAlso): these try how the frame is cut, not
+ * where it may be - in the map's square, only a box's border is (a menu's, the dialog's).
+ */
+function framing(fb: Framebuffer): void {
+  fb.chromeAlso = [[0, 0, 319, 199]];
+}
+
 /** A bar of the frame's blue across the top, eight EGA rows deep, the white line of its rim under it. */
 function barred(): Framebuffer {
   const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
   fb.chrome = true;
+  framing(fb);
   fb.fill(0, 0, 319, 199, 0);
   fb.fill(0, 0, 319, 7, 1);
   fb.fill(0, 8, 319, 8, 15);
@@ -50,6 +59,7 @@ describe('the Standard frame', () => {
   it('follows a slanted end a pixel at a time, where the EGA steps it four', () => {
     const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
     fb.chrome = true;
+    framing(fb);
     fb.fill(0, 0, 319, 199, 0);
     // A wedge: each EGA row one pixel shorter than the last.
     for (let y = 0; y < 16; y++) fb.fill(0, y, 40 - y, y, 1);
@@ -90,6 +100,7 @@ describe('the Standard frame', () => {
     };
     const a = new Framebuffer(new Uint8Array(512 * 128), fonts);
     a.chrome = true;
+    framing(a);
     draw(a, false);
     shown(a);
     draw(a, true);
@@ -99,8 +110,38 @@ describe('the Standard frame', () => {
     expect(cut.mock.calls.every((c) => c[1] !== undefined)).toBe(true);
     const b = new Framebuffer(new Uint8Array(512 * 128), fonts);
     b.chrome = true;
+    framing(b);
     draw(b, true);
     expect(again).toEqual(shown(b));
+  });
+});
+
+describe("the frame's shape, steady while the game goes on", () => {
+  type Cells = { chromeCells(): Uint8Array };
+  const cells = (fb: Framebuffer): Uint8Array => (fb as unknown as Cells).chromeCells();
+
+  it("takes nothing in the map's square for the frame's but a box's border", () => {
+    const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
+    fb.chrome = true;
+    fb.fill(0, 0, 319, 199, 0);
+    fb.fill(8, 40, 9, 47, 1); // a tile's art at the map's edge, in the frame's very blue
+    expect(cells(fb)[44 * 320 + 8]).toBe(0);
+    fb.chromeBox = [4, 36, 60, 60]; // a menu's box over it
+    expect(cells(fb)[44 * 320 + 8]).toBe(1);
+  });
+
+  it("is the same whatever the log's lines say against its bar, but for their first column", () => {
+    const shape = (letters: boolean): Uint8Array => {
+      const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
+      fb.chrome = true;
+      fb.textAreas = () => [[24, 9, 39, 23]];
+      fb.fill(0, 0, 319, 199, 0);
+      fb.fill(184, 60, 319, 70, 1); // the bar over the log
+      fb.fill(184, 71, 319, 71, 15); // its rim
+      if (letters) fb.fill(200, 72, 230, 72, 15); // a line's letters' tops, against it
+      return cells(fb);
+    };
+    expect(shape(true)).toEqual(shape(false));
   });
 });
 
