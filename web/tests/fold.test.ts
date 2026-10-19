@@ -73,14 +73,15 @@ describe('repeated turns', () => {
     turn(g, 'North');
     turn(g, 'North', 'Slow progress!'); // only begins like the last: the North folded into it taken back, printed again
     turn(g, 'North');
-    const cells = (g.text as unknown as { cells: { ch: string; cap: number }[][] }).cells;
+    const cells = (g.text as unknown as { cells: { ch: string; cap: number; fg: number }[][] }).cells;
     const arrows = cells
       .slice(0xb, 0x18)
       .map((r) => r[0x18])
       .filter((c) => c.ch === '\x02');
     expect(arrows.length).toBe(2); // North (x2), and North (x2) again after the turn shown whole
 
-    for (const c of arrows) expect(c.cap).toBe(2); // the border's cap, drawn in the frame's copper - not a glyph in white
+    // The border's cap, in the border's blue (the frame knows its caps by it, and draws them copper) - not a white glyph.
+    for (const c of arrows) expect([c.cap, c.fg]).toEqual([2, 1]);
   });
 
   it('leaves no empty line between turns', () => {

@@ -27,6 +27,9 @@
  * so nothing the window printed meanwhile is lost. One cover at a time.
  */
 
+/** The border's blue, a cap's colour (frame.ts capArrow: Colour.blue). */
+const CAP_BLUE = 1;
+
 export const CLEAR_WINDOW = 0xff;
 export const TOGGLE_UNDERLINE = 0xfe;
 export const TOGGLE_INVERSE = 0xfd;
@@ -337,10 +340,12 @@ export class Text {
     this.clearCells(w.left + from, w.top + y, w.right, w.top + y, w.bg);
     for (let i = from; i < width; i++) {
       if (want[i] === ' ') continue;
-      // A prompt's arrow printed again (a fold taken back) is the border's cap it was (printCap), not a glyph in white.
+      // A prompt's arrow printed again (a fold taken back) is the border's cap it was (printCap): in the border's blue
+      // on black, as frame.ts capArrow prints it - the frame knows its caps by that blue - not a glyph in white.
       const code = want.charCodeAt(i);
-      if (i === 0 && (code === 1 || code === 2) && this.current === this.foldWindow) this.capNext = code;
-      this.glyph(0, code, w.left + i, w.top + y, w.fg, w.bg);
+      const cap = i === 0 && (code === 1 || code === 2) && this.current === this.foldWindow;
+      this.capNext = cap ? code : 0;
+      this.glyph(0, code, w.left + i, w.top + y, cap ? CAP_BLUE : w.fg, cap ? 0 : w.bg);
       this.capNext = 0;
     }
   }
