@@ -125,6 +125,8 @@ export interface Draw {
    * player made it gives him back in the mirror he stands before, and anyone else the mirror as the tiles have it.
    */
   leader?(at: Pick<Place, 'map' | 'x' | 'y'> | null): void;
+  /** Square `place`, beyond the view, made ready to draw (its shore worked out), for tile art that has such work. */
+  warm?(place: Place): void;
   /** Pen colour for fill, line and plot (DRV_2d). */
   pen: number;
   fill(x1: number, y1: number, x2: number, y2: number): void;

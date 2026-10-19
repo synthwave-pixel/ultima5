@@ -13,6 +13,7 @@ import { liftDungeonMap } from './dungeonMap.ts';
 import { Game } from './game.ts';
 import { K, LOST_FOCUS, Pad, TURN_LEFT, TURN_RIGHT } from './io.ts';
 import { Status } from './save.ts';
+import { warmAhead } from './world.ts';
 
 export const upper = (c: number): number => (c >= 0x61 && c <= 0x7a ? c - 0x20 : c);
 
@@ -159,6 +160,7 @@ async function rawKey(g: Game, idle?: () => void, literal = false, command = fal
         frame = (frame + 1) % CURSOR_FRAMES;
         if (idle) idle();
         else if (g.s.mapId < 0x21 || g.s.mapId > 0x7f) updateFrame(g, g.options.tileSet !== 'standard' || (pass++ & 1) === 0);
+        if (command) warmAhead(g);
       })
       .finally(() => (g.awaitingCommand = false));
     // A lost focus is for the command prompt alone (io.ts LOST_FOCUS); anywhere else it passes.

@@ -882,6 +882,14 @@ export class StandardArt implements TileArt {
     if (out) for (let r = 0; r < CELL; r++) page.set(out.subarray(r * CELL, r * CELL + CELL), (y + r) * HI_WIDTH + x);
   }
 
+  /**
+   * The costly part of square `place` worked out ahead, not drawn (world.ts warmAhead): its shore, a new stretch of
+   * coast or river some milliseconds each, which came all at once as a step brought a row of them into view.
+   */
+  warm(place: Place): void {
+    if (!this.squares) this.shores.prepare(place);
+  }
+
   /** The square `draw` draws (CELL by CELL, RGBA in memory order), or null for a tile the art has not. */
   square(tile: number, ground?: number, place?: Place, tint = 0, floor?: number): Uint32Array | null {
     if (tile >= this.cells) return null;

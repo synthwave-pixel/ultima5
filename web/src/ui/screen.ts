@@ -244,6 +244,9 @@ export class Screen implements Platform {
         const art = this.sets.get('modern-pc');
         if (art) art.leader = at;
       },
+      warm: (place) => {
+        if (this.look === 'standard') this.standard?.warm(place);
+      },
       dressAs: (dress) => {
         const art = this.sets.get('modern-pc');
         if (art) art.dressing = dress;

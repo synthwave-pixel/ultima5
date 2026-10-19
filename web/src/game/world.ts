@@ -130,6 +130,29 @@ function loadChunk(g: Game, underworld: boolean, quad: number, offset: number): 
   }
 }
 
+/**
+ * The tile at Britannia's (or the Underworld's) square (x, y), whether or not its chunk is loaded: the loaded window's
+ * where it is (as tileAt), else the chunk as loadChunk would load it. tileAt beyond the window wraps round within it,
+ * and gives a square from its far side.
+ */
+export function worldTile(g: Game, x: number, y: number): number {
+  const s = g.s;
+  x &= 0xff;
+  y &= 0xff;
+  if (((x - s.chunkX) & 0xff) < 0x20 && ((y - s.chunkY) & 0xff) < 0x20) return tileAt(g, x, y);
+  const offset = ((y & 0xf0) << 8) | ((x & 0xf0) << 4);
+  const i = (y & 0xf) * 16 + (x & 0xf);
+  let t: number;
+  if (s.level > 0x7f) t = g.data.files.get('UNDER.DAT')[offset + i];
+  else {
+    const stored = g.data.bytes(0x3876 + ((offset >> 8) & 0xff), 1)[0];
+    t = stored === 0xff ? 1 : g.data.files.get('BRIT.DAT')[stored * 256 + i];
+  }
+  if ((t === T.Cave || t === T.Mine || t === T.Dungeon) && dungeonSealed(g, offset)) return T.DF;
+  if (t === T.Shrine && shrineRuined(g, offset)) return T.Ruins;
+  return t;
+}
+
 /** OUTSUBS_01b4: load the chunks the move by (dx, dy) brings in; (0, ±1) at entry loads both rows. */
 export function loadChunks(g: Game, dx: number, dy: number): void {
   const s = g.s;
@@ -538,7 +561,8 @@ export function placeOf(g: Game, x: number, y: number): Place | undefined {
   if (s.mapId === 0) {
     const wx = (s.x - 5 + x) & 0xff;
     const wy = (s.y - 5 + y) & 0xff;
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) around[(dy + 2) * 5 + dx + 2] = tileAt(g, wx + dx, wy + dy);
+    // (From the world's map itself: a square near the loaded window's edge has squares round it beyond it.)
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) around[(dy + 2) * 5 + dx + 2] = worldTile(g, wx + dx, wy + dy);
     return { map: s.level > 0x7f ? 1 : 0, x: wx, y: wy, around };
   }
   // A settlement's level (32 squares a side) round the party, or the combat map (11) as the view shows it.
@@ -555,6 +579,33 @@ export function placeOf(g: Game, x: number, y: number): Place | undefined {
     for (let dx = -2; dx <= 2; dx++) around[(dy + 2) * 5 + dx + 2] = tileAt(g, clamp(mx + dx), clamp(my + dy));
   return { map, x: mx, y: my, around };
 }
+
+/**
+ * The squares just beyond the view made ready to draw while the game waits for a command (input.ts), a few at each of
+ * the wait's passes: their shores worked out, so a step that brings a row of coast or river into view finds them done
+ * - each was some milliseconds, and a row of them a stall a phone felt. Out to two squares beyond, the nearest first.
+ */
+export function warmAhead(g: Game): void {
+  const d = g.draw;
+  if (!d.warm || g.inDungeon || g.inCombat) return;
+  const s = g.s;
+  const at = `${s.mapId}:${s.level}:${s.x},${s.y}`;
+  if (at !== warmedFor) {
+    warmedFor = at;
+    warming.length = 0;
+    for (const r of [1, 2])
+      for (let y = -r; y <= 10 + r; y++)
+        for (let x = -r; x <= 10 + r; x++) if (x === -r || x === 10 + r || y === -r || y === 10 + r) warming.push([x, y]);
+  }
+  const until = performance.now() + 3;
+  while (warming.length && performance.now() < until) {
+    const [x, y] = warming.shift()!;
+    const place = placeOf(g, x, y);
+    if (place) d.warm(place);
+  }
+}
+let warmedFor = '';
+const warming: [number, number][] = [];
 
 /** A member's tint on the map, as their name's colour in the Standard look: green poisoned, lavender asleep. */
 const FIGURE_TINT: Record<number, number> = { [Status.Poisoned]: 0x40ff40, [Status.Sleeping]: 0xb8a0ff };

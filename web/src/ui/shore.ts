@@ -248,6 +248,11 @@ export class Shores {
     }
   }
 
+  /** Square `place`'s shore worked out now, if it has one, to be kept for when it is drawn (StandardArt.warm). */
+  prepare(place: Place): void {
+    if (Shores.drawn(place)) this.shore(place);
+  }
+
   private shore(place: Place): Shore | null {
     const key = `${place.map}:${place.x},${place.y}:${place.around.join(',')}`;
     let s = this.kept.get(key);
