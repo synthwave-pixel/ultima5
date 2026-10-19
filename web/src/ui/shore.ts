@@ -51,6 +51,10 @@ export interface ShoreSheet {
 }
 
 const WATER = new Set([0x01, 0x02, 0x03]);
+/** What a pixel of a shore is, before and after the wander (Shores work): water, soft land or hard land. */
+const IS_WATER = 0;
+const IS_SOFT = 1;
+const IS_HARD = 2;
 /** The ground that gives and takes at a shore: swamp, grass, scrub, sand, the worn earth, flowering grass. */
 const SOFT = new Set([0x04, 0x05, 0x06, 0x07, 0x08, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x30, 0x31, 0x32, 0x33]);
 /** The grounds a bank's land is laid with: the most of those round it. */
@@ -79,7 +83,9 @@ export interface ShoreStyle {
   sand: readonly number[] | null;
 }
 
-const isRiver = (t: number): boolean => (t >= 0x60 && t <= 0x6f) || t in BRIDGED;
+/** The rivers, by tile: their own (0x60 to 0x6f) and those running under a bridge or down a fall (BRIDGED). */
+const RIVERS = Uint8Array.from({ length: 0x200 }, (_, t) => ((t >= 0x60 && t <= 0x6f) || t in BRIDGED ? 1 : 0));
+const isRiver = (t: number): boolean => RIVERS[t] === 1;
 
 /** The largest distance kept (pixels): the shallows, the stipple and the lines are all within it. */
 const R = 12;
@@ -97,16 +103,20 @@ const hash = (x: number, y: number, s: number): number =>
 
 /** A smooth noise over the world's pixels, features about `scale` apart. */
 function noise(seed: number, scale: number): (x: number, y: number) => number {
-  const ease = (t: number): number => t * t * (3 - 2 * t);
   return (x, y) => {
     const fx = x / scale;
     const fy = y / scale;
     const i = Math.floor(fx);
     const j = Math.floor(fy);
-    const u = ease(fx - i);
-    const v = ease(fy - j);
-    const h = (a: number, b: number): number => hash(a & 0xffff, b & 0xffff, seed);
-    return (h(i, j) * (1 - u) + h(i + 1, j) * u) * (1 - v) + (h(i, j + 1) * (1 - u) + h(i + 1, j + 1) * u) * v;
+    const tu = fx - i;
+    const tv = fy - j;
+    const u = tu * tu * (3 - 2 * tu);
+    const v = tv * tv * (3 - 2 * tv);
+    const i0 = i & 0xffff;
+    const i1 = (i + 1) & 0xffff;
+    const j0 = j & 0xffff;
+    const j1 = (j + 1) & 0xffff;
+    return (hash(i0, j0, seed) * (1 - u) + hash(i1, j0, seed) * u) * (1 - v) + (hash(i0, j1, seed) * (1 - u) + hash(i1, j1, seed) * u) * v;
   };
 }
 
@@ -273,16 +283,16 @@ export class Shores {
     const around = place.around;
     const sq = (sx: number, sy: number): number => around[(sy + 2) * 5 + sx + 2];
     /** What is at pixel (px, py) (from the square's top-left) before the wander: water, soft land or hard land. */
-    const base = (px: number, py: number): 'w' | 's' | 'h' => {
+    const base = (px: number, py: number): number => {
       const sx = Math.floor(px / N);
       const sy = Math.floor(py / N);
       const t = sq(sx, sy);
-      if (WATER.has(t)) return 'w';
+      if (WATER.has(t)) return IS_WATER;
       const lx = px - sx * N;
       const ly = py - sy * N;
       const land = sheet.land(BRIDGED[t] ?? t, lx, ly);
-      if (land !== undefined) return land ? 's' : 'w';
-      return SOFT.has(t) ? 's' : 'h';
+      if (land !== undefined) return land ? IS_SOFT : IS_WATER;
+      return SOFT.has(t) ? IS_SOFT : IS_HARD;
     };
     // The world's pixels, for the noises, which differ in the Underworld.
     const ox0 = place.x * N;
@@ -316,28 +326,33 @@ export class Shores {
     const kind = new Uint8Array(E * E); // 1 water
     const soft = new Uint8Array(E * E); // 0 soft ground, 1 anything else (water, or hard land: a wall, a street)
     const src = new Int16Array(E * E * 2); // where each pixel takes its looks from
-    for (let y = 0; y < E; y++)
-      for (let x = 0; x < E; x++) {
-        const px = x - M;
-        const py = y - M;
-        // Settled for the block of four this pixel is in, at its top-left: the block moved whole, by whole blocks,
-        // so it shows a block of where it is taken from.
-        const [bx, by] = [x & ~1, y & ~1];
-        const [qx, qy] = [px - (x - bx), py - (y - by)];
-        const here = open ? 'w' : base(qx, qy);
+    // Settled a block of four at a time, at its top-left: the block moved whole, by whole blocks, so it shows a block
+    // of where it is taken from. (Worked out once for the four, where it was for each.)
+    for (let by = 0; by < E; by += 2)
+      for (let bx = 0; bx < E; bx += 2) {
+        const qx = bx - M;
+        const qy = by - M;
+        const here = open ? IS_WATER : base(qx, qy);
         let k = here;
-        let [sx, sy] = [px, py];
-        if (here !== 'h' && !open) {
+        let mx = 0;
+        let my = 0;
+        if (here !== IS_HARD && !open) {
           const dx = 2 * Math.round(wander(gx, bx, by) / 2);
           const dy = 2 * Math.round(wander(gy, bx, by) / 2);
           const there = base(qx + dx, qy + dy);
           // Water takes soft ground and soft ground takes water; hard land neither gives nor takes.
-          if (there !== 'h' && there !== here) [k, sx, sy] = [there, px + dx, py + dy];
+          if (there !== IS_HARD && there !== here) [k, mx, my] = [there, dx, dy];
         }
-        kind[y * E + x] = k === 'w' ? 1 : 0;
-        soft[y * E + x] = k === 's' ? 0 : 1;
-        src[(y * E + x) * 2] = sx;
-        src[(y * E + x) * 2 + 1] = sy;
+        const isWater = k === IS_WATER ? 1 : 0;
+        const notSoft = k === IS_SOFT ? 0 : 1;
+        for (let y = by; y < by + 2; y++)
+          for (let x = bx; x < bx + 2; x++) {
+            const e = y * E + x;
+            kind[e] = isWater;
+            soft[e] = notSoft;
+            src[e * 2] = x - M + mx;
+            src[e * 2 + 1] = y - M + my;
+          }
       }
     const far = new Float32Array(E * E).fill(R);
     // The shallows and the lines on the water follow a natural shore only: water against a wall, a quay or a street
@@ -429,79 +444,113 @@ export class Shores {
     const fringeW = noise(seed + 23, 30);
     const own = sq(0, 0);
     let any = false;
-    for (let y = 0; y < N; y++)
-      for (let x = 0; x < N; x++) {
-        const e = (y + M) * E + x + M;
-        const i = y * N + x;
-        const px = src[e * 2];
-        const py = src[e * 2 + 1];
-        const fsx = Math.floor(px / N);
-        const fsy = Math.floor(py / N);
-        const ft = sq(fsx, fsy);
-        const lx = px - fsx * N;
-        const ly = py - fsy * N;
-        // The block's top-left: its distances, its depth and the world's noises read there, for all four.
-        const b = ((y & ~1) + M) * E + (x & ~1) + M;
-        const wx = ox0 + (x & ~1);
-        const wy = oy0 + (y & ~1);
-        if (kind[e]) {
-          any = true;
-          s.mode[i] = WET;
-          s.lx[i] = lx;
-          s.ly[i] = ly;
-          const river = isRiver(ft);
-          s.from[i] = river ? RIVER_WATER : -1;
-          if (!river) {
-            s.depth[i] = Math.round(depthAt(src[b * 2], src[b * 2 + 1]) * 127.5);
-            // The sea's light dimmed in broad patches, out in the world; a town's or an arena's water is left as it is,
-            // so it meets the squares of water drawn as tiles (a moat's corners) without a seam.
-            s.glint[i] = place.map > 1 ? 255 : Math.round((0.55 + 0.45 * (glint(wx, wy) * 0.6 + glint2(wx, wy) * 0.4)) * 255);
-          }
-          const d = toLand[b];
-          if (d >= R) continue;
-          const sw = 3 + shelfW(wx, wy) * 8;
-          if (d < sw) s.shelf[i] = Math.round(0.5 * (1 - d / sw) ** 0.8 * 255);
-          if (river && groundOf(fsx, fsy) === SWAMP) {
-            // The swamp's rivers: a stipple of sand on the bottom, thick at the shore, thinning out.
-            const t = d / (sw + 2);
-            if (t < 1 && hash(wx, wy, 77) < 0.32 * (1 - t) ** 1.5) [s.mark[i], s.markA[i]] = [1, 191];
-          } else {
-            // Everywhere else, lines following the shore, wandering and broken, fading out.
-            const dd = d + (wig(wx, wy) - 0.5) * 3.6;
-            for (const [k, a, w] of lines)
-              if (Math.abs(dd - k) < w && brk(wx + k * 13, wy) > 0.3) {
-                [s.mark[i], s.markA[i]] = [2, Math.round(a * 255)];
-                break;
-              }
-          }
-        } else {
-          // The square's own ground where it is still its own; anywhere else, the ground it comes from (a bank's land
-          // is the ground round it).
-          if (fsx === 0 && fsy === 0 && SOFT.has(own)) s.mode[i] = OWN;
-          else {
-            any = true;
-            s.mode[i] = GROUND;
-            s.from[i] = SOFT.has(ft) ? carried(ft) : groundNear(fsx, fsy, px, py);
-            s.lx[i] = x;
-            s.ly[i] = y;
-          }
-          const d = toWater[b];
-          // The sand fringe on the grass: specks thick at the waterline, thinning inland over two or three of the
-          // originals' pixels.
-          const ground = s.mode[i] === OWN ? own : s.from[i];
-          if (sand && GRASSY.has(ground)) {
-            const w = 7 + fringeW(wx, wy) * 4;
-            if (d < w && hash(wx, wy, 91) < 0.75 * (1 - d / w) ** 1.1) {
-              s.sand[i] = 1 + Math.floor(hash(wx, wy, 92) * sand.length);
+    // A block of four at a time: what is read at its top-left (its distances, its depth, the world's noises there) read
+    // once for the four - each when first wanted, as it was for each pixel.
+    const ml = lines.length;
+    for (let by = 0; by < N; by += 2)
+      for (let bx = 0; bx < N; bx += 2) {
+        const b = (by + M) * E + bx + M;
+        const wx = ox0 + bx;
+        const wy = oy0 + by;
+        let depthB = -1;
+        let glintB = -1;
+        let swB = -1;
+        let stippleB = -1;
+        let wigB = -1;
+        let brkB: number[] | null = null;
+        let fringeB = -1;
+        let speckB = -1;
+        let sandB = -1;
+        let dampB = -1;
+        for (let y = by; y < by + 2; y++)
+          for (let x = bx; x < bx + 2; x++) {
+            const e = (y + M) * E + x + M;
+            const i = y * N + x;
+            const px = src[e * 2];
+            const py = src[e * 2 + 1];
+            const fsx = Math.floor(px / N);
+            const fsy = Math.floor(py / N);
+            const ft = sq(fsx, fsy);
+            const lx = px - fsx * N;
+            const ly = py - fsy * N;
+            if (kind[e]) {
               any = true;
+              s.mode[i] = WET;
+              s.lx[i] = lx;
+              s.ly[i] = ly;
+              const river = isRiver(ft);
+              s.from[i] = river ? RIVER_WATER : -1;
+              if (!river) {
+                if (depthB < 0) depthB = Math.round(depthAt(src[b * 2], src[b * 2 + 1]) * 127.5);
+                s.depth[i] = depthB;
+                // The sea's light dimmed in broad patches, out in the world; a town's or an arena's water is left as it
+                // is, so it meets the squares of water drawn as tiles (a moat's corners) without a seam.
+                if (glintB < 0)
+                  glintB = place.map > 1 ? 255 : Math.round((0.55 + 0.45 * (glint(wx, wy) * 0.6 + glint2(wx, wy) * 0.4)) * 255);
+                s.glint[i] = glintB;
+              }
+              const d = toLand[b];
+              if (d >= R) continue;
+              if (swB < 0) swB = 3 + shelfW(wx, wy) * 8;
+              const sw = swB;
+              if (d < sw) s.shelf[i] = Math.round(0.5 * (1 - d / sw) ** 0.8 * 255);
+              if (river && groundOf(fsx, fsy) === SWAMP) {
+                // The swamp's rivers: a stipple of sand on the bottom, thick at the shore, thinning out.
+                const t = d / (sw + 2);
+                if (t < 1) {
+                  if (stippleB < 0) stippleB = hash(wx, wy, 77);
+                  if (stippleB < 0.32 * (1 - t) ** 1.5) [s.mark[i], s.markA[i]] = [1, 191];
+                }
+              } else {
+                // Everywhere else, lines following the shore, wandering and broken, fading out.
+                if (wigB < 0) wigB = wig(wx, wy);
+                const dd = d + (wigB - 0.5) * 3.6;
+                for (let n = 0; n < ml; n++) {
+                  const [k, a, w] = lines[n];
+                  if (Math.abs(dd - k) < w) {
+                    brkB ??= lines.map(([kk]) => brk(wx + kk * 13, wy));
+                    if (brkB[n] > 0.3) {
+                      [s.mark[i], s.markA[i]] = [2, Math.round(a * 255)];
+                      break;
+                    }
+                  }
+                }
+              }
+            } else {
+              // The square's own ground where it is still its own; anywhere else, the ground it comes from (a bank's
+              // land is the ground round it).
+              if (fsx === 0 && fsy === 0 && SOFT.has(own)) s.mode[i] = OWN;
+              else {
+                any = true;
+                s.mode[i] = GROUND;
+                s.from[i] = SOFT.has(ft) ? carried(ft) : groundNear(fsx, fsy, px, py);
+                s.lx[i] = x;
+                s.ly[i] = y;
+              }
+              const d = toWater[b];
+              // The sand fringe on the grass: specks thick at the waterline, thinning inland over two or three of the
+              // originals' pixels.
+              const ground = s.mode[i] === OWN ? own : s.from[i];
+              if (sand && GRASSY.has(ground)) {
+                if (fringeB < 0) fringeB = 7 + fringeW(wx, wy) * 4;
+                const w = fringeB;
+                if (d < w) {
+                  if (speckB < 0) speckB = hash(wx, wy, 91);
+                  if (speckB < 0.75 * (1 - d / w) ** 1.1) {
+                    if (sandB < 0) sandB = 1 + Math.floor(hash(wx, wy, 92) * sand.length);
+                    s.sand[i] = sandB;
+                    any = true;
+                  }
+                }
+              }
+              if (d < 5 && dampB < 0) dampB = 1.5 + dampW(wx, wy) * 3.5;
+              const dd = d < 5 ? dampB : 0;
+              if (d < dd) {
+                s.shade[i] = Math.round(0.42 * (1 - d / dd) * 255);
+                any = true;
+              }
             }
           }
-          const dd = d < 5 ? 1.5 + dampW(wx, wy) * 3.5 : 0;
-          if (d < dd) {
-            s.shade[i] = Math.round(0.42 * (1 - d / dd) * 255);
-            any = true;
-          }
-        }
       }
     return any ? s : null;
   }
@@ -512,28 +561,35 @@ function chamfer(kind: Uint8Array, to: number): Float32Array {
   const INF = 1e6;
   const d = new Float32Array(E * E);
   for (let i = 0; i < E * E; i++) d[i] = kind[i] === to ? 0 : INF;
-  // The steps already passed, as offsets in the array, and their weights (the pixels two from the edge are left be:
-  // the margin is wider than any distance kept).
-  const off = [-1, -E, -E - 1, -E + 1, -E - 2, -2 * E - 1, -2 * E + 1, -E + 2];
-  const w = [5, 5, 7, 7, 11, 11, 11, 11];
+  // The steps already passed and their weights - 5 across, 7 diagonally, 11 a knight's move - written out (the pixels
+  // two from the edge are left be: the margin is wider than any distance kept).
+  const step = (v: number, c: number): number => (c < v ? c : v);
   for (let y = 2; y < E - 2; y++)
     for (let x = 2; x < E - 2; x++) {
       const i = y * E + x;
       let v = d[i];
-      for (let k = 0; k < 8; k++) {
-        const c = d[i + off[k]] + w[k];
-        if (c < v) v = c;
-      }
+      v = step(v, d[i - 1] + 5);
+      v = step(v, d[i - E] + 5);
+      v = step(v, d[i - E - 1] + 7);
+      v = step(v, d[i - E + 1] + 7);
+      v = step(v, d[i - E - 2] + 11);
+      v = step(v, d[i - 2 * E - 1] + 11);
+      v = step(v, d[i - 2 * E + 1] + 11);
+      v = step(v, d[i - E + 2] + 11);
       d[i] = v;
     }
   for (let y = E - 3; y >= 2; y--)
     for (let x = E - 3; x >= 2; x--) {
       const i = y * E + x;
       let v = d[i];
-      for (let k = 0; k < 8; k++) {
-        const c = d[i - off[k]] + w[k];
-        if (c < v) v = c;
-      }
+      v = step(v, d[i + 1] + 5);
+      v = step(v, d[i + E] + 5);
+      v = step(v, d[i + E + 1] + 7);
+      v = step(v, d[i + E - 1] + 7);
+      v = step(v, d[i + E + 2] + 11);
+      v = step(v, d[i + 2 * E + 1] + 11);
+      v = step(v, d[i + 2 * E - 1] + 11);
+      v = step(v, d[i + E - 2] + 11);
       d[i] = v;
     }
   for (let i = 0; i < E * E; i++) d[i] = Math.min(R, d[i] / 5);
