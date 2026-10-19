@@ -115,9 +115,14 @@ function putAway(g: Game, always = false): void {
   g.text.select(was);
 }
 
-/** The townsman speaks: their window chosen (after the log had the party's words). */
+/**
+ * The townsman speaks: their window chosen (after the log had the party's words). The log's line ended first where
+ * the party's left it open - an answer typed as nothing, whose line the townsman's reply would have ended in the log.
+ */
 export function speak(g: Game): void {
-  if (speechOn(g) && talks.has(g)) g.text.select(SPEECH);
+  if (!speechOn(g) || !talks.has(g)) return;
+  if (g.text.current === LOG && g.text.win.x !== 0) g.printChar('\n');
+  g.text.select(SPEECH);
 }
 
 /** Whether the townsman's window is the one written in now. */

@@ -234,4 +234,26 @@ describe('what is said, in the play area', () => {
     expect(after).toEqual(before);
     expect(cover).toBeDefined(); // the map still left alone under it
   });
+
+  it("ends the log's line after an empty answer typed, before the townsman asks again (the keyboard)", async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    Object.assign(g.options, { input: 'keyboard', dialog: 'play' });
+    journeyOnward(g);
+    stashWorldActors(g);
+    Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    const npc = 5; // the busboy, who asks whether the party is here to eat once he has met them
+    s.npcMet[(s.mapId - 1) * 4 + (npc >> 3)] |= 1 << (npc & 7);
+    const a = s.actors[s.npcs[npc].actor];
+    Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
+    loadLevel(g, true);
+    g.said = '';
+    // Nothing (Enter alone), then "no", then BYE.
+    const keys = [K.Enter, 0x6e, 0x6f, K.Enter, 0x62, 0x79, 0x65, K.Enter];
+    p.next = () => keys.shift() ?? K.Enter;
+    await talkToNpc(g, npc);
+    expect(g.said).toContain('You respond-\n:\n');
+    expect(g.said).not.toMatch(/:You respond-/);
+  });
 });
