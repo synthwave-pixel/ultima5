@@ -6,6 +6,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { boxShown, placement, SPEECH, waitsForKey } from '../src/game/speech.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
+import { RUNE_INK } from '../src/game/runeWords.ts';
 import { newGame } from './helpers.ts';
 
 /** The townsman of this settlement whose script bears this name. */
@@ -150,5 +151,43 @@ describe('what is said, in the play area', () => {
     const meditate = shownPages.find((l) => l[0].startsWith('"Meditate'));
     expect(meditate, shownPages.map((l) => l.join(' / ')).join(' | ')).toHaveLength(6);
     expect(meditate![5]).toBe('Codex!"');
+  });
+  it("shows a mantra's runes reading in a mantra's blue, as the log does (Greyson's, Britain)", async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    Object.assign(g.options, { input: 'controller', dialog: 'play' });
+    journeyOnward(g);
+    stashWorldActors(g);
+    Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    for (const w of ['MANTRA', 'SACRED']) g.words.add(w);
+    const npc = findNpc(g, 'Greyson');
+    const a = s.actors[s.npcs[npc].actor];
+    Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
+    loadLevel(g, true);
+    const runes: { ch: string; ink?: number }[] = [];
+    type Rec = { staged: { ch: string; font: number; ink?: number }[][]; windows: { top: number; left: number }[] };
+    const showStaged = g.text.showStaged.bind(g.text);
+    g.text.showStaged = (f, count, column, row, width) => {
+      const t = g.text as unknown as Rec;
+      for (let r = f; r < f + count; r++) for (const c of t.staged[r].slice(0, width)) if (c.font === 1) runes.push(c);
+      showStaged(f, count, column, row, width);
+    };
+    // Mantra, then British (the rightful ruler), then Compassion; then leave.
+    const answers = ['Mantra', 'British', 'Compassion'];
+    p.next = () => {
+      const m = g.menuShown;
+      if (!m) return Pad.A;
+      const want = answers.length ? m.labels.indexOf(answers[0]) : m.labels.indexOf('Take leave');
+      if (want < 0) return Pad.B;
+      if (m.at === want) {
+        answers.shift();
+        return Pad.A;
+      }
+      return m.at < want ? K.Down : K.Up;
+    };
+    await talkToNpc(g, npc);
+    expect(runes.length).toBeGreaterThan(0); // MU, in runes
+    for (const c of runes) expect(c.ink, c.ch).toBe(RUNE_INK.good);
   });
 });

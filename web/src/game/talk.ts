@@ -152,6 +152,8 @@ function flushWord({ g, t }: Talk): void {
     // Word red, the rest grey (runeWords.ts).
     const runes = runesRead(t.word);
     if (runes) g.p.fx.readInk?.(RUNE_INK[runeKind(runes)]);
+    // (Kept with each glyph too: one written off the screen, for the Dialog setting's box, is drawn later: speech.ts.)
+    if (runes) g.text.ink = RUNE_INK[runeKind(runes)];
     for (const b of t.word) {
       g.text.font = (b & 0x80) === 0 ? 1 : 0;
       const c = b & 0x7f;
@@ -168,6 +170,7 @@ function flushWord({ g, t }: Talk): void {
     t.word = [];
     g.text.font = 0;
     if (runes) g.p.fx.readInk?.(null);
+    g.text.ink = null;
   }
 }
 

@@ -128,3 +128,35 @@ describe('an overlay over a text window', () => {
     expect(() => t.cover(LOG, 24, 11, 39, 12)).not.toThrow();
   });
 });
+
+/**
+ * A rune word's colour - the one it reads into English in (text.ts ink: a mantra blue, a dungeon's Word red) - kept
+ * with each of its glyphs, so one drawn later from the record (the Dialog setting's box: showStaged) reads in it too.
+ */
+describe("a rune word's colour, kept with its glyphs", () => {
+  it('draws a glyph written off the screen in its rune colour, and the rest as they were', () => {
+    const drawn: { ch: string; ink: number | null }[] = [];
+    let ink: number | null = null;
+    const t = new Text({
+      glyph: (_f, code) => drawn.push({ ch: String.fromCharCode(code), ink }),
+      clearCells: () => {},
+      scrollCells: () => {},
+      ink: (rgb) => (ink = rgb),
+    });
+    t.stageWindow = 4;
+    t.setWindow(4, 0, 0, 17, 23);
+    t.select(4);
+    t.print('is ');
+    t.font = 1;
+    t.ink = 0x4060ff;
+    t.print('MU');
+    t.ink = null;
+    t.font = 0;
+    t.print('!');
+    expect(drawn).toEqual([]); // nothing drawn while off the screen
+    t.showStaged(0, 1, 2, 2, 18);
+    const letters = drawn.filter((d) => d.ch.trim());
+    expect(letters.map((d) => `${d.ch}:${d.ink ?? '-'}`)).toEqual(['i:-', 's:-', `M:${0x4060ff}`, `U:${0x4060ff}`, '!:-']);
+    expect(ink).toBeNull(); // and the colour let go after
+  });
+});

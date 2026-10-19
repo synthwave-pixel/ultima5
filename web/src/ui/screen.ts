@@ -197,6 +197,9 @@ export class Screen implements Platform {
         fb.glyph(font, code, column, row, fg, bg, again);
         if (underline) fb.line(column * 8, row * 8 + 7, column * 8 + 7, row * 8 + 7, fg);
       },
+      ink: (rgb) => {
+        fb.readInk = rgb;
+      },
       // A border's cap: its glyph, and the two white lines that join it to the border (ULTIMA_4c2a, ULTIMA_4cce).
       cap: (side, column, row, fg, bg) => {
         fb.glyph(0, side, column, row, fg, bg);

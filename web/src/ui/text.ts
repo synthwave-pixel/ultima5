@@ -57,6 +57,11 @@ export interface TextTarget {
   clearCells(c1: number, r1: number, c2: number, r2: number, colour: number): void;
   /** Scroll cells (c1, r1)-(c2, r2) up one text row, clearing the last. */
   scrollCells(c1: number, r1: number, c2: number, r2: number, colour: number): void;
+  /**
+   * The colour a rune word reads into English in (0xRRGGBB), for the glyphs drawn until it is set again (null): the
+   * talk's, as it prints the word (talk.ts flushWord) - and again from the record, for a glyph drawn later (Text.ink).
+   */
+  ink?(rgb: number | null): void;
 }
 
 export interface TextWindow {
@@ -87,6 +92,8 @@ interface Cell {
   underline: boolean;
   /** A border's cap: 2 the left, 1 the right (Text.printCap); 0 a plain glyph. */
   cap: number;
+  /** The colour its rune word reads into English in (Text.ink), where it was written in one. */
+  ink?: number;
 }
 
 const blank = (bg = 0): Cell => ({ ch: ' ', font: -1, fg: 15, bg, underline: false, cap: 0 });
@@ -116,6 +123,11 @@ export class Text {
   underline = false;
   /** 0 is IBM.CH, 1 RUNES.CH. */
   font = 0;
+  /**
+   * The colour the rune word being written reads into English in (0xRRGGBB), or null: kept with each glyph, so one
+   * drawn later from the record - the Dialog setting's box (showStaged), a change of look (repaint) - reads in it too.
+   */
+  ink: number | null = null;
   /** Whether a printed character advances the cursor (D_538e). */
   advance = true;
   /** The window whose turns fold (the message window), or -1 for none. */
@@ -507,13 +519,23 @@ export class Text {
         if (cell.font < 0 && inked) continue;
         if (cell.font < 0) this.out.clearCells(c, r, c, r, cell.bg);
         else if (cell.cap && this.out.cap) this.out.cap(cell.cap, c, r, cell.fg, cell.bg);
-        else this.out.glyph(cell.font, cell.ch.charCodeAt(0), c, r, cell.fg, cell.bg, cell.underline, true);
+        else this.inked(cell, () => this.out.glyph(cell.font, cell.ch.charCodeAt(0), c, r, cell.fg, cell.bg, cell.underline, true));
       }
+  }
+
+  /** A glyph from the record drawn in the colour its rune word reads in, where it has one (Text.ink). */
+  private inked(cell: Cell, draw: () => void): void {
+    if (cell.ink === undefined || !this.out.ink) return draw();
+    this.out.ink(cell.ink);
+    draw();
+    this.out.ink(this.ink);
   }
 
   private glyph(font: number, code: number, column: number, row: number, fg: number, bg: number): void {
     const cap = this.capNext;
-    this.set(row, column, { ch: String.fromCharCode(code), font, fg, bg, underline: this.underline, cap });
+    const cell: Cell = { ch: String.fromCharCode(code), font, fg, bg, underline: this.underline, cap };
+    if (this.ink !== null) cell.ink = this.ink;
+    this.set(row, column, cell);
     if (this.staging || this.hidden(row, column)) return;
     if (cap && this.out.cap) this.out.cap(cap, column, row, fg, bg);
     else this.out.glyph(font, code, column, row, fg, bg, this.underline);
@@ -565,7 +587,7 @@ export class Text {
         if (!cell || x > 39 || y > 24) continue;
         this.cells[y][x] = { ...cell };
         if (cell.font < 0) this.out.clearCells(x, y, x, y, cell.bg);
-        else this.out.glyph(cell.font, cell.ch.charCodeAt(0), x, y, cell.fg, cell.bg, cell.underline);
+        else this.inked(cell, () => this.out.glyph(cell.font, cell.ch.charCodeAt(0), x, y, cell.fg, cell.bg, cell.underline));
       }
   }
 
