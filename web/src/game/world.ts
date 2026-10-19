@@ -709,6 +709,7 @@ export function drawView(g: Game): void {
   };
   for (let y = 0; y < 11; y++) {
     for (let x = 0; x < 11; x++) {
+      if (covered(g, x, y)) continue; // a box over it, left as it is
       const v = viewAt(g, x, y);
       const place = placeOf(g, x, y);
       if (v === 0) {
@@ -750,6 +751,14 @@ const BADGES: Partial<Record<Bumped, { fill: number; glyph: string[] }>> = {
 };
 
 /** The badges of the chests in view that have been searched (Game.bumped). */
+/** Whether view square (x, y) lies under something over the view (Game.covers), even in part: not to be drawn. */
+export function covered(g: Game, x: number, y: number): boolean {
+  if (g.covers.size === 0) return false;
+  const [x1, y1] = [x * 16 + 8, y * 16 + 8];
+  for (const c of g.covers.values()) if (x1 <= c[2] && x1 + 15 >= c[0] && y1 <= c[3] && y1 + 15 >= c[1]) return true;
+  return false;
+}
+
 export function drawReadings(g: Game): void {
   if (g.bumped.size === 0 || g.inDungeon) return;
   const s = g.s;
@@ -765,6 +774,7 @@ export function drawReadings(g: Game): void {
       if (a.z !== s.level) continue;
     }
     if (vx > 10 || vy > 10 || viewAt(g, vx, vy) !== 0 || actorAt(g, vx, vy) !== 1) continue; // out of sight
+    if (covered(g, vx, vy)) continue;
     const badge = BADGES[g.bumped.get(thingKey(g, a.x, a.y)) ?? 'done'];
     if (!badge) continue;
     // A 7x7 plaque, its corners cut, in the square's top-right: a dark rim, the colour, the glyph in white.

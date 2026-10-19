@@ -230,6 +230,11 @@ export class Game {
    * reading was made - or 'disarmed', by An Sanct or a key; its badge shows it (world.ts drawReadings). Forgotten with the place (a new fight, level or map).
    */
   readonly bumped = new Map<string, Bumped>();
+  /**
+   * What lies over the view while the map goes on animating under it (EGA pixels, inclusive): the talk's menu and the
+   * townsman's box (menu.ts talkBox, speech.ts). The squares under them are not drawn (world.ts drawView, covered).
+   */
+  readonly covers = new Map<'menu' | 'speech', [number, number, number, number]>();
   /** The member a bumped command is done by, chosen for it (bumpAct.ts): -1 for whoever the command asks for. */
   bumpWho = -1;
   /**

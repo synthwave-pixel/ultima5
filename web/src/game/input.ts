@@ -90,10 +90,13 @@ export function asPad(g: Game, k: number): number {
  * backs out - and the letters, which are nobody's shortcuts in that mode,
  * do nothing.
  */
-export async function menuKey(g: Game, keep: number[] = []): Promise<number> {
+export async function menuKey(g: Game, keep: number[] = [], idle?: () => void): Promise<number> {
   for (;;) {
     g.learnRead();
-    const raw = await g.p.waitKey(() => g.titleIdle?.());
+    const raw = await g.p.waitKey(() => {
+      g.titleIdle?.();
+      idle?.();
+    });
     g.lastRaw = raw;
     // Letters the menu itself answers to (Y and N at a yes or no) are letters even on a keyboard read as a pad.
     if (raw < 0x100 && keep.includes(upper(raw))) return upper(raw);

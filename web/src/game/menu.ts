@@ -11,7 +11,7 @@
 import { saysWord, talkingHorseBeside } from './cmds.ts';
 import { actorTileAt } from './actors.ts';
 import { foesAbout } from './bumpAct.ts';
-import { clearBorderTitle, drawVitals, updateFrame, Win } from './frame.ts';
+import { animating, clearBorderTitle, drawVitals, updateFrame, Win } from './frame.ts';
 import { drawTextCard } from './shopCard.ts';
 import { CF, Game } from './game.ts';
 import { menuKey, PAUSED } from './input.ts';
@@ -124,6 +124,7 @@ const key = (g: Game): Promise<number> => menuKey(g);
 /** Put the map back as it was before a menu covered it. */
 export async function restoreView(g: Game): Promise<void> {
   g.draw.chromeBox?.(null);
+  g.covers.delete('menu');
   // At the title there is no map or party to put back (a game's stats would come up over it): what opened the menu
   // draws the title again itself.
   if (!g.inPlay) return;
@@ -274,6 +275,7 @@ function talkBox(g: Game, width: number, lines: number, rows: TalkRows): void {
   d.line(x1, y1, x1, y2);
   d.line(x2, y1, x2, y2);
   d.chromeBox?.([x1, y1, x2, y2]);
+  g.covers.set('menu', [x1, y1, x2, y2]); // the map goes on under it (choose)
   t.setWindow(WIN, left, top, left + cols - 1, top + lines - 1);
   t.select(WIN);
 }
@@ -664,6 +666,7 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
   // (A talk's menu - low in the view, framed - holds its lines alone: no title, no notes. Its title is still the
   // menu's, for whoever reads which it is.)
   const talking = !boxed && talk !== undefined && g.inPlay;
+  const animate = talking ? animating(g) : undefined;
   const noted = !boxed && !talking && items.some((it) => it.note);
   const rows = boxed
     ? Math.min(items.length, HEIGHT - 6)
@@ -732,7 +735,8 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
       dim: items.map((it) => it.dim === true),
       at,
     };
-    const k = await menuKey(g, boxed ? items.flatMap((it) => (it.key ? [it.key] : [])) : []);
+    // (A talk's menu leaves the map going on round it: the townsman and the party, the water.)
+    const k = await menuKey(g, boxed ? items.flatMap((it) => (it.key ? [it.key] : [])) : [], animate);
     if (k === PAUSED) {
       frame(); // the Pause menu was over it
       continue;

@@ -4,6 +4,7 @@ import { analyse } from '../tools/talk/analysis.ts';
 import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkMenuRows } from '../src/game/speech.ts';
+import { covered } from '../src/game/world.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
@@ -110,5 +111,26 @@ describe("the talk's menus, at the view's foot", () => {
     await talkToNpc(g, i).catch(() => undefined);
     expect(firsts[0]).toBe('Name'); // all to ask: Name leads
     expect(firsts[firsts.length - 1]).toBe('Take leave'); // all heard: taking leave leads, the bar on it
+  });
+  it('leaves the map going on round the menu: the squares under it not drawn while it is up, all once the talk is over', async () => {
+    const { g, p, i } = await britain();
+    const s = g.s;
+    const n = s.npcs[i];
+    Object.assign(s, { level: n.z, x: n.x, y: n.y + 1 });
+    loadLevel(g, true);
+    let seen: { cover: number[] | undefined; under: boolean; party: boolean } | null = null;
+    p.next = () => {
+      if (g.menuShown?.title === 'Say' && !seen) {
+        // The bottom row of squares lies under the menu; the party's, at the middle, does not.
+        seen = { cover: g.covers.get('menu'), under: covered(g, 5, 10), party: covered(g, 5, 5) };
+        return Pad.B;
+      }
+      return Pad.A;
+    };
+    await talkToNpc(g, i).catch(() => undefined);
+    expect(seen!.cover).toBeDefined();
+    expect(seen!.under).toBe(true);
+    expect(seen!.party).toBe(false);
+    expect(g.covers.size).toBe(0);
   });
 });

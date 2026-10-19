@@ -1036,6 +1036,7 @@ async function conversation(g: Game, n: number): Promise<void> {
   } finally {
     // The Dialog setting's panel read to its end (a key) and put away (speech.ts) - not where the talk broke off.
     await speech.end(g, ended);
+    g.covers.clear(); // nothing of the talk over the map any more: all of it drawn again
     // Or by the time the talk ends: refused, he ends it ("Scoundrel!").
     settleKeys(g);
     const heard = g.recording;

@@ -13,7 +13,7 @@
 import type { Game } from './game.ts';
 import { Colour } from '../ui/colours.ts';
 import { CLEAR_WINDOW } from '../ui/text.ts';
-import { updateFrame } from './frame.ts';
+import { animating, updateFrame } from './frame.ts';
 import { blinker, waitMark } from './waitMark.ts';
 
 /** The text window the townsman's words are written in, off the screen (frame.ts's are 0-2, the menus' 3). */
@@ -106,6 +106,9 @@ function putAway(g: Game, always = false): void {
   if (b) g.text.clearArea(b.left, b.top, b.left + b.width - 1, b.top + b.height - 1);
   if (k) k.shown = null;
   g.draw.chromeSpeech?.(null);
+  // The view drawn again whole: the box, and the menu answered under it, gone with what covered the map.
+  g.covers.delete('speech');
+  g.covers.delete('menu');
   const was = g.text.current;
   g.viewDirty = 1;
   updateFrame(g);
@@ -167,6 +170,7 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   d.line(x1, y1, x1, y2);
   d.line(x2, y1, x2, y2);
   d.chromeSpeech?.([x1, y1, x2, y2]);
+  g.covers.set('speech', [x1, y1, x2, y2]); // the map goes on under it (waitHere, the talk's menu)
   t.showStaged(from, height, left, top, width);
   k.shown = { left, top, width, height };
   t.dropStaged(from + taken);
@@ -197,7 +201,13 @@ async function waitHere(g: Game, x: number, y: number): Promise<void> {
   g.p.flushKeys();
   waiting.add(g);
   try {
-    await g.p.waitKey(blinker(g, x, y));
+    // The arrow blinking, and the map going on round the box, as it does round the talk's menu.
+    const blink = blinker(g, x, y);
+    const animate = animating(g);
+    await g.p.waitKey(() => {
+      blink();
+      animate();
+    });
   } finally {
     waiting.delete(g);
   }

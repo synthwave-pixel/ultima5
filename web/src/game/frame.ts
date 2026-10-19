@@ -854,6 +854,18 @@ export function ambientSound(g: Game): void {
  * figures (the actors, the party's walk) left as they are where `figures`
  * is false.
  */
+/**
+ * The map's animation for a wait over it (the talk's menu, the townsman's box): as the command prompt's wait has it
+ * (input.ts) - the figures every other pass in the Standard look - the squares under what lies over it left be
+ * (Game.covers). Outside dungeons.
+ */
+export function animating(g: Game): () => void {
+  let pass = 0;
+  return () => {
+    if (g.s.mapId < 0x21 || g.s.mapId > 0x7f) updateFrame(g, g.options.tileSet !== 'standard' || (pass++ & 1) === 0);
+  };
+}
+
 export function updateFrame(g: Game, figures = true): void {
   const s = g.s;
   g.d545e = 0xff;
