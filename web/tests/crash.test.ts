@@ -27,6 +27,20 @@ describe('crash box: what is noise', () => {
     expect(isNoise({ error: thrown('x', 'Error: x\n    at f (moz-extension://abc/inject.js:1:2)') })).toBe(true);
   });
 
+  it("lets a script the browser injects into the page be (Brave's wallet on iOS), but not the game's own", () => {
+    const page = 'http://192.168.4.101:5173/';
+    const wallet = thrown(
+      "undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')",
+      `global code@${page}:1:16`,
+    );
+    expect(isNoise({ error: wallet, message: wallet.message, filename: page, lineno: 1, colno: 16 })).toBe(true);
+    // Thrown in the game's code - a module of the dev server's, or the build's - it counts, wherever it is caught.
+    const ours = thrown('x', 'step@http://192.168.4.101:5173/src/game/talk.ts?t=123:40:7\nglobal code@http://192.168.4.101:5173/:1:1');
+    expect(isNoise({ error: ours, filename: page })).toBe(false);
+    expect(isNoise({ error: new Error('x'), filename: 'https://x.github.io/ultima5/assets/index-abc123.js', lineno: 1 })).toBe(false);
+    expect(isNoise({ error: new Error('x'), filename: 'file:///app/resources/app.asar/dist/assets/index-abc.js' })).toBe(false);
+  });
+
   it('lets the ResizeObserver loop and a call called off be', () => {
     expect(isNoise({ error: undefined, message: 'ResizeObserver loop completed with undelivered notifications.' })).toBe(true);
     expect(isNoise({ error: thrown('The user aborted a request.', '', 'AbortError'), rejection: true })).toBe(true);

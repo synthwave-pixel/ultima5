@@ -33,10 +33,16 @@ export interface Thrown {
 
 /** Schemes of a browser extension's own scripts: their errors are not the game's. */
 const EXTENSION = /\b(?:chrome|moz|safari|safari-web|ms-browser)-extension:\/\//;
+/**
+ * A script file's place, in a stack or as the file an error was thrown in: the game's own code is always in one - the
+ * page writes none inline (index.html) - where what a browser injects into the page itself (Brave's wallet on iOS,
+ * `window.ethereum`) runs as the page's own "global code", at the page's address.
+ */
+const SCRIPT_FILE = /\.(?:m?js|tsx?)(?:\?[^\s:)]*)?(?::\d+|$)/;
 
 /**
  * Whether what was thrown is not the game's breaking: another origin's script, whose error the browser hides behind
- * "Script error." and no stack; an extension's; the ResizeObserver loop the browser reports and recovers from; a fetch
+ * "Script error." and no stack; an extension's, or a script the browser injects into the page; the ResizeObserver loop the browser reports and recovers from; a fetch
  * or a sound called off (an AbortError), which was meant.
  */
 export function isNoise(t: Thrown): boolean {
@@ -46,6 +52,8 @@ export function isNoise(t: Thrown): boolean {
   if (err == null && !t.rejection && /^Script error\.?$/i.test(t.message ?? '')) return true;
   if (/^ResizeObserver loop/.test(message) || /^ResizeObserver loop/.test(t.message ?? '')) return true;
   if (EXTENSION.test(t.filename ?? '') || EXTENSION.test(stack)) return true;
+  // Thrown in the page's own inline code, no script file of the game's anywhere in it: injected, not the game's.
+  if (!t.rejection && t.filename && !SCRIPT_FILE.test(t.filename) && !SCRIPT_FILE.test(stack)) return true;
   if (err instanceof Error && err.name === 'AbortError') return true;
   // A DOMException is an Error in browsers, but not always in a web view of an older engine.
   if (typeof err === 'object' && err !== null && (err as { name?: unknown }).name === 'AbortError') return true;
