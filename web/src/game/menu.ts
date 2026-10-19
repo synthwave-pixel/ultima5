@@ -362,6 +362,12 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
     const word = g.words.forStub(stub, false, { own, said, backwards, reviewed: KEYWORD_LABELS[g.talk.labels + stub.toUpperCase()] });
     if (!word || always.some((w) => saysWord(w, word.toUpperCase()))) return;
     if (offered.has(dest)) return;
+    // Nor a word an earlier keyword of theirs answers first, with another reply (talk.ts findKeyword: the first that
+    // matches): Camile of West Britanny's TRUE is her crops' "Indeed they do!" before it is her True Master, whose
+    // question Master asks - the next of that reply's words is offered instead.
+    const says = sayable(stub, word).toUpperCase();
+    const first = keywords.find((kw) => saysWord(kw.stub, says));
+    if (first && first.dest !== dest) return;
     offered.add(dest);
     // (A name spelt out with full stops, "H.M.S.", is labelled as it is written.)
     const label = word.includes('.') ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
