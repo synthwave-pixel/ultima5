@@ -335,7 +335,14 @@ export class Text {
     while (from < width && this.at(w.top + y, w.left + from).ch === want[from]) from++;
     if (from >= width) return;
     this.clearCells(w.left + from, w.top + y, w.right, w.top + y, w.bg);
-    for (let i = from; i < width; i++) if (want[i] !== ' ') this.glyph(0, want.charCodeAt(i), w.left + i, w.top + y, w.fg, w.bg);
+    for (let i = from; i < width; i++) {
+      if (want[i] === ' ') continue;
+      // A prompt's arrow printed again (a fold taken back) is the border's cap it was (printCap), not a glyph in white.
+      const code = want.charCodeAt(i);
+      if (i === 0 && (code === 1 || code === 2) && this.current === this.foldWindow) this.capNext = code;
+      this.glyph(0, code, w.left + i, w.top + y, w.fg, w.bg);
+      this.capNext = 0;
+    }
   }
 
   /**

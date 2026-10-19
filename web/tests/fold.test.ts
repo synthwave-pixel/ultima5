@@ -67,6 +67,22 @@ describe('repeated turns', () => {
     expect(shown(p)).toEqual([' North (x2)', ' North', 'Blocked!', ' South (x2)']);
   });
 
+  it("keeps every prompt's arrow the frame's, a turn shown whole after all among them", () => {
+    const { g } = ready();
+    turn(g, 'North');
+    turn(g, 'North');
+    turn(g, 'North', 'Slow progress!'); // only begins like the last: the North folded into it taken back, printed again
+    turn(g, 'North');
+    const cells = (g.text as unknown as { cells: { ch: string; cap: number }[][] }).cells;
+    const arrows = cells
+      .slice(0xb, 0x18)
+      .map((r) => r[0x18])
+      .filter((c) => c.ch === '\x02');
+    expect(arrows.length).toBe(2); // North (x2), and North (x2) again after the turn shown whole
+
+    for (const c of arrows) expect(c.cap).toBe(2); // the border's cap, drawn in the frame's copper - not a glyph in white
+  });
+
   it('leaves no empty line between turns', () => {
     const { g, p } = ready();
     turn(g, 'Pass');
