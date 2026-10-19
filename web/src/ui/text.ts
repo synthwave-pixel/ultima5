@@ -471,6 +471,18 @@ export class Text {
     this.current = was;
   }
 
+  /**
+   * Cells (c1, r1)-(c2, r2) as they are now kept: the function returned puts them back and draws them, whatever has
+   * been written over them since (the Pause menu over a townsman's box: speech.ts).
+   */
+  keep(c1: number, r1: number, c2: number, r2: number): () => void {
+    const kept = this.cells.slice(r1, r2 + 1).map((row) => row.slice(c1, c2 + 1).map((cell) => ({ ...cell })));
+    return () => {
+      for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) this.cells[r][c] = { ...kept[r - r1][c - c1] };
+      this.redraw(c1, r1, c2, r2);
+    };
+  }
+
   /** Whether cell (row, column) is under the cover for what the current window draws: kept, not drawn. */
   private hidden(row: number, column: number): boolean {
     const k = this.covering;

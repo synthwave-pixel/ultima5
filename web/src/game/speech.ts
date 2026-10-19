@@ -72,7 +72,7 @@ export function talkMenu(g: Game): { first: number; last: number } {
 /** The talk as it stands: where its box goes, and the cells of the one shown, if one is. */
 interface Talking {
   place: Place;
-  shown: { left: number; top: number; width: number; height: number } | null;
+  shown: { left: number; top: number; width: number; height: number; back: () => void } | null;
 }
 const talks = new WeakMap<Game, Talking>();
 
@@ -160,6 +160,15 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   const height = lines.length;
   const left = Math.max(2, Math.min(22 - width, place.centre - (width >> 1)));
   const top = place.top;
+  frameBox(g, left, top, width, height);
+  t.showStaged(from, height, left, top, width);
+  k.shown = { left, top, width, height, back: t.keep(left, top, left + width - 1, top + height - 1) };
+  t.dropStaged(from + taken);
+  if (wait) await waitHere(g, (left + width - 1) * 8, (top + height - 1) * 8 + 2);
+}
+
+/** The box's frame round cells (left, top) on, `width` by `height`: emptied, edged, and kept clear of the map. */
+function frameBox(g: Game, left: number, top: number, width: number, height: number): void {
   const d = g.draw;
   const [x1, y1, x2, y2] = [left * 8 - 4, top * 8 - 4, (left + width) * 8 + 3, (top + height) * 8 + 3];
   d.pen = 0;
@@ -171,10 +180,14 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   d.line(x2, y1, x2, y2);
   d.chromeSpeech?.([x1, y1, x2, y2]);
   g.covers.set('speech', [x1, y1, x2, y2]); // the map goes on under it (waitHere, the talk's menu)
-  t.showStaged(from, height, left, top, width);
-  k.shown = { left, top, width, height };
-  t.dropStaged(from + taken);
-  if (wait) await waitHere(g, (left + width - 1) * 8, (top + height - 1) * 8 + 2);
+}
+
+/** The box shown drawn again as it was, its words and all: after the Pause menu has been over it (menu.ts restoreView). */
+export function redrawBox(g: Game): void {
+  const b = talks.get(g)?.shown;
+  if (!b) return;
+  frameBox(g, b.left, b.top, b.width, b.height);
+  b.back();
 }
 
 /** Everything written shown, box by box, each but the last read (a key) before the next; the last too, `read`. */
@@ -221,7 +234,7 @@ export const waitsForKey = (g: Game): boolean => waiting.has(g);
 /** The box as it stands, in text cells, or none (for whoever looks at the game from outside: the tests). */
 export const boxShown = (g: Game): { left: number; top: number; width: number; height: number } | null => {
   const b = talks.get(g)?.shown;
-  return b ? { ...b } : null;
+  return b ? { left: b.left, top: b.top, width: b.width, height: b.height } : null;
 };
 
 /**

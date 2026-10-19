@@ -66,7 +66,7 @@ import {
 } from './settings.ts';
 import { A, T } from './tiles.ts';
 import { tileAt } from './world.ts';
-import { CENTRE, TALK_WIDTH, talkMenu } from './speech.ts';
+import { CENTRE, redrawBox, TALK_WIDTH, talkMenu } from './speech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 
@@ -124,7 +124,10 @@ const key = (g: Game): Promise<number> => menuKey(g);
 /** Put the map back as it was before a menu covered it. */
 export async function restoreView(g: Game): Promise<void> {
   g.draw.chromeBox?.(null);
+  // The map drawn whole, the squares a townsman's box stands over too (they may hold what covered them); the box is
+  // drawn again over it below.
   g.covers.delete('menu');
+  g.covers.delete('speech');
   // At the title there is no map or party to put back (a game's stats would come up over it): what opened the menu
   // draws the title again itself.
   if (!g.inPlay) return;
@@ -137,6 +140,7 @@ export async function restoreView(g: Game): Promise<void> {
   } else {
     g.viewDirty = 1;
     updateFrame(g);
+    redrawBox(g); // a townsman's words, where the menu was over them (the Pause menu's, in a talk)
   }
   drawVitals(g);
 }

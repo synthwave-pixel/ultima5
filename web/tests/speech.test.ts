@@ -190,4 +190,48 @@ describe('what is said, in the play area', () => {
     expect(runes.length).toBeGreaterThan(0); // MU, in runes
     for (const c of runes) expect(c.ink, c.ch).toBe(RUNE_INK.good);
   });
+
+  it("puts the townsman's box back as it was after the Pause menu has been over it, the map round it drawn whole", async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    Object.assign(g.options, { input: 'controller', dialog: 'play' });
+    journeyOnward(g);
+    stashWorldActors(g);
+    Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    const npc = findNpc(g, 'Greyson');
+    const a = s.actors[s.npcs[npc].actor];
+    Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
+    loadLevel(g, true);
+    const text = (): string[] => {
+      const b = boxShown(g)!;
+      return [...Array(b.height).keys()].map((r) => g.text.screenText(b.top + r, b.left, b.left + b.width - 1));
+    };
+    let before: string[] | null = null;
+    let during: string[] = [];
+    let after: string[] | null = null;
+    let cover: number[] | undefined;
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title === 'Say' && boxShown(g) && !before) {
+        before = text();
+        return Pad.Start; // the Pause menu, over the box
+      }
+      if (m?.title === 'Paused') {
+        during = text();
+        return Pad.A; // Resume
+      }
+      if (m?.title === 'Say' && before && !after) {
+        after = text();
+        cover = g.covers.get('speech');
+      }
+      // Name asked first, for a box to pause over; then leave.
+      return m && before ? Pad.B : Pad.A;
+    };
+    await talkToNpc(g, npc);
+    expect(before).not.toBeNull();
+    expect(during).not.toEqual(before); // the Pause menu's lines over it
+    expect(after).toEqual(before);
+    expect(cover).toBeDefined(); // the map still left alone under it
+  });
 });
