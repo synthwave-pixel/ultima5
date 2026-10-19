@@ -563,15 +563,19 @@ function thousands(n: number, tenths = true): string {
 
 /**
  * A member's experience and the next level's, for a line with `room` letters after the name: "350/400", "1.7k/3.2k".
- * Where both will not go beside a long name, the current loses its k ("1.7/3.2k") and then its tenths ("1/3.2k"),
- * and a line with no room for a space meets its name. The top level shows MAX.
+ * Where both will not go beside a long name, the current loses its k ("1.7/3.2k") and then its tenths ("1/3.2k"), one
+ * under a thousand goes into tenths of one (".8/1.6k"), and a line with no room for a space meets its name. The top
+ * level shows MAX.
  */
 function xpNumbers(m: Member, room: number, dead: boolean): [string, string, number] {
   const colour = dead ? Colour.lightGray : earnedLevel(m.exp) > m.level ? Colour.levelBlue : Colour.brightWhite;
   if (m.level >= TOP_LEVEL) return [thousands(m.exp), ' MAX', colour];
   const next = `/${thousands(100 << (m.level - 1))}`;
-  for (const now of [thousands(m.exp), thousands(m.exp).replace('k', ''), thousands(m.exp, false).replace('k', '')])
-    if (now.length + next.length <= room) return [now, next, colour];
+  // Under a thousand against a next level in thousands ("825/1.6k" beside an eight-letter name), the current in
+  // tenths of a thousand as the next is, its nought dropped (".8/1.6k").
+  const tenth = m.exp < 1000 ? (Math.floor(m.exp / 100) / 10).toFixed(1).replace(/^0/, '') : '';
+  for (const now of [thousands(m.exp), thousands(m.exp).replace('k', ''), thousands(m.exp, false).replace('k', ''), tenth])
+    if (now && now.length + next.length <= room) return [now, next, colour];
   return [thousands(m.exp, false).replace('k', ''), next, colour];
 }
 

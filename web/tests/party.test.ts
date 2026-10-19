@@ -114,6 +114,18 @@ describe('the party, as the Standard look shows it', () => {
     expect(line(2)).toBe('Shamino3.4/6.4k'); // the k dropped, then the space
     expect(line(3)).toBe('Geoffrey 3/6.4k'); // and the tenths
     expect(line(4)).toBe('Dupre  9.9k MAX');
+    // Under a thousand against a next level in thousands, beside a long name: in tenths, and nothing past the line's
+    // fifteen columns (the frame's, where a sixteenth was left on it).
+    member(5, 'Geoffrey', 5, 825);
+    drawVitals(g);
+    expect(line(5)).toBe('Geoffrey.8/1.6k');
+    expect(
+      p.rows
+        .slice(1, 7)
+        .map((r) => r[39] ?? ' ')
+        .join('')
+        .trim(),
+    ).toBe('');
     g.panelXp = false;
     drawVitals(g);
     expect(line(0)).toMatch(/^Iolo\s+100\/100$/);
