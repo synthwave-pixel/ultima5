@@ -66,6 +66,7 @@ import {
 } from './settings.ts';
 import { A, T } from './tiles.ts';
 import { tileAt } from './world.ts';
+import { CENTRE, TALK_WIDTH, talkMenu } from './speech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 
@@ -246,48 +247,42 @@ function framed(g: Game, x1: number, y1: number, x2: number, y2: number): void {
 /** How many pixels a frame's corner leaves bare on each of its first rows, from the outside in. */
 const CORNER = [5, 3, 2, 1, 1];
 
-/**
- * Half the map's square, top or bottom, for a menu that must leave its middle in sight (the port's): the five rows of
- * squares above the party, or the five below - the party at the middle and whoever it talks to, beside it or across a
- * counter, seen on the other side. Nine rows of text, a row short of the half so as not to touch them: the title, a
- * blank, and seven lines before the list scrolls.
- */
-export type Band = 'top' | 'bottom';
-const BAND_ROWS = 9;
-/** The band's text rows (in the menus' window, from TOP) and its pixels: the top's above the middle row, the bottom's below. */
-const bandTop = (band: Band): number => (band === 'top' ? TOP : TOP + HEIGHT - BAND_ROWS);
-
-/**
- * The half of the map's square away from whoever the party talks to (talk.ts): the bottom for one to the north, or
- * to the east or west; the top for one to the south.
- */
-export function talkBand(g: Game): Band {
-  const s = g.s;
-  const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
-  return a && a.y > s.y ? 'top' : 'bottom';
+/** Where a talk's menu goes (speech.ts talkMenuRows): the text rows it may take, low in the view. */
+export interface TalkRows {
+  first: number;
+  last: number;
 }
 
-/** Draw a menu panel's frame and title - the map's square, or half of it (`band`); the text window is left selected. */
-function panel(g: Game, title: string, band?: Band): void {
+/**
+ * The talk's menu's box: framed as the townsman's words are over it (speech.ts), as wide as its longest line and
+ * centred as they are, its foot at the view's, as tall as its lines or the room `rows` leaves; no title. The text
+ * window is left selected.
+ */
+function talkBox(g: Game, width: number, lines: number, rows: TalkRows): void {
+  const d = g.draw;
+  const t = g.text;
+  cols = Math.max(6, Math.min(TALK_WIDTH, width));
+  const left = Math.max(2, Math.min(22 - cols, CENTRE - (cols >> 1)));
+  const top = rows.last - lines + 1;
+  const [x1, y1, x2, y2] = [left * 8 - 4, top * 8 - 4, (left + cols) * 8 + 3, (top + lines) * 8 + 3];
+  d.pen = 0;
+  d.fill(x1, y1, x2, y2);
+  d.pen = Colour.blue;
+  d.line(x1, y1, x2, y1);
+  d.line(x1, y2, x2, y2);
+  d.line(x1, y1, x1, y2);
+  d.line(x2, y1, x2, y2);
+  d.chromeBox?.([x1, y1, x2, y2]);
+  t.setWindow(WIN, left, top, left + cols - 1, top + lines - 1);
+  t.select(WIN);
+}
+
+/** Draw a menu panel's frame and title - the map's square; the text window is left selected. */
+function panel(g: Game, title: string): void {
   const d = g.draw;
   const t = g.text;
   cols = WIDTH;
   d.pen = 0;
-  if (band && g.inPlay) {
-    // Half the square, over the map, a line between it and what is left in sight.
-    const top = bandTop(band);
-    const [y1, y2] = band === 'top' ? [VIEW_EDGE[0], (top + BAND_ROWS) * 8 - 1] : [top * 8, VIEW_EDGE[1]];
-    d.fill(VIEW_EDGE[0], y1, VIEW_EDGE[1], y2);
-    d.pen = Colour.blue;
-    const edge = band === 'top' ? y2 : y1;
-    d.line(VIEW_EDGE[0], edge, VIEW_EDGE[1], edge);
-    d.chromeBox?.([VIEW_EDGE[0], y1, VIEW_EDGE[1], y2]);
-    t.setWindow(WIN, LEFT, top, LEFT + WIDTH - 1, top + BAND_ROWS - 1);
-    t.select(WIN);
-    put(g, 0, 0, ' '.repeat(WIDTH));
-    put(g, Math.max(0, (WIDTH - title.length) >> 1), 0, title);
-    return;
-  }
   // In play, the map's square in the screen's frame: the frame is the panel's. At the title, where there is no frame,
   // the same square in the same frame, centred on the screen - Settings as it is in the game.
   const left = g.inPlay ? LEFT : TITLE_LEFT;
@@ -371,8 +366,8 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   lines.sort((a, b) => rank(a) - rank(b));
   const items = lines.map((l) => l.item);
   items.push({ label: 'Take leave' });
-  // Half the view, away from whom they talk to: the party and they in sight between the lines (talkBand).
-  const at = await choose(g, 'Say', items, 0, false, talkBand(g));
+  // Low in the view, framed as the townsman's words are above it: the party and they in sight between (speech.ts).
+  const at = await choose(g, 'Say', items, 0, false, talkMenu(g));
   if (at < 0 || at >= lines.length) return 'BYE';
   g.talk.chosen = lines[at].mark;
   return lines[at].word;
@@ -551,7 +546,7 @@ export async function answerMenu(
     lines.map((l) => ({ label: l.label, dim: l.dim })),
     0,
     false,
-    talkBand(g),
+    talkMenu(g),
   );
   if (riddle) {
     if (at < 0) return LEAVE;
@@ -646,13 +641,18 @@ export async function askWord(
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
-export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, band?: Band): Promise<number> {
+export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, talk?: TalkRows): Promise<number> {
   const t = g.text;
   const was = t.current;
-  // (A band - half the square - holds its title, a blank and its lines; it has no notes.)
-  const banded = !boxed && band !== undefined && g.inPlay;
-  const noted = !boxed && !banded && items.some((it) => it.note);
-  const rows = boxed ? Math.min(items.length, HEIGHT - 6) : banded ? BAND_ROWS - 2 : HEIGHT - 3 - (noted ? NOTE_ROWS + 1 : 0);
+  // (A talk's menu - low in the view, framed - holds its lines alone: no title, no notes. Its title is still the
+  // menu's, for whoever reads which it is.)
+  const talking = !boxed && talk !== undefined && g.inPlay;
+  const noted = !boxed && !talking && items.some((it) => it.note);
+  const rows = boxed
+    ? Math.min(items.length, HEIGHT - 6)
+    : talking
+      ? Math.min(items.length, talk.last - talk.first + 1)
+      : HEIGHT - 3 - (noted ? NOTE_ROWS + 1 : 0);
   // A box's notes (the port's): under its lines, after a blank row, as many rows as its longest note wants (three at
   // most), the box as wide as the view's square to hold them.
   const boxNotes = boxed ? Math.min(BOX_NOTE_ROWS, Math.max(0, ...items.map((it) => (it.note ? wrap(it.note).length : 0)))) : 0;
@@ -669,13 +669,14 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
         boxNotes ? WIDTH : Math.max(title.length, ...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1,
         rows + (boxNotes ? boxNotes + 1 : 0),
       );
-    else panel(g, title, banded ? band : undefined);
+    else if (talking) talkBox(g, Math.max(...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1, rows, talk);
+    else panel(g, title);
   };
   frame();
   const draw = (): void => {
     if (at < top) top = at;
     if (at >= top + rows) top = at - rows + 1;
-    const head = boxed && !title ? 0 : 2;
+    const head = (boxed && !title) || talking ? 0 : 2;
     for (let r = 0; r < rows; r++) row(g, r + head, items[top + r], top + r === at, lettered);
     if (boxNotes) {
       const lines = wrap(items[at]?.note ?? '');

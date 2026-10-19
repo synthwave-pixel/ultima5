@@ -2,9 +2,9 @@
  * speech.ts
  *
  * The Dialog setting's Play (the port's): what a townsman says, shown in the play area rather than the message log -
- * in a box framed as the Yes and No box is, only as big as the lines it holds, centred over the townsman and just
- * beyond them from the party (above one north, east or west of it, below one south), so the party and they are in
- * sight. Their words are written off the screen (text.ts stageWindow) and shown a box at a time: a reply too long for
+ * in a box framed as the Yes and No box is, only as big as the lines it holds, across the top of the view and centred
+ * in it, the party's menu framed the same at its foot (menu.ts choose, talkMenuRows); each stops short of the party,
+ * and of the townsman where they stand on its side, so both are in sight. Their words are written off the screen (text.ts stageWindow) and shown a box at a time: a reply too long for
  * the room there is shown a page at a time, the blinking arrow of a story page (waitMark.ts) at its corner till a key
  * is pressed; so are the pauses the scripts themselves make. What the party says, the prompts and the townsman's
  * description stay in the log.
@@ -27,30 +27,46 @@ const BOX_WIDTH = TEXT_WIDTH + 2;
 /** The rows written off the screen before any is shown: more than a box ever holds. */
 const STAGE_ROWS = 24;
 
+/** The view's middle: the column whose left edge is the middle of the party's square (the view's sixth, 5). */
+export const CENTRE = 12;
+/** The most columns the talk's boxes take, the townsman's and the party's menu: the view's square, but a column. */
+export const TALK_WIDTH = BOX_WIDTH;
+
 /**
- * Where the box goes for the townsman `dx`, `dy` squares from the party: `centre`, the column whose left edge is the
- * middle of their square; above them (`above`) with its last row at `edge`, or below with its first there; `rows`, the
- * most it may hold - its frame half a row clear of their square, and of the view's edge.
+ * Where the box goes, for the townsman `dx`, `dy` squares from the party: its first row at `top`, the top of the view,
+ * centred on `centre`; `rows`, the most it may hold - its frame half a row clear of the townsman where they stand to
+ * the north, else of the party's own row.
  */
 export interface Place {
-  above: boolean;
+  top: number;
   centre: number;
-  edge: number;
   rows: number;
 }
 
+/** A townsman `dx`, `dy` squares away: one further than across a counter (a word shouted across a room) is as beside. */
+const near = (dx: number, dy: number): number => (Math.abs(dx) > 2 || Math.abs(dy) > 2 ? 0 : dy);
+
 export function placement(dx: number, dy: number): Place {
-  // The party's square is the view's sixth (5) either way: squares are two rows and two columns of text, the view's
-  // first at row and column 1. One further than across a counter (a word shouted across the room) is taken as beside.
-  if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dx = dy = 0;
-  const [col, row] = [5 + dx, 5 + dy];
-  const centre = 2 + 2 * col;
-  if (dy > 0) {
-    const edge = 2 * row + 4;
-    return { above: false, centre, edge, rows: 22 - edge };
-  }
-  const edge = 2 * row - 1;
-  return { above: true, centre, edge, rows: edge - 1 };
+  // Squares are two rows of text, the view's first at row 1, the party's the sixth (5).
+  const d = near(dx, dy);
+  const last = d < 0 ? 2 * (5 + d) - 1 : 2 * 5 - 1;
+  return { top: 2, centre: CENTRE, rows: last - 1 };
+}
+
+/**
+ * The rows the party's menu may take at the view's foot (inclusive), for the townsman `dx`, `dy` squares away: from a
+ * row clear of the party's square, or of the townsman's where they stand to the south, to the view's last.
+ */
+export function talkMenuRows(dx: number, dy: number): { first: number; last: number } {
+  const d = near(dx, dy);
+  return { first: d > 0 ? 2 * (5 + d) + 4 : 2 * 6 + 2, last: 21 };
+}
+
+/** The talk's menu's rows (talkMenuRows), for whoever the party talks to now. */
+export function talkMenu(g: Game): { first: number; last: number } {
+  const s = g.s;
+  const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
+  return talkMenuRows(a ? a.x - s.x : 0, a ? a.y - s.y : 0);
 }
 
 /** The talk as it stands: where its box goes, and the cells of the one shown, if one is. */
@@ -139,7 +155,7 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   width = Math.min(BOX_WIDTH, width);
   const height = lines.length;
   const left = Math.max(2, Math.min(22 - width, place.centre - (width >> 1)));
-  const top = place.above ? place.edge - height + 1 : place.edge;
+  const top = place.top;
   const d = g.draw;
   const [x1, y1, x2, y2] = [left * 8 - 4, top * 8 - 4, (left + width) * 8 + 3, (top + height) * 8 + 3];
   d.pen = 0;

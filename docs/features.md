@@ -503,20 +503,19 @@ of a tune that 1988 printed in the Book of Lore - and is answered from its
 answer's own letters in four orders, a wrong one greying once tried. It is
 easier than it was, and meant to be.
 
-The Say and Answer menus take half the view - the five rows of squares
-away from whoever the party talks to (the bottom for one to the north, east
-or west; the top for one to the south) - so the party and they stay in
-sight at its middle, across a counter too, a row clear of them: a title and
-seven lines before the list scrolls.
+The Say and Answer menus sit at the foot of the view, framed as the
+Yes and No box is, only as wide as their longest line and centred, with
+no title: a row clear of the party, and of whoever it talks to where they
+stand to the south (the list scrolls where it is longer than the room).
 
-What the townsman says is shown over them (Settings, Dialog: Play, the
-default): in a box framed as the Yes and No box is, only as big as its
-lines, centred on them just beyond them from the party - above one north,
-east or west of it, below one south - and the log keeps the party's words
-and the prompts. A speech too long for the room there is shown a box at a
-time, and the scripts' own pauses wait too, the story page's blinking
-arrow at its corner till a key. Dialog: Log writes it all in the message
-log, as 1988 did.
+What the townsman says is shown across the top of the view (Settings,
+Dialog: Play, the default): in the same frame, only as big as its lines,
+centred, and a row clear of them where they stand to the north (else of
+the party's own row), so the party and they are in sight between the two
+boxes. The log keeps the party's words and the prompts. A speech too long
+for the room is shown a box at a time, and the scripts' own pauses wait
+too, the story page's blinking arrow at its corner till a key. Dialog:
+Log writes it all in the message log, as 1988 did, the menu as in Play.
 
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)

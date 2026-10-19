@@ -32,12 +32,11 @@ function findNpc(g: Game, name: string): number {
  * corner till a key. The party's words, the prompts and what is seen of them stay in the log.
  */
 describe('what is said, in the play area', () => {
-  it('goes just beyond whoever is spoken to, centred over them, half a row clear of their square and the edge', () => {
-    expect(placement(0, -1)).toEqual({ above: true, centre: 12, edge: 7, rows: 6 }); // north of the party
-    expect(placement(0, -2)).toEqual({ above: true, centre: 12, edge: 5, rows: 4 }); // across a counter
-    expect(placement(1, 0)).toEqual({ above: true, centre: 14, edge: 9, rows: 8 }); // east: above them
-    expect(placement(-1, 1)).toEqual({ above: false, centre: 10, edge: 16, rows: 6 }); // south-west: below them
-    expect(placement(0, 2)).toEqual({ above: false, centre: 12, edge: 18, rows: 4 });
+  it('goes at the top of the view, centred, a row clear of whoever is spoken to to the north, or of the party', () => {
+    expect(placement(0, -1)).toEqual({ top: 2, centre: 12, rows: 6 }); // north of the party: short of them
+    expect(placement(0, -2)).toEqual({ top: 2, centre: 12, rows: 4 }); // across a counter
+    expect(placement(1, 0)).toEqual({ top: 2, centre: 12, rows: 8 }); // beside: short of the party's row
+    expect(placement(-1, 1)).toEqual({ top: 2, centre: 12, rows: 8 }); // south
     expect(placement(0, 7)).toEqual(placement(0, 0)); // farther: as beside
   });
 
@@ -99,10 +98,10 @@ describe('what is said, in the play area', () => {
     expect(pages).toBeGreaterThan(2); // a page at a time, and the last read before the panel goes
     // Each box full - all six rows it has room for - or its speech ended: none broken off short of a line that fitted.
     for (const lines of shownPages) expect(lines.length === 6 || /"$/.test(lines[lines.length - 1]), lines.join(' / ')).toBe(true);
-    // Each box above her, its last row clear of her square, centred over her (but where the view's edge holds it in).
+    // Each box at the top of the view, its last row clear of her square, centred.
     for (const b of boxes) {
-      expect(b.top + b.height - 1).toBe(7);
-      expect(b.top).toBeGreaterThanOrEqual(2);
+      expect(b.top).toBe(2);
+      expect(b.top + b.height - 1).toBeLessThanOrEqual(7);
       expect(b.width).toBeLessThanOrEqual(20);
       expect(b.left + (b.width >> 1)).toBe(12);
     }
