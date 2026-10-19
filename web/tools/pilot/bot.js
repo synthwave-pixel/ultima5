@@ -276,7 +276,8 @@
         continue;
       }
       if (m.title !== 'Say') {
-        const q = g.said.replace(/\s+/g, ' ').slice(-160);
+        // What this conversation has said (in the play area's box or the log alike, talk.ts), else the log.
+        const q = (g.recording ?? g.said).replace(/\s+/g, ' ').slice(-160);
         const times = asked.get(q.slice(-60)) || 0;
         asked.set(q.slice(-60), times + 1);
         let i = m.labels.indexOf(g.s.members[0].name);
@@ -317,7 +318,7 @@
         continue;
       }
       // Someone whose patience is wearing thin is left alone before they call the guard.
-      const testy = /patience|bother me|leave me|begone|go away/i.test(g.said.replace(/\s+/g, ' ').slice(-140));
+      const testy = /patience|bother me|leave me|begone|go away/i.test((g.recording ?? g.said).replace(/\s+/g, ' ').slice(-140));
       let i = testy ? -1 : m.labels.findIndex((l, k) => !m.dim[k] && l !== 'Take leave');
       if (i < 0 && !testy && B.talking) {
         i = m.labels.findIndex((l) => {
@@ -328,7 +329,8 @@
       }
       lastWord = i >= 0 ? m.labels[i] : '';
       heard.push(i >= 0 ? m.labels[i] : 'bye');
-      await B.pick(i >= 0 ? i : m.labels.length - 1);
+      // Taking leave: first in the list once all is heard (menu.ts sayMenu), last before.
+      await B.pick(i >= 0 ? i : m.labels.indexOf('Take leave'));
     }
     return { heard, stuck: true };
   };
@@ -370,7 +372,7 @@
         let pick = round++;
         if (only) pick = m.labels.findIndex((l, k) => k >= pick && only.test(l));
         if (pick < 0 || pick >= m.labels.length || m.labels[pick] === 'Take leave') {
-          await B.pick(m.labels.length - 1);
+          await B.pick(m.labels.indexOf('Take leave'));
           break;
         }
         round = only ? pick + 1 : round;
