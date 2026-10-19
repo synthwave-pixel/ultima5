@@ -58,7 +58,7 @@ describe("the talk's menus, at the view's foot", () => {
     expect(w.bottom).toBe(21); // the view's last row
     expect(w.top).toBeGreaterThanOrEqual(14); // a row clear of the party's
     expect(w.right - w.left + 1).toBeLessThan(21); // as wide as its lines, not the view
-    expect(Math.abs(w.left + (w.right - w.left + 1) / 2 - 12)).toBeLessThanOrEqual(1); // centred
+    expect(w.left + w.right + 1).toBe(24); // centred to the pixel: the view's middle is column 12's left edge
     expect(first).toBe('Name'); // its first line, not "Say"
   });
   it('marks a list too long for its box: an arrow up where lines are above it, down where they are below', async () => {
@@ -69,6 +69,7 @@ describe("the talk's menus, at the view's foot", () => {
     Object.assign(a, { x: 16, y: 16 }); // in the middle of the towne
     Object.assign(s, { level: a.z, x: 16, y: 14 }); // two squares north of them, as across a counter: four lines of room
     const marks: string[] = [];
+    let centred = true;
     let presses = 0;
     p.next = () => {
       const m = g.menuShown;
@@ -76,10 +77,12 @@ describe("the talk's menus, at the view's foot", () => {
       const w = g.text.windows[3];
       const edge = (y: number): string => g.text.screenText(y, w.right, w.right);
       marks.push(`${m.at}:${edge(w.top)}${edge(w.bottom)}:${w.bottom - w.top + 1}`);
+      centred &&= w.left + w.right + 1 === 24; // the arrows' columns and all
       if (++presses <= m.labels.length) return K.Down;
       return Pad.B;
     };
     await talkToNpc(g, i).catch(() => undefined);
+    expect(centred).toBe(true);
     const [first] = marks;
     expect(first).toBe(`0: \x19:4`); // at the top: more below, none above
     expect(marks.some((x) => x.includes('\x18\x19'))).toBe(true); // in the middle: both

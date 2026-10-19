@@ -152,7 +152,8 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   let width = Math.max(...lines.map((l) => l.length));
   // The arrow a column clear of the last line, inside the box.
   if (wait) width = Math.max(width, lines[lines.length - 1].length + 2);
-  width = Math.min(BOX_WIDTH, width);
+  // An even width, so it is centred to the pixel: the view's middle lies between two columns.
+  width = Math.min(BOX_WIDTH, width + (width & 1));
   const height = lines.length;
   const left = Math.max(2, Math.min(22 - width, place.centre - (width >> 1)));
   const top = place.top;

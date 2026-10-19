@@ -261,7 +261,8 @@ export interface TalkRows {
 function talkBox(g: Game, width: number, lines: number, rows: TalkRows): void {
   const d = g.draw;
   const t = g.text;
-  cols = Math.max(6, Math.min(TALK_WIDTH, width));
+  // An even width, so it is centred to the pixel: the view's middle lies between two columns.
+  cols = Math.max(6, Math.min(TALK_WIDTH, width + (width & 1)));
   const left = Math.max(2, Math.min(22 - cols, CENTRE - (cols >> 1)));
   const top = rows.last - lines + 1;
   const [x1, y1, x2, y2] = [left * 8 - 4, top * 8 - 4, (left + cols) * 8 + 3, (top + lines) * 8 + 3];

@@ -103,7 +103,7 @@ describe('what is said, in the play area', () => {
       expect(b.top).toBe(2);
       expect(b.top + b.height - 1).toBeLessThanOrEqual(7);
       expect(b.width).toBeLessThanOrEqual(20);
-      expect(b.left + (b.width >> 1)).toBe(12);
+      expect(b.left * 2 + b.width).toBe(24); // centred to the pixel
     }
     expect(new Set(boxes.map((b) => b.width)).size).toBeGreaterThan(1); // sized to each box's lines
     expect(boxShown(g)).toBeNull(); // put away at the end
