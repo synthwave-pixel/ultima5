@@ -1854,6 +1854,13 @@ export class Framebuffer {
 
   /** Standard's chrome over the picture: the frame's blue as copper, bevelled by its own shape; white beside it, the rim. */
   private copper(out: Uint32Array): void {
+    // What the frame's shape is read from unchanged since the last frame, it is the last frame's: the shape is not
+    // worked out again (chromeCells, the whole screen several times over, at every frame - a quarter of the work of
+    // walking about).
+    if (!this.chromeInputsChanged() && this.chromeCache.length) {
+      this.paintCopper(out, this.chromeCache[0]);
+      return;
+    }
     const cls = this.chromeCells();
     // The frame's few shapes - the screen as it stands, with a menu's box, a popup's - each cut once and kept: a
     // menu opened and shut flips between two, and the cut (every pixel of the hi page, several times over) was paid
@@ -1866,7 +1873,11 @@ export class Framebuffer {
     } else if (hit > 0) {
       this.chromeCache.unshift(...this.chromeCache.splice(hit, 1));
     }
-    const entry = this.chromeCache[0];
+    this.paintCopper(out, this.chromeCache[0]);
+  }
+
+  /** A cut frame over the picture, in the place's tone. */
+  private paintCopper(out: Uint32Array, entry: Framebuffer['chromeCache'][number]): void {
     const { at } = entry;
     // In the tone the place asks for (chromeTone), its colours recoloured once and kept with the shape.
     const key = toneKey(this.chromeTone);
@@ -1959,6 +1970,58 @@ export class Framebuffer {
         for (let x = c1 * 8; x < Math.min(WIDTH, (c2 + 1) * 8); x++) if (cls[y * WIDTH + x] === 3) cls[y * WIDTH + x] = 0;
     return cls;
   }
+
+  /**
+   * Whether anything the frame's shape is read from (chromeCells) has changed since last asked: the colour page and
+   * the EGA page wherever it may be the frame's - all but the map's square outside its boxes - and the bounds it is
+   * read within. Kept as they were, and compared, so the same means the same shape, never a guess.
+   */
+  private chromeInputsChanged(): boolean {
+    const p = this.pages[0];
+    const h = this.hi[0];
+    const box = (b: [number, number, number, number] | null): number[] => (b ? [1, ...b] : [0, 0, 0, 0, 0]);
+    const head = [
+      this.chromeFrom,
+      this.chromeTop,
+      ...box(this.chromeHole),
+      ...box(this.chromeBox),
+      ...box(this.chromeSpeech),
+      this.chromeAlso.length,
+      ...this.chromeAlso.flat(),
+      ...this.textAreas().flat(),
+    ];
+    const need = head.length + 1 + 2 * WIDTH * HEIGHT;
+    if (this.inputs.length < need) this.inputs = new Uint32Array(need);
+    const now = this.inputs;
+    let n = 0;
+    now[n++] = head.length;
+    for (const v of head) now[n++] = v;
+    const boxes = [this.chromeBox, this.chromeSpeech, ...this.chromeAlso].filter((b) => b !== null);
+    const inBox = (x: number, y: number): boolean => {
+      for (const b of boxes) if (x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]) return true;
+      return false;
+    };
+    const view = this.chromeFrom === 0;
+    for (let y = this.chromeTop; y < HEIGHT; y++) {
+      const inRows = view && y >= VIEW_LEFT && y <= VIEW_RIGHT;
+      for (let x = 0; x < WIDTH; x++) {
+        // (In the map's square, outside a box, nothing is the frame's: chromeCells shown.)
+        if (inRows && x >= VIEW_LEFT && x <= VIEW_RIGHT) {
+          if (!boxes.length) x = VIEW_RIGHT;
+          if (!boxes.length || !inBox(x, y)) continue;
+        }
+        now[n++] = p[y * WIDTH + x];
+        now[n++] = h[y * HI * HI_WIDTH + x * HI];
+      }
+    }
+    const was = this.lastInputs;
+    let same = was !== null && was.length === n;
+    for (let i = 0; same && i < n; i++) if (was![i] !== now[i]) same = false;
+    if (!same) this.lastInputs = now.slice(0, n);
+    return !same;
+  }
+  private inputs = new Uint32Array(0);
+  private lastInputs: Uint32Array | null = null;
 
   /** The prompts' arrows in the text windows' first column (textAreas), drawn over the cut frame (present). */
   private textCaps: { cx: number; cy: number; side: number }[] = [];
