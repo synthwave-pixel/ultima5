@@ -40,7 +40,7 @@ export class GamepadInput {
   private turn = 0;
   private nextTurn = 0;
 
-  constructor(private readonly send: (code: number) => void) {
+  constructor(private readonly send: (code: number, held?: boolean) => void) {
     const poll = (now: number): void => {
       this.poll(now);
       requestAnimationFrame(poll);
@@ -75,7 +75,7 @@ export class GamepadInput {
         this.nextTurn = now + TURN_FIRST_MS;
       }
     } else if (turn !== 0 && now >= this.nextTurn) {
-      this.send(turn);
+      this.send(turn, true);
       this.nextTurn = now + TURN_MS;
     }
     if (dir !== this.direction) {
@@ -85,7 +85,7 @@ export class GamepadInput {
         this.nextRepeat = now + REPEAT_FIRST_MS;
       }
     } else if (dir !== 0 && now >= this.nextRepeat) {
-      this.send(dir);
+      this.send(dir, true);
       this.nextRepeat = now + REPEAT_MS;
     }
   }

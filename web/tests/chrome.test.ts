@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EGA_RGBA, Framebuffer, HI, HI_HEIGHT, HI_WIDTH } from '../src/ui/framebuffer';
 import { finerFont } from '../src/ui/loadArt';
 import { decodePng } from '../tools/png';
@@ -71,6 +71,36 @@ describe('the Standard frame', () => {
     fb.fill(100, 20, 120, 40, 1); // a menu's border appears
     const second = shown(fb);
     expect(second[30 * HI * HI_WIDTH + 110 * HI]).not.toBe(first[30 * HI * HI_WIDTH + 110 * HI]);
+  });
+
+  it('cut again only where it changed is cut as it would be whole (the log scrolling, the map edge as the party walks)', () => {
+    // A screen of bars and boxes, then small changes in rows far apart: one at the top, one between, one at the foot.
+    const draw = (fb: Framebuffer, changed: boolean): void => {
+      fb.fill(0, 0, 319, 199, 0);
+      fb.fill(0, 0, 319, 7, 1);
+      fb.fill(0, 8, 319, 8, 15);
+      fb.fill(0, 0, 7, 199, 1);
+      fb.fill(184, 70, 191, 199, 1);
+      fb.fill(0, 192, 319, 199, 1);
+      fb.fill(60, 100, 140, 101, 1);
+      if (!changed) return;
+      fb.fill(30, 1, 33, 9, 15); // against the top bar
+      fb.fill(192, 72, 199, 79, 1); // beside the log's bar, a prompt's arrow
+      fb.fill(250, 188, 252, 191, 15); // at the foot
+    };
+    const a = new Framebuffer(new Uint8Array(512 * 128), fonts);
+    a.chrome = true;
+    draw(a, false);
+    shown(a);
+    draw(a, true);
+    const cut = vi.spyOn(a as unknown as { cutCopper: (c: Uint8Array, y0?: number, y1?: number) => unknown }, 'cutCopper');
+    const again = shown(a);
+    expect(cut.mock.calls.length).toBeGreaterThan(1); // band by band, not the whole
+    expect(cut.mock.calls.every((c) => c[1] !== undefined)).toBe(true);
+    const b = new Framebuffer(new Uint8Array(512 * 128), fonts);
+    b.chrome = true;
+    draw(b, true);
+    expect(again).toEqual(shown(b));
   });
 });
 

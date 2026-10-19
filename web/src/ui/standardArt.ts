@@ -53,6 +53,9 @@ import { Soils } from './soils.ts';
 import { Wear } from './wear.ts';
 import { type Piece, Woods } from './woods.ts';
 
+/** The tiles the map's painters read whatever the square (shore.ts WATER, ranges.ts and woods.ts GRASS). */
+const SHARED = [0x01, 0x02, 0x03, 0x05];
+
 /** A tile on the colour page: the EGA tile's sixteen pixels at the page's scale. */
 export const CELL = 16 * HI;
 /** A tile's side in the EGA's pixels, as the original tiles draw it. */
@@ -337,7 +340,11 @@ export class StandardArt implements TileArt {
     return this.tickCount;
   }
 
-  /** One animation tick (with the EGA animator's): the tiles drawn from the EGA's that the animator has changed drawn again. */
+  /**
+   * One animation tick (with the EGA animator's): the tiles drawn from the EGA's that the animator has changed marked
+   * to be drawn again - when next drawn (fresh), not now: the water, the fires and the rest of a few hundred turn at
+   * every tick, wherever they are, and drawing them all again then was most of a step's work on a phone.
+   */
   tick(): void {
     this.tickCount++;
     const from = this.derivedFrom;
@@ -347,12 +354,33 @@ export class StandardArt implements TileArt {
         this.install(t);
         continue;
       }
+      if (this.stale.has(t)) continue;
       for (let i = 0; i < 128; i++)
         if (from[t * 128 + i] !== was[i]) {
-          this.install(t);
+          this.stale.add(t);
           break;
         }
     }
+  }
+
+  /** The tiles the animator has changed since they were drawn (tick): drawn again when next wanted (fresh). */
+  private readonly stale = new Set<number>();
+
+  /** Tile (or cell) `t` drawn again first, if the animator has changed it since (tick). */
+  private fresh(t: number | undefined): void {
+    if (t !== undefined && this.stale.has(t)) this.install(t);
+  }
+
+  /** A square's tiles made fresh before it is drawn: its own, its ground and floor, and the map's round it (its shore). */
+  private freshFor(tile: number, ground?: number, floor?: number, place?: Place | null): void {
+    if (!this.stale.size) return;
+    this.fresh(tile);
+    this.fresh(ground);
+    this.fresh(floor);
+    if (place) for (const t of place.around) this.fresh(t);
+    // And what the map's painters take from beyond the square's own: the shore its water from the three waters, the
+    // hills and woods their grass from the grass.
+    for (const t of SHARED) this.fresh(t);
   }
 
   /**
@@ -522,6 +550,7 @@ export class StandardArt implements TileArt {
 
   /** Tile `t` drawn into its own cell from the EGA tiles as they are now. */
   private install(t: number): void {
+    this.stale.delete(t);
     const from = this.derivedFrom!;
     this.put(t, this.derive(from, t, this.tickCount));
     const wet = this.wetCells.get(t);
@@ -605,6 +634,13 @@ export class StandardArt implements TileArt {
 
   /** The cell a tile shows this tick. */
   private cellOf(tile: number, who = this.dressing): number {
+    if (this.stale.size) this.fresh(tile);
+    const cell = this.cellFor(tile, who);
+    if (this.stale.size) this.fresh(cell); // another frame of it, drawn from a tile of its own
+    return cell;
+  }
+
+  private cellFor(tile: number, who: Dressing | null): number {
     const dressed = who ? this.dressedOf(tile, who) : undefined;
     if (dressed !== undefined) return dressed;
     const avatar = this.avatarCells.get(tile);
@@ -849,6 +885,7 @@ export class StandardArt implements TileArt {
   /** The square `draw` draws (CELL by CELL, RGBA in memory order), or null for a tile the art has not. */
   square(tile: number, ground?: number, place?: Place, tint = 0, floor?: number): Uint32Array | null {
     if (tile >= this.cells) return null;
+    this.freshFor(tile, ground, floor, place);
     // The whole square is drawn for its place: a piece standing there (the rubble) is chosen by it as its land is.
     return this.placed(
       place ?? null,
@@ -862,6 +899,7 @@ export class StandardArt implements TileArt {
    * `terrain` - with its woods and shore, where `place` is given - laid on `floor` where it lets it show (a hut).
    */
   party(page: Uint32Array, figures: Figure[], x: number, y: number, terrain: number, floor?: number, place?: Place): void {
+    this.freshFor(terrain, undefined, floor, place);
     const out =
       (place && !this.squares && (this.standing(terrain, floor, place) ?? this.terrainFromMap(place))) || this.compose(terrain, floor);
     const q = CELL / 2;

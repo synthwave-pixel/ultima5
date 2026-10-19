@@ -266,19 +266,19 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
   screen.dropRepeat = (k) =>
     g.options.input === 'controller' &&
     (k === 0x0d || k === 0x1b || k === 0x20 || 'ZXBCVYQE/.'.includes(String.fromCharCode(k).toUpperCase()));
-  const send = (code: number): void => {
+  const send = (code: number, held = false): void => {
     // The crash box (ui/crash.ts), over everything, reads the gamepad itself: nothing beneath it is answered.
     if (menuUp()) return;
     // While a box of the page's own is up, it is the controller's to answer.
     if (pageBox) return pageBox(code);
     // While the map is showing, the controller and touch pad drive it (zoom, move, close).
     if (mapKey(code)) return;
-    screen.push(code);
+    screen.push(code, true, held);
   };
-  new GamepadInput((code) => {
+  new GamepadInput((code, held) => {
     touch.show(false);
     from('gamepad');
-    send(code);
+    send(code, held);
   });
   const touch = new TouchPad({
     send,

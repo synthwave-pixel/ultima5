@@ -1854,7 +1854,7 @@ export class Framebuffer {
     const hash = cellsHash(cls);
     const hit = this.chromeCache.findIndex((c) => c.hash === hash && sameCells(cls, c.cells));
     if (hit < 0) {
-      this.chromeCache.unshift({ hash, cells: cls, ...this.cutCopper(cls) });
+      this.chromeCache.unshift({ hash, cells: cls, ...this.recut(cls, this.chromeCache[0]) });
       this.chromeCache.length = Math.min(this.chromeCache.length, CHROME_SHAPES);
     } else if (hit > 0) {
       this.chromeCache.unshift(...this.chromeCache.splice(hit, 1));
@@ -1966,10 +1966,17 @@ export class Framebuffer {
    * that the bevel finds no end there (an end would be lit or shaded, a seam across the bar where the cap begins);
    * the cap is drawn over it once the frame is coloured (capOf).
    */
-  private cutCaps(cls: Uint8Array, shape: Uint8Array, outline: Uint8Array): { cell: number; side: number; mark: boolean }[] {
+  private cutCaps(
+    cls: Uint8Array,
+    shape: Uint8Array,
+    outline: Uint8Array,
+    HEIGHT: number,
+    top: number,
+  ): { cell: number; side: number; mark: boolean }[] {
     const caps: { cell: number; side: number; mark: boolean }[] = [];
     const S = 8 * HI;
-    for (let cy = this.chromeTop >> 3; cy < HEIGHT / 8; cy++)
+    const HI_HEIGHT = HEIGHT * HI;
+    for (let cy = top >> 3; cy < HEIGHT / 8; cy++)
       for (let cx = 0; cx < WIDTH / 8; cx++) {
         const side = this.capIn(cls, cx, cy);
         if (!side) continue;
@@ -2017,9 +2024,69 @@ export class Framebuffer {
    * pixel lies inside the shape (a distance field), lit where the edge it is nearest faces up or left and shaded
    * where it faces down or right, an edge across the light between the two. What is drawn: where, and in what colour.
    */
-  private cutCopper(cls: Uint8Array): { at: Uint32Array; colour: Uint32Array } {
+  /**
+   * The cut for a new shape, from the last one where little differs (the log scrolled, its prompts' arrows and its
+   * top line's letters against the bar moved; the map's edge beside the frame as the party walks): only the rows that
+   * differ cut again, a row of text either side, and spliced into the last cut - all the cut does reaches a few pixels
+   * at most. Else the whole.
+   */
+  private recut(
+    cls: Uint8Array,
+    last: { cells: Uint8Array; at: Uint32Array; colour: Uint32Array } | undefined,
+  ): {
+    at: Uint32Array;
+    colour: Uint32Array;
+  } {
+    if (!last) return this.cutCopper(cls);
+    // The rows of text (eight of the screen's) where anything differs, each with the row of text either side: runs of
+    // them, one band each.
+    const rows = HEIGHT / 8;
+    const near = new Uint8Array(rows);
+    for (let y = 0; y < HEIGHT; y++) {
+      const row = y * WIDTH;
+      for (let x = 0; x < WIDTH; x++)
+        if (cls[row + x] !== last.cells[row + x]) {
+          for (let r = Math.max(0, (y >> 3) - 1); r <= Math.min(rows - 1, (y >> 3) + 1); r++) near[r] = 1;
+          break;
+        }
+    }
+    const bands: [number, number][] = [];
+    for (let r = 0; r < rows; r++) {
+      if (!near[r]) continue;
+      if (bands.length && bands[bands.length - 1][1] === r * 8) bands[bands.length - 1][1] = (r + 1) * 8;
+      else bands.push([r * 8, (r + 1) * 8]);
+    }
+    if (!bands.length) return { at: last.at, colour: last.colour };
+    if (bands.reduce((n, [a, b]) => n + b - a, 0) > HEIGHT / 2) return this.cutCopper(cls);
+    const span = HI * HI_WIDTH;
+    const inside = (i: number): boolean => bands.some(([a, b]) => i >= a * span && i < b * span);
+    const at: number[] = [];
+    const colour: number[] = [];
+    for (let k = 0; k < last.at.length; k++)
+      if (!inside(last.at[k])) {
+        at.push(last.at[k]);
+        colour.push(last.colour[k]);
+      }
+    // Each band cut with a row of text more either side, so its own ends - taken for the screen's, lit or shaded as
+    // its edge is - lie outside what is kept.
+    for (const [a, b] of bands) {
+      const cut = this.cutCopper(cls, Math.max(0, a - 8), Math.min(HEIGHT, b + 8));
+      for (let k = 0; k < cut.at.length; k++)
+        if (cut.at[k] >= a * span && cut.at[k] < b * span) {
+          at.push(cut.at[k]);
+          colour.push(cut.colour[k]);
+        }
+    }
+    return { at: Uint32Array.from(at), colour: Uint32Array.from(colour) };
+  }
+
+  private cutCopper(whole: Uint8Array, y0 = 0, y1 = HEIGHT): { at: Uint32Array; colour: Uint32Array } {
+    // Rows y0 to y1 of the screen (all, but where only some are cut again: recut), as though they were all of it.
+    const HEIGHT = y1 - y0;
+    const cls = whole.subarray(y0 * WIDTH, y1 * WIDTH);
+    const top = Math.max(0, this.chromeTop - y0);
     const W4 = HI_WIDTH;
-    const H4 = HI_HEIGHT;
+    const H4 = HEIGHT * HI;
     // Two silhouettes, each doubled twice by EPX and grown only into what lies beside the frame (never over tile art
     // or lettering): the blue alone, and the blue with the white that outlines it. The rim is the band between the
     // two, so where the frame slants its dark edge slants with it rather than stepping in blocks.
@@ -2045,8 +2112,8 @@ export class Framebuffer {
       (c) => c !== 0,
     );
     for (let i = 0; i < shape.length; i++) if (!outline[i]) shape[i] = 0;
-    squareCorners(cls, shape, outline);
-    const caps = this.cutCaps(cls, shape, outline);
+    squareCorners(cls, shape, outline, HEIGHT);
+    const caps = this.cutCaps(cls, shape, outline, HEIGHT, top);
     // Distance in from the edge, in thirds of a pixel (the 3-4 chamfer), as far as the bevel reaches and a little on.
     const far = (BEVEL + 2) * 3;
     const dist = new Uint16Array(W4 * H4);
@@ -2082,7 +2149,7 @@ export class Framebuffer {
     const at: number[] = [];
     const colour: number[] = [];
     const d = (x: number, y: number): number => (x < 0 || y < 0 || x >= W4 || y >= H4 ? 0 : dist[y * W4 + x]);
-    for (let y = this.chromeTop * HI; y < H4; y++) {
+    for (let y = top * HI; y < H4; y++) {
       for (let x = 0; x < W4; x++) {
         const cx = x >> 2;
         const cy = y >> 2;
@@ -2120,7 +2187,7 @@ export class Framebuffer {
             if (nx < 0 || ny < 0 || nx >= WIDTH || ny >= HEIGHT) continue;
             const k = cls[ny * WIDTH + nx];
             if (k === 1 || k === 2) continue;
-            const v = h[ny * HI * W4 + nx * HI];
+            const v = h[(ny + y0) * HI * W4 + nx * HI];
             if (v !== EGA_RGBA[1] && v !== EGA_RGBA[15]) shown = v;
             break;
           }
@@ -2151,7 +2218,8 @@ export class Framebuffer {
           colour.push(piece[y * S + x]);
         }
     }
-    return { at: Uint32Array.from(at), colour: Uint32Array.from(colour) };
+    const off = y0 * HI * W4;
+    return { at: Uint32Array.from(at, (i) => i + off), colour: Uint32Array.from(colour) };
   }
 
   private chromeCache: {
@@ -2346,7 +2414,7 @@ const sameCells = (a: Uint8Array, b: Uint8Array): boolean => {
  * (Framebuffer.chromeCells): the corner's own white pixel has none of the blue the doubling put in it, and the black
  * pixel outside it none of the rim.
  */
-function squareCorners(cls: Uint8Array, shape: Uint8Array, outline: Uint8Array): void {
+function squareCorners(cls: Uint8Array, shape: Uint8Array, outline: Uint8Array, HEIGHT: number): void {
   const k = (x: number, y: number): number => (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT ? -1 : cls[y * WIDTH + x]);
   const clear = (bits: Uint8Array, x: number, y: number): void => {
     for (let hy = y * HI; hy < (y + 1) * HI; hy++) bits.fill(0, hy * HI_WIDTH + x * HI, hy * HI_WIDTH + (x + 1) * HI);

@@ -314,7 +314,7 @@ export class Screen implements Platform {
       if (k === 0) return;
       e.preventDefault();
       if (e.repeat && this.dropRepeat?.(k)) return;
-      this.push(k);
+      this.push(k, true, e.repeat);
     });
     const frame = (now: number): void => {
       if (this.fb.runes.active) this.fb.stepRunes(now);
@@ -1073,8 +1073,12 @@ export class Screen implements Platform {
     return false;
   }
 
-  /** A key from any source (keyboard, touch, gamepad); `pressed` false for one the page itself sends. */
-  push(k: number, pressed = true): void {
+  /**
+   * A key from any source (keyboard, touch, gamepad); `pressed` false for one the page itself sends. `held`, a held
+   * key's repeat: let go where one already waits its turn - a phone that steps slower than the repeats come had
+   * walked on, a step for each kept, long after the thumb was lifted.
+   */
+  push(k: number, pressed = true, held = false): void {
     // A box of the page's own over the game (the crash box) takes the controller and the touch pad's keys itself.
     if (menuUp()) return;
     if (pressed) this.onKey?.();
@@ -1084,7 +1088,7 @@ export class Screen implements Platform {
       const w = this.waiter;
       this.waiter = null;
       w(k);
-    } else if (this.keys.length < 16) {
+    } else if (this.keys.length < 16 && !(held && this.keys.length > 0)) {
       this.keys.push(k);
     }
   }

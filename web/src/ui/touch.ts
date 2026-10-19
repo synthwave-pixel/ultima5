@@ -39,8 +39,8 @@ const PX = 0.26;
 const SVG = 'http://www.w3.org/2000/svg';
 
 export interface TouchPadOptions {
-  /** Hand a press to the game (the DOS key or controller code). */
-  send: (code: number) => void;
+  /** Hand a press to the game (the DOS key or controller code); `held`, a held direction's repeat. */
+  send: (code: number, held?: boolean) => void;
   /** Called on every press: the game switches to controller mode. */
   onPress: () => void;
   /** Called when the pad is shown or hidden, to remember it. */
@@ -168,7 +168,7 @@ export class TouchPad {
         this.release();
         this.repeating = el;
         this.repeat = setTimeout(() => {
-          this.repeat = setInterval(() => this.press(key), REPEAT_MS);
+          this.repeat = setInterval(() => this.press(key, true), REPEAT_MS);
         }, REPEAT_FIRST_MS);
       }
     };
@@ -183,9 +183,9 @@ export class TouchPad {
     el.addEventListener('lostpointercapture', up);
   }
 
-  private press(key: number): void {
+  private press(key: number, held = false): void {
     this.options.onPress();
-    this.options.send(key);
+    this.options.send(key, held);
   }
 
   private release(): void {
