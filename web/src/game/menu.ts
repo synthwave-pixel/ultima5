@@ -344,6 +344,9 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   // has been heard, by whichever of them it was asked.
   const heard = new Set<string>();
   keywords.forEach(({ dest }, i) => g.words.wasHeard(s.mapId, npc, i) && heard.add(dest));
+  // Nor greyed where more of the reply can be heard now than was (talk.ts moreToHear): a question the party's karma or
+  // the townsman's knowing them now opens, or an answer it listens for now known - white again till that is heard.
+  for (const { dest, more } of keywords) if (more) heard.delete(dest);
   const offered = new Set<string>();
   // A townsman whose own keywords include "job" is answered by the game's Job before his own is looked at, so
   // his line would be a second Job that never greys: the five the game answers itself are not offered twice.

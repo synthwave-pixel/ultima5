@@ -482,6 +482,137 @@ async function partyWords(k: Talk): Promise<void> {
 export interface Keyword {
   stub: string;
   dest: string;
+  /**
+   * Whether its reply has more to say now than was heard of it (moreToHear): a question its karma or the townsman's
+   * knowing the Avatar opens that has not been asked, or an answer its question listens for, known now and never given.
+   */
+  more?: boolean;
+}
+
+/**
+ * What a reply leads to that may be heard or not as things stand (Keyword.more): a question a karma or the townsman's
+ * knowing the Avatar sends it to (`word` none), or a question's answer (`word`). Each holds where it is reached: the
+ * townsman knowing the Avatar as the reply is asked, or not (`met`, where that decides), the karma between `karma` and
+ * `below`, and the answer it lies behind (`via`, `a<label>:<word>` as asked marks it) - a choice not taken is not more.
+ */
+interface Opening {
+  label: number;
+  met?: boolean | undefined;
+  karma: number;
+  below: number;
+  via?: string | undefined;
+  word?: string;
+  /** Every answer the question listens for: where any has been given, the question has been answered. */
+  answers?: string[];
+}
+
+/** A way through a reply: whether the townsman knows the Avatar, whether that has been asked, the karma, the answer behind. */
+interface Way {
+  met: boolean;
+  asked: boolean;
+  karma: number;
+  below: number;
+  via?: string | undefined;
+}
+
+/**
+ * The openings of a reply, following the script as processChar does: a question once gone to is the conversation's
+ * from there (TALK_0c5c asks it, then "Your interest?"), the rest of the reply unsaid; 0x8c goes to its question where
+ * the townsman knows the Avatar, else on; 0xfe goes to its question at its karma, else on. The arguments of 0x85
+ * (three) and 0x86 (one) are passed over.
+ */
+function openingsOf(script: Uint8Array, reply: string): Opening[] {
+  const out: Opening[] = [];
+  const seen = new Set<string>();
+  const labelAt = (label: number): number => {
+    for (let i = 0; i + 1 < script.length; i++)
+      if (script[i] === 0x90 && script[i + 1] === label && (i === 0 || script[i - 1] === 0)) return i;
+    return -1;
+  };
+  // The zero-ended strings of a question: its text, the reply to any other answer, then answer and reply in turn.
+  const strings = (from: number): number[][] => {
+    const parts: number[][] = [];
+    let part: number[] = [];
+    for (let i = from; i < script.length; i++) {
+      if (script[i] === 0) {
+        parts.push(part);
+        part = [];
+        if (script[i + 1] === 0x90) break;
+      } else part.push(script[i]);
+    }
+    return parts;
+  };
+  const opening = (label: number, w: Way): Opening => ({
+    label,
+    met: w.asked ? w.met : undefined,
+    karma: w.karma,
+    below: w.below,
+    via: w.via,
+  });
+  const follow = (label: number, w: Way): void => {
+    if (label < 0x91 || label > 0x9e) return;
+    const at = labelAt(label);
+    if (at < 0) return;
+    const key = `${label}.${w.met}.${w.asked}.${w.karma}.${w.below}.${w.via}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (w.asked || w.karma > 0 || w.below <= 99) out.push(opening(label, w));
+    const parts = strings(at + 2);
+    const answers: string[] = [];
+    for (let i = 2; i + 1 < parts.length; i += 2) answers.push(String.fromCharCode(...parts[i].map((c) => c & 0x7f)).toLowerCase());
+    for (const word of answers)
+      if (!/^(y|ye|yes|n|no)$/i.test(word) && word.trim().length >= 2) out.push({ ...opening(label, w), word, answers });
+    // The question itself may be only the way on (Joshua's 0x92: if he knows the Avatar, 0x93), then its replies.
+    walk(parts[0] ?? [], w);
+    walk(parts[1] ?? [], w);
+    for (let i = 2; i + 1 < parts.length; i += 2) walk(parts[i + 1], { ...w, via: `a${label}:${answers[(i - 2) / 2]}` });
+  };
+  const walk = (bytes: number[], w: Way): void => {
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if (b === 0x82 || b === 0x84) return; // the conversation over, or joined
+      if (b === 0x85) i += 3;
+      else if (b === 0x86) i += 1;
+      // (0x88 asks the name: given, the townsman knows the Avatar from then on, which `met` covers; kept back, it is a
+      // choice made, as an answer not given is.)
+      else if (b === 0x8c) {
+        const to = bytes[i + 1];
+        i += 1;
+        w = { ...w, asked: true };
+        if (w.met) {
+          if (to !== undefined) follow(to, w);
+          return;
+        }
+      } else if (b === 0xfe) {
+        const [min, to] = [bytes[i + 1] ?? 0, bytes[i + 2]];
+        i += 2;
+        if (to !== undefined && min < w.below) follow(to, { ...w, karma: Math.max(w.karma, min) });
+        w = { ...w, below: Math.min(w.below, min) };
+        if (w.below <= w.karma) return;
+      } else if (b >= 0x91 && b <= 0x9e) {
+        follow(b, w);
+        return;
+      }
+    }
+  };
+  const bytes = [...reply].map((c) => c.charCodeAt(0));
+  for (const met of [false, true]) walk(bytes, { met, asked: false, karma: 0, below: 100 });
+  return out;
+}
+
+/** Whether an opening may be heard now and has not been (talk.ts asked marks a question asked, and its answer). */
+function moreToHear(g: Game, npc: number, openings: Opening[]): boolean {
+  const s = g.s;
+  const heard = (n: string): boolean => g.words.wasHeard(s.mapId, npc, n);
+  const karma = modern.karmaInUse(g);
+  return openings.some((o) => {
+    if (o.via !== undefined && !heard(o.via)) return false;
+    if (o.met !== undefined && hasMet(g, npc) !== o.met) return false;
+    if (karma < o.karma || karma >= o.below) return false;
+    if (o.word === undefined) return !heard(`q${o.label}`);
+    // A question asked and given none of what it listens for, one of which is known now.
+    return heard(`q${o.label}`) && !o.answers!.some((a) => heard(`a${o.label}:${a}`)) && g.words.forStub(o.word) !== null;
+  });
 }
 
 /**
@@ -508,7 +639,7 @@ export function keywordsOf(k: Talk): Keyword[] {
   return stubs.map((stub, n) => {
     let to = n;
     while (answers[to] === PASS_ON && to + 1 < answers.length) to++;
-    return { stub, dest: answers[to] };
+    return { stub, dest: answers[to], more: moreToHear(k.g, t.npc, openingsOf(t.script, answers[to])) };
   });
 }
 
@@ -713,6 +844,8 @@ async function asked(k: Talk): Promise<number> {
   const { g, t } = k;
   // The Modern karma: the question asked (one that counts by being reached), and below, the answer.
   modern.asked(g, t.labels, t.label);
+  // Asked, and below its answer given: what the Say list looks for before greying a reply (moreToHear).
+  g.words.markHeard(g.s.mapId, t.npc, `q${t.label}`);
   let r: number;
   do {
     await printQuote(k);
@@ -743,6 +876,7 @@ async function asked(k: Talk): Promise<number> {
   } while (r === 0);
   await printQuote(k);
   const found = findAnswer(k);
+  if (found) g.words.markHeard(g.s.mapId, t.npc, `a${t.label}:${scriptWord(k).toLowerCase()}`);
   modern.answered(g, t.labels, t.label, found ? scriptWord(k) : null, t.typed);
   const ended = found ? await replyToAnswer(k) : await replyOtherwise(k);
   if (!ended) {
