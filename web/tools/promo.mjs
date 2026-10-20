@@ -1,6 +1,7 @@
 // The README's promotional sheets, put together from screenshots of the game (as ultima3's promo/ are):
-//   - promo/features.jpg: nine scenes of the Modern look, each captioned - towns, talk, combat, the dungeons and their
-//     map, the journal, the cloth map, the mirror and the gypsy;
+//   - promo/features.jpg: nine scenes of the Modern look, each captioned - towns, talk (the reply in a box over the
+//     view, the words to say framed under it), combat, the dungeons and their map, the journal, the cloth map, the
+//     mirror and the gypsy;
 //   - promo/looks.jpg: the two looks and their tiles (Modern with Modern PC, Apple ][ or PC EGA; PC 1988 with PC EGA or
 //     Apple ][), each in the world, a town, combat and a dungeon, and the Modern look's dungeon also as the whole
 //     level's map (its tiles; the first-person view is the same in all three).
@@ -21,7 +22,7 @@ const DIM = '#7F96A0';
 
 const FEATURES = [
   ['town', 'Towns by day and night, their people at their schedules'],
-  ['talk', 'Talk by the words you have learned, picked from a list'],
+  ['talk', 'Talk by the words you have learned, the reply above'],
   ['combat-ship', 'Combat on land and sea: pirates boarding'],
   ['dungeon', 'First-person dungeons, lit by torch'],
   ['dungeon-map', 'The whole dungeon level, mapped as you go'],

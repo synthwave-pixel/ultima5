@@ -26,6 +26,8 @@ describes how the Modern look is drawn.
 
 ## Your game files
 
+<img src="screens/game-files.jpg" alt="The first start: Scan for game files..., a drop zone for the folder, its files or a .zip, and Choose folder... and Choose files or .zip... buttons" width="640">
+
 - **Scan for game files**: the first time the game starts it asks for the
   player's copy of MS-DOS Ultima V, and Scan for game files... looks for
   it. The desktop app looks beside itself, in the home folder, and where
@@ -199,6 +201,8 @@ describes how the Modern look is drawn.
 
 ## Character creation
 
+<img src="screens/mirror.jpg" alt="The mirror in the bedroom: Appearance - figure, skin, hair, clothes and trim, each chosen left and right - with the Avatar shown large beside it and in the room below" width="640">
+
 - **The name** starts as one of the port's own names, with the bar on
   "Suggest a name"; A rolls another. Type your own, or Continue with the
   one shown. Starting over when a game is saved warns that its Avatar, by
@@ -258,6 +262,8 @@ describes how the Modern look is drawn.
 
 ## Controls and menus
 
+<img src="screens/command-menu.jpg" alt="The command menu beside a townsman: Talk first, then Look, Cast, Use item, Ready, Stats, Mix reagents, Attack (Sht. Sword), Wait, Ignite torch (x3), View a gem (x1), New order, Journal and Map" width="640">
+
 - **Input**: Controller, how the game starts, reads the keyboard as a pad
   - W A S D or the arrows walk; Enter or Z is A; Space, Escape, X or B is
   B; Q, / or C is X; E, the full stop, V or Y is Y - and everything is
@@ -300,6 +306,9 @@ describes how the Modern look is drawn.
   a gold dot marks the tune's next key at Lord British's harpsichord,
   until the way is open or the Sandalwood Box is had. Seated at a
   harpsichord, the number keys still play notes, as in 1988.
+
+  <img src="screens/harpsichord.jpg" alt="The harpsichord's keyboard in a box over Lord British's chamber: nine keys, the one just played lit, its number rising from it, and a gold dot on the tune's next key" width="640">
+
 - **Each button means one thing everywhere.** A (or Tab) opens a command
   menu with what is at hand first, and chooses; B passes or backs out -
   the answer "none" to any question - and a command backed out of spends
@@ -310,7 +319,8 @@ describes how the Modern look is drawn.
   spell, and where words are typed it is the letter picker - in which X
   rubs out a letter and Y switches a name's case, its abc row under
   Space, a press down from it. At an aim the
-  button that began it looses it, as A does. Start or Select (or the touch
+  button that began it looses it, as A does. In a dungeon the right stick turns
+  the party left or right where it stands. Start or Select (or the touch
   pad's pause button, or Escape at the command prompt) opens the Pause
   menu wherever the game waits, and the game carries on where it was. A
   press on a gamepad or the touch pad puts the game in controller mode,
@@ -478,7 +488,12 @@ Wartow); the opening story's Britannia, Blackthorn, the Shadowlords, the
 Great Council, the Codex, the Abyss, Iolo and Shamino; and the eight
 virtues the gypsy weighs as the Avatar is made. A townsman's menu shows the ones that townsman answers, what has not
 been asked first and the name and the trade leading that: white if their
-answer has never been heard, grey once it has. A keyword the townsman has
+answer has never been heard, grey once it has - and white again where
+more of it can be heard now than was: a question the party's karma has
+since opened (Gruman's mantra of Honor), one a townsman asks only of an
+Avatar they know, or a question asked before the word it listens for was
+known (a password learnt since). A choice made - No to an offer, a name
+kept back - stays grey. A keyword the townsman has
 a word of their own for (Chamfort's LAND is Landon, Judge Dryden's PLEA
 is pleading) is offered as that word, and not at all until it has been
 heard - never as another that only begins the same way ("land",
@@ -510,6 +525,8 @@ stand to the south (the list scrolls where it is longer than the room, a
 grey arrow at its right where there are more lines above or below, as the
 title menu has). Once everything a townsman answers has been heard (every
 line grey), Take leave comes first, the bar on it.
+
+<img src="screens/talk.jpg" alt="Talking to the busboy in Britain: his reply, &quot;I am the busboy.&quot;, in a framed box at the top of the view; the words to say framed at its foot, Dishes chosen, a grey arrow at its corner where more lie below; the party's words and the prompts in the log" width="640">
 
 What the townsman says is shown across the top of the view (Settings,
 Dialog: Play, the default): in the same frame, only as big as its lines,
@@ -549,6 +566,8 @@ set Input to Classic and type it.
   ("1.7k/3.2k"), blue where a level is due, which only camping brings.
 
 ## Magic
+
+<img src="screens/magic.jpg" alt="Casting at the Lycaeum: the spells mixed, each with its count (Light x4 ... Protection x0, greyed), and the card for Light - its words, In Lor, the mixtures, its cost in mana, its circle and its reagent with the party's stock" width="640">
 
 - **Magic at a glance.** With the menu's bar on a spell to cast or on Mix,
   and while the caster is chosen, the party panel shows each member's
@@ -607,6 +626,9 @@ set Input to Classic and type it.
   repeats round the party as it goes on for ever. The PC (1988) look
   keeps its map over the first-person view - Off, in the Corner, or the
   Whole view, chosen in Settings.
+
+  <img src="screens/dungeon-map.jpg" alt="The first level of a dungeon in the Modern look's own tiles: the party in a lit passage of purple stone, a ladder below them, with the corridor's first-person view beside the map under the party panel" width="640">
+
 - **The menu names what is here or ahead**, its way already chosen: Klimb a
   ladder or a pit, Open or Jimmy a chest, Get its treasure, Drink at a
   fountain, Read the sign on the wall ahead, Attack the creature before
@@ -682,6 +704,9 @@ other hurt in the game kills as it always did.
   is named in the fight with what is left - "Bow x23:", "Spear x2:" (the
   one in hand and the spares) - and the last arrow or quarrel says so as
   it puts the bows or crossbows away.
+
+  <img src="screens/combat.jpg" alt="A fight in the open against orcs: Iolo fires, the log reading &quot;Crossbow x60:&quot; then &quot;Orc barely wounded!&quot;, and Mariah's turn, marked on the field and in the party panel" width="640">
+
 - **Clone** (In Quas Xen) starts its crosshair on the nearest friend - a
   copy is to fight for the party, and one of a foe would fight against it.
 - **Auto aim**, on to begin with: X in a fight (Q or C on a keyboard), and
@@ -724,7 +749,11 @@ other hurt in the game kills as it always did.
   in. Fights it goes nowhere in for thirty turns are handed back: All is
   turned off, and Allies held for the rest of that fight alone.
 - **Gameplay** (Pause menu): input, Auto Pause, the rules and auto aim.
-- **Settings** (Pause menu): the look and its tiles, outlines, status
+
+  <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
+
+- **Settings** (Pause menu): the look and its tiles, the dialog (a
+  townsman's words in the view or in the log), outlines, status
   letters, scanlines (each look its own: on in the PC (1988) look until
   turned off), the dungeon map (the PC (1988) look's), the export and
   import of the saved game, and forgetting the installed files. In both,
@@ -763,6 +792,9 @@ other hurt in the game kills as it always did.
   words for the deed are tinted in the log, faintly blue for a rise and
   faintly red for a fall (the Modern look only). The design is
   docs/superpowers/specs/2026-10-17-modern-karma-design.md.
+
+  <img src="screens/journal-path.jpg" alt="The journal's The Path: in word, in deed and in battle Wise, in the quest Untried, with the card for In word over the party" width="640">
+
   **Places** (after the Ultima III port's Towns) opens onto the townes, the castles and villages, the keeps, and the
   lighthouses and huts, each kind with how many of its places are done: a place is "Mystery..." until it is seen on
   the map or someone names it, then what the map calls it ("Towne?", "Keep?") until it is named, then, once the party
@@ -786,7 +818,13 @@ other hurt in the game kills as it always did.
   gives it:
   where the place is and who knows what it wants, never the mantra or the
   Word itself - in the log, or, too long to read there (the Crown's hunt,
-  the way to Doom), in a reader of its own. And the clues townsfolk gave,
+  the way to Doom), in a reader of its own. A line that names a place - a
+  shrine, a dungeon, a towne, castle, keep, lighthouse or hut, once it is
+  no mystery - says "X: View" there too, and X (Q or C on a keyboard read
+  as a pad, X with Classic input) opens the map on it: chosen and named,
+  on Britannia or the Underworld as its entrance lies (Doom below), and
+  marked though the party has only heard of it; closing the map comes back
+  to the journal on the same line. And the clues townsfolk gave,
   kept with the saved game: each answer that names a quest thing (a
   mantra, a Word of Power, a shard, a Shadowlord, the regalia...) kept
   whole, once, with who said it, where and when (a Shadowlord's name a clue
@@ -824,6 +862,9 @@ other hurt in the game kills as it always did.
   a dungeon's. A basement (Yew's, through the fireplace, Lord British's,
   Blackthorn's, Doom's) is mapped as the party has seen it, like any
   other level.
+
+  <img src="screens/map.jpg" alt="The cloth map: Britannia's coasts in ink on parchment, its places in brown, forests and mountains the party has seen painted over it, and the party's own mark named Avatar" width="640">
+
 - **Help**, as the ultima3 port's: short pages on the controls, a fight,
   the dungeons, and how the look in use shows the party. For a controller
   it opens on a picture of one, drawn as the game draws - a squared pad in

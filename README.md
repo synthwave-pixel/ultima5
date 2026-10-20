@@ -12,7 +12,7 @@ The page itself carries three things of the game's: the Ultima V
 Upgrade's music in `web/public/music/`, the Apple II version's tiles, for
 the Apple ][ tile set, and the box's painting, for the key art.
 
-![The Modern look: a town, talk by the words you have learned, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
+![The Modern look: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
 ![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
 
@@ -250,14 +250,21 @@ has the whole list; the highlights:
   stand, and "Blocked!" is kept for walls and water. Walking into a chest
   searches and opens it, into a foe attacks, into rocks climbs them, into
   a door opens it (jimmies it, with a key), into the wall that hides a
-  dungeon room's secret way pushes it. Classic input makes every command
-  a letter again, as in 1988.
+  dungeon room's secret way pushes it. A harpsichord opens a keyboard to
+  play. Classic input makes every command a letter again, as in 1988.
 - **Conversation by what you have heard.** On a controller, instead of
   typing keywords you pick from the words you have actually learnt, and
   only the ones the game answers to. Words from a guide can be added in
-  Cheats; Classic input still lets you type anything.
+  Cheats; Classic input still lets you type anything. What a townsman
+  says appears in a box at the top of the view, page by page, with the
+  words to say framed at its foot, so you can see who you are talking
+  to; Settings, Dialog: Log keeps it all in the message log, as 1988
+  did.
 - **A journal, maps and a dungeon map** that fill in as you play, kept
-  with the save.
+  with the save. The journal's **The Path** tells how far you walk the
+  path of the Avatar, in 1988's own words, never a number; under the
+  Modern and Story rules it reads four parts - in word, in deed, in battle and in
+  the quest - and a deed that moved it is tinted in the log.
 - **Your own Avatar** (Modern PC): five figures and your choice of skin,
   hair and clothes, changed at any mirror. The old "Male or Female?" is
   now "How art thou addressed?", since that is all it ever decided.

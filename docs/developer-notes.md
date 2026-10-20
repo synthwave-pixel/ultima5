@@ -137,6 +137,7 @@ Run in `web/` unless the path says otherwise.
 | `node tools/icons.mjs` | Redraws the icons. |
 | `node tools/key-art.mjs` | Draws the key art from the box's painting: Steam's library artwork, the boot screen, the README's banner, and each at its native size in `art/`. |
 | `node tools/promo.mjs` | Puts together the README's sheets of screenshots (`promo/`) from the dev server's screenshots in `screenshots/` (the script lists the scenes). |
+| `sips -s format jpeg -s formatOptions 82 -Z 1280` | Makes `docs/screens/`, the pictures in [What is new, in full](features.md), from the same screenshots: JPEGs 1280 wide, one to a section. |
 
 **The pilot** (`web/tools/pilot/`) is a bot that plays the development
 build using only the controller's keys. It played the game along the
