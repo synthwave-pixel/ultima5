@@ -460,7 +460,8 @@ export function showMap(
   const nameNow = (): string => {
     if (page === 'here') return hereName();
     const w = world();
-    return chosen[w] >= 0 ? labelOf(marks[w][chosen[w]], (key) => knowsPlace(g, key)) : '';
+    // (The place the journal opened the map on goes by the name the journal gave it: a shrine is its virtue's.)
+    return chosen[w] >= 0 ? labelOf(marks[w][chosen[w]], (key) => knowsPlace(g, key) || key === focus) : '';
   };
   const seenMarks = (): Mark[] => shown(world());
 
