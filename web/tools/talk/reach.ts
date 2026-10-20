@@ -24,20 +24,20 @@ import { analyse } from './analysis.ts';
 const TLK = ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK'];
 
 /** A part of a script and the labelled blocks it goes on to (0x91 to 0x9f, after 0x8c, 0x8f and the like). */
-interface Said {
+export interface Said {
   text: string;
   labels: number[];
 }
-interface Reply extends Said {
+export interface Reply extends Said {
   stub: string;
 }
 /** A labelled block: a question, with the reply to any other answer and the answers it listens for. */
-interface Block extends Said {
+export interface Block extends Said {
   label: number;
   other: Said;
   replies: Reply[];
 }
-interface Townsman {
+export interface Townsman {
   /** "file:talk", as keywordLabels.ts keys its labels. */
   key: string;
   name: string;
@@ -61,7 +61,7 @@ export interface Reach {
 }
 
 /** Every conversation's script, read into its parts. */
-function townsfolk(g: Game): Townsman[] {
+export function townsfolk(g: Game): Townsman[] {
   const compressed = g.data.table(0x24ea, 0x80);
   const speech = (bytes: number[]): string => {
     let out = '';

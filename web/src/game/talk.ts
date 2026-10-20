@@ -627,8 +627,12 @@ export function keywordsOf(k: Talk): Keyword[] {
   const answers: string[] = [];
   for (let n = 0; toKeyword(k, n); n++) {
     const word = scriptWord(k);
-    if (!word || word.charCodeAt(0) < 0x20) break;
-    stubs.push(word);
+    // The keywords end where the questions begin (0x90) or the script does. One that is no word - Weblock's 0x87,
+    // where his file lost a keyword after GORN - keeps its place, never offered (findKeyword counts it too), and
+    // those after it are his still: typed, 1988 answered them all.
+    const raw = t.script[t.at];
+    if (!word || (raw >= 0x90 && raw <= 0x9f)) break;
+    stubs.push(word.charCodeAt(0) < 0x20 ? '' : word);
     skip(k, 0, 0x90);
     let answer = '';
     for (let i = t.at; i < t.script.length && t.script[i] !== 0; i++) answer += String.fromCharCode(t.script[i]);

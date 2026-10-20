@@ -369,7 +369,7 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
     // matches): Camile of West Britanny's TRUE is her crops' "Indeed they do!" before it is her True Master, whose
     // question Master asks - the next of that reply's words is offered instead.
     const says = sayable(stub, word).toUpperCase();
-    const first = keywords.find((kw) => saysWord(kw.stub, says));
+    const first = keywords.find((kw) => kw.stub !== '' && saysWord(kw.stub, says));
     if (first && first.dest !== dest) return;
     offered.add(dest);
     // (A name spelt out with full stops, "H.M.S.", is labelled as it is written.)
@@ -521,7 +521,10 @@ export async function answerMenu(
   again = false,
 ): Promise<string> {
   const yesNo = (stub: string): boolean => /^(y|ye|yes|n|no)$/i.test(stub);
-  const open = !own && !riddle && expected.length > 0 && !expected.some(yesNo);
+  // (An answer that is no word - Sir Arbuthnot's "'Tis indeed an honor!", a reply that took its answer's place in his
+  // file - is listened for by nothing a player could say: his question is asked as yes or no, as it reads.)
+  const isWord = (stub: string): boolean => /^[a-z0-9][a-z0-9'.]*$/i.test(stub.trim());
+  const open = !own && !riddle && expected.some(isWord) && !expected.some(yesNo);
   const lines: { label: string; word: string; dim?: boolean }[] = [];
   if (own) lines.push({ label: own, word: own });
   else if (riddle) {
