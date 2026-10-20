@@ -2086,6 +2086,8 @@ export async function journalScreen(g: Game): Promise<number> {
   };
   /** A long hint asked for in a list (Y), shown once the list has been left for it (choose's LEFT_FOR_HOOK). */
   let pending: { name: string; text: string; at: number } | null = null;
+  /** A place to see on the map (X on a line that names one: JournalLine.view), opened once the list has been left. */
+  let viewing: { key: string; at: number } | null = null;
   /** A list of the journal's lines, Y giving the hint of the one the bar is on - and what it says, its card on the panel. */
   const list = async (title: string, lines: JournalLine[], at: number): Promise<number> => {
     const key = g.choiceKey;
@@ -2100,7 +2102,8 @@ export async function journalScreen(g: Game): Promise<number> {
       if (line?.about || line?.hint) {
         // Headed by its page's title where it opens one, short enough for the panel's border ("Shadowlords", not
         // "Shadowlords slain").
-        drawTextCard(g, cardTitle(line.card ?? line.open?.title ?? nameOf(line)), line.about ?? '', line.hint ? 'Y: Hint' : '');
+        const foot = [line.hint ? 'Y: Hint' : '', line.view && g.hooks.showMap ? 'X: View' : ''].filter(Boolean).join(' ');
+        drawTextCard(g, cardTitle(line.card ?? line.open?.title ?? nameOf(line)), line.about ?? '', foot);
         carded = true;
       } else if (carded) {
         clearBorderTitle(g);
@@ -2109,7 +2112,15 @@ export async function journalScreen(g: Game): Promise<number> {
       }
     };
     g.choiceKey = (k, i, shown) => {
-      if (shown !== title || (k !== Pad.Y && k !== 0x59 && k !== 0x79)) return false;
+      if (shown !== title) return false;
+      // X on a place: the map, opened on it (the letter too, as Y's hint is, where the keyboard is Classic).
+      if (k === Pad.X || k === 0x58 || k === 0x78) {
+        const view = lines[i]?.view;
+        if (!view || !g.hooks.showMap) return true;
+        viewing = { key: view, at: i };
+        return 'leave';
+      }
+      if (k !== Pad.Y && k !== 0x59 && k !== 0x79) return false;
       const line = lines[i];
       if (!line?.hint) return true;
       const text = `Hint: ${line.hint}`;
@@ -2128,6 +2139,14 @@ export async function journalScreen(g: Game): Promise<number> {
           lines.map((l) => ({ label: l.label, enabled: l.enabled })),
           at,
         );
+        const view = viewing;
+        if (r === LEFT_FOR_HOOK && view) {
+          viewing = null;
+          await g.hooks.showMap?.(false, view.key);
+          await restoreView(g);
+          at = view.at;
+          continue;
+        }
         const long = pending;
         if (r !== LEFT_FOR_HOOK || !long) return r;
         pending = null;

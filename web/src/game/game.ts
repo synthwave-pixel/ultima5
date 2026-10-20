@@ -101,8 +101,11 @@ export interface GameHooks {
   transfer?: Transfer;
   /** Forget the installed game files and start the installer again. */
   uninstall?: () => Promise<void>;
-  /** Show the map of Britannia (or the Underworld) over the game until dismissed. */
-  showMap?: (underworld: boolean) => Promise<void>;
+  /**
+   * Show the map of Britannia (or the Underworld) over the game until dismissed: opened on the place `focus` (a mark's
+   * key, "place:<id>" or "shrine:<n>": the journal's X) where one is given, on whichever world has it.
+   */
+  showMap?: (underworld: boolean, focus?: string) => Promise<void>;
   /**
    * A line of text from the device's own keyboard (a phone's comes up on the screen), in a box high on the page
    * where that keyboard leaves it in sight; `value` to begin from, at most `max` letters. Null if it was put by.

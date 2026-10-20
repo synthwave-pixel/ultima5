@@ -106,6 +106,8 @@ export interface JournalLine {
   read?: { text: string; dim: boolean }[];
   /** Nothing to open or hint (a list with nothing in it yet). */
   enabled?: boolean;
+  /** The place it names, as the map knows it ("place:<id>", "shrine:<n>"): X opens the map on it (menu.ts). */
+  view?: string;
 }
 
 /** The menu's width, in letters: a count or a state is set against its right edge. */
@@ -452,7 +454,7 @@ function placeLine(g: Game, id: number): JournalLine {
   const seen = placeSeen(g, id);
   if (!known && !seen) return { label: row('Mystery...', ''), about: MYSTERY, hint };
   const name = known ? (PLACE_SHORT[id] ?? placeTitle(g, id)) : `${placeKind(id)}?`;
-  const card = known && PLACE_CARD[id] ? { card: PLACE_CARD[id] } : {};
+  const card = { ...(known && PLACE_CARD[id] ? { card: PLACE_CARD[id] } : {}), view: `place:${id}` };
   if (!entered)
     return { label: row(name, seen ? 'seen' : ''), ...card, about: seen ? 'Found, not yet entered.' : 'Heard of, not yet found.', hint };
   const { heard, all } = placeCount(g, id);
@@ -583,6 +585,7 @@ export function journalTop(g: Game): JournalLine[] {
     label: row(virtues[v], questState(g, v)),
     about: shrineStatus(g, v),
     hint: SHRINE_HINTS[v],
+    view: `shrine:${v}`,
   });
   const begun = [0, 1, 2, 3, 4, 5, 6, 7].filter((v) => questState(g, v) === 'ordained' || questState(g, v) === 'answered');
   const done = [0, 1, 2, 3, 4, 5, 6, 7].filter((v) => questState(g, v) === 'done');
@@ -596,6 +599,7 @@ export function journalTop(g: Game): JournalLine[] {
       label: row(named(g.data.locations[0x20 + d]?.name ?? ''), s.d58d0[d] !== 0 ? 'unsealed' : ''),
       about: dungeonStatus(g, d),
       hint: DUNGEON_HINTS[d],
+      view: `place:${id}`,
     };
   });
   const groups = placeGroups(g);

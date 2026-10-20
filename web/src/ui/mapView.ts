@@ -38,7 +38,7 @@ import type { Game } from '../game/game.ts';
 import { asPad } from '../game/input.ts';
 import { K, Pad } from '../game/io.ts';
 import { knowsPlace } from '../game/placeNames.ts';
-import { GLYPH_SIZE, GLYPHS, labelOf, marksFor, nearestMark, stepTo, wrapped, type Mark } from './mapMarks.ts';
+import { focusOf, GLYPH_SIZE, GLYPHS, labelOf, marksFor, nearestMark, stepTo, wrapped, type Mark } from './mapMarks.ts';
 import { CELL_NAMES, cellKind, dungeonPicture, INTERIOR_PIXELS, townPicture } from './interiorMap.ts';
 import { drawParchment, INK, MAP_PIXELS, MAP_SCALE } from './parchment.ts';
 import type { StandardArt } from './standardArt.ts';
@@ -165,7 +165,8 @@ function drawBox(px: Uint32Array, mark: Mark): void {
 
 /**
  * One world's picture: the paper (or the dark), what has been seen painted over it, the marks and the party - `party`,
- * its square on this world, or null; drawn where `lit` (it blinks, showMap).
+ * its square on this world, or null; drawn where `lit` (it blinks, showMap). The mark `reveal` (its key) is drawn as
+ * seen: the place the journal opened the map on, known by name though not yet come to.
  */
 function worldPicture(
   g: Game,
@@ -177,6 +178,7 @@ function worldPicture(
   chosen: number,
   party: { x: number; y: number } | null = null,
   lit = true,
+  reveal = '',
 ): ImageData {
   const underworld = world === 'under';
   const fog = g.fog.of(underworld);
@@ -195,7 +197,7 @@ function worldPicture(
     }
   }
   const mark = (m: Mark): void => {
-    if (g.fog.seen(underworld, m.x, m.y)) drawMark(px, m, MARK_INK, MARK_EDGE);
+    if (g.fog.seen(underworld, m.x, m.y) || (reveal && m.key === reveal)) drawMark(px, m, MARK_INK, MARK_EDGE);
     else if (m.onPaper && paper) drawMark(px, m, INK, null);
   };
   marks.forEach((m, i) => {
@@ -332,13 +334,17 @@ export function mapKey(code: number): boolean {
   return true;
 }
 
-/** Show the maps until closed. */
+/**
+ * Show the maps until closed: on the place where the party is, or - `focus`, a mark's key ("place:<id>",
+ * "shrine:<n>": the journal's View) - on that place, chosen, on whichever world has it, shown though not yet seen.
+ */
 export function showMap(
   g: Game,
   tiles: Uint8Array,
   underworld: boolean,
   onClose: () => void,
   art: StandardArt | null = null,
+  focus = '',
 ): Promise<void> {
   const overlay = document.createElement('div');
   overlay.style.cssText =
@@ -408,7 +414,8 @@ export function showMap(
    * Britannia's paper every place the mapmaker knew, as the cloth map draws them - no hut, no dungeon (the port's;
    * it went only to those seen).
    */
-  const shown = (w: World): Mark[] => marks[w].filter((m) => g.fog.seen(w === 'under', m.x, m.y) || (w === 'brit' && m.onPaper));
+  const shown = (w: World): Mark[] =>
+    marks[w].filter((m) => g.fog.seen(w === 'under', m.x, m.y) || (w === 'brit' && m.onPaper) || (focus !== '' && m.key === focus));
   /** The square each world's map is centred on: the place chosen, which it slides to. */
   const centre: Record<World, { x: number; y: number }> = { brit: { x: px, y: py }, under: { x: px, y: py } };
   for (const w of ['brit', 'under'] as World[]) {
@@ -419,6 +426,14 @@ export function showMap(
     const at = chosen[w] >= 0 ? marks[w][chosen[w]] : null;
     if (at) centre[w] = { x: at.x + 0.5, y: at.y + 0.5 };
   }
+  // The place the journal asked for, chosen and centred on its own world, which the map opens on.
+  const target = focusOf(marks, focus);
+  const focused: World | null = target?.world ?? null;
+  if (target) {
+    chosen[target.world] = target.at;
+    const at = marks[target.world][target.at];
+    centre[target.world] = { x: at.x + 0.5, y: at.y + 0.5 };
+  }
   /** The party's mark lit or dark, by turns (about twice a second, showMap's timer). */
   let lit = true;
 
@@ -426,11 +441,11 @@ export function showMap(
     const out: Page[] = [];
     if (hasHere) out.push('here');
     out.push('brit');
-    if (g.fog.knowsUnderworld) out.push('under');
+    if (g.fog.knowsUnderworld || focused === 'under') out.push('under');
     if (hasCloth()) out.push('cloth');
     return out;
   };
-  let page: Page = hasHere ? 'here' : underworld && g.fog.knowsUnderworld ? 'under' : 'brit';
+  let page: Page = focused ?? (hasHere ? 'here' : underworld && g.fog.knowsUnderworld ? 'under' : 'brit');
   let zoom = 0;
   let cx = 0.5;
   let cy = 0.5;
@@ -551,7 +566,11 @@ export function showMap(
       inner.width = inner.height = MAP_PIXELS;
       inner
         .getContext('2d')!
-        .putImageData(worldPicture(g, quads, w, w === 'under' ? null : paper, worlds[w], marks[w], chosen[w], partyOn(w), lit), 0, 0);
+        .putImageData(
+          worldPicture(g, quads, w, w === 'under' ? null : paper, worlds[w], marks[w], chosen[w], partyOn(w), lit, focus),
+          0,
+          0,
+        );
     }
     if (page === 'here') {
       inner.style.cssText = `width:${size}px;height:${size}px;image-rendering:pixelated;display:block;`;

@@ -302,3 +302,16 @@ export function stepTo(marks: Mark[], from: number, dx: number, dy: number, size
   }
   return best === -1 ? from : best;
 }
+
+/**
+ * Where a map opened on a place (`focus`, a mark's key: the journal's View) opens: the world whose marks have it, and
+ * which of them it is; null where neither world has it.
+ */
+export function focusOf(marks: { brit: Mark[]; under: Mark[] }, focus: string): { world: 'brit' | 'under'; at: number } | null {
+  if (!focus) return null;
+  for (const world of ['brit', 'under'] as const) {
+    const at = marks[world].findIndex((m) => m.key === focus);
+    if (at >= 0) return { world, at };
+  }
+  return null;
+}

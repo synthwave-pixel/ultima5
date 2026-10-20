@@ -307,8 +307,8 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
       await clearInstalled();
       location.reload();
     },
-    async showMap(underworld) {
-      await showMap(g, tiles, underworld, () => screen.flushKeys(), screen.standardArt);
+    async showMap(underworld, focus) {
+      await showMap(g, tiles, underworld, () => screen.flushKeys(), screen.standardArt, focus);
     },
     async askText(title, value, max) {
       const text = await textBox(title, value, max);
