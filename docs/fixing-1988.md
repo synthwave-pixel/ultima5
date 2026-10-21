@@ -182,6 +182,33 @@ stand-in, so that every test plays out the same each time. One thing
 keeps the 1988 numbers on purpose: where a Shadowlord blights a towne,
 its trees still fall the same way each day.
 
+## Two conversations with a word missing
+
+A playthrough of every conversation by the controller's lists alone
+(`web/tools/talk/audit.ts`: the Say and Answer lists and the game's own
+matching, round after round from what a new Avatar knows until nothing more
+is learnt) found two townsmen whose files had lost a word, each leaving
+something no player could reach, typing or not:
+
+- **Weblock**, in Blackthorn's palace, points the way to its rooms and
+  people. After the keyword `gorn` his file has `hass`, then a byte that
+  means "the next one's answer" (0x87), then "He is a prisoner in the
+  dungeon!": the answer and the keyword after it swapped. Asked of Gorn he
+  said "hass", and asked of Hassad, nothing. The two are put back in
+  order, Gorn and Hassad sharing the prisoner's line. (On a controller it
+  was worse: the Say list stopped at the stray byte, and his directions to
+  the kitchen, foyer, dungeon, roof, stables and throne were never
+  offered. The list now passes over a keyword that is no word.)
+- **Sir Arbuthnot**, of Greyhaven, asks "Art thou the one true Avatar?".
+  The `y` the question listens for is missing, so the reply meant for it -
+  "'Tis indeed an honor!", and his asking the Avatar's name - stood where
+  the answer's word belongs, and every answer got "Oh.". The `y` is put
+  back.
+
+Both are corrected as the script is read (`SCRIPT_FIXES` in
+`web/src/game/talk.ts`, beside Thrud's Jeweled Sword, given as the Crossbow
+in 1988); the player's files are left as they are.
+
 ## Kept as they were
 
 Not every oddity is a bug, and the port keeps what is merely 1988's way:
@@ -205,6 +232,15 @@ Not every oddity is a bug, and the port keeps what is merely 1988's way:
   under the ground can be walked onto, and reappears where it is; some
   rooms set their creatures down together on one square (a swarm of bats
   out of one crack), as the data has it.
+- **Two greetings no one hears.** Thorne of Jhelom ("been in any good
+  battles lately?") and Felespar of Yew ("Any news of Lord British?")
+  greet an Avatar they know, but neither ever asks the Avatar's name, so
+  neither can come to know them. Making them reachable would mean a
+  question they never asked.
+- **A few jests need a word nobody says.** Dupre's duck, Jacqueline's mud,
+  Temme's An Ylem and Lord R'hien's nod to one of the game's makers are
+  answered only to a word no one in Britannia says; Add word, under
+  Cheats, says it.
 - **A room's trigger raises its walls where it will.** Wrong's trap shuts
   the way out behind the party, a hidden door in it - wall raised under
   anyone standing there, who can still step out.

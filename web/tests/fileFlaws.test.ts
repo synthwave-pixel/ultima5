@@ -6,10 +6,10 @@ import { analyse } from '../tools/talk/analysis.ts';
 import { newGame } from './helpers.ts';
 
 /**
- * Where a townsman's file lost a word, what is left of it is still played as 1988 played it typed: a keyword that is
- * no word - Weblock's 0x87 after GORN - keeps its place and is passed over (talk.ts keywordsOf), the Say list going on
- * to the keywords after it; an answer that is no word - Sir Arbuthnot's reply in his answer's place - leaves his
- * question a yes or no (menu.ts answerMenu).
+ * Two townsmen's files that lost a word, put right (talk.ts SCRIPT_FIXES): Weblock's GORN and HASS share "He is a
+ * prisoner in the dungeon!", and the keywords after them are his (a keyword that is no word, where another file has
+ * one, keeps its place and is passed over: keywordsOf); Sir Arbuthnot's "Art thou the one true Avatar?" listens for
+ * Yes again, which his honour answers (an answer that is no word leaves a question a yes or no: answerMenu).
  */
 describe("a word lost from a townsman's file", () => {
   it("leaves the rest of Weblock's on the Say list, each answered as typed in 1988", async () => {
@@ -36,11 +36,12 @@ describe("a word lost from a townsman's file", () => {
     };
     await talkToNpc(g, npc);
     for (const l of ['Kitchen', 'Foyer', 'Dungeon', 'Roof', 'Stables', 'Throne']) expect(labels).toContain(l);
+    expect(heard).toContain(':gorn "He is a prisoner in the dungeon!"'); // not "hass"
     expect(heard).toContain('Go up the ladder in the main foyer.'); // the kitchen
     expect(heard).toContain('Take the ladder down.'); // the stables
   });
 
-  it('leaves Sir Arbuthnot\'s "Art thou the one true Avatar?" answered Yes or No', async () => {
+  it('answers Sir Arbuthnot\'s "Art thou the one true Avatar?" Yes, with his honour and the Avatar\'s name asked', async () => {
     const { g, p } = newGame();
     journeyOnward(g);
     for (const w of analyse(g).learnable.keys()) g.words.add(w);
@@ -52,6 +53,7 @@ describe("a word lost from a townsman's file", () => {
     Object.assign(g.s, { mapId: 9 + (at >> 5) });
     g.s.npcs[npc].fa = 15; // Sir Arbuthnot
     let offered: string[] | null = null;
+    let heard = '';
     let said = false;
     p.next = () => {
       const m = g.menuShown;
@@ -63,11 +65,15 @@ describe("a word lost from a townsman's file", () => {
         said = true;
         return Pad.A;
       }
-      if (/Art thou the one true Avatar\?"?\s*You respond-\s*:\s*$/.test(g.said.replace(/\s+/g, ' '))) offered = m.labels;
-      offered = m.labels;
-      return m.labels[m.at] === 'Yes' ? Pad.A : K.Down; // Yes: he knows of the Avatar, and is asked
+      if (/Art thou the one true Avatar\?"?\s*You respond-\s*:\s*$/.test(g.said.replace(/\s+/g, ' ')) && offered === null)
+        offered = m.labels;
+      heard += g.said.replace(/\s+/g, ' ');
+      if (m.labels.includes('Say nothing')) return Pad.A; // the Avatar's name, given
+      return m.labels[m.at] === 'Yes' ? Pad.A : K.Down; // Yes: of the Avatar, and the Avatar
     };
     await talkToNpc(g, npc);
     expect(offered).toEqual(['Yes', 'No']);
+    expect(heard).toContain(`"'Tis indeed an honor!" "What is thy name?"`);
+    expect(g.s.npcMet[(g.s.mapId - 1) * 4 + (npc >> 3)] & (1 << (npc & 7))).not.toBe(0); // he knows the Avatar now
   });
 });

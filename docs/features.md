@@ -947,6 +947,15 @@ settled on the original Apple II disks - is told in
   conversation and wanders the town, as in 1988, which then answered
   "No response!" ever after; they now say "Thank ye!". Walking into one
   talks to them, never attacks.
+- **Two conversations lost a word, and have it back.** Weblock, the guide
+  in Blackthorn's palace, answered Gorn with "hass": two strings of his
+  file had swapped, and "He is a prisoner in the dungeon!" - meant for
+  Gorn and Hassad both - could never be heard. Sir Arbuthnot of
+  Greyhaven's "Art thou the one true Avatar?" had lost the Yes it listens
+  for, so his "'Tis indeed an honor!" (and his asking the Avatar's name)
+  was out of reach. Both are put right as the game reads the file, which
+  is left as it is
+  ([Fixing the 1988 game](fixing-1988.md#two-conversations-with-a-word-missing)).
 
 ## Saving
 

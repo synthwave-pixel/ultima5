@@ -415,8 +415,9 @@ export class Vocabulary {
       const fits = [...this.known.entries()].filter(([k]) => fitsStub(s, k)).sort(([a], [b]) => a.length - b.length);
       const it = fits.find(([k]) => k === key(reviewed)) ?? fits.find(([, w]) => sameRoot(reviewed, w));
       // Not offered at all till that word is heard: another that only begins the same way ("land", for Chamfort's
-      // Landon) would ask of what the player has not yet learnt, and the answer make no sense.
-      return it ? it[1] : null;
+      // Landon) would ask of what the player has not yet learnt, and the answer make no sense. A form of it heard, it
+      // is offered as the word reviewed: Windmire's accident, where only Emilly's "accidently" has been heard.
+      return it ? (it[0] === key(reviewed) ? it[1] : reviewed) : null;
     }
     if (own && !whole) {
       // Of theirs, the rarest in Britannia first - a topic is the uncommon word (Zachariah's comets, not "come") -

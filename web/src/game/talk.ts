@@ -108,14 +108,42 @@ export type Talk = {
 
 /**
  * The port's corrections to the scripts as the DOS files have them, each for one NPC (by their name, the script's
- * first word), a run of bytes put in place of another. Thrud of Windemere offers "the Jeweled Sword and Shield" for
- * the Resistance's password, and his gifts are items 0x08 (the Jewel Shield) and 0x1c - the Crossbow, where the
- * Jeweled Sword is 0x28: 28 written in decimal for a number meant in hex. Guides to the game, the Commodore 64's
- * among them, have him give the sword.
+ * first word), a run of bytes put in place of another - longer, where something was lost, the rest of the script
+ * moved on to make room (fixing-1988.md):
+ *
+ * - Thrud of Windemere offers "the Jeweled Sword and Shield" for the Resistance's password, and his gifts are items
+ *   0x08 (the Jewel Shield) and 0x1c - the Crossbow, where the Jeweled Sword is 0x28: 28 written in decimal for a
+ *   number meant in hex. Guides to the game, the Commodore 64's among them, have him give the sword.
+ * - Weblock of Blackthorn's palace: GORN's answer is "hass" and the keyword after it a 0x87, the two strings
+ *   swapped - GORN and HASS were to share "He is a prisoner in the dungeon!", and GORN answered "hass".
+ * - Sir Arbuthnot of Greyhaven: "Art thou the one true Avatar?" lost the y it listened for, its reply ("'Tis indeed
+ *   an honor!", and the Avatar's name asked) standing in the answer's place, where nothing could reach it.
  */
 const SCRIPT_FIXES: { who: string; was: number[]; now: number[] }[] = [
   { who: 'Thrud', was: [0x86, 0x08, 0x86, 0x1c], now: [0x86, 0x08, 0x86, 0x28] },
+  // gorn | hass | 0x87  ->  gorn | 0x87 | hass
+  {
+    who: 'Weblock',
+    was: [0xe7, 0xef, 0xf2, 0xee, 0, 0xe8, 0xe1, 0xf3, 0xf3, 0, 0x87],
+    now: [0xe7, 0xef, 0xf2, 0xee, 0, 0x87, 0, 0xe8, 0xe1, 0xf3, 0xf3],
+  },
+  // Oh. | 'Tis...  ->  Oh. | y | 'Tis...
+  { who: 'Sir Arbuthnot', was: [0xcf, 0xe8, 0xae, 0, 0xa7, 0xd4], now: [0xcf, 0xe8, 0xae, 0, 0xf9, 0, 0xa7, 0xd4] },
 ];
+
+/** The port's corrections (SCRIPT_FIXES) made to a script, `name` its NPC's: each run of bytes found put right. */
+export function fixScript(script: Uint8Array, name: string): void {
+  for (const fix of SCRIPT_FIXES) {
+    if (name !== fix.who) continue;
+    for (let i = 0; i + fix.was.length <= script.length; i++) {
+      if (!fix.was.every((b, k) => script[i + k] === b)) continue;
+      const rest = script.slice(i + fix.was.length);
+      script.set(fix.now, i);
+      script.set(rest.subarray(0, script.length - i - fix.now.length), i + fix.now.length);
+      i += fix.now.length - 1;
+    }
+  }
+}
 
 /** The NPC's script, from the settlement's TLK file (TALK_127e), with the port's corrections (SCRIPT_FIXES). */
 export function loadScript(g: Game, npcTalk: number): void {
@@ -136,11 +164,7 @@ export function loadScript(g: Game, npcTalk: number): void {
   t.own = new Set(scriptSpeech(file.subarray(offset, Math.min(end, offset + 0x400)), g.data.table(0x24ea, 0x80)));
   let name = '';
   for (let i = 0; t.script[i] >= 0xa0; i++) name += String.fromCharCode(t.script[i] & 0x7f);
-  for (const fix of SCRIPT_FIXES) {
-    if (name !== fix.who) continue;
-    for (let i = 0; i + fix.was.length <= t.script.length; i++)
-      if (fix.was.every((b, k) => t.script[i + k] === b)) t.script.set(fix.now, i);
-  }
+  fixScript(t.script, name);
 }
 
 // --- Printing words ---------------------------------------------------------------------

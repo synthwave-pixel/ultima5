@@ -11,7 +11,9 @@
  * says the keyword, as ever. tests/keywordlabels.test.ts fails on any such keyword without one here.
  *
  * Keyed by the conversation - the file (0 TOWNE, 1 DWELLING, 2 CASTLE, 3 KEEP .TLK) and its number there - and the
- * keyword as the script writes it.
+ * keyword as the script writes it. An empty label labels nothing: the keyword is still said by any word that fits,
+ * but its answer is offered by the next of the keywords that share it (menu.ts sayMenu) - a word that reads as the
+ * matter, where the first of them does not.
  */
 
 export const KEYWORD_LABELS: Readonly<Record<string, string>> = {
@@ -155,6 +157,8 @@ export const KEYWORD_LABELS: Readonly<Record<string, string>> = {
   '0:32:GREA': 'great',
   // Sindar (Trinsic), TOWNE.TLK: GREA/COUN ask about the Great Council, not 'counsel'.
   '0:32:COUN': 'council',
+  // Sindar (Trinsic), TOWNE.TLK: WHIC/DUNG are answered 'Dungeon?' 'SHAME!' - the dungeon's Word; offered as Dungeon, not 'which'.
+  '0:32:WHIC': '',
   // Sindar (Trinsic), TOWNE.TLK: WORD/POWE are answered 'INFAMA !' - a Word of Power.
   '0:32:POWE': 'power',
   // Jimmy (Trinsic), TOWNE.TLK: His question 'Many extraordinary powers had she!' leads to EXTR/POWE.
@@ -173,6 +177,8 @@ export const KEYWORD_LABELS: Readonly<Record<string, string>> = {
   '1:2:TRAV': 'travel',
   // Windmire (Stormcrow), DWELLING.TLK: Emilly tells of Windmire's 'best shipmate' who died; MATE/SCOT/ACCI are the matter he won't discuss.
   '1:3:MATE': 'mate',
+  // Windmire (Stormcrow), DWELLING.TLK: ACCI leads MATE/SCOT, the matter he won't discuss - Emilly's 'accidently', her own spelling, read as the accident it is.
+  '1:3:ACCI': 'accident',
   // Emilly (Stormcrow), DWELLING.TLK: ACCI's answer 'His best shipmate died in a storm' leads to MATE, answered 'His name was Scotty'.
   '1:4:MATE': 'mate',
   // David (Greyhaven), DWELLING.TLK: Charlotte: 'I live here with my husband and son, and maintain the lighthouse!' - the guess TEND/LIGH/MAIN.

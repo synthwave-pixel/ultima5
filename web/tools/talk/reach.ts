@@ -16,6 +16,7 @@
  */
 
 import { saysWord } from '../../src/game/cmds.ts';
+import { fixScript } from '../../src/game/talk.ts';
 import type { Game } from '../../src/game/game.ts';
 import { KEYWORD_LABELS } from '../../src/game/keywordLabels.ts';
 import { scriptSpeech, talksBackwards, townsfolkSaying, Vocabulary, wordRoot } from '../../src/game/words.ts';
@@ -94,7 +95,16 @@ export function townsfolk(g: Game): Townsman[] {
     }));
     const starts = entries.map((e) => e.at).sort((a, b) => a - b);
     for (const { talk, at } of entries) {
-      const script = file.subarray(at, starts.find((s) => s > at) ?? file.length);
+      // With the port's corrections, as the game loads it (talk.ts fixScript): room left for one that adds bytes.
+      const raw = file.subarray(at, starts.find((s) => s > at) ?? file.length);
+      const room = new Uint8Array(raw.length + 16);
+      room.set(raw);
+      let who = '';
+      for (let i = 0; room[i] >= 0xa0; i++) who += String.fromCharCode(room[i] & 0x7f);
+      fixScript(room, who);
+      let end = room.length;
+      while (end > raw.length && room[end - 1] === 0) end--;
+      const script = room.subarray(0, end);
       const strings: number[][] = [];
       const marks: { at: number; label: number }[] = [];
       let cur: number[] = [];

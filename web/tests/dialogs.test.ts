@@ -30,7 +30,6 @@ const NEVER_QUESTIONED = [
 ];
 const NEVER_OFFERED = [
   'Lord Kenneth (GREYHAVEN) #94 dcb', // the first riddle's notes: offered from their own letters (menu.ts answerMenu)
-  'Sir Arbuthnot (GREYHAVEN) #93', // a reply's text in the answer's place, in the file
   "Treanna (Lord British's castle) #94 ed", // a wrong answer, "Not that one!"
   'Glinkie (PAWS) #92 equa', // the equator: moongates, midnight and gate say the same
 ];

@@ -361,8 +361,11 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
     // Nor a stub spelt with full stops (Jimmy of Trinsic's "H.M."): its letters alone are some other word ("hm"), and
     // its fellow without them ("hms") is offered for the same answer.
     if (stub.includes('.')) return;
-    // Labelled with the townsman's own word for it, where it has been heard (words.ts forStub).
-    const word = g.words.forStub(stub, false, { own, said, backwards, reviewed: KEYWORD_LABELS[g.talk.labels + stub.toUpperCase()] });
+    // Labelled with the townsman's own word for it, where it has been heard (words.ts forStub) - or, reviewed as no
+    // label (keywordLabels.ts), by the next of the keywords that share its answer.
+    const reviewed = KEYWORD_LABELS[g.talk.labels + stub.toUpperCase()];
+    if (reviewed === '') return;
+    const word = g.words.forStub(stub, false, { own, said, backwards, reviewed });
     if (!word || always.some((w) => saysWord(w, word.toUpperCase()))) return;
     if (offered.has(dest)) return;
     // Nor a word an earlier keyword of theirs answers first, with another reply (talk.ts findKeyword: the first that

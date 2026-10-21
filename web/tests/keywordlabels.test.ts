@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { saysWord } from '../src/game/cmds.ts';
+import { Pad } from '../src/game/io.ts';
 import { KEYWORD_LABELS } from '../src/game/keywordLabels.ts';
+import { journeyOnward } from '../src/game/run.ts';
+import { talkToNpc } from '../src/game/talk.ts';
 import { sayable, talksBackwards, townsfolkSaying } from '../src/game/words.ts';
 import { analyse, type Row } from '../tools/talk/analysis.ts';
 import { newGame } from './helpers.ts';
@@ -26,6 +29,7 @@ describe('the reviewed keyword labels', () => {
     for (const [k, word] of Object.entries(KEYWORD_LABELS)) {
       const r = byKey.get(k);
       expect(r, `${k} is a keyword the list offers`).toBeDefined();
+      if (word === '') continue; // no label: its answer offered by another of its keywords (below)
       expect(saysWord(r!.stub, word.toUpperCase()), `${k}: ${word} fits ${r!.stub}`).toBe(true);
       expect(said(word), `${k}: someone says ${word}`).toBeGreaterThan(0);
     }
@@ -70,5 +74,40 @@ describe('the reviewed keyword labels', () => {
     fresh.words.learn(fresh, 'Thorkin forges rivets.');
     expect(fresh.words.forStub('STEV', false, { backwards: false })).toBeNull(); // Lord R'hien's "stev"
     expect(fresh.words.forStub('STEV')).toBe('stevir'); // as it would be to Goeth
+  });
+
+  /** The Say list a townsman offers, every word heard: by their file (0-3) and conversation there. */
+  const sayList = async (file: number, talk: number): Promise<string[]> => {
+    const game = newGame();
+    journeyOnward(game.g);
+    for (const w of analyse(game.g).learnable.keys()) game.g.words.add(w);
+    Object.assign(game.g.options, { input: 'controller', dialog: 'log' });
+    const npcs = game.g.data.files.get(['TOWNE.NPC', 'DWELLING.NPC', 'CASTLE.NPC', 'KEEP.NPC'][file]);
+    const at = [...Array(8 * 32).keys()].find((k) => npcs[(k >> 5) * 0x240 + 0x220 + (k & 31)] === talk)!;
+    Object.assign(game.g.s, { mapId: file * 8 + (at >> 5) + 1 });
+    game.g.s.npcs[at & 31].fa = talk;
+    let labels: string[] = [];
+    game.p.next = () => {
+      const m = game.g.menuShown;
+      if (m?.title !== 'Say') return Pad.A;
+      labels = m.labels;
+      return Pad.B;
+    };
+    await talkToNpc(game.g, at & 31);
+    return labels;
+  };
+
+  it('label an answer by the next of its keywords where the first is reviewed as no label (Sindar: Dungeon, not Which)', async () => {
+    const labels = await sayList(0, 32);
+    expect(labels).toContain('Dungeon');
+    expect(labels).not.toContain('Which');
+  });
+
+  it("label Windmire's matter he won't discuss as the accident, though only Emilly's 'accidently' has been heard", () => {
+    const { g: game } = newGame();
+    game.words.add('accidently');
+    expect(game.words.forStub('ACCI', false, { reviewed: KEYWORD_LABELS['1:3:ACCI'] })).toBe('accident');
+    game.words.add('accident');
+    expect(game.words.forStub('ACCI', false, { reviewed: KEYWORD_LABELS['1:3:ACCI'] })).toBe('accident');
   });
 });
