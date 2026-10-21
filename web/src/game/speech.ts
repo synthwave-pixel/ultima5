@@ -14,6 +14,7 @@ import type { Game } from './game.ts';
 import { Colour } from '../ui/colours.ts';
 import { CLEAR_WINDOW } from '../ui/text.ts';
 import { animating, updateFrame } from './frame.ts';
+import { LOST_FOCUS, TURN_LEFT, TURN_RIGHT } from './io.ts';
 import { blinker, waitMark } from './waitMark.ts';
 
 /** The text window the townsman's words are written in, off the screen (frame.ts's are 0-2, the menus' 3). */
@@ -222,10 +223,15 @@ async function waitHere(g: Game, x: number, y: number): Promise<void> {
     // The arrow blinking, and the map going on round the box, as it does round the talk's menu.
     const blink = blinker(g, x, y);
     const animate = animating(g);
-    await g.p.waitKey(() => {
-      blink();
-      animate();
-    });
+    // A key reads on, as at every wait (input.ts rawKey): not a turn of the right stick, nor the window losing focus -
+    // a pad whose stick rests off its centre would otherwise turn every page by itself.
+    for (;;) {
+      const k = await g.p.waitKey(() => {
+        blink();
+        animate();
+      });
+      if (k !== TURN_LEFT && k !== TURN_RIGHT && k !== LOST_FOCUS) break;
+    }
   } finally {
     waiting.delete(g);
   }

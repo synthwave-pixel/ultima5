@@ -5,7 +5,10 @@
  * the d-pad (or the left stick) as the arrow keys, repeating while held
  * as a held key does; A, B, X, Y, Start (Menu) and Select (View) as the
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
- * TURN_RIGHT), which only a dungeon heeds.
+ * TURN_RIGHT), which only a dungeon heeds. A stick's axis counts only once it has been seen at rest, near its middle:
+ * one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests at -1 -
+ * would otherwise hold a way, or a turn, for as long as the pad is plugged in. The right stick is read only in the
+ * standard mapping, the one that says which axes it is.
  */
 
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
@@ -13,6 +16,8 @@ import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
 const REPEAT_FIRST_MS = 300;
 const REPEAT_MS = 130;
 const DEADZONE = 0.5;
+/** How near its middle an axis must come to be taken for at rest. */
+const REST = 0.25;
 /** A turn held on the right stick repeats slower than a step: a quarter turn is a lot to overshoot. */
 const TURN_FIRST_MS = 450;
 const TURN_MS = 350;
@@ -39,6 +44,8 @@ export class GamepadInput {
   private direction = 0;
   private turn = 0;
   private nextTurn = 0;
+  /** The axes seen at rest: only these are read. */
+  private rested = new Set<number>();
 
   constructor(private readonly send: (code: number, held?: boolean) => void) {
     const poll = (now: number): void => {
@@ -61,13 +68,16 @@ export class GamepadInput {
     }
     let dir = 0;
     for (const [i, code] of DPAD) if (pad.buttons[i]?.pressed) dir = code;
-    const [ax, ay] = [pad.axes[0] ?? 0, pad.axes[1] ?? 0];
+    pad.axes.forEach((v, i) => Math.abs(v) < REST && this.rested.add(i));
+    const axis = (i: number): number => (this.rested.has(i) ? (pad.axes[i] ?? 0) : 0);
+    const [ax, ay] = [axis(0), axis(1)];
     if (dir === 0 && Math.max(Math.abs(ax), Math.abs(ay)) > DEADZONE) {
       dir = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? K.Left : K.Right) : ay < 0 ? K.Up : K.Down;
     }
     // The right stick (axes 2 and 3 in the standard mapping), across: a turn, sent once and again while held.
-    const rx = pad.axes[2] ?? 0;
-    const turn = Math.abs(rx) > DEADZONE && Math.abs(rx) > Math.abs(pad.axes[3] ?? 0) ? (rx < 0 ? TURN_LEFT : TURN_RIGHT) : 0;
+    const standard = pad.mapping === 'standard';
+    const rx = standard ? axis(2) : 0;
+    const turn = Math.abs(rx) > DEADZONE && Math.abs(rx) > Math.abs(axis(3)) ? (rx < 0 ? TURN_LEFT : TURN_RIGHT) : 0;
     if (turn !== this.turn) {
       this.turn = turn;
       if (turn !== 0) {

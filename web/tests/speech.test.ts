@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Game } from '../src/game/game.ts';
-import { K, Pad } from '../src/game/io.ts';
+import { K, LOST_FOCUS, Pad, TURN_LEFT } from '../src/game/io.ts';
 import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { boxShown, placement, SPEECH, waitsForKey } from '../src/game/speech.ts';
@@ -255,5 +255,42 @@ describe('what is said, in the play area', () => {
     await talkToNpc(g, npc);
     expect(g.said).toContain('You respond-\n:\n');
     expect(g.said).not.toMatch(/:You respond-/);
+  });
+
+  it("waits on at a box's arrow through a turn of the right stick, or the window losing focus: only a key reads on", async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    Object.assign(g.options, { input: 'controller', dialog: 'play' });
+    journeyOnward(g);
+    stashWorldActors(g);
+    Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
+    await enterTown(g, true);
+    const npc = findNpc(g, 'Greyson');
+    const a = s.actors[s.npcs[npc].actor];
+    Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
+    loadLevel(g, true);
+    // At each box's arrow: a turn, then a lost focus, then A - and the box the same box throughout.
+    const unread: string[] = [];
+    let step = 0;
+    let box = '';
+    p.next = () => {
+      const m = g.menuShown;
+      if (waitsForKey(g)) {
+        const now = JSON.stringify(boxShown(g));
+        if (step > 0 && now !== box) unread.push(box);
+        box = now;
+        step = (step + 1) % 3;
+        return [TURN_LEFT, LOST_FOCUS, Pad.A][(step + 2) % 3];
+      }
+      if (step !== 0) unread.push(`${box} (left at ${step})`);
+      step = 0;
+      if (m?.title === 'Say') return asked++ < 2 ? Pad.A : Pad.B; // Name and Job, then leave
+      return Pad.A;
+    };
+    let asked = 0;
+    await talkToNpc(g, npc);
+    if (step !== 0) unread.push(`${box} (left at ${step}, the talk over)`);
+    expect(box).not.toBe(''); // a box waited
+    expect(unread).toEqual([]);
   });
 });
