@@ -41,6 +41,34 @@ describe("a word lost from a townsman's file", () => {
     expect(heard).toContain('Take the ladder down.'); // the stables
   });
 
+  it("offers Hassad to a party that has heard of him from Kaiko, not of Gorn: the prisoner's line", async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    g.words.add('hassad'); // heard of, and no more: not "gorn", and never the stray "hass"
+    Object.assign(g.options, { input: 'controller', dialog: 'log' });
+    Object.assign(g.s, { mapId: 18 });
+    const npcs = g.data.files.get('CASTLE.NPC');
+    const npc = [...Array(32).keys()].find((i) => npcs[0x240 + 0x220 + i] === 14)!;
+    g.s.npcs[npc].fa = 14; // Weblock
+    let labels: string[] = [];
+    let heard = '';
+    let asked = false;
+    p.next = () => {
+      heard += g.said.replace(/\s+/g, ' ');
+      const m = g.menuShown;
+      if (m?.title !== 'Say') return Pad.A;
+      if (!labels.length) labels = m.labels;
+      const at = m.labels.indexOf('Hassad');
+      if (asked || at < 0) return Pad.B;
+      if (m.at !== at) return m.at < at ? K.Down : K.Up;
+      asked = true;
+      return Pad.A;
+    };
+    await talkToNpc(g, npc);
+    expect(labels).toContain('Hassad');
+    expect(heard).toContain(':hassad "He is a prisoner in the dungeon!"');
+  });
+
   it('answers Sir Arbuthnot\'s "Art thou the one true Avatar?" Yes, with his honour and the Avatar\'s name asked', async () => {
     const { g, p } = newGame();
     journeyOnward(g);

@@ -131,8 +131,12 @@ const SCRIPT_FIXES: { who: string; was: number[]; now: number[] }[] = [
   { who: 'Sir Arbuthnot', was: [0xcf, 0xe8, 0xae, 0, 0xa7, 0xd4], now: [0xcf, 0xe8, 0xae, 0, 0xf9, 0, 0xa7, 0xd4] },
 ];
 
-/** The port's corrections (SCRIPT_FIXES) made to a script, `name` its NPC's: each run of bytes found put right. */
-export function fixScript(script: Uint8Array, name: string): void {
+/**
+ * The port's corrections (SCRIPT_FIXES) made to a script, `name` its NPC's: each run of bytes found put right. How many
+ * bytes longer the script now is.
+ */
+export function fixScript(script: Uint8Array, name: string): number {
+  let grown = 0;
   for (const fix of SCRIPT_FIXES) {
     if (name !== fix.who) continue;
     for (let i = 0; i + fix.was.length <= script.length; i++) {
@@ -140,9 +144,11 @@ export function fixScript(script: Uint8Array, name: string): void {
       const rest = script.slice(i + fix.was.length);
       script.set(fix.now, i);
       script.set(rest.subarray(0, script.length - i - fix.now.length), i + fix.now.length);
+      grown += fix.now.length - fix.was.length;
       i += fix.now.length - 1;
     }
   }
+  return grown;
 }
 
 /** The NPC's script, from the settlement's TLK file (TALK_127e), with the port's corrections (SCRIPT_FIXES). */
@@ -161,10 +167,11 @@ export function loadScript(g: Game, npcTalk: number): void {
     if (o > offset && o < end) end = o;
   }
   t.labels = `${(g.s.mapId - 1) >> 3}:${npcTalk}:`;
-  t.own = new Set(scriptSpeech(file.subarray(offset, Math.min(end, offset + 0x400)), g.data.table(0x24ea, 0x80)));
   let name = '';
   for (let i = 0; t.script[i] >= 0xa0; i++) name += String.fromCharCode(t.script[i] & 0x7f);
-  fixScript(t.script, name);
+  const grown = fixScript(t.script, name);
+  // Their own words as they now say them (a word put right is theirs; Weblock's stray "hass" is not).
+  t.own = new Set(scriptSpeech(t.script.subarray(0, Math.min(end - offset + grown, 0x400)), g.data.table(0x24ea, 0x80)));
 }
 
 // --- Printing words ---------------------------------------------------------------------
