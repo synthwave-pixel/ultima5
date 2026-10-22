@@ -245,7 +245,8 @@ has the whole list; the highlights:
   PC speaker sounds are there too, beside new chip-tune ones, and the
   Ultima V Upgrade's music plays where the Upgrade played it, in four
   soundtracks - Classical, Electronic, Ambient and the Upgrade's own; the
-  Music and Sound FX levels are set in the Pause menu.
+  soundtrack and the Music and Sound FX levels are set in the Pause menu,
+  under Audio.
 - **No more guessing at commands.** Menus offer what makes sense where you
   stand, and "Blocked!" is kept for walls and water. Walking into a chest
   searches and opens it, into a foe attacks, into rocks climbs them, into

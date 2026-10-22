@@ -1531,11 +1531,8 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
             saveOptions(g.options);
           },
         },
-        applied(g, musicVoiceLine(g)),
-        applied(g, musicLine(g)),
-        applied(g, soundLine(g)),
-        applied(g, effectsLevelLine(g)),
-        { label: 'Gameplay', act: () => gameplayMenu(g).then(() => undefined) },
+        audioLine(g),
+        gameplayLine(g),
         {
           label: 'Settings',
           act: async () => {
@@ -1691,7 +1688,7 @@ async function dialLevel(g: Game, title: string, start: number, set: (n: number)
   if (n >= 0) set(n);
 }
 
-/** The music's level: in the Pause menu, and in Settings at the title. */
+/** The music's level (Audio). */
 function musicLine(g: Game): Setting {
   const o = g.options;
   return {
@@ -1717,7 +1714,7 @@ const SOUNDTRACK_NOTES: Record<MusicVoice, string> = {
   original: "Upgrade (2001): the Ultima V Upgrade's MIDI, on a sound card.",
 };
 
-/** Which soundtrack plays: in the Pause menu, and in Settings at the title. */
+/** Which soundtrack plays (Audio). */
 function musicVoiceLine(g: Game): Setting {
   const o = g.options;
   return {
@@ -1728,7 +1725,7 @@ function musicVoiceLine(g: Game): Setting {
   };
 }
 
-/** The sound effects' set: in the Pause menu, and in Settings at the title. */
+/** The sound effects' set (Audio). */
 function soundLine(g: Game): Setting {
   const o = g.options;
   return {
@@ -1738,7 +1735,7 @@ function soundLine(g: Game): Setting {
   };
 }
 
-/** The sound effects' level, a step's sound played at each step: in the Pause menu, and in Settings at the title. */
+/** The sound effects' level, a step's sound played at each step (Audio). */
 function effectsLevelLine(g: Game): Setting {
   const o = g.options;
   return {
@@ -1758,22 +1755,10 @@ function effectsLevelLine(g: Game): Setting {
   };
 }
 
-/** `line` as the Pause menu has it: the setting changed, kept and taken up at once. */
-function applied(g: Game, line: Setting): Setting {
-  return {
-    ...line,
-    act: async () => {
-      await line.act?.();
-      saveOptions(g.options);
-      g.hooks.applyOptions?.(g.options);
-    },
-  };
-}
-
 /**
- * Settings: how the game looks - the UX, its tiles and what goes over them - and the keeping of the saved game. At
- * the title, with no Pause menu to hold them, the music, the sound effects and Gameplay's choices too. Each line
- * carries what it does, so lines may be added or moved without any numbering to keep in step.
+ * Settings: how the game looks - the UX, its tiles and what goes over them - and in play the keeping of the saved game.
+ * At the title, with no Pause menu to hold them, Audio and Gameplay too. Each line carries what it does, so lines may
+ * be added or moved without any numbering to keep in step.
  */
 export function settingLines(g: Game, title = false): Setting[] {
   const o = g.options;
@@ -1837,19 +1822,8 @@ export function settingLines(g: Game, title = false): Setting[] {
             act: () => void (o.dungeonMap = o.dungeonMap === 'off' ? 'small' : o.dungeonMap === 'small' ? 'full' : 'off'),
           },
         ]),
-    ...(title
-      ? [
-          musicVoiceLine(g),
-          musicLine(g),
-          soundLine(g),
-          effectsLevelLine(g),
-          {
-            label: 'Gameplay',
-            note: 'How the game plays: input, poison, hunger, experience, throwing, aiming.',
-            act: () => gameplayMenu(g).then(() => undefined),
-          },
-        ]
-      : []),
+    // At the title, with no Pause menu to hold them, Audio and Gameplay too: the same lists as the Pause menu's.
+    ...(title ? [audioLine(g), gameplayLine(g)] : []),
     // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
     // Character and Remove game files.
     ...(title ? [] : transferLines(g)),
@@ -1950,7 +1924,7 @@ async function optionsMenu(g: Game, title: string, lines: () => Setting[]): Prom
   }
 }
 
-/** Settings (settingLines); `title`, opened from the title, where it holds the Pause menu's music and Gameplay too. */
+/** Settings (settingLines); `title`, opened from the title, where it holds the Pause menu's Audio and Gameplay too. */
 export async function settingsMenu(g: Game, title = false): Promise<number> {
   return optionsMenu(g, 'Settings', () => settingLines(g, title));
 }
@@ -1958,6 +1932,34 @@ export async function settingsMenu(g: Game, title = false): Promise<number> {
 /** Gameplay (gameplayLines). */
 export async function gameplayMenu(g: Game): Promise<number> {
   return optionsMenu(g, 'Gameplay', () => gameplayLines(g));
+}
+
+/** Audio: the soundtrack, the sound effects and how loud each is - the Pause menu's, and Settings' at the title. */
+export function audioLines(g: Game): Setting[] {
+  return [{ label: 'Back', note: '' }, musicVoiceLine(g), musicLine(g), soundLine(g), effectsLevelLine(g)];
+}
+
+/** Audio (audioLines). */
+export async function audioMenu(g: Game): Promise<number> {
+  return optionsMenu(g, 'Audio', () => audioLines(g));
+}
+
+/** The line that opens Audio: on the Pause menu, and in Settings at the title. */
+function audioLine(g: Game): Setting {
+  return {
+    label: 'Audio',
+    note: 'The soundtrack, the sound effects, and how loud each is.',
+    act: () => audioMenu(g).then(() => undefined),
+  };
+}
+
+/** The line that opens Gameplay: on the Pause menu, and in Settings at the title. */
+function gameplayLine(g: Game): Setting {
+  return {
+    label: 'Gameplay',
+    note: 'How the game plays: input, poison, hunger, experience, throwing, aiming.',
+    act: () => gameplayMenu(g).then(() => undefined),
+  };
 }
 
 /** A yes-or-no question as a menu. */

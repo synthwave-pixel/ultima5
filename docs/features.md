@@ -80,8 +80,8 @@ describes how the Modern look is drawn.
 
 ## Looks and sound
 
-- **Two looks and two sounds**, chosen in Settings (UX) and in the Pause
-  menu and Settings (Sound FX).
+- **Two looks and two sounds**, chosen in Settings (UX) and in Audio
+  (Sound FX).
   *Modern* (the default) is the port's own screen, at the ultima3 port's
   scale: every one of the 512 tiles redrawn, creatures standing on the
   ground rather than in black squares, and chip-tune effects (pulse,
@@ -100,11 +100,12 @@ describes how the Modern look is drawn.
   a fountain. *PC (1988)* (UX) and *Original* (Sound FX) are the 1988 PC
   release's EGA tiles and screen, and the PC speaker as the DOS game drove
   it.
-- **A mixer**: Music level and Sound FX level (the Pause menu, and
-  Settings at the title), each Off or 10% to 100%, dialled and heard as it
-  turns; Sound FX chooses Standard or Original. Settings from before carry
+- **A mixer**: **Audio** (on the Pause menu, and in Settings at the
+  title) holds the soundtrack, Music level, Sound FX and Sound FX level,
+  each level Off or 10% to 100%, dialled and heard as it turns; Sound FX
+  chooses Standard or Original. Settings from before carry
   over (music off is none; Sound FX off, none of the Standard set). The
-  Pause menu and Settings pause the music where it is - it goes on from
+  Pause menu, Audio and Settings pause the music where it is - it goes on from
   there after - but for the Music and Music level lines, where it plays
   while the bar is on them, each soundtrack heard as it is chosen; the
   menus' own clicks are heard as they are made.
@@ -166,7 +167,7 @@ describes how the Modern look is drawn.
   Project, 2001) gave it the Apple II and Commodore 128 versions' songs as
   MIDI, and they play where the Upgrade plays them, read from its driver
   and patches (`web/src/game/music.ts`). Its sixteen tunes come in four
-  soundtracks, chosen in the Pause menu (Music):
+  soundtracks, chosen in Audio (Music):
   - **Classical** (the default): the tunes arranged anew for a string
     orchestra, a full orchestra, a Renaissance consort, a Celtic band
     and a pedalled piano;
@@ -464,13 +465,14 @@ describes how the Modern look is drawn.
 - **Pause**: Escape, either system button on a controller, or the touch
   pad's pause button holds the game - the music and everything sounding
   stop where they are, except a level being dialled, which is heard - and
-  offers Auto combat, the music and the sound effects, Gameplay, Settings,
+  offers Auto combat, Audio (the music and the sound effects), Gameplay, Settings,
   the help, the cheats, the tips, saving, and saving and leaving off. The
   journal and the map are in the command menu.
   With Auto Pause on, a window that loses focus while the game waits
   opens it too, as does sending the Android app to the background.
-- **The title screen** has Settings too (with the music, the sound and
-  Gameplay in it, there being no Pause menu there), and its questions (a new
+- **The title screen** has Settings too - the same lines of the look as
+  in play, with Audio and Gameplay in it, there being no Pause menu there -
+  and its questions (a new
   character over a saved game, the adventure's kind, Journey Onward with
   no game saved) are boxes of their own above its menu.
 
@@ -752,7 +754,7 @@ other hurt in the game kills as it always did.
   spiked helm swung before the axe at a charmed friend), else it closes
   in. Fights it goes nowhere in for thirty turns are handed back: All is
   turned off, and Allies held for the rest of that fight alone.
-- **Gameplay** (Pause menu): input, Auto Pause, the rules and auto aim.
+- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules and auto aim.
 
   <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
 

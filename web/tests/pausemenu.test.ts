@@ -195,7 +195,7 @@ describe('Quit on the title menu', () => {
 });
 
 describe('the Pause menu, Gameplay and Settings', () => {
-  it('put Music and Sound FX in Pause, the rules in Gameplay, and the look in Settings', async () => {
+  it('put Audio, Gameplay and Settings in Pause - the music and sound in Audio, the rules in Gameplay, the look in Settings', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
     g.lastSource = 'keyboard';
@@ -205,20 +205,18 @@ describe('the Pause menu, Gameplay and Settings', () => {
       return Pad.B;
     };
     await pauseMenu(g);
-    expect(paused.slice(0, 8)).toEqual([
-      'Resume',
-      'Auto combat: Off',
+    expect(paused.slice(0, 5)).toEqual(['Resume', 'Auto combat: Off', 'Audio', 'Gameplay', 'Settings']);
+    expect(paused).not.toContain('Journal');
+    expect(paused).not.toContain('Map');
+    const { audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');
+    const name = (l: { label: string }): string => l.label.replace(/:.*/, '');
+    expect(audioLines(g).map((l) => l.label)).toEqual([
+      'Back',
       'Music: Classical',
       'Music level: 60%',
       'Sound FX: Standard',
       'Sound FX level: 80%',
-      'Gameplay',
-      'Settings',
     ]);
-    expect(paused).not.toContain('Journal');
-    expect(paused).not.toContain('Map');
-    const { gameplayLines, settingLines } = await import('../src/game/menu.ts');
-    const name = (l: { label: string }): string => l.label.replace(/:.*/, '');
     expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Auto aim']);
     expect(settingLines(g).map(name)).toEqual([
       'Back',
@@ -231,10 +229,8 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Export saved game',
       'Import saved game',
     ]);
-    // At the title there is no Pause menu: Settings holds the music, the sound and Gameplay.
-    expect(settingLines(g, true).map(name)).toEqual(
-      expect.arrayContaining(['Music', 'Music level', 'Sound FX', 'Sound FX level', 'Gameplay']),
-    );
+    // At the title there is no Pause menu: Settings holds Audio and Gameplay.
+    expect(settingLines(g, true).map(name)).toEqual(expect.arrayContaining(['Audio', 'Gameplay']));
     // And not the saves', which are Manage Saves' there (characterMenu.ts).
     expect(settingLines(g, true).map(name)).not.toEqual(expect.arrayContaining(['Export saved game']));
     expect(
@@ -244,7 +240,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
     ).toEqual([]);
   });
 
-  it('dials Music down to Off from Pause, heard as it turns, kept and taken up', async () => {
+  it("dials Music down to Off from Pause's Audio, heard as it turns, kept and taken up", async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
     const applied: number[] = [];
@@ -253,7 +249,8 @@ describe('the Pause menu, Gameplay and Settings', () => {
     p.next = () => {
       const m = g.menuShown!;
       if (m.title === 'Music level') return step++ < 6 ? K.Down : Pad.A;
-      const want = m.labels.findIndex((l) => l.startsWith('Music level'));
+      // Audio, then its Music level line.
+      const want = m.labels.findIndex((l) => (m.title === 'Paused' ? l === 'Audio' : l.startsWith('Music level')));
       if (step === 0 && m.at !== want) return K.Down;
       return step === 0 ? Pad.A : Pad.B;
     };
@@ -280,22 +277,22 @@ describe('the Pause menu, Gameplay and Settings', () => {
         musicUnderDial = heard[heard.length - 1];
         return step++ < 2 ? K.Down : Pad.A;
       }
-      const want = m.labels.findIndex((l) => l.startsWith('Sound FX level'));
+      const want = m.labels.findIndex((l) => (m.title === 'Paused' ? l === 'Audio' : l.startsWith('Sound FX level')));
       if (step === 0 && m.at !== want) return K.Down;
       return step === 0 ? Pad.A : Pad.B;
     };
     await pauseMenu(g);
-    expect(during).toEqual([true]); // the Pause menu holds the music, and the dial lets nothing go
-    expect(holds).toEqual([true, false]); // until Resume
+    expect(during).toEqual([true, true]); // the Pause menu and Audio hold the music, and the dial lets nothing go
+    expect(holds).toEqual([true, true, false, false]); // Audio's let go as it closes, the Pause menu's at Resume
     expect(heard).toContain(true); // heard as the bar passed the Music level line
     expect(musicUnderDial).toBe(false); // but not under the Sound FX level's dial
     expect(heard[heard.length - 1]).toBe(false);
   });
 
   it('cycles the Music line through the four soundtracks, each named within the menu’s width', async () => {
-    const { settingLines } = await import('../src/game/menu.ts');
+    const { audioLines } = await import('../src/game/menu.ts');
     const { g } = newGame();
-    const music = () => settingLines(g, true).find((l) => l.label.startsWith('Music:'))!;
+    const music = () => audioLines(g).find((l) => l.label.startsWith('Music:'))!;
     const seen: string[] = [];
     for (let i = 0; i < 4; i++) {
       const line = music();
@@ -308,11 +305,11 @@ describe('the Pause menu, Gameplay and Settings', () => {
   });
 
   it('touches no hold at the title, where nothing is held', async () => {
-    const { settingLines } = await import('../src/game/menu.ts');
+    const { audioLines } = await import('../src/game/menu.ts');
     const { g, p } = newGame();
     const holds: boolean[] = [];
     g.sound.setHeld = (_reason, held) => void holds.push(held);
-    const line = settingLines(g, true).find((l) => l.label.startsWith('Sound FX level'))!;
+    const line = audioLines(g).find((l) => l.label.startsWith('Sound FX level'))!;
     p.keys.push(Pad.B);
     await line.act?.();
     expect(holds).toEqual([]);
@@ -325,7 +322,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
     p.next = () => {
       const m = g.menuShown!;
       if (m.title === 'Sound FX level') return step++ < 3 ? K.Down : Pad.B;
-      const want = m.labels.findIndex((l) => l.startsWith('Sound FX level'));
+      const want = m.labels.findIndex((l) => (m.title === 'Paused' ? l === 'Audio' : l.startsWith('Sound FX level')));
       if (step === 0 && m.at !== want) return K.Down;
       return step === 0 ? Pad.A : Pad.B;
     };

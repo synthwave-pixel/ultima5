@@ -110,7 +110,7 @@ describe('the sound holds', () => {
 });
 
 describe('the music under a menu', () => {
-  it('is heard only while the bar is on the Music or Music level line, in the Pause menu and in Settings at the title', async () => {
+  it("is heard only while the bar is on Audio's Music or Music level line, from the Pause menu and from Settings at the title", async () => {
     const { pauseMenu, settingsMenu } = await import('../src/game/menu.ts');
     const { journeyOnward } = await import('../src/game/run.ts');
     const { K, Pad } = await import('../src/game/io.ts');
@@ -126,10 +126,15 @@ describe('the music under a menu', () => {
       let onVoice = false;
       let elsewhere = false;
       let offAgain = false;
+      let inAudio = false;
       fly(g, p, [
         () => {
           const at = g.menuShown?.at ?? -1;
           const label = lines()[at] ?? '';
+          if (label === 'Audio' && g.menuShown?.title !== 'Audio' && !inAudio) {
+            inAudio = true; // the music's lines are Audio's
+            return Pad.A;
+          }
           if (label.startsWith('Music:')) {
             onVoice = heard[heard.length - 1] === true;
             return K.Down;
