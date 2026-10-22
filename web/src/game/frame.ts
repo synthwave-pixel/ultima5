@@ -180,8 +180,9 @@ export function setWind(g: Game, dir: number): void {
     g.say([0x555c, 0x5562, 0x5568, 0x556e, 0x5574][s.wind] ?? 0x555c);
     g.say(0x557a);
     rightArrow(g);
-    void was;
-    t.select(Win.messages);
+    // Back to the window written in before (1988 went to the log): the wind shifts as the map goes on round a menu
+    // or a townsman's box, whose lines would otherwise go on in the log (issue #7).
+    t.select(was);
   } else {
     g.draw.pen = Colour.brightWhite;
     g.draw.line(0x30, 0xb8, 0x98, 0xb8);

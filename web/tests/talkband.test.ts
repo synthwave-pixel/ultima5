@@ -5,6 +5,7 @@ import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkMenuRows } from '../src/game/speech.ts';
 import { covered } from '../src/game/world.ts';
+import { setWind } from '../src/game/frame.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
@@ -132,5 +133,31 @@ describe("the talk's menus, at the view's foot", () => {
     expect(seen!.under).toBe(true);
     expect(seen!.party).toBe(false);
     expect(g.covers.size).toBe(0);
+  });
+
+  it('keeps the Say list in the view when the wind changes as it waits, in the PC (1988) look (issue #7)', async () => {
+    const { g, p, i } = await britain();
+    g.options.tileSet = 'original'; // the PC (1988) look, whose wind is on the map's border
+    const s = g.s;
+    const n = s.npcs[i];
+    Object.assign(s, { level: n.z, x: n.x, y: n.y + 1 });
+    loadLevel(g, true);
+    let log = '';
+    let moved = false;
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title !== 'Say') return Pad.A;
+      if (!moved) {
+        setWind(g, 2); // the wind shifting, as the map goes on round the menu (frame.ts shiftWind)
+        moved = true;
+        return K.Down; // the bar redrawn
+      }
+      // The log's rows (the right-hand column, under the party panel), as the list was drawn again.
+      log = [...Array(14).keys()].map((r) => g.text.screenText(r + 10, 24, 39)).join('|');
+      return Pad.B;
+    };
+    await talkToNpc(g, i).catch(() => undefined);
+    expect(moved).toBe(true);
+    expect(log).not.toMatch(/Take leave|Name|Job/);
   });
 });
