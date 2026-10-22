@@ -28,6 +28,7 @@ import { shortcutCasts, SPELL_EFFECTS } from './magic.ts';
 import type { Keyword } from './talk.ts';
 import { sayable, talksBackwards, townsfolkSaying } from './words.ts';
 import { KEYWORD_LABELS } from './keywordLabels.ts';
+import { OPEN_ANSWERS } from './openAnswers.ts';
 import {
   attackOffer,
   fireOffer,
@@ -541,7 +542,10 @@ export async function answerMenu(
     }
     for (const l of lines) l.dim = riddle.tried.has(l.word);
   } else {
-    if (!open) lines.push({ label: 'Yes', word: 'YES' }, { label: 'No', word: 'NO' });
+    // A question that listens for nothing and does not read as yes or no: the answers written for it (openAnswers.ts).
+    const written = expected.length === 0 ? OPEN_ANSWERS[g.talk.labels + g.talk.label.toString(16)] : undefined;
+    if (written) for (const label of written) lines.push({ label, word: label.toUpperCase() });
+    else if (!open) lines.push({ label: 'Yes', word: 'YES' }, { label: 'No', word: 'NO' });
     for (const stub of expected) {
       // A letter alone is a way of saying yes (Malik's "o.k.?" listening for O), which Yes says: not a word to offer -
       // it would be any word that begins with it.

@@ -512,7 +512,11 @@ asked in a small box of two columns low in the view, the altar and the
 Avatar kneeling there in sight above it, and the box is put away for a
 second before each chant; the second and third chants are offered from
 the word just chanted. A townsman's own question is answered Yes, No,
-or with whatever it listens for that has been heard. One question is a
+or with whatever it listens for that has been heard. A question that
+listens for nothing in particular and is no yes-or-no - Camile's "how
+art thou doing on this fine day?" - offers a few answers written for it
+instead ("Well", "Poorly"), the townsman going on as they did to
+anything typed. One question is a
 riddle - Lord Kenneth, teaching the harpsichord, asks for the next notes
 of a tune that 1988 printed in the Book of Lore - and is answered from its
 answer's own letters in four orders, a wrong one greying once tried. It is
