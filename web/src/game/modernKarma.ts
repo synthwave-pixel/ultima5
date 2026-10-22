@@ -55,7 +55,14 @@ export class PathState {
   encode(): PathData {
     return {
       pools: { ...this.pools },
-      tally: structuredClone(this.tally),
+      // Each pool's virtues in the virtues' own order, whatever order they were first shown in: a save taken up and
+      // saved again is the very same text (decode reads them so).
+      tally: Object.fromEntries(
+        POOLS.map((pool) => [
+          pool,
+          Object.fromEntries(VIRTUES.flatMap((v) => (this.tally[pool][v] === undefined ? [] : [[v, this.tally[pool][v]]]))),
+        ]),
+      ) as PathData['tally'],
       done: [...this.done],
       families: { ...this.families },
       alms: { ...this.alms },

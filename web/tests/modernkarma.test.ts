@@ -316,3 +316,14 @@ describe("the Modern karma's choices, against the game's own conversations", () 
     }
   });
 });
+
+describe('the Modern karma, saved', () => {
+  it('saves the same text again once taken up, whatever order its virtues were first shown in', () => {
+    const p = new PathState();
+    p.tally.battle.Honor = 1; // Honor before Valor, the reverse of the virtues' own order
+    p.tally.battle.Valor = 2;
+    const once = JSON.stringify(p.encode());
+    expect(JSON.stringify(PathState.decode(JSON.parse(once) as ReturnType<PathState['encode']>).encode())).toBe(once);
+    expect(Object.keys(p.encode().tally.battle)).toEqual(['Valor', 'Honor']);
+  });
+});
