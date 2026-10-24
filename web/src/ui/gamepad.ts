@@ -8,7 +8,8 @@
  * TURN_RIGHT), which only a dungeon heeds. A stick's axis counts only once it has been seen at rest, near its middle:
  * one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests at -1 -
  * would otherwise hold a way, or a turn, for as long as the pad is plugged in. The right stick is read only in the
- * standard mapping, the one that says which axes it is.
+ * standard mapping, the one that says which axes it is. Read at every refresh of the display; or, where reading is
+ * lazy (Battery saver), only while a pad is connected - none, no reading at all, till the browser says one is.
  */
 
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
@@ -47,12 +48,34 @@ export class GamepadInput {
   /** The axes seen at rest: only these are read. */
   private rested = new Set<number>();
 
-  constructor(private readonly send: (code: number, held?: boolean) => void) {
-    const poll = (now: number): void => {
+  /** Whether a frame is asked for, to read the pad in. */
+  private reading = false;
+
+  constructor(
+    private readonly send: (code: number, held?: boolean) => void,
+    /** Whether the pad is read only while one is connected (Battery saver), not at every refresh. */
+    private readonly lazy: () => boolean = () => false,
+  ) {
+    // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh.
+    globalThis.addEventListener?.('gamepadconnected', () => this.wake());
+    this.wake();
+  }
+
+  /** Reading begun again, where it had stopped (a pad connected, or Battery saver turned off). */
+  wake(): void {
+    if (this.reading) return;
+    this.reading = true;
+    requestAnimationFrame((now) => {
+      this.reading = false;
       this.poll(now);
-      requestAnimationFrame(poll);
-    };
-    requestAnimationFrame(poll);
+      if (!this.lazy() || this.connected()) this.wake();
+    });
+  }
+
+  /** Whether any pad is connected. */
+  private connected(): boolean {
+    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
+    return pads.some((p) => p?.connected);
   }
 
   private poll(now: number): void {

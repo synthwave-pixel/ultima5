@@ -47,3 +47,52 @@ describe("a gamepad's sticks", () => {
     expect(sent('', (ms) => [0, 0, ms < 100 ? 0 : -1, 0])).toEqual([]);
   });
 });
+
+/** Read lazily (Battery saver), a pad is read only while one is connected: none, no frame asked for at all. */
+describe('a gamepad read lazily', () => {
+  /** The frames asked for, run one at a time by `next`. */
+  const frames = (): { queued: number; next: () => void } => {
+    const q: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => q.push(f));
+    return {
+      get queued() {
+        return q.length;
+      },
+      next: () => q.shift()?.(performance.now()),
+    };
+  };
+
+  it('asks for no frame with no pad connected, and reads every frame once one is, the pad sent from', () => {
+    const f = frames();
+    let pads: ReturnType<typeof padOf>[] = [];
+    vi.stubGlobal('navigator', { getGamepads: () => pads });
+    const sent: number[] = [];
+    const input = new GamepadInput(
+      (c) => sent.push(c),
+      () => true,
+    );
+    f.next(); // the first read, finding none
+    expect(f.queued).toBe(0); // and asking no more
+    pads = [padOf('standard', [0, 0, 0, 0])];
+    input.wake(); // the browser's gamepadconnected
+    f.next();
+    expect(f.queued).toBe(1); // a pad: read at every refresh
+    pads[0].buttons[0].pressed = true;
+    f.next();
+    expect(sent).toEqual([0x100]); // A
+    pads = [];
+    f.next();
+    expect(f.queued).toBe(0); // unplugged: reading stops
+  });
+
+  it('reads at every refresh, pad or none, where it is not lazy', () => {
+    const f = frames();
+    vi.stubGlobal('navigator', { getGamepads: () => [] });
+    new GamepadInput(
+      () => undefined,
+      () => false,
+    );
+    for (let i = 0; i < 3; i++) f.next();
+    expect(f.queued).toBe(1);
+  });
+});

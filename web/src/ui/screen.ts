@@ -329,7 +329,18 @@ export class Screen implements Platform {
       if (e.repeat && this.dropRepeat?.(k)) return;
       this.push(k, true, e.repeat);
     });
+    // A frame each refresh of the display, as a page that animates has it - or, where frames are lazy (Battery saver,
+    // lazyFrames), one only when there is something to show: the picture changed (the framebuffer says so as it is
+    // marked, onDirty), or the runes or the harpsichord's keyboard moving. At rest, none.
+    let pending = false;
+    const want = (): void => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(frame);
+    };
+    this.fb.onDirty = want;
     const frame = (now: number): void => {
+      pending = false;
       if (this.fb.runes.active) this.fb.stepRunes(now);
       // The frame's tone where the party is (the Standard look's, chromeTone.ts), at once when it changes.
       if (this.toneOf) {
@@ -347,10 +358,14 @@ export class Screen implements Platform {
         this.fb.present(this.image);
         this.show();
       }
-      requestAnimationFrame(frame);
+      const moving = this.fb.runes.active || (this.harp !== null && this.harp !== undefined && harpMoving(this.harp, performance.now()));
+      if (!this.lazyFrames() || moving || this.fb.dirty) want();
     };
-    requestAnimationFrame(frame);
+    want();
   }
+
+  /** Whether frames are asked for only when there is something to show (Battery saver: pageHooks.ts), not at every refresh. */
+  lazyFrames: () => boolean = () => false;
 
   /**
    * The colour page onto the canvas at the display's size, and page 0's story words over it at that size. Enlarged,

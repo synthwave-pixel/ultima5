@@ -234,8 +234,12 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     sound.setHeld('focus', away);
   };
   document.addEventListener('visibilitychange', awake);
-  // With Battery saver on, the map rests a minute after the last press (screen.ts waitKey).
+  // With Battery saver on, the map rests a minute after the last press (screen.ts waitKey), a frame is asked for only
+  // when there is something to show (screen.ts lazyFrames), and a gamepad read only while one is connected.
   screen.restAfter = () => (g.options.batterySaver ? BATTERY_SAVER_REST_MS : null);
+  screen.lazyFrames = () => g.options.batterySaver;
+  // (Set once the gamepad is: Battery saver turned off, it is read at every refresh again.)
+  let wakeInput = (): void => undefined;
   // With Auto Pause on, a window that loses focus, or a page hidden, while the game waits for a command opens the
   // Pause menu there (the ultima3 port's), so the player comes back to the game held: another window in front on a
   // desktop, the Android app sent to the background (Capacitor's App plugin says so too, where the web view is not
@@ -257,6 +261,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     awake();
   });
   const apply = (o: Options): void => {
+    wakeInput();
     scanlines.enabled = o.tileSet === 'standard' ? o.scanlines : o.pcScanlines;
     g.soundOff = o.effectsLevel === 0;
     sound.setEffects(o.soundSet, o.effectsLevel);
@@ -292,11 +297,15 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     if (mapKey(code)) return;
     screen.push(code, true, held);
   };
-  new GamepadInput((code, held) => {
-    touch.show(false);
-    from('gamepad');
-    send(code, held);
-  });
+  const gamepad = new GamepadInput(
+    (code, held) => {
+      touch.show(false);
+      from('gamepad');
+      send(code, held);
+    },
+    () => g.options.batterySaver,
+  );
+  wakeInput = () => gamepad.wake();
   const touch = new TouchPad({
     send,
     onPress: () => from('touch'),

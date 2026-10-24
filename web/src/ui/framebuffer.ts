@@ -284,7 +284,17 @@ export class Framebuffer {
   /** The page drawn on (DRV_0f). */
   page = 0;
   pen = 15;
-  dirty = true;
+  /** Whether the picture has changed since it was last shown (present): marked so, the screen is told (onDirty). */
+  get dirty(): boolean {
+    return this.changed;
+  }
+  set dirty(on: boolean) {
+    this.changed = on;
+    if (on) this.onDirty?.();
+  }
+  private changed = true;
+  /** Told whenever the picture is marked changed: the screen asks for a frame to show it in (screen.ts frameWanted). */
+  onDirty: (() => void) | null = null;
   private revealSeed = 0;
   /**
    * Glyphs drawn over the Standard chrome, by the key 'row:side' (the party panel's active arrow and state letters):

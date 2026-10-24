@@ -761,7 +761,9 @@ other hurt in the game kills as it always did.
 - **Settings** (Pause menu): the look and its tiles, the dialog (a
   townsman's words in the view or in the log), Battery saver (off to
   begin with: on, the map stops moving a minute after the last press,
-  until the next - for a phone left with the game open), outlines, status
+  until the next, and the screen is drawn and a gamepad read only when
+  there is something to show or a pad to read - for a phone left with the
+  game open), outlines, status
   letters, scanlines (each look its own: on in the PC (1988) look until
   turned off), the dungeon map (the PC (1988) look's), the export and
   import of the saved game, and forgetting the installed files. In both,
