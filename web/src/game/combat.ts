@@ -1932,7 +1932,7 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
   const auto = !walkedInto && g.autoAim && reached(careful);
   if (g.autoAim && !walkedInto && !auto) return careful && reached(false) ? allyAtRisk(g, i) : nothingInReach(g);
   // A snap attack's first blow at the snap target (snapTarget: the foe marked), the hands after it from there.
-  const pick = auto ? snapTarget(g, i) : -1;
+  const pick = auto ? snapTarget(g, i, careful) : -1;
   const snap: Bumped | null = pick >= 0 ? { x: g.combat[pick].x, y: g.combat[pick].y, snap: true } : null;
   // Once a hand has struck, a hand after it with no foe left in its reach is not asked where to strike (the port's):
   // the foe the first blow killed was the only one near.
@@ -1979,12 +1979,12 @@ function nearestFirst(g: Game, i: number, js: number[]): number[] {
 /**
  * The foes member combatant `i`'s snap attack (X, Snap attacks on) could open on, as attackEach would: those the first
  * hand to reach one reaches - a shot only along a clear line, and past any a stray might carry into a friend, but for
- * the X confirming it (allyAtRisk) - or with no weapon, those beside them; the nearest first. None, for a creature.
+ * the X confirming it (allyAtRisk; `careful` false) - or with no weapon, those beside them; the nearest first. None,
+ * for a creature.
  */
-export function snapTargets(g: Game, i: number): number[] {
+export function snapTargets(g: Game, i: number, careful = g.allyWarned !== i): number[] {
   const c = g.combat[i];
   if (!c || (c.flags & CF.Player) === 0 || onMonsterSide(g, i)) return [];
-  const careful = g.allyWarned !== i;
   const foes: number[] = [];
   for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j)) foes.push(j);
   const hands = [0, 2, 3].map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
@@ -2006,8 +2006,8 @@ export function snapTargets(g: Game, i: number): number[] {
  * The foe member combatant `i`'s snap attack opens on: the one they last struck or chose (Game.snapMemory) while it
  * is still one to open on, else the nearest (snapTargets); -1 where there is none.
  */
-export function snapTarget(g: Game, i: number): number {
-  const list = snapTargets(g, i);
+export function snapTarget(g: Game, i: number, careful = g.allyWarned !== i): number {
+  const list = snapTargets(g, i, careful);
   if (!list.length) return -1;
   return list.includes(g.snapMemory[i]) ? g.snapMemory[i] : list[0];
 }

@@ -169,4 +169,17 @@ describe('snap targets', () => {
       }
     }
   });
+  it('passes over a foe a stray shot might carry into a friend - but for the X confirming it, which keeps to the choice', () => {
+    const { g, me, at } = field(BOW, [8, 5, 9], [5, 8, 9]);
+    placeCombatant(g, 1, 1, 8, 6, 0); // a friend beside each foe
+    placeCombatant(g, 2, 1, 6, 8, 0);
+    g.snapMemory[me] = at[1];
+    expect(snapTargets(g, me)).toEqual([]);
+    expect(snapTarget(g, me)).toBe(-1);
+    // Warned (allyAtRisk), the next X shoots, at the foe chosen.
+    g.allyWarned = me;
+    expect(snapTarget(g, me)).toBe(at[1]);
+    g.allyWarned = -1;
+    expect(snapTarget(g, me, false)).toBe(at[1]);
+  });
 });
