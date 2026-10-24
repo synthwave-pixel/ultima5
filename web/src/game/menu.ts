@@ -392,6 +392,8 @@ export async function sayMenu(g: Game, keywords: Keyword[], own?: ReadonlySet<st
   // Low in the view, framed as the townsman's words are above it: the party and they in sight between (speech.ts).
   const at = await choose(g, 'Say', items, 0, false, talkMenu(g));
   const line = at < 0 ? undefined : lines[done ? at - 1 : at];
+  // The label chosen, for the log to echo as the menu showed it (talk.ts partyWords): backing out is Take leave.
+  g.talk.echo = line ? line.item.label : leave.label;
   if (!line) return 'BYE';
   g.talk.chosen = line.mark;
   return line.word;
@@ -581,11 +583,15 @@ export async function answerMenu(
   if (riddle) {
     if (at < 0) return LEAVE;
     riddle.tried.add(lines[at].word);
+    g.talk.echo = lines[at].label;
     return lines[at].word;
   }
   // Backing out of a question is No (or, to one that is not a yes-or-no question, I know not): the nearest a
-  // controller has to turning away.
-  return at < 0 ? (own ? '' : open ? knowNot(expected) : 'NO') : lines[at].word;
+  // controller has to turning away. The label chosen - or the line that answer is, backed out of - for the log to
+  // echo as the menu showed it (talk.ts partyWords).
+  const word = at < 0 ? (own ? '' : open ? knowNot(expected) : 'NO') : lines[at].word;
+  g.talk.echo = at >= 0 ? lines[at].label : (lines.find((l) => l.word === word)?.label ?? null);
+  return word;
 }
 
 /** "I know not", as said: what no answer the question listens for begins (the reply to any other, TALK_096e). */

@@ -540,8 +540,9 @@ Dialog: Play, the default): in the same frame, only as big as its lines,
 centred, and a row clear of them where they stand to the north (else of
 the party's own row), so the party and they are in sight between the two
 boxes. The log keeps the party's words and the prompts - 1988's "Your
-interest?" once, then its colon alone before each word asked, a word to
-a line, the log a list of what was asked (the journal still reads the
+interest?" once, then its colon alone before each word asked - as the
+menu labelled it, ":Job", ":Busboy" - a word to a line, the log a list of
+what was asked (the journal still reads the
 talk whole). A speech
 too long
 for the room is shown a box at a time, and the scripts' own pauses wait

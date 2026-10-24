@@ -37,6 +37,8 @@ const dec = (v: number, n: number): number => (v > n ? v - n : 0);
 export class TalkState {
   /** The line of the say menu last chosen (its mark in the record of what has been heard), or null if typed. */
   chosen: number | string | null = null;
+  /** The label of the line last chosen from the talk's menus (Say, Answer), as the menu showed it; null if typed. */
+  echo: string | null = null;
   /** Wrong answers already given to each riddle of this conversation, by the question's label: the menu greys them. */
   tried = new Map<number, Set<string>>();
   /** D_4aee: an action waiting for its argument bytes. */
@@ -504,6 +506,7 @@ async function partyWords(k: Talk): Promise<void> {
   // townsman has just let fall can be asked about while still standing before them.
   g.words.learn(g, g.recording ?? '');
   const { answerMenu, sayMenu } = await import('./menu.ts');
+  t.echo = null;
   // Asked a question, the player answers it: yes, no, or a word the question is listening for that they have heard
   // somewhere. Asked their name, they give it. Otherwise it is their turn to ask.
   if (k.naming) t.typed = await answerMenu(g, [], g.s.members[0].name);
@@ -518,7 +521,10 @@ async function partyWords(k: Talk): Promise<void> {
       t.typed = await answerMenu(g, expected, undefined, { tried });
     } else t.typed = await answerMenu(g, expected, undefined, undefined, asksAgain(k));
   } else t.typed = await sayMenu(g, keywordsOf(k), t.own);
-  if (t.typed !== '\x1b') g.print(t.typed);
+  // In the log, what was said - or with the Dialog setting's Play, the menu's label for it, as the menu showed it
+  // (":Busboy", not the word said, "busboy"; the port's). The townsman is told the word either way.
+  if (t.typed !== '\x1b') g.print(speech.speechOn(g) && t.echo !== null ? t.echo : t.typed);
+  t.echo = null;
   g.printChar('\n');
 }
 

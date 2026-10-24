@@ -54,7 +54,12 @@ describe('"Your interest?"', () => {
     expect(log.log.match(/Your interest\?/g)!.length).toBeGreaterThan(3);
     // What the party asked is in the log either way, after a colon of its own.
     const words = (t: string) => [...t.matchAll(/^:([A-Za-z][A-Za-z ]*)$/gm)].map((m) => m[1]);
-    expect(words(play.log)).toEqual(words(log.log));
+    // With Play as the menu labelled it (":Job", ":Shadowlords", ":Take leave"), with Log the word said.
+    const said = (w: string): string => (w === 'Take leave' ? 'BYE' : w).toUpperCase();
+    expect(words(play.log).map(said)).toEqual(words(log.log).map(said));
+    expect(play.log).toContain(':Job\n');
+    for (const w of words(play.log)) expect(w, w).toMatch(/^[A-Z][a-z]*( [a-z]+)*$|^Tester$/);
+    expect(words(log.log)).toContain('JOB');
     expect(words(play.log).length).toBeGreaterThan(3);
     // With Play, a word to a line, one after another - 1988's empty lines being for the reply between them.
     expect(play.log).toMatch(/^:[A-Za-z ]+\n:/m);
