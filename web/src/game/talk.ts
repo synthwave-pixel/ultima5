@@ -244,6 +244,15 @@ async function addSpoken(k: Talk, b: number): Promise<void> {
 }
 
 const printCr = (k: Talk): Promise<number> => processChar(k, 0x80 | 0x0d);
+
+/**
+ * The lines' ends after the party's words in the log, before the reply: 1988's two, an empty line - or with the Dialog
+ * setting's Play, where the reply is the box's and the log a list of what was asked, its line's end alone (the port's).
+ */
+async function afterWords(k: Talk): Promise<void> {
+  await printCr(k);
+  if (!speech.speechOn(k.g)) await printCr(k);
+}
 const printQuote = (k: Talk): Promise<number> => processChar(k, 0x80 | 0x22);
 
 // --- Walking the script -------------------------------------------------------------------
@@ -770,8 +779,7 @@ async function interest(k: Talk): Promise<number> {
       return farewell(k);
     }
     await speech.listen(g);
-    await printCr(k);
-    await printCr(k);
+    await afterWords(k);
     speech.begin(g); // the reply, the panel afresh
     const r = await tryStandard(k);
     if (r === 1) return 1;
@@ -912,8 +920,7 @@ async function asked(k: Talk): Promise<number> {
       if (t.typed.length === 0) g.say(0x9450); // "\n\n\"What didst thou say?"
     } while (t.typed.length === 0);
     await speech.listen(g);
-    await printCr(k);
-    await printCr(k);
+    await afterWords(k);
     speech.begin(g); // the reply, the panel afresh
     r = await tryStandard(k);
     if (r === 1) return 1;
@@ -981,7 +988,9 @@ async function askName(k: Talk): Promise<void> {
   flushWord(k);
   g.say(0x9468); // "What is thy name?\"\n"
   await speech.listen(g); // the party's answer, in the log (speech.ts)
-  g.say(0x947c); // "\nYou respond-\n:"
+  // (Its line's end before it is for the question in the log above it; with Play the question is the box's, and the
+  // log has its empty line after the word last asked already: afterWords.)
+  g.print(speech.speechOn(g) ? g.t(0x947c).replace(/^\n/, '') : g.t(0x947c)); // "\nYou respond-\n:"
   k.naming = true;
   try {
     await readWords(k);
@@ -989,6 +998,13 @@ async function askName(k: Talk): Promise<void> {
     k.naming = false;
   }
   t.pending = t.argCount = 0;
+  // With Play, the log's empty line after the name given, as after any word (afterWords): their reply is the box's.
+  if (speech.speechOn(g)) {
+    const was = g.text.current;
+    g.text.select(2); // the log (frame.ts Win.messages)
+    if (g.text.win.x === 0) g.printChar('\n');
+    g.text.select(was);
+  }
   if (t.typed.length === 0) {
     g.say(0x948c); // "\n\n\"If you say so..."
     return;

@@ -56,6 +56,11 @@ describe('"Your interest?"', () => {
     const words = (t: string) => [...t.matchAll(/^:([A-Za-z][A-Za-z ]*)$/gm)].map((m) => m[1]);
     expect(words(play.log)).toEqual(words(log.log));
     expect(words(play.log).length).toBeGreaterThan(3);
+    // With Play, one empty line between one word asked and the next - 1988's two being for the reply between them.
+    expect(play.log).toMatch(/^:[A-Za-z ]+\n\n:/m);
+    expect(play.log).not.toMatch(/\n\n\n/); // never two empty lines
+    expect(play.log).not.toMatch(/^:[^\n]+\n(?!\n)/m); // and one after every word, the name too
+    expect(log.log).toMatch(/^:[A-Za-z ]+\n\n\n/m);
     // The conversation heard (the journal's) has the prompt before every word, with Play as with Log.
     expect(play.heard.match(/Your interest\?/g)!.length).toBe(log.heard.match(/Your interest\?/g)!.length);
     // And the journal notes the same of it.
