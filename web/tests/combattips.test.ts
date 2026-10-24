@@ -72,7 +72,7 @@ describe("a fight's tips", () => {
     restore(again, saved);
     expect(combatTip(again)).toBe('Tip: Press Y to cast a spell!');
   });
-  it("is given in the log at a real fight's first turn of the party's, one a fight", async () => {
+  it("is given in the log at a real fight's first turn of the party's, one a fight, and never again once all are given", async () => {
     const fight = async (g: ReturnType<typeof newGame>['g'], p: ReturnType<typeof newGame>['p']): Promise<string> => {
       const from = p.log.length;
       const s = g.s;
@@ -103,5 +103,14 @@ describe("a fight's tips", () => {
     const second = await fight(g, p);
     expect(second).toContain('Tip:PressYtocastaspell!');
     expect(second).not.toContain('PressXfor');
+    const third = await fight(g, p);
+    expect(third).toContain('Tip:PressLB/RBtocyclesnaptargets!');
+    // Every tip given: no fight after has one, nor does the game taken up again from its save.
+    for (let n = 0; n < 3; n++) expect(await fight(g, p)).not.toContain('Tip:');
+    const { restore, serialize } = await import('../src/game/storage.ts');
+    const again = newGame(1);
+    journeyOnward(again.g);
+    restore(again.g, serialize(g));
+    expect(combatTip(again.g)).toBeNull();
   });
 });

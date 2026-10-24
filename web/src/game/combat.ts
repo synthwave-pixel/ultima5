@@ -3504,7 +3504,6 @@ export function drawCombatMarks(g: Game): void {
     if (standard) crosshair(g);
     return;
   }
-  snapArrows(g);
   const x = c.x * 16 + 8;
   const y = c.y * 16 + 8;
   d.pen = Colour.brightWhite;
@@ -3514,6 +3513,7 @@ export function drawCombatMarks(g: Game): void {
       d.line(x + i + k, y, x + i + k, y + 0xf);
     }
   }
+  snapArrows(g); // over the turn's square, a foe beside them
   crosshair(g);
 }
 
