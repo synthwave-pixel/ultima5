@@ -100,6 +100,8 @@ function settleKeys(g: Game): void {
 export type Talk = {
   g: Game;
   t: TalkState;
+  /** "Your interest?" asked once in the log already, with the Dialog setting's Play (interest): its colon alone after. */
+  prompted?: boolean;
   /** Being asked their name. */
   naming?: boolean;
   /** The townsman described ("You see ..."), their words not yet begun: the first quote they say begins them (speech.ts). */
@@ -752,7 +754,14 @@ async function interest(k: Talk): Promise<number> {
     // A gift of Jeremy's keys not paid for by the time he asks what else (JEREMY).
     settleKeys(g);
     await speech.listen(g); // the prompt and the party's words in the log (speech.ts)
-    g.say(0x9408); // "Your interest?\n:"
+    // With Play the townsman's words are the box's, and the log a list of what the party asked: "Your interest?" once
+    // in it, then its colon alone (the port's). The conversation heard keeps it whole, where the journal parts the
+    // answers by it (journal.ts noteConversation).
+    if (k.prompted && speech.speechOn(g)) {
+      if (g.recording !== null) g.recording += g.t(0x9408).replace(/:$/, '');
+      g.printChar(':');
+    } else g.say(0x9408); // "Your interest?\n:"
+    k.prompted = true;
     await readWords(k);
     if (t.typed.length === 0) {
       await speech.listen(g);

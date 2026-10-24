@@ -539,7 +539,10 @@ What the townsman says is shown across the top of the view (Settings,
 Dialog: Play, the default): in the same frame, only as big as its lines,
 centred, and a row clear of them where they stand to the north (else of
 the party's own row), so the party and they are in sight between the two
-boxes. The log keeps the party's words and the prompts. A speech too long
+boxes. The log keeps the party's words and the prompts - 1988's "Your
+interest?" once, then its colon alone before each word asked, the log a
+list of what was asked (the journal still reads the talk whole). A speech
+too long
 for the room is shown a box at a time, and the scripts' own pauses wait
 too, the story page's blinking arrow at its corner till a key. Dialog:
 Log writes it all in the message log, as 1988 did, the menu as in Play.
