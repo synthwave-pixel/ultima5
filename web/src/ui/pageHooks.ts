@@ -217,16 +217,25 @@ export function androidSave(capacitor: unknown): ((text: string, name: string) =
   };
 }
 
+/** How long after the last press Battery saver lets the map rest. */
+export const BATTERY_SAVER_REST_MS = 60_000;
+
 export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElement, tiles: Uint8Array, sound: PcSound): void {
   const native = Boolean((window as { Capacitor?: CapacitorLike }).Capacitor?.isNativePlatform?.());
   const scanlines = new ScanlineOverlay(canvas);
   // A tab nobody is looking at holds where it is, music and all, and takes up again when it comes back - unless
   // the pause menu is up, whose own hold outlives the window's return (the u3 port's two holds).
+  // The Android app sent to the background is held too, by Capacitor's App plugin (pause, resume): its web view may
+  // not be told the page is hidden, and would go on animating, and its sound on, unseen.
+  let appAway = false;
   const awake = (): void => {
-    screen.setAwake(!document.hidden);
-    sound.setHeld('focus', document.hidden);
+    const away = document.hidden || appAway;
+    screen.setAwake(!away);
+    sound.setHeld('focus', away);
   };
   document.addEventListener('visibilitychange', awake);
+  // With Battery saver on, the map rests a minute after the last press (screen.ts waitKey).
+  screen.restAfter = () => (g.options.batterySaver ? BATTERY_SAVER_REST_MS : null);
   // With Auto Pause on, a window that loses focus, or a page hidden, while the game waits for a command opens the
   // Pause menu there (the ultima3 port's), so the player comes back to the game held: another window in front on a
   // desktop, the Android app sent to the background (Capacitor's App plugin says so too, where the web view is not
@@ -238,7 +247,15 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
   document.addEventListener('visibilitychange', () => document.hidden && away());
   const app = (window as { Capacitor?: { Plugins?: { App?: { addListener?: (e: string, f: () => void) => unknown } } } }).Capacitor?.Plugins
     ?.App;
-  void app?.addListener?.('pause', away);
+  void app?.addListener?.('pause', () => {
+    appAway = true;
+    awake();
+    away();
+  });
+  void app?.addListener?.('resume', () => {
+    appAway = false;
+    awake();
+  });
   const apply = (o: Options): void => {
     scanlines.enabled = o.tileSet === 'standard' ? o.scanlines : o.pcScanlines;
     g.soundOff = o.effectsLevel === 0;

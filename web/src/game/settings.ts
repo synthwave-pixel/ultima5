@@ -70,6 +70,11 @@ export interface Options {
    * sight between it and the menu; Log, the message log, as 1988 had it.
    */
   dialog: Dialog;
+  /**
+   * Battery saver (the port's): the map rests - its water, its figures, the cursor - once a minute has gone by with
+   * nothing pressed, until the next press (screen.ts waitKey). Off, it goes on as ever.
+   */
+  batterySaver: boolean;
 }
 
 export type Dialog = 'play' | 'log';
@@ -222,6 +227,7 @@ export const DEFAULTS: Options = {
   autoPause: false,
   statusLetters: false,
   dialog: 'play',
+  batterySaver: false,
 };
 
 /** What settings kept by an earlier build may carry besides the Options they became. */
@@ -278,6 +284,7 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   if (saved.tiles !== undefined && !TILES.includes(saved.tiles)) delete saved.tiles;
   if (saved.pcTiles !== undefined && !PC_TILES.includes(saved.pcTiles)) delete saved.pcTiles;
   if (saved.dialog !== undefined && !DIALOGS.includes(saved.dialog)) delete saved.dialog;
+  if (saved.batterySaver !== undefined && typeof saved.batterySaver !== 'boolean') delete saved.batterySaver;
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;

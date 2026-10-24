@@ -1094,7 +1094,10 @@ export class Screen implements Platform {
   push(k: number, pressed = true, held = false): void {
     // A box of the page's own over the game (the crash box) takes the controller and the touch pad's keys itself.
     if (menuUp()) return;
-    if (pressed) this.onKey?.();
+    if (pressed) {
+      this.onKey?.();
+      this.lastInput = performance.now();
+    }
     // The runes being read are read at once; the key goes on to the game.
     if (this.fb.runes.active) this.fb.finishRunes();
     if (this.waiter) {
@@ -1311,6 +1314,15 @@ export class Screen implements Platform {
     this.keys.length = 0;
   }
 
+  /** When the last key or button came (push): the wait's idle rests a while after it (restAfter). */
+  private lastInput = performance.now();
+
+  /**
+   * How long after the last press the wait's idle - the map's animation, the cursor - rests until the next (the
+   * Battery saver setting's minute), or null for never: set from the options (pageHooks.ts).
+   */
+  restAfter: () => number | null = () => null;
+
   async waitKey(idle: () => void | Promise<void>): Promise<number> {
     const queued = this.keys.shift();
     if (queued !== undefined) return queued;
@@ -1320,6 +1332,16 @@ export class Screen implements Platform {
       // that ends it still comes, and the next idle may well do.
       let told = false;
       const tick = (): void => {
+        // At rest - a page nobody is looking at, or, with Battery saver, a minute since the last press - nothing is
+        // drawn or worked out until it wakes: the page shown again, or the key that ends the wait (done).
+        const rest = this.restAfter();
+        if (rest !== null && performance.now() - this.lastInput >= rest) return;
+        if (this.asleep) {
+          void this.asleep.then(() => {
+            if (this.waiter === done) tick();
+          });
+          return;
+        }
         void new Promise<void>((r) => r(idle()))
           .catch((e: unknown) => {
             if (!told) console.error(e);

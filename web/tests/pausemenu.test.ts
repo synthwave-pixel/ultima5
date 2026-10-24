@@ -226,6 +226,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Status letters',
       'Dialog',
       'Scanlines',
+      'Battery saver',
       'Export saved game',
       'Import saved game',
     ]);

@@ -1812,6 +1812,12 @@ export function settingLines(g: Game, title = false): Setting[] {
       note: 'Dark bands over the picture, as an old monitor had. Each UX keeps its own.',
       act: () => void (pc ? (o.pcScanlines = !o.pcScanlines) : (o.scanlines = !o.scanlines)),
     },
+    {
+      // The map at rest after a quiet minute, till a press (screen.ts waitKey): for a phone left with the game open.
+      label: `Battery saver: ${onOff(o.batterySaver)}`,
+      note: 'The map stops moving after a minute with nothing pressed, until the next press.',
+      act: () => void (o.batterySaver = !o.batterySaver),
+    },
     // The EGA look's map over the dungeon's view; the Standard look's is switched by the Map command in a dungeon.
     ...(o.tileSet === 'standard'
       ? []
