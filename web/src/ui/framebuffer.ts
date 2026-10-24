@@ -634,14 +634,16 @@ export class Framebuffer {
    * The Standard marks round the 16-pixel square at (x, y): four triangles at its sides, drawn in game pixels (four
    * colour-page pixels) with a half-black rim like the figures'. A weapon's aim, a spell's and a member a spell is
    * for point in, their two colours fading one to the other and back over a second (`ms`, a clock in
-   * milliseconds); a direction asked points out, white. On the colour page only, and within the map.
+   * milliseconds); a direction asked points out, white. On the colour page only, and within the map. `small`: the
+   * snap target's (combat.ts snapMark), each triangle four game pixels at its foot and two deep, its point two off the
+   * square - the foe an X would strike, where the full mark is the crosshair's.
    */
-  aim(x: number, y: number, ms: number, mark: Mark = 'attack'): void {
+  aim(x: number, y: number, ms: number, mark: Mark = 'attack', small = false): void {
     const h = this.hx;
     const g = HI; // one game pixel
-    const base = 5 * g; // each triangle's width at its foot (six cells, the nearest to the square's centre)
-    const depth = 3 * g; // and its height, foot to point
-    const inset = -3.5 * g; // its foot this far outside the square's side
+    const base = (small ? 4 : 5) * g; // each triangle's width at its foot (six cells, the nearest to the square's centre)
+    const depth = (small ? 2 : 3) * g; // and its height, foot to point
+    const inset = (small ? -3 : -3.5) * g; // its foot this far outside the square's side
     const left = x * HI;
     const top = y * HI;
     const size = 16 * HI;

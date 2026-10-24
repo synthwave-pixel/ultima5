@@ -179,7 +179,8 @@ lays them (Z is A, X is B):
 | Right stick | | In a dungeon, turn left or right where you stand |
 | A | Enter, Z (Tab at the prompt) | Open the menu of what you can do here; choose |
 | B | Space, X, B (Escape in a menu) | Back out; at the prompt, pass a turn; leave a won fight |
-| X | Q, C, / | Attack (Fire aboard a ship or beside a cannon) |
+| X | Q, C, / | Attack: in a fight a snap attack on the foe marked (Fire aboard a ship or beside a cannon) |
+| LB, RB | [ and ] | In a fight, the next foe to snap at; at an aim, the next target |
 | Y | E, V, Y, . (full stop) | Cast; in the Journal, a hint; on a world map, back to the party |
 | Start, Select | Escape at the prompt | Pause menu |
 
@@ -277,7 +278,9 @@ has the whole list; the highlights:
   possesses one of the party is cast out again. Story eases it all
   further; Classic is 1988's game as the Apple II plays it. [The rules
   side by side](docs/features.md#difficulty-and-options).
-- **A fight that tells you more**: what each bow or thrown weapon has
+- **A fight that tells you more**: snap attacks, X striking the foe
+  marked for it without aiming (LB and RB pick another, and each member
+  keeps to the foe they chose), what each bow or thrown weapon has
   left ("Bow x23:"), a warning before a shot that might hit an ally,
   Switch Weapon to swap between a member's melee and ranged arms, and
   Auto combat that knows a charmed friend from a foe - for the whole party,

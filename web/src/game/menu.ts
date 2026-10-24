@@ -1801,6 +1801,13 @@ export function settingLines(g: Game, title = false): Setting[] {
       act: () => void (o.statusLetters = !o.statusLetters),
     },
     {
+      // The foe a snap attack would strike, marked in a fight (combat.ts snapMark): of Snap attacks, in Gameplay.
+      label: `Snap targets: ${onOff(o.snapTargets)}`,
+      note: 'In a fight, small arrows round the foe X would strike. LB/RB or [ ] pick another.',
+      enabled: o.autoAim,
+      act: () => void (o.snapTargets = !o.snapTargets),
+    },
+    {
       // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
       label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
       note: 'Play: what is said, in the play area. Log: in the message log.',
@@ -1891,7 +1898,8 @@ export function gameplayLines(g: Game): Setting[] {
       act: () => void (o.rules = RULES[(RULES.indexOf(o.rules) + 1) % RULES.length]),
     },
     {
-      label: `Auto aim: ${onOff(o.autoAim)}`,
+      // Snap attacks (settings.ts autoAim, its name once Auto aim).
+      label: `Snap attacks: ${onOff(o.autoAim)}`,
       note: 'X (keyboard Q or C), or walking into a foe, strikes it, no crosshair.',
       act: () => void (o.autoAim = !o.autoAim),
     },

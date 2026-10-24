@@ -1171,7 +1171,7 @@ export class Intro {
     g.ool.under.set(g.data.files.get('INIT.OOL').subarray(0, 256));
     g.printChar(0xff);
     t.moveTo(0, 10);
-    g.tipsNudged = false; // its first turn points to the Tips (run.ts journeyOnward)
+    g.tipsShown = new Set(); // its first turn points to the Tips (run.ts journeyOnward), its fights give theirs
     // A character of their own, beside any others kept (characters.ts), with the settings in use as theirs.
     chooseCharacter(newCharacter());
     saveOptions(g.options);

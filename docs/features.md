@@ -314,7 +314,8 @@ describes how the Modern look is drawn.
   menu with what is at hand first, and chooses; B passes or backs out -
   the answer "none" to any question - and a command backed out of spends
   no turn. X (Q or C on a keyboard; the keyboard's X is B) attacks: in a
-  fight, with Auto aim on, the foe in reach; aboard
+  fight, with Snap attacks on, the foe marked in reach (LB and RB, or [
+  and ], pick another); aboard
   a frigate it fires the broadside, and beside a castle's cannon, the
   cannon. Y casts, the spell list opening in a fight on the caster's last
   spell, and where words are typed it is the letter picker - in which X
@@ -715,10 +716,20 @@ other hurt in the game kills as it always did.
 
 - **Clone** (In Quas Xen) starts its crosshair on the nearest friend - a
   copy is to fight for the party, and one of a foe would fight against it.
-- **Auto aim**, on to begin with: X in a fight (Q or C on a keyboard), and
-  walking into a foe,
-  strike without the crosshair - each weapon at the foe walked into, else
-  the nearest foe it reaches. A shot or a throw that misses flies on to a
+- **Snap attacks** (named Auto aim once), on to begin with: X in a fight
+  (Q or C on a keyboard), and walking into a foe,
+  strike without the crosshair - each weapon at the foe walked into, or
+  for X the snap target, else the nearest foe it reaches. The snap target
+  is the foe the first hand that reaches one would strike: the one the
+  member last struck or chose while it is still in reach, else the
+  nearest, the weaker of two as near. With **Snap targets** on (Settings;
+  on to begin with) it is marked on the member's turn - the crosshair's
+  four arrows, small, round the foe - only when an X would strike it. LB
+  and RB (or [ and ]) step it to the next foe in reach or the one before,
+  the nearest first and round from the last to the first, spending no
+  turn; at an aim, by hand or a spell's, they jump the crosshair the same
+  way from target to target in range - a foe, or for a spell for a friend
+  (Clone) the party's side - with nothing remembered. A shot or a throw that misses flies on to a
   square beside its foe and strikes whoever is there, friend or foe (as in
   1988), so X passes over a foe with one of the party's side beside it
   (a dagger, spear or axe at a neighbour, struck from the hand, strays
@@ -754,7 +765,7 @@ other hurt in the game kills as it always did.
   spiked helm swung before the axe at a charmed friend), else it closes
   in. Fights it goes nowhere in for thirty turns are handed back: All is
   turned off, and Allies held for the rest of that fight alone.
-- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules and auto aim.
+- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules and Snap attacks.
 
   <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
 
@@ -764,7 +775,7 @@ other hurt in the game kills as it always did.
   until the next, and the screen is drawn and a gamepad read only when
   there is something to show or a pad to read - for a phone left with the
   game open), outlines, status
-  letters, scanlines (each look its own: on in the PC (1988) look until
+  letters, Snap targets, scanlines (each look its own: on in the PC (1988) look until
   turned off), the dungeon map (the PC (1988) look's), the export and
   import of the saved game, and forgetting the installed files. In both,
   each setting says what it does at the foot of the list while the bar is
@@ -884,7 +895,13 @@ other hurt in the game kills as it always did.
 - **Tips**, for a new player: first steps from Iolo's hut, food, reagents,
   healing, camping, poison, magic, levelling, talking, day and night,
   dungeons, doors, virtue, travel and the quest. A new game's first turn
-  points to them.
+  points to them. A character's first fights each give a tip in the log,
+  one a fight and each once: X for a snap attack, Y to cast a spell, then
+  LB/RB to cycle snap targets - the keyboard's keys (C, Y, [ or ]) when
+  the keyboard was last pressed. They wait, from the next not yet given,
+  while the keyboard is read as letters (Classic) or Snap attacks or Snap
+  targets is off, and the shoulders' while the touch pad, which has none,
+  was last pressed; the saved game keeps which have been given.
 - **Cheats**, in the pause menu under Help: a full restore, gold, food,
   gems and keys and torches, five Glass Swords, and reagents - what
   grinding would give, for anyone who would rather not - Renew virtue,

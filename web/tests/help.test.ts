@@ -76,11 +76,11 @@ describe('the pointer to the Tips', () => {
     const { journeyOnward } = await import('../src/game/run.ts');
     const { restore, serialize } = await import('../src/game/storage.ts');
     const { g, p } = newGame();
-    g.tipsNudged = false; // as a new character leaves it (intro.ts createCharacter)
+    g.tipsShown = new Set(); // as a new character leaves it (intro.ts createCharacter)
     journeyOnward(g);
     expect(p.log.replace(/\s+/g, '')).toContain('SeeTips,inthepausemenu'); // as the log wraps it
     const saved = serialize(g);
-    expect(saved.tipsNudged).toBe(true);
+    expect(saved.tipsShown).toEqual(['nudge']);
     const again = newGame();
     restore(again.g, saved);
     journeyOnward(again.g);
@@ -88,11 +88,19 @@ describe('the pointer to the Tips', () => {
     // A save from before the pointer: begun, so none.
     const old = newGame();
     const before = serialize(old.g);
-    delete before.tipsNudged;
-    old.g.tipsNudged = false;
+    delete before.tipsShown;
+    old.g.tipsShown = new Set();
     restore(old.g, before);
     journeyOnward(old.g);
     expect(old.p.log.replace(/\s+/g, '')).not.toContain('SeeTips');
+    // A save from before the list, its game not yet begun: the pointer still to come.
+    const unbegun = newGame();
+    const fresh = serialize(unbegun.g);
+    delete fresh.tipsShown;
+    fresh.tipsNudged = false;
+    restore(unbegun.g, fresh);
+    journeyOnward(unbegun.g);
+    expect(unbegun.p.log.replace(/\s+/g, '')).toContain('SeeTips');
   });
 });
 

@@ -47,9 +47,11 @@ export function bumpInto(g: Game, command: number, dir: number): void {
  * letter on a command, so in this mode the letters are not commands at
  * all - everything is reached through the menus - and any other letter is
  * ignored rather than doing something the player did not ask for. 0
- * means: wait for another key.
+ * means: wait for another key. [ and ] are the shoulders, LB and RB, with either input (a key no command has).
  */
 export function asPad(g: Game, k: number): number {
+  if (k === 0x5b) return Pad.LB;
+  if (k === 0x5d) return Pad.RB;
   if (g.options.input !== 'controller' || k >= 0x100 || k < 0x20) return k;
   switch (k) {
     case 0x20: // Space
@@ -296,8 +298,9 @@ export async function getLetter(g: Game, letters: number[], labels?: string[]): 
  * spell they began, at its aim; nothing, elsewhere - but Y at a prompt
  * answered by a letter (`letters`), where it opens the letter picker and
  * its first letter is the answer.
+ * `shoulders`: LB and RB are themselves too (the crosshair's, combat.ts aim), not passed over.
  */
-export async function getChar(g: Game, idle?: () => void, literal = false, letters = false): Promise<number> {
+export async function getChar(g: Game, idle?: () => void, literal = false, letters = false, shoulders = false): Promise<number> {
   // At a prompt a letter answers, a list of lettered wares just printed is offered as a menu at once, to a player
   // with no letters - and again with A - its B the prompt's "none" (Space, which every such prompt takes for leaving).
   // Nowhere else: a list still in the log is no answer to a wait, a direction or a member.
@@ -329,6 +332,10 @@ export async function getChar(g: Game, idle?: () => void, literal = false, lette
         return K.Escape;
       case Pad.X:
         return Pad.X;
+      case Pad.LB:
+      case Pad.RB:
+        if (shoulders) return k;
+        break;
       case Pad.Y: {
         if (!letters) return Pad.Y;
         const { letterPicker } = await import('./menu.ts');
@@ -416,11 +423,20 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
       // X: attack, wherever the party is - Fire, aboard a ship or beside a cannon, as the guns are the attack there.
       else if (k === Pad.X) {
         key = where !== 'combat' && firesHere(g) ? 0x46 : 0x41;
-        // Auto aim: X's attack in a fight finds its own foes; the menu's Attack still aims its first blow by hand.
+        // Snap attacks: X's attack in a fight finds its own foes; the menu's Attack still aims its first blow by hand.
         g.autoAim = where === 'combat' && g.options.autoAim;
       }
       // Y: cast, wherever the party is (Look and Ztats are in the menu).
       else if (k === Pad.Y) key = 0x43;
+      // The shoulders, in a fight: the member's snap target, the next or the one before (combat.ts cycleSnap); no
+      // turn spent, and nothing anywhere else.
+      else if (k === Pad.LB || k === Pad.RB) {
+        if (where === 'combat') {
+          const { cycleSnap } = await import('./combat.ts');
+          cycleSnap(g, k === Pad.RB ? 1 : -1);
+        }
+        continue;
+      }
       // The right stick: a turn in a dungeon (dungeon.ts dungeonCommand), nothing anywhere else.
       else if (k === TURN_LEFT || k === TURN_RIGHT) key = where === 'dungeon' ? k : 0;
       // Both system buttons, either side of a controller's logo, hold the game (the u3 port's), and Escape on a

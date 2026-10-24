@@ -217,13 +217,14 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Sound FX: Standard',
       'Sound FX level: 80%',
     ]);
-    expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Auto aim']);
+    expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Snap attacks']);
     expect(settingLines(g).map(name)).toEqual([
       'Back',
       'UX',
       'Tiles',
       'Outlines',
       'Status letters',
+      'Snap targets',
       'Dialog',
       'Scanlines',
       'Battery saver',

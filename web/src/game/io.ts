@@ -37,9 +37,11 @@ export const K = {
 /**
  * Controller buttons (a gamepad, the touch pad), beyond any DOS key code.
  * What each means depends on the prompt waiting for it (input.ts): at a
- * command prompt A opens the command menu, elsewhere it is Enter.
+ * command prompt A opens the command menu, elsewhere it is Enter. The shoulders (LB, RB; [ and ] on a keyboard) step
+ * a fight's snap target, or the crosshair, from one target to the next (combat.ts), out of the way of the menus' own
+ * keys from 0x100 up.
  */
-export const Pad = { A: 0x100, B: 0x101, X: 0x102, Y: 0x103, Start: 0x104, Select: 0x105 } as const;
+export const Pad = { A: 0x100, B: 0x101, X: 0x102, Y: 0x103, Start: 0x104, Select: 0x105, LB: 0x1e2, RB: 0x1e3 } as const;
 
 /** The Pause menu's Save game, as a command: saved there and then, without 1988's Quit prompt (storage.ts saveCommand). */
 export const SAVE_NOW = 0x109;
@@ -199,9 +201,9 @@ export interface Draw {
    * The Standard look's marks at viewport cell (x, y), four triangles round the square (Mark): a weapon's aim red
    * fading to dark orange and back each second, a spell's dark purple and dark blue, a member a spell is for green
    * and dark green - each pointing in; a direction asked, white, pointing out from whoever acts. Absent in a look
-   * that has none (the crosshair is drawn).
+   * that has none (the crosshair is drawn). `small`: the snap target's, smaller (combat.ts snapMark).
    */
-  aim?(x: number, y: number, mark?: Mark): void;
+  aim?(x: number, y: number, mark?: Mark, small?: boolean): void;
   /**
    * One step of drawing `tile` into cell (x, y) a pixel at a time: step 0
    * is the top-left pixel, then an 8-bit LFSR (mask 0xb8) picks the rest

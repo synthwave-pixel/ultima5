@@ -51,7 +51,8 @@ export interface Options {
   /** The game's rules: Story, Modern or Classic (Rules). */
   rules: Rules;
   /**
-   * Auto aim, in a fight: X, and walking into a foe, strike without the crosshair - each weapon at the foe walked into,
+   * Snap attacks (named Snap attacks once; the key kept, so a setting carries over), in a fight: X, and walking into a
+   * foe, strike without the crosshair - each weapon at the foe walked into,
    * else the nearest it reaches; and after a blow aimed by hand, the hands after it strike the same foe while it stands
    * in their reach. Off, every blow is aimed by hand (walking into a foe, the crosshair starts on it).
    */
@@ -75,6 +76,11 @@ export interface Options {
    * nothing pressed, until the next press (screen.ts waitKey). Off, it goes on as ever.
    */
   batterySaver: boolean;
+  /**
+   * Snap targets (the port's): in a fight, the foe a snap attack (X, Snap attacks on) would strike marked on the
+   * active member's turn, small arrows round it (framebuffer aim); off, it is struck all the same, unmarked.
+   */
+  snapTargets: boolean;
 }
 
 export type Dialog = 'play' | 'log';
@@ -228,6 +234,7 @@ export const DEFAULTS: Options = {
   statusLetters: false,
   dialog: 'play',
   batterySaver: false,
+  snapTargets: true,
 };
 
 /** What settings kept by an earlier build may carry besides the Options they became. */
@@ -285,6 +292,7 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   if (saved.pcTiles !== undefined && !PC_TILES.includes(saved.pcTiles)) delete saved.pcTiles;
   if (saved.dialog !== undefined && !DIALOGS.includes(saved.dialog)) delete saved.dialog;
   if (saved.batterySaver !== undefined && typeof saved.batterySaver !== 'boolean') delete saved.batterySaver;
+  if (saved.snapTargets !== undefined && typeof saved.snapTargets !== 'boolean') delete saved.snapTargets;
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;

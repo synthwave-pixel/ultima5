@@ -221,8 +221,18 @@ export class Game {
   notes: Note[] = [];
   /** Whether a game is in play, rather than the title up (run.ts journeyOnward): what Export takes (transfer.ts). */
   inPlay = false;
-  /** Whether the new game's pointer to the Tips has been given (run.ts journeyOnward); a new character's is not. */
-  tipsNudged = true;
+  /**
+   * The tips given in the log, once each, kept with the saved game (tips.ts): 'nudge', a new game's pointer to the
+   * Tips (run.ts journeyOnward); and a fight's, one a fight (COMBAT_TIPS). A new character's are none.
+   */
+  tipsShown = new Set<string>(['nudge']);
+  /** Whether this fight has had its tip, or need not (combat.ts combatLoop, combatTip): one a fight. */
+  fightTipped = false;
+  /**
+   * In a fight, each member's snap target (combat.ts snapTarget), by combat slot: the foe they last struck or chose
+   * with LB/RB, theirs again while it stands in reach; -1 none. Not saved: a fight's own.
+   */
+  snapMemory: number[] = new Array<number>(0x20).fill(-1);
   /** The day (time.ts gameDay) the old man last came to camp (combat.ts apparitionComes); -1, not yet. Saved. */
   oldManDay = -1;
   /** Bump to act's direction, taken by the command's direction prompt (0 for none; dropped when the command ends). */
@@ -309,20 +319,21 @@ export class Game {
   backAt = -Infinity;
   /**
    * In combat, the foe a member has just walked into - or pointed at, along a line past a friend walked into: the
-   * attack that follows is aimed at it (combat.ts).
+   * attack that follows is aimed at it (combat.ts). `snap`: the snap target (combat.ts snapTarget), no foe walked
+   * into, and passed over as any foe is where a stray shot might hit a friend.
    */
-  bumpFoe: { x: number; y: number; pointed?: boolean } | null = null;
-  /** Y pressed in a fight with Auto aim on: the attack that follows finds its own foes (combat.ts attackEach). */
+  bumpFoe: { x: number; y: number; pointed?: boolean; snap?: boolean } | null = null;
+  /** X pressed in a fight with Snap attacks on: the attack that follows finds its own foes (combat.ts attackEach). */
   autoAim = false;
   /**
-   * The member told their Auto aim's shot might hit one of the party's side (combat.ts allyAtRisk): their next X, with
+   * The member told their snap attack's shot might hit one of the party's side (combat.ts allyAtRisk): their next X, with
    * no other key between, shoots all the same. -1 for none.
    */
   allyWarned = -1;
   /** Another window playing this character, not yet warned of (otherWindows.ts); and those warned of. */
   otherWindow: string | null = null;
   readonly windowsWarnedOf = new Set<string>();
-  /** Where the crosshair starts, if a foe stands there in reach: the foe walked into, Auto aim off (combat.ts aim). */
+  /** Where the crosshair starts, if a foe stands there in reach: the foe walked into, Snap attacks off (combat.ts aim). */
   aimFrom: { x: number; y: number } | null = null;
   /** A spell is being cast: its aim is marked as a spell's, not a weapon's (combat.ts crosshair). */
   casting = false;

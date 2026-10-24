@@ -60,8 +60,10 @@ export interface SaveData {
   fog?: FogData;
   /** The words the player has heard said, and whose answers they have had (older saves have none). */
   words?: WordData;
-  /** False for a game not yet begun, whose first turn points to the Tips (older saves have none: begun). */
+  /** False for a game not yet begun, whose first turn points to the Tips (saves before tipsShown; none: begun). */
   tipsNudged?: boolean;
+  /** The tips given in the log, by name (Game.tipsShown; older saves have none, but their tipsNudged). */
+  tipsShown?: string[];
   /** The Avatar's appearance (appearance.ts; older saves have none: the default). */
   appearance?: Appearance;
   /** The companions' looks made at a mirror, by name (companions.ts; older saves have none: each as they begin). */
@@ -97,7 +99,7 @@ export function serialize(g: Game): SaveData {
     regalia: g.regalia,
     fog: g.fog.encode(),
     words: g.words.encode(),
-    tipsNudged: g.tipsNudged,
+    tipsShown: [...g.tipsShown],
     appearance: g.appearance,
     companions: Object.fromEntries(g.companionLooks),
     oldManDay: g.oldManDay,
@@ -142,7 +144,10 @@ export function restore(g: Game, d: SaveData, fresh = false): void {
   } else g.regalia = 0;
   g.fog.merge(Fog.decode(d.fog));
   g.words.merge(Vocabulary.decode(d.words));
-  g.tipsNudged = d.tipsNudged !== false;
+  // The tips given; a save from before the list, its pointer to the Tips alone - given, unless the game was not begun.
+  g.tipsShown = new Set(
+    Array.isArray(d.tipsShown) ? d.tipsShown.filter((t): t is string => typeof t === 'string') : d.tipsNudged === false ? [] : ['nudge'],
+  );
   g.oldManDay = typeof d.oldManDay === 'number' && Number.isFinite(d.oldManDay) ? d.oldManDay : -1;
   // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
   g.path = PathState.decode(d.path);

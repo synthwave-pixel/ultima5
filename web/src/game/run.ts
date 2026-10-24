@@ -64,9 +64,9 @@ export function journeyOnward(g: Game): void {
   setWind(g, -1);
   drawVitals(g);
   // A new game's first turn: where the Tips are, once (the port's).
-  if (!g.tipsNudged) {
+  if (!g.tipsShown.has('nudge')) {
     g.print('New to Britannia? See Tips, in the pause menu.\n');
-    g.tipsNudged = true;
+    g.tipsShown.add('nudge');
   }
 }
 

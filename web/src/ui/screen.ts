@@ -267,7 +267,7 @@ export class Screen implements Platform {
         this.harp = view;
         fb.dirty = true;
       },
-      aim: (x, y, mark) => fb.aim(TILE_X + x * 16, TILE_Y + y * 16, performance.now(), mark),
+      aim: (x, y, mark, small) => fb.aim(TILE_X + x * 16, TILE_Y + y * 16, performance.now(), mark, small),
       burst: (x, y, frame, magic) => {
         if (this.look === 'standard') fb.burst(x, y, frame, magic);
       },

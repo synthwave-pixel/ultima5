@@ -29,6 +29,8 @@ const BUTTONS: [number, number][] = [
   [1, Pad.B],
   [2, Pad.X],
   [3, Pad.Y],
+  [4, Pad.LB],
+  [5, Pad.RB],
   [9, Pad.Start],
   [8, Pad.Select],
 ];
