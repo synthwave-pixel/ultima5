@@ -68,6 +68,7 @@ import {
 import { A, T } from './tiles.ts';
 import { tileAt } from './world.ts';
 import { CENTRE, redrawBox, TALK_WIDTH, talkMenu } from './speech.ts';
+import { merchantSpeaking } from './merchantSpeech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 
@@ -683,7 +684,11 @@ function scrollMarks(g: Game, rows: number, above: boolean, below: boolean): voi
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
-export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, talk?: TalkRows): Promise<number> {
+export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, talkRows?: TalkRows): Promise<number> {
+  // What was said for the Dialog setting's box shown first: the box drawn before the menu, not over it - and a list
+  // low in the view, as a townsman's talk has it, the merchant's words in sight above it (merchantSpeech.ts).
+  if (g.beforeRead) await g.beforeRead();
+  const talk = talkRows ?? (!boxed && merchantSpeaking(g) ? talkMenu(g) : undefined);
   const t = g.text;
   const was = t.current;
   // (A talk's menu - low in the view, framed - holds its lines alone: no title, no notes. Its title is still the
@@ -850,6 +855,7 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
  * a row (and wrap), left and right across it; A chooses, B goes back. The index chosen, or -1.
  */
 export async function chooseTwoColumns(g: Game, title: string, items: Item[], start = 0): Promise<number> {
+  if (g.beforeRead) await g.beforeRead();
   const t = g.text;
   const was = t.current;
   const rows = Math.ceil(items.length / 2);

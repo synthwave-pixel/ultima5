@@ -239,6 +239,9 @@ async function waitHere(g: Game, x: number, y: number): Promise<void> {
 }
 const waiting = new WeakSet<Game>();
 
+/** Whether words have been written for the box that it has not yet shown (merchantSpeech.ts). */
+export const unshownWords = (g: Game): boolean => talks.has(g) && unshown(g).lines.length > 0;
+
 /** Whether the box waits for a key now, its arrow blinking (for whoever plays the game from outside: the tests). */
 export const waitsForKey = (g: Game): boolean => waiting.has(g);
 

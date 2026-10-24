@@ -407,7 +407,9 @@ export class Game {
     // Whatever is printed for the player to read - a townsman's words, a sign, a book, the Codex - may hold a word
     // worth keeping (learnRead); the borders' winds and the menus' own lines are nobody's words.
     if (this.p.text.current !== 0 && this.p.text.current !== 3) this.read = (this.read + s).slice(-4000);
-    if (this.p.text.current !== 2) return;
+    // The log's, and the Dialog setting's box's (speech.ts SPEECH): what a merchant names there is still what a menu
+    // offers (input.ts getLetter).
+    if (this.p.text.current !== 2 && this.p.text.current !== 4) return;
     this.said = (this.said + s).slice(-700);
     this.saidSince = (this.saidSince + s).slice(-700);
   }
@@ -483,12 +485,34 @@ export class Game {
     }
   }
 
+  /**
+   * Where what is printed goes, in place of the window chosen, while it is set: a merchant's words parted from the
+   * rest (merchantSpeech.ts), each part printed by it in its own window. (`routing` while it prints them.)
+   */
+  printRoute: ((s: string) => void) | null = null;
+  private routing = false;
+  /** Called as the player is asked something - any wait for a key or a choice (input.ts, menu.ts) - while it is set. */
+  beforeRead: (() => Promise<void>) | null = null;
+
+  /** `s` given to the printRoute, where one is set (and it is not printing already); whether it took it. */
+  private routed(s: string): boolean {
+    if (!this.printRoute || this.routing) return false;
+    this.routing = true;
+    try {
+      this.printRoute(s);
+    } finally {
+      this.routing = false;
+    }
+    return true;
+  }
+
   /** ULTIMA_1850_PrintString. */
   print(s: string): void {
     if (this.holding) {
       this.heldText += s;
       return;
     }
+    if (this.routed(s)) return;
     this.remember(s);
     if (this.recording !== null && this.recorded()) this.recording += s;
     this.p.text.print(s);
@@ -588,6 +612,7 @@ export class Game {
       this.heldText += String.fromCharCode(code);
       return;
     }
+    if ((code === 0x0a || (code >= 0x20 && code < 0x7f)) && this.routed(String.fromCharCode(code))) return;
     if (code === 0x0a || (code >= 0x20 && code < 0x7f)) this.remember(String.fromCharCode(code));
     if (this.recording !== null && this.recorded() && (code === 0x0a || (code >= 0x20 && code < 0x7f)))
       this.recording += String.fromCharCode(code);
@@ -607,6 +632,7 @@ export class Game {
       this.heldText += String(n).padStart(minLength, filler);
       return;
     }
+    if (this.routed(String(n).padStart(minLength, filler))) return;
     this.p.text.printNumber(n, minLength, filler);
   }
 

@@ -260,8 +260,8 @@ has the whole list; the highlights:
   Cheats; Classic input still lets you type anything. What a townsman
   says appears in a box at the top of the view, page by page, with the
   words to say framed at its foot, so you can see who you are talking
-  to; Settings, Dialog: Log keeps it all in the message log, as 1988
-  did.
+  to - a merchant's too, haggling and all; Settings, Dialog: Log keeps it
+  all in the message log, as 1988 did.
 - **A journal, maps and a dungeon map** that fill in as you play, kept
   with the save. The journal's **The Path** tells how far you walk the
   path of the Avatar, in 1988's own words, never a number; under the

@@ -30,6 +30,7 @@ import { drawBuyers, drawGuildCard, drawReagentCard, drawWareCard, sortWares, st
 import { Colour } from '../ui/colours.ts';
 import { actorTileAt } from './actors.ts';
 import { poisonKills } from './settings.ts';
+import { logOnly, merchantPause, merchantSpeaking, withMerchantSpeech } from './merchantSpeech.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -119,6 +120,8 @@ function greet(v: Visit): void {
   const { g } = v;
   g.printChar('"');
   sayFile(v, g.data.words(0x3b2a + v.kind * 8, 4)[g.random(0, 3)]);
+  // (The greeting in the Dialog setting's box: nothing in the log to part it from the answer - merchantSpeech.ts.)
+  if (merchantSpeaking(g)) return;
   const x = g.text.win.x;
   if (x > 0xb)
     g.say(0x784c); // "\n\n:"
@@ -236,9 +239,12 @@ async function guildWares(v: Visit): Promise<void> {
     if (k === 0x59) {
       g.say(0x7916); // "Yes\n\n\"We sell:\n\n"
       for (let done = false; !done; ) {
-        g.say(0x78d4);
-        g.say(0x78e4);
-        g.say(0x78f4);
+        // The list the log's, to be picked from by letter (merchantSpeech.ts).
+        logOnly(g, () => {
+          g.say(0x78d4);
+          g.say(0x78e4);
+          g.say(0x78f4);
+        });
         g.say(0x7906); // "Thy concern?\" "
         let key: number;
         do {
@@ -283,7 +289,7 @@ async function reagent(v: Visit, pick: number, result: number): Promise<number> 
   if (i === 8) return -2;
   if (s.reagents[i] === 99) {
     g.say(0x792c); // "\n\n\"Thou canst not carry any more!\"\n\n"
-    await getChar(g);
+    if (!(await merchantPause(g))) await getChar(g);
     return result;
   }
   v.price = haggle(prices[i], s.members[v.buyer].int);
@@ -388,13 +394,16 @@ async function apothecaryWares(v: Visit): Promise<void> {
       const prices = g.data.bytes(0x3a32 + v.shop * 8, 8);
       for (let done = false; !done; ) {
         let letter = 0x41;
-        for (let i = 0; i < 8; i++) {
-          if (prices[i] === 0) continue;
-          g.printChar(letter++);
-          g.say(0x7a16); // "..."
-          g.print(names[i]);
-          g.printChar('\n');
-        }
+        // The list the log's, to be picked from by letter, the merchant's words about it the box's (merchantSpeech.ts).
+        logOnly(g, () => {
+          for (let i = 0; i < 8; i++) {
+            if (prices[i] === 0) continue;
+            g.printChar(letter++);
+            g.say(0x7a16); // "..."
+            g.print(names[i]);
+            g.printChar('\n');
+          }
+        });
         g.say(0x7a1a); // "\nThy interest?\" "
         let key: number;
         do {
@@ -512,7 +521,7 @@ async function buyArm(v: Visit, item: number, result: number, forWhom = -1): Pro
       if (s.equipment[item] === 99) {
         g.say(0x7b76); // "\n\"Thou canst not carry any more!\"\n"
         sayOvl(v, 0x7b9a); // "says $.\n\n"
-        await getChar(g);
+        if (!(await merchantPause(g))) await getChar(g);
       } else if (s.gold < v.price) {
         g.say(0x7ba4); // "\n\""
         g.print(g.data.table(0x3cae, 4)[g.random(0, 3)]);
@@ -650,15 +659,18 @@ async function buyArmsList(v: Visit, wares: Uint8Array): Promise<number> {
   for (let done = false; !done; ) {
     g.say(0x7c44); // "\n\n"
     let n = 0;
-    for (; n < 8; n++) {
-      const item = wares[n];
-      if (item === 0xff) break;
-      g.printChar(n + 0x61);
-      g.say(0x7c48); // "..."
-      g.print(names[item].length < 0xd ? names[item] : short[item]);
-      if (g.text.win.x !== 0) g.printChar('\n');
-    }
-    g.printChar('\n');
+    // The list the log's, to be picked from by letter (merchantSpeech.ts).
+    logOnly(g, () => {
+      for (; n < 8; n++) {
+        const item = wares[n];
+        if (item === 0xff) break;
+        g.printChar(n + 0x61);
+        g.say(0x7c48); // "..."
+        g.print(names[item].length < 0xd ? names[item] : short[item]);
+        if (g.text.win.x !== 0) g.printChar('\n');
+      }
+      g.printChar('\n');
+    });
     g.print(g.data.table(0x3cb6, 4)[g.random(0, 3)]);
     g.say(0x7c4c); // "\" "
     let key: number;
@@ -731,13 +743,15 @@ async function buyArmsFor(v: Visit, wares: number[]): Promise<number> {
       };
       // The wares in the log as 1988 lists them (the merchant's "We have:" says them), then the question.
       g.say(0x7c44); // "\n\n"
-      wares.forEach((item, n) => {
-        g.printChar(n + 0x61);
-        g.say(0x7c48); // "..."
-        g.print(names[item].length < 0xd ? names[item] : short[item]);
-        if (g.text.win.x !== 0) g.printChar('\n');
+      logOnly(g, () => {
+        wares.forEach((item, n) => {
+          g.printChar(n + 0x61);
+          g.say(0x7c48); // "..."
+          g.print(names[item].length < 0xd ? names[item] : short[item]);
+          if (g.text.win.x !== 0) g.printChar('\n');
+        });
+        g.printChar('\n');
       });
-      g.printChar('\n');
       g.print(g.data.table(0x3cb6, 4)[g.random(0, 3)]);
       g.say(0x7c4c); // "\" "
       const pick = await choose(g, 'Buy', items, Math.min(bar, items.length - 1), true);
@@ -979,7 +993,8 @@ async function armoury(v: Visit): Promise<void> {
   const { g } = v;
   let result = 0;
   sayOvl(v, 0x8018); // "\"Good @, and welcome to #!\"\n"
-  await getChar(g);
+  // A key to go on: in the Dialog setting's box, its arrow (merchantSpeech.ts).
+  if (!(await merchantPause(g))) await getChar(g);
   sayOvl(v, 0x8036); // "\n$ says,\n\""
   g.print(g.data.table(0x3d46, 2)[g.random(0, 1)]);
   g.say(0x8042); // "\" "
@@ -1296,7 +1311,10 @@ async function drink(p: Pub): Promise<number> {
   g.say(0x9b76); // "\"Our wine list,\n"
   sir(g);
   g.say(0x9b88);
-  for (const a of [0x9b8c, 0x9b9e, 0x9bb0, 0x9bc2, 0x9bd4, 0x9be6]) g.say(a);
+  // The list the log's, to be picked from by letter (merchantSpeech.ts).
+  logOnly(g, () => {
+    for (const a of [0x9b8c, 0x9b9e, 0x9bb0, 0x9bc2, 0x9bd4, 0x9be6]) g.say(a);
+  });
   g.say(0x9bfa); // "Thy choice?\" "
   let k: number;
   do {
@@ -1574,6 +1592,8 @@ async function boats(w: Wright): Promise<void> {
         }
       } else {
         v.price = haggle(g.data.words(0x4d66, 4)[v.shop], int);
+        // (1988's words open without their quotation mark, which the next close: given for the Dialog setting's box.)
+        if (merchantSpeaking(g)) g.printChar('"');
         sayFile(v, 0x183e);
         sayFile(v, 0x1a50);
         if ((await waitYN(g)) === 0x59) {
@@ -1590,6 +1610,8 @@ async function boats(w: Wright): Promise<void> {
     } else if (k === 0x53) {
       g.say(0x9ffa); // "S\n\n"
       v.price = haggle(g.data.words(0x4d6e, 4)[v.shop], int);
+      // (1988's words open without their quotation mark, which the next close: given for the Dialog setting's box.)
+      if (merchantSpeaking(g)) g.printChar('"');
       sayFile(v, 0x188c);
       sayFile(v, 0x1a50);
       leave = true;
@@ -1973,6 +1995,11 @@ async function inn(v: Visit): Promise<void> {
 
 /** TALK_00e6_TalkToMerchant: kinds 0x81-0x88 (arms, pub, stables, shipwright, reagents, guild, healer, inn). */
 export async function merchant(g: Game, kind: number): Promise<void> {
+  // With the Dialog setting's Play, the merchant's words in the box over the view, as a townsman's (merchantSpeech.ts).
+  return withMerchantSpeech(g, () => visit(g, kind));
+}
+
+async function visit(g: Game, kind: number): Promise<void> {
   const s = g.s;
   if ((s.partyTile & 0xfe) === 0x12 && kind !== 0x83) {
     g.say(0x9072); // "A merchant says:\n\"GET THAT HORSE OUT OF HERE!\"\n"

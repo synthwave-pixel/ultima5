@@ -544,6 +544,17 @@ for the room is shown a box at a time, and the scripts' own pauses wait
 too, the story page's blinking arrow at its corner till a key. Dialog:
 Log writes it all in the message log, as 1988 did, the menu as in Play.
 
+A merchant's words are shown the same way - the arms dealer's, the
+barkeep's, the healer's and the rest: what they say within their
+quotation marks is the box's, put into sentences for its width (1988
+broke its lines for the log's), and the log keeps who says it
+("Gwenneth says,"), the party's answers, what comes of them ("Sold!") and
+the lettered lists of wares a keyboard picks from. The box shows as the
+party is asked something and stays up while they answer; a shop's long
+menus (the barkeep's Lore) sit low in the view under it, and the parting
+word waits for a key. Where 1988 left out a merchant's opening quotation
+mark (the shipwright's frigate and skiff), the box supplies it.
+
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)
 and offered from then on wherever it may be said. To swear at a townsman,

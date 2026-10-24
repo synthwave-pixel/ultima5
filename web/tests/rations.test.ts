@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { merchant } from '../src/game/shops.ts';
+import { waitsForKey } from '../src/game/speech.ts';
 import { newGame } from './helpers.ts';
 
 /**
@@ -22,7 +23,7 @@ async function buy(gold: number, dial: number[]): Promise<{ shown: string[][]; g
   let state: 'ask' | 'choose' | 'dial' | 'done' = 'ask';
   p.next = () => {
     const m = g.menuShown;
-    if (!m) return Pad.A;
+    if (!m || waitsForKey(g)) return Pad.A;
     if (m.title === 'How many?') {
       shown.push([...m.labels]);
       state = 'dial';

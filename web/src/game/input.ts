@@ -93,6 +93,7 @@ export function asPad(g: Game, k: number): number {
  * do nothing.
  */
 export async function menuKey(g: Game, keep: number[] = [], idle?: () => void): Promise<number> {
+  if (g.beforeRead) await g.beforeRead();
   for (;;) {
     g.learnRead();
     const raw = await g.p.waitKey(() => {
@@ -141,6 +142,8 @@ async function rawKey(g: Game, idle?: () => void, literal = false, command = fal
   pressed = false;
   const queued = typed.shift();
   if (queued !== undefined) return queued;
+  // Anything said for the Dialog setting's box shown before the player answers (merchantSpeech.ts).
+  if (g.beforeRead) await g.beforeRead();
   g.learnRead();
   const auto = await autoCombatKey(g);
   if (auto !== 0) return auto;

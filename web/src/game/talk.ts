@@ -1324,8 +1324,12 @@ export async function talkToNpc(g: Game, npc: number): Promise<number> {
     await merchant(g, talk);
     return 0;
   }
-  g.say(0x9196); // "A merchant says:\n\"Come see me at\nmy shoppe, "
-  g.say(0x91c4); // "when\nit's open!\"\n"
+  // (In the Dialog setting's box with Play, the merchant's words: merchantSpeech.ts.)
+  const { withMerchantSpeech } = await import('./merchantSpeech.ts');
+  await withMerchantSpeech(g, async () => {
+    g.say(0x9196); // "A merchant says:\n\"Come see me at\nmy shoppe, "
+    g.say(0x91c4); // "when\nit's open!\"\n"
+  });
   return 0;
 }
 
