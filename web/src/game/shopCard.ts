@@ -79,9 +79,10 @@ export function sortWares(g: Game, m: number, wares: number[], price: (item: num
 }
 
 /** An armament's name as the panel has room for it: the long one where it fits, else the short. */
-function nameOf(g: Game, item: number): string {
+/** An armament's name as the card has room for it (`width`): its own, else its short one ("Chain Mail", "Plate"). */
+export function nameOf(g: Game, item: number, width = W): string {
   const long = g.data.table(0x17f6, 0x30)[item] ?? '';
-  return long.length <= W ? long : (g.data.table(0x1962, 0x38)[item]?.trim() ?? '');
+  return long.length <= width ? long : (g.data.table(0x1962, 0x38)[item]?.trim() ?? '');
 }
 
 /** A number's line: its label, the ware's number, and the difference from what it would replace. */
@@ -143,11 +144,10 @@ export function wareCard(g: Game, m: number, item: number): { rows: Line[]; note
   }
   const gone = replaced(g, m, item);
   const short = g.data.table(0x1962, 0x38);
-  // A weapon and a shield both put away (a two-handed ware): the shield said short, so both fit the line.
-  const had = (gone.length ? gone.map((i) => (gone.length > 1 && isShield(i) ? 'Shld' : short[i].trim())).join('+') : 'Nothing').slice(
-    0,
-    W,
-  );
+  // What is put away named as the ware is, in full where it fits ("Chain Mail vs Plate Mail", not "Chain"); a weapon
+  // and a shield both put away (a two-handed ware) said short, the shield shortest, so both fit the line.
+  const one = (i: number): string => (gone.length > 1 ? (isShield(i) ? 'Shld' : short[i].trim()) : nameOf(g, i));
+  const had = (gone.length ? gone.map(one).join('+') : 'Nothing').slice(0, W);
   const kind = g.data.bytes(0x1a7e, 0x30)[item];
   const def = g.data.bytes(0x1634, 0x30);
   const weight = g.data.bytes(0x1aae, 0x30);

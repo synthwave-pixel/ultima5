@@ -491,6 +491,11 @@ export class Game {
    */
   printRoute: ((s: string) => void) | null = null;
   private routing = false;
+  /**
+   * The choice last made from a shopkeeper's words offered as a menu (input.ts getLetter, getChar's lettered list): its
+   * letter, and its label, for the log to echo in its place with the Dialog setting's Play (merchantSpeech.ts).
+   */
+  lastPick: { letter: number; label: string } | null = null;
   /** Called as the player is asked something - any wait for a key or a choice (input.ts, menu.ts) - while it is set. */
   beforeRead: (() => Promise<void>) | null = null;
 

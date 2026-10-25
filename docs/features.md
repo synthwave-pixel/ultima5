@@ -552,13 +552,21 @@ Log writes it all in the message log, as 1988 did, the menu as in Play.
 A merchant's words are shown the same way - the arms dealer's, the
 barkeep's, the healer's and the rest: what they say within their
 quotation marks is the box's, put into sentences for its width (1988
-broke its lines for the log's), and the log keeps who says it
-("Gwenneth says,"), the party's answers, what comes of them ("Sold!") and
-the lettered lists of wares a keyboard picks from. The box shows as the
-party is asked something and stays up while they answer; a shop's long
-menus (the barkeep's Lore) sit low in the view under it, and the parting
-word waits for a key. Where 1988 left out a merchant's opening quotation
-mark (the shipwright's frigate and skiff), the box supplies it.
+broke its lines for the log's; a paragraph's end is a line's, so a short
+question after a long speech is never paged apart from it), and the log
+keeps who says it ("Gwenneth says,") and the party's answers, echoed as
+the menus name them ("Mutton", "Chain Mail"). The lettered lists of wares
+are the menus' with a controller (each priced there) and the log's for a
+keyboard picking by letter. The box shows as the party is asked something
+and stays up while they answer - a sentence left open on a colon ("We
+stock:") waiting for its question - a shop's long menus (the barkeep's
+Lore) sit low in the view under it, and the parting word waits for a key.
+Each quotation mark is read by what is either side of it, so where 1988
+left a merchant's opening mark out (the shipwright's frigate and skiff,
+and the question an armoury asks again when a choice is backed out of)
+their words are still the box's, not the log's; and the two lines 1988
+printed without their marks, the armoury's "Sold!" and an innkeeper's
+"Thy friends will not leave thee!", are the box's too.
 
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)

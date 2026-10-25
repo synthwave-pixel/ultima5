@@ -7,6 +7,7 @@ import type { Game } from '../src/game/game.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
+import { boxedWords, words } from './merchantWords.ts';
 import { fly, Landed } from './pilot.ts';
 
 /**
@@ -126,15 +127,12 @@ describe("a merchant's words with the Dialog setting's Play", () => {
         if (kind !== 2) expect(log.log).toContain('"');
         if (kind !== 2) expect(play.box.length).toBeGreaterThan(20); // (the stables shut at this hour)
         expect(play.after).toBeNull(); // put away as the visit ends
-        // Nothing lost nor added: all that was said, the box's and the log's, the words 1988 printed (the spaces and the
-        // quotation marks apart; the numbers, which a log's printNumber does not keep; and the colon the greeting puts
-        // before the answer in the log, which has no greeting before it with Play); and the box showed all it was
-        // given, a page at a time.
-        const words = (t: string): string => t.replace(/[\s"\d:]/g, '');
-        expect(words(play.all)).toEqual(words(log.all));
+        // The merchant's words, all of them and nothing else: the box has what Log printed within quotation marks (boxed),
+        // and showed all it was given, a page at a time.
+        expect(words(play.box)).toEqual(words(boxedWords(log.log)));
         expect(words(play.shown)).toEqual(words(play.box));
-        // The lists picked from by letter stay in the log.
-        for (const line of log.log.split('\n').filter((l) => /^[A-Za-z]\.{3}/.test(l.trim()))) expect(play.log).toContain(line.trim());
+        // With a controller the lists picked from by letter are the menus' alone: neither the log's nor the box's.
+        expect(play.log).not.toMatch(/^\s*[A-Za-z][.)]\.{2,}/m);
       });
   it('with the keyboard as letters (Classic): as with Log, the letters typed answering as ever', async () => {
     const run = async (dialog: 'play' | 'log', kind: number, typed: string, setup?: (g: Game) => void) => {
@@ -251,8 +249,7 @@ describe("a merchant's words with the Dialog setting's Play", () => {
       expect(play.held).toEqual(log.held);
       check?.(play.held);
       expect(play.log).not.toContain('"');
-      const words = (t: string): string => t.replace(/[\s"\d:]/g, '');
-      expect(words(play.all)).toEqual(words(log.all));
+      expect(words(play.box)).toEqual(words(boxedWords(log.log)));
       expect(words(play.shown)).toEqual(words(play.box));
       expect(play.after).toBeNull();
     });

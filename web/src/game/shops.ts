@@ -26,7 +26,7 @@ import { setTileAt, setTownTile, tileAt } from './world.ts';
 import { saysWord } from './cmds.ts';
 import { itemCounts, itemLabel, listBox, listLine, nextHeld, prevHeld, readyPurchase, wornWhere, End, Home, PgDn, PgUp } from './zstats.ts';
 import { sleepTicks } from './effects.ts';
-import { drawBuyers, drawGuildCard, drawReagentCard, drawWareCard, sortWares, standing } from './shopCard.ts';
+import { drawBuyers, drawGuildCard, drawReagentCard, drawWareCard, nameOf, sortWares, standing } from './shopCard.ts';
 import { Colour } from '../ui/colours.ts';
 import { actorTileAt } from './actors.ts';
 import { poisonKills } from './settings.ts';
@@ -533,7 +533,8 @@ async function buyArm(v: Visit, item: number, result: number, forWhom = -1): Pro
         drawVitals(g);
         if (item === 0x1b || item === 0x1d) s.equipment[item] = 99;
         else s.equipment[item] = inc(s.equipment[item], 1, 99);
-        sayOvl(v, 0x7bb4); // "\nSold!\n"
+        // (Said by the merchant, with Play in their box - 1988 printed it without its quotation marks: quoted.)
+        sayShop(v, merchantSpeaking(g) ? '\n"Sold!"\n' : g.t(0x7bb4)); // "\nSold!\n"
         result = 1;
         await offerReady(v, item, forWhom);
       }
@@ -581,13 +582,15 @@ async function offerReady(v: Visit, item: number, forWhom = -1): Promise<void> {
   const { g } = v;
   const s = g.s;
   if (item === 0x1b || item === 0x1d) return; // arrows and quarrels are not readied
-  const short = g.data.table(0x1962, 0x38);
   const able = Array.from({ length: s.partySize }, (_, i) => i).filter((i) => s.members[i].status !== Status.Dead);
   const items = [
     { label: 'Keep it packed' },
     ...able.map((i) => {
       const has = wornWhere(g, i, item);
-      return { label: `${s.members[i].name.slice(0, 8)} (${has.length ? short[has[0]].trim() : 'nothing'})` };
+      // What they would put away named in full where the line has room ("Tester (Chain Mail)"), else short.
+      const who = s.members[i].name.slice(0, 8);
+      const name = has.length ? nameOf(g, has[0], 16 - who.length) : 'nothing';
+      return { label: `${who} (${name})` };
     }),
   ];
   const watch = g.choiceWatch;
@@ -1784,9 +1787,12 @@ async function leave(v: Visit, int: number, gender: number, result: number): Pro
     }
     g.say(0x4ea9);
     if (m === 0) {
+      // (The innkeeper's words, with Play in their box: 1988 printed them without their quotation marks.)
+      if (merchantSpeaking(g)) g.printChar('"');
       g.say(0x4eac); // "Thy friend"
       if (s.partySize > 2) g.printChar('s');
-      g.say(0x4eb7); // " will not leave thee!\n\n"
+      if (merchantSpeaking(g)) g.print(`${g.t(0x4eb7).trimEnd()}"\n\n`);
+      else g.say(0x4eb7); // " will not leave thee!\n\n"
       continue;
     }
     if (s.members[m].status === Status.Dead) {

@@ -271,6 +271,7 @@ export async function getLetter(g: Game, letters: number[], labels?: string[]): 
   if (labels) {
     const { ask } = await import('./menu.ts');
     const at = await ask(g, 'Choose', labels);
+    if (at >= 0) g.lastPick = { letter: letters[at], label: labels[at] };
     return at < 0 ? K.Space : letters[at];
   }
   // Capitalised words that do not begin a sentence: those are the ones a shopkeeper is naming.
@@ -289,6 +290,7 @@ export async function getLetter(g: Game, letters: number[], labels?: string[]): 
     'Choose',
     items.map((it) => it.label),
   );
+  if (at >= 0) g.lastPick = { letter: letters[at], label: items[at].label };
   return at < 0 ? K.Space : letters[at];
 }
 
@@ -321,6 +323,7 @@ export async function getChar(g: Game, idle?: () => void, literal = false, lette
       'Choose',
       list.map((c) => c.label),
     );
+    if (at >= 0) g.lastPick = { letter: list[at].letter, label: list[at].label };
     return at < 0 ? K.Space : list[at].letter;
   };
   const offers = g.options.input === 'controller' && list.length >= 2;

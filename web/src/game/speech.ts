@@ -150,7 +150,9 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
   const t = g.text;
   const { place } = k;
   const { from, lines: rest } = unshown(g);
-  const taken = Math.min(rest.length, place.rows);
+  // A page that would leave one line alone for the next leaves it two: a question's last word is not paged apart
+  // from the rest of it ("Wilt thou take" / "it?").
+  const taken = rest.length === place.rows + 1 && place.rows > 2 ? place.rows - 1 : Math.min(rest.length, place.rows);
   const lines = rest.slice(0, taken);
   while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
   if (lines.length === 0) {
@@ -241,6 +243,9 @@ const waiting = new WeakSet<Game>();
 
 /** Whether words have been written for the box that it has not yet shown (merchantSpeech.ts). */
 export const unshownWords = (g: Game): boolean => talks.has(g) && unshown(g).lines.length > 0;
+
+/** The words written for the box and not yet shown, a line to a row (merchantSpeech.ts). */
+export const unshownText = (g: Game): string => (talks.has(g) ? unshown(g).lines.join('\n') : '');
 
 /** Whether the box waits for a key now, its arrow blinking (for whoever plays the game from outside: the tests). */
 export const waitsForKey = (g: Game): boolean => waiting.has(g);

@@ -37,7 +37,7 @@ describe('an armoury’s wares for one of the party', () => {
   it('weighs a sword against the sword it would replace: better green, worse red', () => {
     const g = shamino();
     const { rows, note } = wareCard(g, 1, LONG_SWORD);
-    expect(rows.map(text).map((s) => s.trim())).toEqual(['Sht. Sword', 'vs', 'Long Sword', 'Atk  15 (+3)', 'Wt    9 (+4)']);
+    expect(rows.map(text).map((s) => s.trim())).toEqual(['Short Sword', 'vs', 'Long Sword', 'Atk  15 (+3)', 'Wt    9 (+4)']);
     expect(tint(rows[3])).toBe(Colour.brightGreen);
     expect(tint(rows[4])).toBe(Colour.brightRed); // heavier is worse
     expect(note).toEqual([]);

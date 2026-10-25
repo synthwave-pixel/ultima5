@@ -29,6 +29,8 @@ interface Visit {
   last: string;
   /** Spaces not yet given (reflow): given before the next letter, not before a closing mark. */
   spaces: number;
+  /** A paragraph's end held (reflow): a line's end before the next letter. */
+  para: boolean;
   /** Their last word, kept back for what follows it - their closing mark, wrapped with it - till it comes (route). */
   tail: string;
   /** The box's own printing (boxPrint), not to be parted again. */
@@ -39,6 +41,16 @@ interface Visit {
   opening: boolean;
   /** Given, the words after it in the box: the closing mark is the box's too. */
   opened: boolean;
+  /** A list of wares kept from the log (logOnly, a controller's), as it was printed; null while none is. */
+  hidden: string | null;
+  /** The last letter printed in the visit, for a quotation mark at the start of the next to be read by (route). */
+  lastRaw: string;
+  /** Printed outside their marks and not yet given the log: the log's, or their words missing a mark (route). */
+  pending: string;
+  /** Their closing mark given with their last words already (sayWords). */
+  closed: boolean;
+  /** The party has been asked something, and nothing printed since: what is, outside a mark, is their answer. */
+  echo: boolean;
 }
 const visits = new WeakMap<Game, Visit>();
 
@@ -62,8 +74,14 @@ export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): P
     opening: false,
     opened: false,
     spaces: 0,
+    para: false,
     tail: '',
     direct: false,
+    hidden: null,
+    lastRaw: '\n',
+    pending: '',
+    closed: false,
+    echo: false,
   };
   visits.set(g, v);
   const routeWas = g.printRoute;
@@ -75,6 +93,7 @@ export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): P
     await visit();
     read = true;
   } finally {
+    giveLog(g, v);
     giveTail(g, v);
     g.printRoute = routeWas;
     g.beforeRead = readWas;
@@ -89,7 +108,10 @@ const staged = (g: Game): boolean => speech.unshownWords(g);
 
 /**
  * Text printed in a visit for the log: to the box within the quotation marks - the marks with them, as a townsman's
- * words are shown - to the log outside them.
+ * words are shown - to the log outside them. What is outside them is held (Visit.pending) until it is known whose it
+ * is: a mark that opens after it, or the party asked something, and it was the log's; a mark that closes after it -
+ * 1988 leaving its opening mark out, as where a choice backed out of has a shop ask its question again - and it was
+ * the merchant's, their words missing their mark.
  */
 function route(g: Game, v: Visit, s: string): void {
   // The log's text alone, or the box's: the party panel, the menus and the borders print as ever.
@@ -99,63 +121,113 @@ function route(g: Game, v: Visit, s: string): void {
     return;
   }
   if (v.logOnly > 0) {
-    toLog(g, v, s);
+    if (v.hidden !== null) v.hidden += s;
+    else toLog(g, v, s);
     return;
   }
   let at = 0;
   for (let i = 0; i <= s.length; i++) {
     if (i < s.length && s[i] !== '"') continue;
     const part = s.slice(at, i);
-    const closes = i < s.length && v.quoted;
-    let closed = false;
-    if (part && v.quoted) {
-      // Their words - after the party has answered, a box afresh - and the log's line ended before them (speech.speak).
-      if (v.fresh) {
-        speech.begin(g);
-        v.fresh = false;
-        v.last = '';
-        v.held = false;
-        v.spaces = 0;
-        // A quotation begun before the party was asked, and taken up after it: opened afresh in the new box.
-        if (!v.opening) v.opening = true;
-      }
-      speech.speak(g);
-      let out = v.tail + reflow(v, part);
-      v.tail = '';
-      // The closing mark with the words before it, so that the two are wrapped as one (not the mark alone on a line);
-      // else their last word kept back for it (a shop prints the mark apart, after them).
-      if (closes && v.opened) {
-        out += '"';
-        v.last = '"';
-        closed = true;
-      } else {
-        const cut = Math.max(out.lastIndexOf(' '), out.lastIndexOf('\n')) + 1;
-        v.tail = out.slice(cut);
-        out = out.slice(0, cut);
-      }
-      boxPrint(g, out);
-    } else if (part) toLog(g, v, part);
+    const mark = i < s.length;
+    if (v.quoted && part) sayWords(g, v, part, mark);
+    else if (part && v.echo) {
+      // The first printed after the party is asked, outside any mark: their answer echoed (":Yes"), the log's.
+      v.echo = false;
+      giveLog(g, v);
+      toLog(g, v, part);
+    } else if (part) v.pending += part;
+    if (part && /\S/.test(part)) v.echo = false;
     at = i + 1;
-    if (i === s.length) break;
-    v.quoted = !v.quoted;
-    v.held = false;
-    v.spaces = 0;
+    if (!mark) break;
+    // The mark read by what is either side of it: at a word's start (a line's start or a space before it, a letter
+    // after), it opens; after a letter or a stop, it closes.
+    const before = i > 0 ? s[i - 1] : v.lastRaw;
+    const atStart = /^\s?$/.test(before) && /[A-Za-z'.]/.test(s[i + 1] ?? '');
     if (v.quoted) {
-      v.opening = true;
-      v.opened = false;
-      continue;
+      closeWords(g, v);
+      // Their words left unclosed (a choice backed out of: "Thou canst buy:", then "Come back when ..."): closed, and
+      // this mark opens their next.
+      if (atStart) openWords(v);
+    } else if (!atStart && /\S/.test(before) && /\S/.test(v.pending)) {
+      // A mark that closes with none opened: what was held was their words, their opening mark left out.
+      const words = v.pending.replace(/^\s+/, '');
+      const lead = v.pending.slice(0, v.pending.length - words.length);
+      v.pending = lead;
+      openWords(v);
+      sayWords(g, v, words, true);
+      closeWords(g, v);
+    } else {
+      giveLog(g, v);
+      openWords(v);
     }
-    // Their closing mark, after their words in the box (as a townsman's are shown, quotation marks and all) - not
-    // where the box was shown already, the party asked something between.
-    if (v.opened && !v.fresh && !closed) {
-      g.text.select(speech.SPEECH);
-      boxPrint(g, `${v.tail}"`);
-      v.tail = '';
-      v.last = '"';
-    }
-    v.opening = v.opened = false;
-    g.text.select(LOG);
   }
+  if (s) v.lastRaw = s[s.length - 1];
+}
+
+/** Their words begun: the opening mark to go before their first letter (reflow). */
+function openWords(v: Visit): void {
+  v.quoted = true;
+  v.held = v.para = false;
+  v.spaces = 0;
+  v.opening = true;
+  v.opened = false;
+}
+
+/**
+ * Their words written for the box - after the party has answered, a box afresh, and the log's line ended before them
+ * (speech.speak) - `closing` where their closing mark comes after them, wrapped with them.
+ */
+function sayWords(g: Game, v: Visit, part: string, closing: boolean): void {
+  if (v.fresh) {
+    giveLog(g, v);
+    speech.begin(g);
+    v.fresh = false;
+    v.last = '';
+    v.held = v.para = false;
+    v.spaces = 0;
+    // A quotation begun before the party was asked, and taken up after it: opened afresh in the new box.
+    if (!v.opening) v.opening = true;
+  }
+  speech.speak(g);
+  let out = v.tail + reflow(v, part);
+  v.tail = '';
+  // The closing mark with the words before it, so that the two are wrapped as one (not the mark alone on a line);
+  // else their last word kept back for it (a shop prints the mark apart, after them).
+  if (closing && v.opened) {
+    out += '"';
+    v.last = '"';
+    v.closed = true;
+  } else {
+    const cut = Math.max(out.lastIndexOf(' '), out.lastIndexOf('\n')) + 1;
+    v.tail = out.slice(cut);
+    out = out.slice(0, cut);
+  }
+  boxPrint(g, out);
+}
+
+/** Their words ended: their closing mark after them in the box (where it is not already, nor shown already). */
+function closeWords(g: Game, v: Visit): void {
+  if (v.opened && !v.fresh && !v.closed) {
+    g.text.select(speech.SPEECH);
+    boxPrint(g, `${v.tail}"`);
+    v.tail = '';
+    v.last = '"';
+  }
+  v.quoted = false;
+  v.closed = false;
+  v.held = v.para = false;
+  v.spaces = 0;
+  v.opening = v.opened = false;
+  g.text.select(LOG);
+}
+
+/** What was held for the log (Visit.pending), given it: known now to be the log's. */
+function giveLog(g: Game, v: Visit): void {
+  if (!v.pending) return;
+  const text = v.pending;
+  v.pending = '';
+  toLog(g, v, text);
 }
 
 /** Printed in the box's window (chosen), as it is: no space to begin a line the last filled. */
@@ -184,8 +256,8 @@ function giveTail(g: Game, v: Visit): void {
 
 /**
  * Their words as the box is to show them: 1988's lines were broken for the log's width, and the box is wider, so a
- * line's end within a paragraph is a space (none after a hyphen: "ocean-going"), and only an empty line - a paragraph's
- * end - is kept. A line's end is held until the next letter says which it is.
+ * line's end within a paragraph is a space (none after a hyphen: "ocean-going"), and a paragraph's end (an empty line)
+ * a line's end. A line's end is held until the next letter says which it is.
  */
 function reflow(v: Visit, part: string): string {
   let out = '';
@@ -199,13 +271,11 @@ function reflow(v: Visit, part: string): string {
       v.last = '"';
     }
     if (c === '\n') {
-      if (v.held) {
-        out += '\n\n';
-        v.held = false;
-        v.spaces = 0;
-        v.last = '\n';
-      } else if (v.last === '\n' || v.last === '') out += c;
-      else v.held = true;
+      // A paragraph's end a line's end alone in the box, no empty row (the box has few to spare: a short question
+      // after a long speech is not to be paged apart from it), and never two - held, as a line's end is, till the
+      // next letter: none before a closing mark.
+      if (v.held) v.para = true;
+      else if (v.last !== '\n' && v.last !== '') v.held = true;
       continue;
     }
     // Spaces held too, till a letter after them: none before the closing mark, nor two for a line's end after one.
@@ -213,10 +283,11 @@ function reflow(v: Visit, part: string): string {
       if (!v.held) v.spaces++;
       continue;
     }
-    if (v.held) {
+    if (v.para) out += '\n';
+    else if (v.held) {
       if (v.last !== '-' && !/[?!.,;:]/.test(c)) out += ' ';
     } else if (v.spaces > 0) out += ' '.repeat(v.spaces);
-    v.held = false;
+    v.held = v.para = false;
     v.spaces = 0;
     out += c;
     v.last = c;
@@ -230,15 +301,29 @@ function reflow(v: Visit, part: string): string {
  * before the party's answer), and more than one empty line in a row.
  */
 function toLog(g: Game, v: Visit, s: string): void {
+  // The letter a choice echoes in the log ("M"), as its menu labelled it ("Mutton"), as a townsman's talk echoes it.
+  const pick = g.lastPick;
+  const letter = /^(\s*)([A-Za-z])(\s*)$/.exec(s);
+  if (pick && letter && letter[2].toUpperCase().charCodeAt(0) === pick.letter) {
+    s = `${letter[1]}${pick.label}${letter[3]}`;
+    g.lastPick = null;
+  }
   const was = g.text.current;
   g.text.select(LOG);
-  const w = g.text.win;
+  // What goes, worked out ahead of the cursor, then printed whole: the log wraps a word it is given whole, never one
+  // given it a letter at a time.
+  let x = g.text.win.x;
+  let tail = v.logTail;
+  let out = '';
   for (const c of s) {
-    if (c === ' ' && w.x === 0) continue;
-    if (c === '\n' && w.x === 0 && (v.logTail === '\n\n' || v.logTail === '')) continue;
-    g.print(c);
-    v.logTail = (v.logTail + c).slice(-2);
+    if (c === ' ' && x === 0) continue;
+    if (c === '\n' && x === 0 && (tail === '\n\n' || tail === '')) continue;
+    out += c;
+    x = c === '\n' ? 0 : x + 1;
+    tail = (tail + c).slice(-2);
   }
+  if (out) g.print(out);
+  v.logTail = tail;
   if (was !== LOG) g.text.select(was);
 }
 
@@ -248,6 +333,13 @@ function toLog(g: Game, v: Visit, s: string): void {
  */
 async function shown(g: Game, v: Visit): Promise<void> {
   const was = g.text.current;
+  // Their sentence left open on a colon ("Excellent! We stock:"), the party asked something first (who is buying):
+  // its words wait for what follows, shown with it, not alone.
+  if (v.quoted && /:\s*$/.test(`${speech.unshownText(g)}${v.tail}`)) return;
+  // Held for the log, the log's (the party asked something: no mark closes it now) - the choice echoed in it first.
+  giveLog(g, v);
+  g.lastPick = null;
+  v.echo = true;
   giveTail(g, v);
   if (staged(g)) {
     g.text.select(speech.SPEECH);
@@ -263,7 +355,10 @@ async function shown(g: Game, v: Visit): Promise<void> {
  */
 export async function merchantPause(g: Game): Promise<boolean> {
   const v = visits.get(g);
-  if (v) giveTail(g, v);
+  if (v) {
+    giveLog(g, v);
+    giveTail(g, v);
+  }
   if (!v || !staged(g)) return false;
   g.text.select(speech.SPEECH);
   await speech.pause(g);
@@ -280,12 +375,23 @@ export function logOnly(g: Game, print: () => void): void {
   const v = visits.get(g);
   if (!v) return print();
   const was = g.text.current;
+  // (What was held before it the log's, before the list.)
+  if (!v.quoted) giveLog(g, v);
   v.logOnly++;
+  if (g.options.input === 'controller') v.hidden = '';
   g.text.select(LOG);
   try {
     print();
   } finally {
     v.logOnly--;
     g.text.select(was);
+    // With a controller the list is the menu's (its wares, priced), not the log's as well: kept in what was said, a
+    // line to each, for the menu read from it (input.ts letteredChoices).
+    if (v.hidden !== null) {
+      const list = `${g.said.endsWith('\n') ? '' : '\n'}${v.hidden.replace(/(?<=\S)(?=[A-Za-z]\.{3,})/g, '\n')}\n`;
+      g.said = (g.said + list).slice(-700);
+      g.saidSince = (g.saidSince + list).slice(-700);
+      v.hidden = null;
+    }
   }
 }

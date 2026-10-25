@@ -663,7 +663,8 @@ export async function askWord(
   const from = Math.max(0, words.indexOf(start.toUpperCase()));
   const at = twoColumns ? await chooseTwoColumns(g, title, items, from) : await choose(g, title, items, from);
   const said = at < 0 || at >= words.length ? '' : words[at];
-  g.print(said);
+  // (A merchant's choice, with the Dialog setting's Play, echoed as the menu labelled it: "British", not "british".)
+  g.print(merchantSpeaking(g) && said ? items[at].label : said);
   g.printChar('\n');
   return said;
 }

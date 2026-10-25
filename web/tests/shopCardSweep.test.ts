@@ -90,7 +90,7 @@ describe('an armoury’s card, every ware against every way of being armed', () 
     const { rows, note } = wareCard(g, 1, 0x1e);
     const all = [...rows, note];
     const run = (s: string) => all.flat().find((r) => r.text === s);
-    expect(text(rows[0]).trim()).toBe('Glass Swrd');
+    expect(text(rows[0]).trim()).toBe('Glass Sword'); // named in full, as the ware is
     expect(all.map(text)).toContain('Atk  15 (+15)');
     expect(run('-Sure hit')?.colour).toBe(Colour.brightRed);
     expect(run('-Magic')?.colour).toBe(Colour.brightRed);
