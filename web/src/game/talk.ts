@@ -104,6 +104,8 @@ export type Talk = {
   t: TalkState;
   /** "Your interest?" asked once in the log already, with the Dialog setting's Play (interest): its colon alone after. */
   prompted?: boolean;
+  /** The last letter the script spoke (addSpoken): what a quotation mark after it is read by. */
+  spoken?: number;
   /** Being asked their name. */
   naming?: boolean;
   /** The townsman described ("You see ..."), their words not yet begun: the first quote they say begins them (speech.ts). */
@@ -229,6 +231,10 @@ const wrapAt = (g: Game): number => g.text.win.right - g.text.win.left + 3;
 /** A letter added (addLetter), the box paged first where the word it ends would be written past it (speech.ts). */
 async function addSpoken(k: Talk, b: number): Promise<void> {
   const { g, t } = k;
+  // A quotation mark closing the description, with none opened (1988's Geoffrey: "a large and impressive fighter.""):
+  // a slip of the file's, not their words beginning - with Play left out, the description the log's to its end.
+  if (k.describing && b === 0xa2 && speech.speechOn(g) && k.spoken !== undefined && !/\s/.test(String.fromCharCode(k.spoken & 0x7f)))
+    return;
   // A script whose description goes on to its greeting and its first "Your interest?" itself (Gwenno's, knowing the
   // party): their words begin at their first quote, in the Dialog setting's box.
   if (k.describing && b === 0xa2) {
@@ -243,6 +249,7 @@ async function addSpoken(k: Talk, b: number): Promise<void> {
     await speech.room(g, w.x !== 0 && w.x + t.word.length >= wrapAt(g) ? 1 : 0);
   }
   addLetter(k, b);
+  k.spoken = b;
 }
 
 const printCr = (k: Talk): Promise<number> => processChar(k, 0x80 | 0x0d);
