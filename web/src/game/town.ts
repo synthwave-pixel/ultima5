@@ -694,7 +694,9 @@ async function afterMove(g: Game): Promise<void> {
 
 /** TOWN_10da. */
 export async function begone(g: Game, i: number): Promise<void> {
-  g.say(0x278a); // "\"Begone,\nvermin!\"\n"
+  // (With the Dialog setting's Play, in the box by them: merchantSpeech.ts withSpeaker.)
+  const { fromActor, withSpeaker } = await import('./merchantSpeech.ts');
+  await withSpeaker(g, fromActor(g, g.s.npcs[i].actor), async () => g.say(0x278a)); // "\"Begone,\nvermin!\"\n"
   await damageParty(g);
   turnAfraid(g, i);
 }
@@ -785,11 +787,18 @@ async function arrest(g: Game): Promise<boolean> {
     }
     return false;
   }
-  g.say(0x27e2); // "\n\"Thou art under arrest!\"\n\n"
-  g.say(0x27fe); // "\"Wilt thou come quietly?\"\n\n:"
-  let k: number;
-  do k = await getCharYN(g);
-  while (k !== 0x4e && k !== 0x59);
+  // The guard's words, with the Dialog setting's Play in the box by them (merchantSpeech.ts withSpeaker): to the
+  // party's answer, and the guard's to that where it is No; being struck down, after.
+  const { fromActor, withSpeaker } = await import('./merchantSpeech.ts');
+  const k = await withSpeaker(g, fromActor(g, s.npcs[s.d65bf].actor), async () => {
+    g.say(0x27e2); // "\n\"Thou art under arrest!\"\n\n"
+    g.say(0x27fe); // "\"Wilt thou come quietly?\"\n\n:"
+    let answer: number;
+    do answer = await getCharYN(g);
+    while (answer !== 0x4e && answer !== 0x59);
+    if (answer === 0x4e) g.say(0x285e); // "No\n\n\"Then defend thyself, rogue!\"\n"
+    return answer;
+  });
   if (k === 0x59) {
     g.say(0x281b); // "Yes\n\nThe guard strikes thee unconscious!\n"
     g.draw.pen = 0;
@@ -803,7 +812,6 @@ async function arrest(g: Game): Promise<boolean> {
     await enterTown(g, true);
     return false;
   }
-  g.say(0x285e); // "No\n\n\"Then defend thyself, rogue!\"\n"
   callGuards(g);
   return true;
 }

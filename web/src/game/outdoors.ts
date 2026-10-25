@@ -1110,14 +1110,18 @@ export async function outdoorsLoop(g: Game): Promise<void> {
         g.say(0x3a11); // "Burning!\n"
         await damageParty(g);
       } else if (s.x === 0xe9 && s.y === 0xeb && s.level === 0 && s.mapId === 0) {
-        g.say(0x2b6b); // "\n\""
-        if (s.questActive !== 0) {
-          g.say(0x2b6e); // "Pass, Seeker!\"\n"
-        } else {
-          g.say(0x2b7e); // "Thou art not upon a Sacred Quest!\n"
-          g.say(0x2ba1); // "Passage denied!\"\n"
-          s.y++;
-        }
+        // The shrine's guardian, with the Dialog setting's Play in the box (merchantSpeech.ts withSpeaker).
+        const { withSpeaker } = await import('./merchantSpeech.ts');
+        await withSpeaker(g, { dx: 0, dy: -1 }, async () => {
+          g.say(0x2b6b); // "\n\""
+          if (s.questActive !== 0) {
+            g.say(0x2b6e); // "Pass, Seeker!\"\n"
+          } else {
+            g.say(0x2b7e); // "Thou art not upon a Sacred Quest!\n"
+            g.say(0x2ba1); // "Passage denied!\"\n"
+          }
+        });
+        if (s.questActive === 0) s.y++;
       }
       await earthquake(g);
       await endTurn(g);

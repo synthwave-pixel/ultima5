@@ -94,8 +94,18 @@ export const merchantSpeaking = (g: Game): boolean => visits.has(g);
  * else just `visit`. At its end the box's last words are read (a key) and the box put away; broken off (an error),
  * put away unread.
  */
-export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): Promise<void> {
-  if (!speech.speechOn(g) || visits.has(g)) return visit();
+export async function withMerchantSpeech<T>(g: Game, visit: () => Promise<T>): Promise<T> {
+  return withSpeaker(g, null, visit);
+}
+
+/**
+ * `speak` - whatever someone says to the party with quotation marks about it, a guard's arrest, a prisoner's thanks,
+ * the old man's word at the camp - with their words in the box as a merchant's are (this module's routing), the box
+ * placed for where they stand (`from`: squares from the party; null, the townsman talked to). Where the Dialog
+ * setting is Log, just `speak`.
+ */
+export async function withSpeaker<T>(g: Game, from: { dx: number; dy: number } | null, speak: () => Promise<T>): Promise<T> {
+  if (!speech.speechOn(g) || visits.has(g)) return speak();
   const v: Visit = {
     quoted: false,
     fresh: true,
@@ -117,14 +127,16 @@ export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): P
     keeper: '',
   };
   visits.set(g, v);
+  speech.speakFrom(g, from);
   const routeWas = g.printRoute;
   const readWas = g.beforeRead;
   g.printRoute = (s) => route(g, v, s);
   g.beforeRead = () => shown(g, v);
   let read = false;
   try {
-    await visit();
+    const out = await speak();
     read = true;
+    return out;
   } finally {
     giveLog(g, v);
     giveTail(g, v);
@@ -133,8 +145,15 @@ export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): P
     visits.delete(g);
     if (speech.boxShown(g) !== null || staged(g)) g.text.select(speech.SPEECH);
     await speech.end(g, read);
+    speech.speakFrom(g, null);
   }
 }
+
+/** Where `actor` stands, squares from the party (withSpeaker's `from`). */
+export const fromActor = (g: Game, actor: number): { dx: number; dy: number } => {
+  const a = g.s.actors[actor];
+  return a ? { dx: a.x - g.s.x, dy: a.y - g.s.y } : { dx: 0, dy: 0 };
+};
 
 /** Whether the merchant's window holds words not yet shown. */
 const staged = (g: Game): boolean => speech.unshownWords(g);
@@ -311,7 +330,8 @@ function reflow(v: Visit, part: string): string {
       else if (v.last !== '\n' && v.last !== '') v.held = true;
       continue;
     }
-    // Spaces held too, till a letter after them: none before the closing mark, nor two for a line's end after one.
+    // Spaces held too, till a letter after them: none before the closing mark, nor two for a line's end after one -
+    // nor two at all, the box's lines its own (1988's karma words have "achieved  the" for one).
     if (c === ' ') {
       if (!v.held) v.spaces++;
       continue;
@@ -319,7 +339,7 @@ function reflow(v: Visit, part: string): string {
     if (v.para) out += '\n';
     else if (v.held) {
       if (v.last !== '-' && !/[?!.,;:]/.test(c)) out += ' ';
-    } else if (v.spaces > 0) out += ' '.repeat(v.spaces);
+    } else if (v.spaces > 0) out += ' ';
     v.held = v.para = false;
     v.spaces = 0;
     out += c;

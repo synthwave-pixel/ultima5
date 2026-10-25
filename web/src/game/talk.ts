@@ -1332,9 +1332,11 @@ export async function talkToNpc(g: Game, npc: number): Promise<number> {
     return 0;
   }
   const talk = me.fa;
+  // Their words, with the Dialog setting's Play, in the box by them, as a merchant's are (merchantSpeech.ts).
+  const { withSpeaker } = await import('./merchantSpeech.ts');
   if (talk === 0) {
     // A prisoner the party freed (items.ts jimmyCommand), who has no conversation since, as in 1988: their thanks.
-    if (g.fog.named.has(freedKey(s.mapId, npc))) g.print('"Thank ye!"\n');
+    if (g.fog.named.has(freedKey(s.mapId, npc))) await withSpeaker(g, null, async () => g.print('"Thank ye!"\n'));
     else g.say(0x9168); // "No response!\n"
     return 0;
   }
@@ -1343,17 +1345,19 @@ export async function talkToNpc(g: Game, npc: number): Promise<number> {
     return 0;
   }
   if (talk === 0xfd) {
-    g.printChar('"');
-    g.say(0x9176); // "Don't hurt me!\nPlease go away!"
-    g.printChar('"');
-    g.printChar('\n');
+    await withSpeaker(g, null, async () => {
+      g.printChar('"');
+      g.say(0x9176); // "Don't hurt me!\nPlease go away!"
+      g.printChar('"');
+      g.printChar('\n');
+    });
     return 0;
   }
   if (talk === 0xfe) {
     await begone(g, npc);
     return 0;
   }
-  if (talk === 0xff) return guardDemands(g);
+  if (talk === 0xff) return withSpeaker(g, null, () => guardDemands(g));
   if ((me.fe & 1) !== 0 && (scheduleSlot(g, npc, s.hour) & 1) !== 0) {
     await merchant(g, talk);
     return 0;

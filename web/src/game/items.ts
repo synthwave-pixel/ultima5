@@ -445,7 +445,9 @@ export async function jimmyCommand(g: Game): Promise<number> {
         g.fog.named.add(freedKey(s.mapId, npc));
         if (!npcKilled(g, npc)) {
           for (let k = 0; k < 3; k++) s.schedules[npc].setType(k, 5);
-          g.say(0x8b36); // "\n\"I thank thee!\"\n"
+          // (With the Dialog setting's Play, in the box by them: merchantSpeech.ts withSpeaker.)
+          const { fromActor, withSpeaker } = await import('./merchantSpeech.ts');
+          await withSpeaker(g, fromActor(g, s.npcs[npc].actor), async () => g.say(0x8b36)); // "\n\"I thank thee!\"\n"
           s.karma = inc(s.karma, 2, 99);
           modern.deed(g, 'deeds', 5, 'Compassion', `freed:${s.mapId}:${npc}`); // a prisoner freed (modernKarma.ts)
         }

@@ -93,14 +93,14 @@ export async function boardCommand(g: Game): Promise<number> {
   // Smith beside the party, who will not be ridden (the port's): in 1988 he was stood on and Board said "Nay!"; walked
   // into, he is talked to now (town.ts move), and Board says it from beside him.
   if (tile === 0 && talkingHorseBeside(g)) {
-    g.say(0x425e); // "\"Nay!\"\n"
+    await nay(g); // "\"Nay!\"\n"
     return 1;
   }
   if ((tile & 0xfe) === 0x10) {
     if (s.mapId !== 0) {
       const npc = npcOfActor(g, i);
       if (npc !== -1 && s.npcs[npc].fa !== 0) {
-        g.say(0x425e); // "\"Nay!\"\n"
+        await nay(g); // "\"Nay!\"\n"
         return 1;
       }
     }
@@ -423,6 +423,18 @@ export async function newOrderCommand(g: Game): Promise<number> {
   s.members[b].b.set(tmp);
   g.vitalsDirty = 1;
   return 1;
+}
+
+/** Smith's "Nay!" - with the Dialog setting's Play in the box, as a townsman's words are (merchantSpeech.ts). */
+async function nay(g: Game): Promise<void> {
+  const { fromActor, withSpeaker } = await import('./merchantSpeech.ts');
+  const s = g.s;
+  // The box placed by him: the horse beside the party with words of his own.
+  const by = s.npcs.findIndex((n) => {
+    const a = s.actors[n.actor];
+    return n.fa !== 0 && a && (a.tile & 0xfe) === 0x10 && Math.abs(a.x - s.x) <= 1 && Math.abs(a.y - s.y) <= 1;
+  });
+  await withSpeaker(g, by >= 0 ? fromActor(g, s.npcs[by].actor) : { dx: 0, dy: 0 }, async () => g.say(0x425e));
 }
 
 // --- Yell -----------------------------------------------------------------------------

@@ -63,11 +63,29 @@ export function talkMenuRows(dx: number, dy: number): { first: number; last: num
   return { first: d > 0 ? 2 * (5 + d) + 4 : 2 * 6 + 2, last: 21 };
 }
 
-/** The talk's menu's rows (talkMenuRows), for whoever the party talks to now. */
-export function talkMenu(g: Game): { first: number; last: number } {
+/**
+ * Who speaks, squares from the party, where it is not the townsman talked to (g.talk.npc): a guard, a prisoner, the
+ * old man at the camp (merchantSpeech.ts withSpeaker); null for the townsman.
+ */
+const speakers = new WeakMap<Game, { dx: number; dy: number }>();
+export function speakFrom(g: Game, at: { dx: number; dy: number } | null): void {
+  if (at) speakers.set(g, at);
+  else speakers.delete(g);
+}
+
+/** Where whoever speaks stands, squares from the party: the speaker set (speakFrom), else the townsman talked to. */
+function speaker(g: Game): { dx: number; dy: number } {
+  const at = speakers.get(g);
+  if (at) return at;
   const s = g.s;
   const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
-  return talkMenuRows(a ? a.x - s.x : 0, a ? a.y - s.y : 0);
+  return { dx: a ? a.x - s.x : 0, dy: a ? a.y - s.y : 0 };
+}
+
+/** The talk's menu's rows (talkMenuRows), for whoever the party talks to now. */
+export function talkMenu(g: Game): { first: number; last: number } {
+  const { dx, dy } = speaker(g);
+  return talkMenuRows(dx, dy);
 }
 
 /** The talk as it stands: where its box goes, and the cells of the one shown, if one is. */
@@ -86,9 +104,8 @@ export const speechOn = (g: Game): boolean => g.options.dialog === 'play' && g.i
  */
 export function begin(g: Game): void {
   if (!speechOn(g)) return;
-  const s = g.s;
-  const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
-  const place = placement(a ? a.x - s.x : 0, a ? a.y - s.y : 0);
+  const { dx, dy } = speaker(g);
+  const place = placement(dx, dy);
   const was = talks.get(g);
   talks.set(g, { place, shown: was?.shown ?? null });
   putAway(g, true);

@@ -3394,6 +3394,26 @@ async function apparition(g: Game): Promise<void> {
   man.tile = man.anim = 0x16;
   await reveal(g, 0x174, 5, 5);
   man.tile = man.anim = 0x74;
+  // His words, with the Dialog setting's Play, in the box over him, as a townsman's are (merchantSpeech.ts): the key
+  // he waits on its arrow.
+  const { merchantPause, withSpeaker } = await import('./merchantSpeech.ts');
+  await withSpeaker(g, { dx: 0, dy: 0 }, () => blessings(g, man, snd, merchantPause));
+  g.say(0x77f8); // "\n\nThe strangely familiar old man vanishes...\n"
+  man.tile = man.anim = 0x16;
+  await reveal(g, g.combatMap[5 * 32 + 5], 5, 5);
+  man.tile = man.anim = 0;
+  await sleepTicks(g, 1);
+  passTime(g, 0);
+}
+
+/** The old man's gifts to each of the party - healed, raised a level where earned - and his word on their karma. */
+async function blessings(
+  g: Game,
+  man: Game['s']['actors'][number],
+  snd: Game['sound'] | null,
+  pause: (g: Game) => Promise<boolean>,
+): Promise<void> {
+  const s = g.s;
   const classTiles = g.data.bytes(0x1ade, 9);
   for (let m = 0; m < s.partySize; m++) {
     const p = s.members[m];
@@ -3441,7 +3461,7 @@ async function apparition(g: Game): Promise<void> {
           p.int = Math.min(p.int + 1, 0x1e);
       }
       g.say(0x77dc); // "\" "
-      await getChar(g);
+      if (!(await pause(g))) await getChar(g);
       g.printChar('\n');
     }
     if (p.cls === 0x41 || p.cls === 0x4d) p.mp = p.int;
@@ -3456,13 +3476,7 @@ async function apparition(g: Game): Promise<void> {
   for (let i = at; i < karma.length && karma[i] !== 0 && i < at + 2000; i++) text += String.fromCharCode(karma[i]);
   g.print(text);
   g.printChar('"');
-  await getChar(g);
-  g.say(0x77f8); // "\n\nThe strangely familiar old man vanishes...\n"
-  man.tile = man.anim = 0x16;
-  await reveal(g, g.combatMap[5 * 32 + 5], 5, 5);
-  man.tile = man.anim = 0;
-  await sleepTicks(g, 1);
-  passTime(g, 0);
+  if (!(await pause(g))) await getChar(g);
 }
 
 /** ULTIMA_6360: camping outdoors (in a dungeon, dungeon.ts does it). */

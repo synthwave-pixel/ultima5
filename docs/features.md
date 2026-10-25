@@ -570,6 +570,17 @@ their words are still the box's, not the log's; and the two lines 1988
 printed without their marks, the armoury's "Sold!" and an innkeeper's
 "Thy friends will not leave thee!", are the box's too.
 
+So are the words of those who speak to the party outside a conversation,
+each box placed by the speaker: a guard's arrest ("Wilt thou come
+quietly?", the answer in the log), "Begone, vermin!", the demand for
+charity and the password asked of a Badge's bearer, a freed
+prisoner's thanks, a frightened townsman's "Don't hurt me!", Smith's
+"Nay!" to being ridden, a shrine guardian turning the party back, and
+the old man at the camp, his blessing on each member and his word on
+their karma. What only tells - "An apparition!", "Dost thou pay?", a
+guard striking the party down - stays in the log, as do the shrines'
+voices and the story's own scenes.
+
 Nothing is typed at the Say menu, so a controller's player is never left
 guessing at words: a word known from a guide is added in Cheats (Add word)
 and offered from then on wherever it may be said. To swear at a townsman,
