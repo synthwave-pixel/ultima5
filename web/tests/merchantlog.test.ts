@@ -31,10 +31,18 @@ const transcript = async (
   for (const m of s.members.slice(s.partySize)) m.mapId = 0xff;
   setup?.(g);
   const ev: string[] = [];
+
   let logLine = '';
   const flushLog = () => {
     if (logLine.trim()) ev.push(`LOG   ${logLine.replace(/\s+$/, '')}`);
     logLine = '';
+  };
+  // The sounds asked for, in their place: the Standard set's cues (cues.ts).
+  g.soundOff = false;
+  g.options.soundSet = 'standard';
+  g.sound.cue = async (name) => {
+    flushLog();
+    ev.push(`SOUND ${name}`);
   };
   const gg = g as unknown as { remember: (t: string) => void };
   const remember = gg.remember.bind(g);
@@ -158,9 +166,40 @@ describe('a merchant with Play, as the player sees it', () => {
       const box = ev.filter((e) => e.startsWith('BOX')).join(' ');
       const read = box.replace(/ \/ /g, ' '); // the box's rows as one
       // Nothing of Max's in the log: the party's answers and who said what alone.
-      for (const l of log) expect(l, l).toMatch(/^(Buy|Max says,|says Max\.|Yes|No|Chain Coif|Sold!)$/);
+      for (const l of log) expect(l, l).toMatch(/^(Buy|Yes|No|Chain Coif)$/);
       expect(box).not.toMatch(/\/ "( |$)/); // no closing mark alone on a row
       expect(read).toMatch(/"(Come back|Thanks for|What |Which |Anything|Mayhap|Have a|G'day|Come again|Fare)/);
+    }
+  });
+  it("leaves out the log's lines that only say who speaks, and yells a yell", async () => {
+    const ev = await transcript(0, 5, [/^Buy/, /^Tester/, /^Plate/, /^Yes/], (g) => (g.s.gold = 20));
+    const log = ev.filter((e) => e.startsWith('LOG')).map((e) => e.slice(6));
+    expect(log.filter((l) => /\b(says|yells|asks)\b/.test(l))).toEqual([]);
+    // The party that cannot pay is yelled out: the Yell heard as Max's words are shown.
+    const yell = ev.indexOf('SOUND Yell');
+    expect(yell).toBeGreaterThan(0);
+    expect(ev.slice(yell).find((e) => e.startsWith('BOX'))).toMatch(/OUT|Beat it|pull/);
+    // The pub's "CAN'T PAY? Beat it!" (its name printed apart, after "yells "), and the shipwright's "Cheat me": yelled.
+    for (const [kind, picks] of [
+      [1, [/^Yes/, /^Mutton/]],
+      [3, [/^Yes/, /^Frigate/, /^Yes/]],
+    ] as const) {
+      const poor = await transcript(kind, 0, [...picks], (g) => (g.s.gold = 1));
+      expect(poor, `kind ${kind}`).toContain('SOUND Yell');
+      expect(poor.filter((e) => /^LOG .*\byells\b/.test(e))).toEqual([]);
+    }
+    // And every merchant's: no line of the log names who speaks.
+    for (const [kind, picks] of [
+      [1, [/^Yes/, /^Mutton/, /^No/]],
+      [3, [/^Yes/, /^Frigate/, /^No/]],
+      [6, [/^Yes/, /^Cure/]],
+      [7, [/^Yes/, /^Rest/, /^Yes/]],
+    ] as const) {
+      const lines = (await transcript(kind, 0, [...picks])).filter((e) => e.startsWith('LOG'));
+      expect(
+        lines.filter((l) => /\b(says|yells|asks)\b/.test(l)),
+        `kind ${kind}`,
+      ).toEqual([]);
     }
   });
 });

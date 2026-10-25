@@ -30,7 +30,7 @@ import { drawBuyers, drawGuildCard, drawReagentCard, drawWareCard, nameOf, sortW
 import { Colour } from '../ui/colours.ts';
 import { actorTileAt } from './actors.ts';
 import { poisonKills } from './settings.ts';
-import { logOnly, merchantPause, merchantSpeaking, withMerchantSpeech } from './merchantSpeech.ts';
+import { logOnly, merchantKeeper, merchantPause, merchantSpeaking, withMerchantSpeech } from './merchantSpeech.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -2045,6 +2045,7 @@ async function visit(g: Game, kind: number): Promise<void> {
     // The Avatar is the one spoken to while alive, whoever does the haggling: the party's face is the Avatar's.
     addressee: s.members[0].status !== Status.Dead ? 0 : buyer,
   };
+  merchantKeeper(g, v.keeper); // (with Play, "says Max." left out of the log: merchantSpeech.ts)
   switch (k) {
     case 0:
       return armoury(v);

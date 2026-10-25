@@ -554,8 +554,10 @@ barkeep's, the healer's and the rest: what they say within their
 quotation marks is the box's, put into sentences for its width (1988
 broke its lines for the log's; a paragraph's end is a line's, so a short
 question after a long speech is never paged apart from it), and the log
-keeps who says it ("Gwenneth says,") and the party's answers, echoed as
-the menus name them ("Mutton", "Chain Mail"). The lettered lists of wares
+keeps the party's answers, echoed as the menus name them ("Mutton",
+"Chain Mail") - not 1988's lines that only say who speaks ("Gwenneth
+says,", "says Gwenneth."): a merchant yelling the party out ("OUT,
+SLIME!") is heard instead, a shout of its own in the Standard sound set. The lettered lists of wares
 are the menus' with a controller (each priced there) and the log's for a
 keyboard picking by letter. The box shows as the party is asked something
 and stays up while they answer - a sentence left open on a colon ("We

@@ -39,6 +39,7 @@ describe('the ultima3 cues', () => {
     'DraggedUnder',
     'Dissolve',
     'Absorbed',
+    'Yell',
   ];
 
   it('has a voice for every cue, none of them clipping', () => {

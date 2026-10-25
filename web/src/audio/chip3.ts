@@ -916,6 +916,25 @@ export function u3Effect(name: string, k = 1, circle = 1, r: () => number = () =
         -14,
       );
     }
+    case 'Yell': {
+      // A merchant yelling the party out: the guards' muttered curse (Alarm) without its glass, shouted - higher,
+      // longer, louder, a rasp of breath to bark it.
+      const shout = (
+        [
+          [70, 0.06],
+          [69, 0.05],
+          [64, 0.05],
+          [63, 0.11],
+        ] as [number, number][]
+      ).map(([n, d], i, all): [Float32Array, number] => [
+        lowpass(
+          tone(d, glide(midi(n) * 1.06, midi(n) * 0.95, d), 'p25', (t) => hold(d, 0.005)(t) * (i === 3 ? Math.pow(0.08, t / d) : 1)),
+          3400,
+        ),
+        0.02 + all.slice(0, i).reduce((sum, [, x]) => sum + x, 0),
+      ]);
+      return peak(mix(highpass(noise(0.05, 9000, perc(0.004, 0.05), 0x5959), 1200), ...shout), -11);
+    }
     case 'DeathMale':
       // A member falls: a lament, the minor tetrachord falling to the tonic below, the last note sagging.
       return peak(lament([57, 55, 53, 52, 45], 0.15, 0.45), -11);

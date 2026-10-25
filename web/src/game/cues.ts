@@ -6,7 +6,8 @@
  * cactus's prick, a fire field, a door opened and swinging shut, the guards called, an electric field, the Codex's voice; a
  * monster's own blow and spell, where the party's swing and arrows sounded the same; and a blow that grazes, one
  * leaving the field and one dragged under, and magic undone - a ring lost, one absorbed by the Mirror of Truth, a thing
- * unmade by Negate Matter - where the DOS game sounded its vanishing for them all. The Standard sound set plays
+ * unmade by Negate Matter - where the DOS game sounded its vanishing for them all; and a merchant yelling the party out
+ * of their shop, where the Dialog setting's Play says it in the box without the log's "yells Max.". The Standard sound set plays
  * them (audio/chip3.ts); the Original set keeps the DOS game's own - its sound where it had one, silence where
  * it had none.
  */
@@ -36,7 +37,8 @@ export type Cue =
   | 'Withdraw'
   | 'DraggedUnder'
   | 'Dissolve'
-  | 'Absorbed';
+  | 'Absorbed'
+  | 'Yell';
 
 /**
  * Sound cue `name` in the Standard set; in the Original, the DOS game's own sound for the moment (`original`), or

@@ -12,6 +12,7 @@
 
 import type { Game } from './game.ts';
 import * as speech from './speech.ts';
+import { cue } from './cues.ts';
 
 /** The message log's window (frame.ts Win.messages). */
 const LOG = 2;
@@ -51,8 +52,39 @@ interface Visit {
   closed: boolean;
   /** The party has been asked something, and nothing printed since: what is, outside a mark, is their answer. */
   echo: boolean;
+  /** The merchant's name (merchantKeeper): the log's lines that only name who speaks ("says Max.") left out. */
+  keeper: string;
 }
 const visits = new WeakMap<Game, Visit>();
+
+/** The merchant of the visit under way, by name (shops.ts merchant): for the lines that only name who speaks. */
+export function merchantKeeper(g: Game, name: string): void {
+  const v = visits.get(g);
+  if (v) v.keeper = name;
+}
+
+/**
+ * The log's lines that only name who speaks - "Max says,", "says Max.", "Donya asks," - left out of `s`: with the box
+ * the merchant's words are plainly theirs. A yell ("yells Max.") is heard instead (cues.ts Yell).
+ */
+function unnamed(g: Game, v: Visit, s: string): string {
+  if (!v.keeper) return s;
+  const name = v.keeper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let yelled = false;
+  const line = (verb: string, lead: string): string => {
+    if (verb === 'yells') yelled = true;
+    return lead;
+  };
+  s = s
+    .replace(new RegExp(`(^|\\n)[ \\t]*(says|yells|asks) ${name}\\.?[ \\t]*(?=\\n|$)`, 'g'), (_, lead: string, verb: string) =>
+      line(verb, lead),
+    )
+    .replace(new RegExp(`(^|\\n)[ \\t]*${name} (says|yells|asks)[,:]?[ \\t]*(?=\\n|$)`, 'g'), (_, lead: string, verb: string) =>
+      line(verb, lead),
+    );
+  if (yelled) void cue(g, 'Yell');
+  return s;
+}
 
 /** Whether a merchant's words go to the box now: a visit under way, with the Dialog setting's Play. */
 export const merchantSpeaking = (g: Game): boolean => visits.has(g);
@@ -82,6 +114,7 @@ export async function withMerchantSpeech(g: Game, visit: () => Promise<void>): P
     pending: '',
     closed: false,
     echo: false,
+    keeper: '',
   };
   visits.set(g, v);
   const routeWas = g.printRoute;
@@ -301,6 +334,7 @@ function reflow(v: Visit, part: string): string {
  * before the party's answer), and more than one empty line in a row.
  */
 function toLog(g: Game, v: Visit, s: string): void {
+  s = unnamed(g, v, s);
   // The letter a choice echoes in the log ("M"), as its menu labelled it ("Mutton"), as a townsman's talk echoes it.
   const pick = g.lastPick;
   const letter = /^(\s*)([A-Za-z])(\s*)$/.exec(s);
