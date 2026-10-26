@@ -197,6 +197,9 @@ const ADDRESSED: readonly [string, number][] = [
  * taking it - or typed, L or S, or the original's F or M. The save's gender for the answer, or null for B (back to the
  * name). The screen is put back as it was, the box's copper for the caller to let go.
  */
+/** The introduction's page of the Shadowlord's bolt (its picture the bolt striking, the page before's before it). */
+const STRIKE_PAGE = 11;
+
 export async function askAddress(g: Game): Promise<number | null> {
   const t = g.text;
   const was = t.current;
@@ -432,12 +435,13 @@ export class Intro {
    * The rest of the page on show's prose, a step at a time (ui/storyText.ts setSteps): each after a key, the page's
    * arrow blinking for it. False where B (or Escape) was pressed instead, to leave the story.
    */
-  async proseSteps(): Promise<boolean> {
+  async proseSteps(onStep?: (words: string) => Promise<void>): Promise<boolean> {
     while (this.fx.proseMore?.()) {
       this.g.p.flushKeys();
       const k = asPad(this.g, await this.anyKey(false, true));
       if (k === Pad.B || k === K.Escape) return false;
-      this.fx.proseNext?.();
+      const words = this.fx.proseNext?.() ?? '';
+      await onStep?.(words);
     }
     return true;
   }
@@ -898,6 +902,9 @@ export class Intro {
       } else {
         const words = this.fileText('STORY.DAT', storyAt[i]);
         if (!fx.prose?.([words])) this.proseText(words);
+        // The Shadowlord's bolt read in steps (the port's): the page opens on the picture before it, the Shadowlords
+        // as they stood, and the bolt's strike as "The arrow strikes him full in the chest!" is read.
+        else if (i === STRIKE_PAGE && fx.proseMore?.()) fx.image(this.res(`STORY${sets[i - 1] + 1}.16`), pics[i - 1], px[i - 1], py[i - 1]);
       }
       if (i !== 0) {
         playTune(g, introTune(i), 'introduction');
@@ -916,7 +923,13 @@ export class Intro {
         await fx.reveal(0x28, 0x56, 0x4b, 0x78);
       }
       // The page's other paragraphs, a key each.
-      if (!(await this.proseSteps())) {
+      const strike = async (words: string): Promise<void> => {
+        if (i !== STRIKE_PAGE || !/^The arrow strikes/.test(words)) return;
+        fx.page(1);
+        fx.image(story, pics[i], px[i], py[i]);
+        await fx.reveal(0, py[i], 319, 199);
+      };
+      if (!(await this.proseSteps(strike))) {
         left = true;
         break;
       }

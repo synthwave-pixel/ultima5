@@ -408,6 +408,50 @@ function sentences(para: Para): Para[] {
   return out;
 }
 
+/**
+ * Sentences that begin a step of their own wherever they come (the port's, for the reading): each the start of a
+ * sentence in STORY.DAT, compared by its letters alone. The steps then go as ever, each piece cut evenly where it
+ * is still too tall.
+ */
+export const STEP_BREAKS = [
+  'The last time you saw such', // after "...the symbol of the Codex of Ultimate Wisdom!"
+  'Gripping it tightly', // after "You hesitantly reach for it."
+  'Strange shadows cast', // after "...the willow tree in the nearby woods."
+  'But never had the blue door', // after "...had come to mean so much."
+  'The gate must open', // after "Impatience turns to anxiety."
+  'Looking down at the ankh', // after "...in the air above the amulet."
+  'But something is wrong', // after "It must be Britannia!"
+  'The arrow strikes him', // after "...casts the glowing bolt at Shamino." (intro.ts: its picture comes with it)
+  'Upon seeing the amulet', // after "...emits a bright blue glow."
+  'Realizing it must be removed', // after "...with which it was created."
+  'Reaching out to help Shamino', // after "...standing framed within the doorway."
+  "'Tis good to see thee", // after "...next to the warm hearth."
+  'Where once was the Abyss', // after "...the very bowels of Britannia."
+  'It is believed that', // after "...into this underground void at their deepest levels."
+  'They corrupted Blackthorn', // after "...until the Shadowlords appeared."
+  'But this cannot go on forever', // after "...rounded up in one fell swoop."
+  'The risk was great', // after "...to discover the fate of Lord British."
+];
+const letters = (t: string): string => t.replace(/[^A-Za-z]/g, '').toLowerCase();
+const BREAKS = STEP_BREAKS.map(letters);
+
+/** A paragraph cut where a sentence of STEP_BREAKS begins: the pieces, in order. */
+function breakAt(para: Para): Para[] {
+  const out: Para[] = [];
+  let cur: string[][] = [];
+  for (const sentence of sentences(para)) {
+    const start = letters(sentence.words.map((w) => w.join('')).join(' '));
+    if (cur.length && BREAKS.some((b) => start.startsWith(b))) {
+      out.push({ indent: false, words: cur });
+      cur = [];
+    }
+    cur.push(...sentence.words);
+  }
+  if (cur.length) out.push({ indent: false, words: cur });
+  if (out.length) out[0].indent = para.indent;
+  return out;
+}
+
 /** A step: its paragraphs (or a paragraph's piece), and whether it carries the page's dropped letter. */
 interface Step {
   paras: Para[];
@@ -500,14 +544,12 @@ export function setSteps(texts: string[], lit: Uint8Array, measure: Measure): Ru
     const height = rect[3] * K - 2 * STEP_MARGIN;
     const pieces: Step[] = [];
     let fits = true;
-    for (const [pi, para] of paras.entries()) {
-      const got = splitPara(measure, para, pi === 0, width, height);
-      if (!got) {
-        fits = false;
-        break;
+    for (const [pi, whole] of paras.entries())
+      for (const [bi, para] of breakAt(whole).entries()) {
+        const got = fits ? splitPara(measure, para, pi === 0 && bi === 0, width, height) : null;
+        if (!got) fits = false;
+        else pieces.push(...got);
       }
-      pieces.push(...got);
-    }
     if (!fits) continue;
     const steps = pieces;
     if (

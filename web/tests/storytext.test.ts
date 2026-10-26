@@ -129,6 +129,21 @@ describe('the story pages set in the Standard look', () => {
     expect(read(steps[1])).toBe([7, 8, 9, 10, 11, 12, 13].map(sentence).join(' '));
   });
 
+  it('begins a step at each sentence the port breaks at (STEP_BREAKS), whatever room is left', () => {
+    const para = 'Overhead, roiling, black clouds fill the sky. It must be Britannia! But something is wrong. You are overcome.';
+    const steps = setSteps(
+      [para],
+      page(() => false),
+      measure,
+    )!;
+    expect(steps.map(read)).toEqual([
+      'Overhead, roiling, black clouds fill the sky. It must be Britannia!',
+      'But something is wrong. You are overcome.',
+    ]);
+    // Its first letter dropped on the paragraph's first piece alone.
+    expect(steps[1].some((r) => r.face === 'capital')).toBe(false);
+  });
+
   it('gives up where one sentence alone will not fit (the page then set in one block)', () => {
     const long = `A sentence ${'that goes on '.repeat(40)}and on.`;
     expect(

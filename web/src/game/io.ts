@@ -298,8 +298,8 @@ export interface Effects {
    * the page waits for a key before each, and proseNext sets it.
    */
   proseMore?(): boolean;
-  /** The next step of the page last set by prose, in place of the one shown on page 0. */
-  proseNext?(): void;
+  /** The next step of the page last set by prose, in place of the one shown on page 0: its words, as read. */
+  proseNext?(): string;
   /**
    * The gypsy's question set the Standard look's way on page 0: each answer under its bowl, grey, or white for the
    * one `lit` (0 the left, 1 the right, -1 neither), the question under them. False as for prose.

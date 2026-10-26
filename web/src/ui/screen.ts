@@ -787,9 +787,13 @@ export class Screen implements Platform {
       proseNext: () => {
         const story = this.story;
         const next = this.proseLeft.shift();
-        if (!story || !next) return;
+        if (!story || !next) return '';
         fb.words[0] = fb.words[0].filter((w) => !w.run.step);
         this.drawRuns(story.measure, next, 0);
+        return next
+          .filter((r) => !r.panel)
+          .map((r) => r.text)
+          .join(' ');
       },
       choice: (question, left, right, lit) => {
         const story = this.story;
