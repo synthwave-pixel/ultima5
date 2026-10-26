@@ -1051,7 +1051,8 @@ export function wrap(text: string, width = WIDTH): string[] {
     }
     out.push(line);
   }
-  return out;
+  // A no-break space (savedWhen's "8:31 AM" in a sentence) holds its words together, and is shown as a space.
+  return out.map((l) => l.replace(/\u00a0/g, ' '));
 }
 
 // --- The command menu -------------------------------------------------------------------------------
@@ -1605,7 +1606,10 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
             }
             const chosen = await chooseSave(g, 'Load a save', kept);
             if (!chosen) return;
-            if (!(await confirm(g, `Back to the game saved ${savedWhen(chosen.data.written)}? All played since is undone.`))) return;
+            if (
+              !(await confirm(g, `Back to the game saved ${savedWhen(chosen.data.written, Date.now(), true)}? All played since is undone.`))
+            )
+              return;
             await takeUp(g, chosen.data);
           },
         },
@@ -1984,7 +1988,7 @@ function audioLine(g: Game): Setting {
 function gameplayLine(g: Game): Setting {
   return {
     label: 'Gameplay',
-    note: 'How the game plays: input, poison, hunger, experience, throwing, aiming.',
+    note: 'How the game plays: input, auto pause, the rules, snap attacks.',
     act: () => gameplayMenu(g).then(() => undefined),
   };
 }

@@ -186,6 +186,16 @@ describe('the earlier saves', () => {
     expect(savedWhen(new Date(2025, 11, 31, 12, 0).getTime(), now)).toBe('Dec 31 2025, 12:00 PM');
   });
 
+  it('keep the time whole in a sentence wrapped to the menu: "8:31 AM", never "8:31" at a line\'s end', async () => {
+    const { wrap } = await import('../src/game/menu.ts');
+    const now = new Date(2026, 9, 26, 12).getTime();
+    const when = savedWhen(new Date(2026, 9, 26, 8, 31).getTime(), now, true);
+    // As the Pause menu's Load a save asks it, where 1988's width broke it as "...8:31" / "AM? All...".
+    const lines = wrap(`Back to the game saved ${when}? All played since is undone.`);
+    expect(lines.some((l) => l.includes('8:31 AM?'))).toBe(true);
+    expect(lines.join('\n')).not.toContain('\u00a0');
+  });
+
   it("say where by the game's own names", () => {
     const { g } = game();
     const s = g.s;

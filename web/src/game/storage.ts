@@ -581,11 +581,12 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
  * 2025, 4:35 PM"). Spelled out here rather than by the browser, whose "PM" may come after a space the game's
  * letters do not have.
  */
-export function savedWhen(written: number, now = Date.now()): string {
+export function savedWhen(written: number, now = Date.now(), inProse = false): string {
   const d = new Date(written);
   const year = d.getFullYear() === new Date(now).getFullYear() ? '' : ` ${d.getFullYear()}`;
   const h = d.getHours();
-  const time = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  // In a sentence, wrapped (menu.ts wrap), the time is kept whole: "8:31 AM" never left at a line's end as "8:31".
+  const time = `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}${inProse ? '\u00a0' : ' '}${h < 12 ? 'AM' : 'PM'}`;
   return `${MONTHS[d.getMonth()]} ${d.getDate()}${year}, ${time}`;
 }
 

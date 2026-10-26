@@ -83,7 +83,7 @@ async function dying(g: Game): Promise<void> {
         label: 'Load the last save',
         enabled: last !== null,
         note: last
-          ? `Back to the game saved ${savedWhen(last.data.written)} (${savedWhere(g, last.data)}), all since undone.`
+          ? `Back to the game saved ${savedWhen(last.data.written, Date.now(), true)} (${savedWhere(g, last.data)}), all since undone.`
           : 'No game has been saved yet.',
       },
       {
