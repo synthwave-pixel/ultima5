@@ -18,8 +18,11 @@ const K = 4;
 const W = 320;
 const H = 200;
 
-/** A face a run is set in: the story's body and its initials, or the game's own lettering (the gypsy's choices). */
-export type RunFace = 'body' | 'initial' | 'mono';
+/**
+ * A face a run is set in: the story's body and its initials (setProse's), or the game's own lettering - the story's
+ * steps and the gypsy's choices - and a step's dropped first letter in it ('capital').
+ */
+export type RunFace = 'body' | 'initial' | 'mono' | 'capital';
 
 /**
  * A run of text to draw: its words, where its baseline starts (colour page pixels), its size, face and colour. Or,
@@ -207,7 +210,15 @@ interface Setting {
 }
 
 /** The paragraphs set at `size` in a column `width` wide: their lines, the first paragraph's first letter dropped. */
-function setAt(measure: Measure, paras: Para[], size: number, width: number, initial: boolean): Omit<Setting, 'rect'> {
+function setAt(
+  measure: Measure,
+  paras: Para[],
+  size: number,
+  width: number,
+  initial: boolean,
+  face: RunFace = 'body',
+  capFace: RunFace = 'initial',
+): Omit<Setting, 'rect'> {
   const laid: Setting['laid'] = [];
   let count = 0;
   paras.forEach((para, pi) => {
@@ -215,17 +226,17 @@ function setAt(measure: Measure, paras: Para[], size: number, width: number, ini
     let cap: Setting['laid'][number]['cap'] = null;
     const m = initial && pi === 0 ? para.words[0]?.join('').match(/^([“‘]?)([A-Za-z])(.*)$/) : null;
     if (m) {
-      const glyph = measure(m[2], Math.round(size * LEADING * CAP_LINES * 0.95), 'initial');
-      const quote = m[1] ? measure(m[1], size, 'body') : 0;
+      const glyph = measure(m[2], Math.round(size * LEADING * CAP_LINES * 0.95), capFace);
+      const quote = m[1] ? measure(m[1], size, face) : 0;
       cap = { letter: m[2], quote: m[1], width: quote + glyph + size * 0.3 };
       body = { ...para, words: m[3] ? [[m[3]], ...para.words.slice(1)] : para.words.slice(1) };
     }
     const indent = !cap && para.indent && pi > 0 ? size * 1.2 : 0;
-    let lines = breakLines(measure, size, body, (i) => width - (cap && i < CAP_LINES ? cap.width : 0), indent);
+    let lines = breakLines(measure, size, body, (i) => width - (cap && i < CAP_LINES ? cap.width : 0), indent, face);
     if (cap && lines.length < CAP_MIN_LINES) {
       // Too short to carry a dropped letter: set as it is.
       cap = null;
-      lines = breakLines(measure, size, para, () => width, indent);
+      lines = breakLines(measure, size, para, () => width, indent, face);
     }
     laid.push({ lines, cap, indent, first: count });
     count += lines.length;
@@ -369,8 +380,14 @@ export function setChoice(question: string, left: string, right: string, lit: nu
   }
 }
 
-/** The one size every step is set at (colour page pixels): today's largest page setting was 30. */
-export const STEP_SIZE = 36;
+/**
+ * The face every step is set in - the game's own lettering, as its menus and the gypsy's questions are - and its
+ * size (colour page pixels: the lettering's wide cells, a line beside the narrowest picture some eighteen letters).
+ */
+export const STEP_FACE: RunFace = 'mono';
+export const STEP_SIZE = 24;
+/** The game's lettering has straight marks alone: the curled ones put back. */
+const straight = (t: string): string => t.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 /** Clear space kept above and below the steps (colour page pixels). */
 const STEP_MARGIN = 12;
 /** How much lower each step starts than the last, in lines, as far as the space allows. */
@@ -391,15 +408,25 @@ function sentences(para: Para): Para[] {
   return out;
 }
 
-/** A step: its words, and whether it carries the page's dropped letter. */
+/** A step: its paragraphs (or a paragraph's piece), and whether it carries the page's dropped letter. */
 interface Step {
-  para: Para;
+  paras: Para[];
   cap: boolean;
 }
 
+/** A step's lines set: each line's words and how far it is indented (a paragraph's first after the step's first). */
+interface StepLaid {
+  cap: Setting['laid'][number]['cap'];
+  lines: { pieces: string[]; indent: number }[];
+}
+
 /** A step's lines at STEP_SIZE in a column `width` wide, its first letter dropped where it carries the cap and is long enough to. */
-function stepLines(measure: Measure, step: Step, width: number): Setting['laid'][number] {
-  return setAt(measure, [step.para], STEP_SIZE, width, step.cap).laid[0];
+function stepLines(measure: Measure, step: Step, width: number): StepLaid {
+  const laid = setAt(measure, step.paras, STEP_SIZE, width, step.cap, STEP_FACE, 'capital').laid;
+  return {
+    cap: laid[0]?.cap ?? null,
+    lines: laid.flatMap((p) => p.lines.map((ln, i) => ({ pieces: ln.pieces, indent: i === 0 ? p.indent : 0 }))),
+  };
 }
 
 /**
@@ -410,7 +437,7 @@ function stepLines(measure: Measure, step: Step, width: number): Setting['laid']
 function splitPara(measure: Measure, para: Para, cap: boolean, width: number, height: number): Step[] | null {
   const lh = STEP_SIZE * LEADING;
   const tall = (st: Step): number => stepLines(measure, st, width).lines.length * lh;
-  if (tall({ para, cap }) <= height) return [{ para, cap }];
+  if (tall({ paras: [para], cap }) <= height) return [{ paras: [para], cap }];
   const parts = sentences(para);
   const n = parts.length;
   // The height of sentences i..j-1 as one step (the first carrying the cap).
@@ -419,7 +446,7 @@ function splitPara(measure: Measure, para: Para, cap: boolean, width: number, he
     const key = `${i},${j}`;
     let h = memo.get(key);
     if (h === undefined) {
-      h = tall({ para: { indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }, cap: cap && i === 0 });
+      h = tall({ paras: [{ indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }], cap: cap && i === 0 });
       memo.set(key, h);
     }
     return h;
@@ -447,7 +474,7 @@ function splitPara(measure: Measure, para: Para, cap: boolean, width: number, he
     const steps: Step[] = [];
     for (let i = 0, k = pieces; i < n; k--) {
       const j = solve(i, k)[1];
-      steps.push({ para: { indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }, cap: cap && i === 0 });
+      steps.push({ paras: [{ indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }], cap: cap && i === 0 });
       i = j;
     }
     return steps;
@@ -471,7 +498,7 @@ export function setSteps(texts: string[], lit: Uint8Array, measure: Measure): Ru
   for (const rect of clearSpaces(lit)) {
     const width = rect[2] * K;
     const height = rect[3] * K - 2 * STEP_MARGIN;
-    const steps: Step[] = [];
+    const pieces: Step[] = [];
     let fits = true;
     for (const [pi, para] of paras.entries()) {
       const got = splitPara(measure, para, pi === 0, width, height);
@@ -479,9 +506,10 @@ export function setSteps(texts: string[], lit: Uint8Array, measure: Measure): Ru
         fits = false;
         break;
       }
-      steps.push(...got);
+      pieces.push(...got);
     }
     if (!fits) continue;
+    const steps = pieces;
     if (
       !best ||
       steps.length < best.steps.length ||
@@ -505,25 +533,26 @@ export function setSteps(texts: string[], lit: Uint8Array, measure: Measure): Ru
     const runs: Run[] = [];
     if (p.cap) {
       const size = STEP_SIZE;
-      if (p.cap.quote) runs.push({ text: p.cap.quote, x: x0, y: top + size, size, face: 'body', colour: COPPER, step: true });
+      if (p.cap.quote) runs.push({ text: straight(p.cap.quote), x: x0, y: top + size, size, face: STEP_FACE, colour: COPPER, step: true });
+      // The letter in the lettering, copper, standing in the paragraph's first two lines: its foot on the second's.
       runs.push({
         text: p.cap.letter,
-        x: x0 + (p.cap.quote ? size * 0.35 : 0),
-        y: top + lh * CAP_LINES - size * 0.28,
+        x: x0 + (p.cap.quote ? measure(p.cap.quote, size, STEP_FACE) : 0),
+        y: top + lh + size,
         size: Math.round(lh * CAP_LINES * 0.95),
-        face: 'initial',
+        face: 'capital',
         colour: COPPER,
         step: true,
       });
     }
     p.lines.forEach((ln, i) => {
-      const off = p.cap && i < CAP_LINES ? p.cap.width : 0;
+      const off = (p.cap && i < CAP_LINES ? p.cap.width : 0) + ln.indent;
       runs.push({
-        text: ln.pieces.join(' '),
+        text: straight(ln.pieces.join(' ')),
         x: x0 + off,
         y: top + i * lh + STEP_SIZE,
         size: STEP_SIZE,
-        face: 'body',
+        face: STEP_FACE,
         colour: WHITE,
         step: true,
       });

@@ -7,6 +7,7 @@ import {
   setChoice,
   setProse,
   setSteps,
+  STEP_FACE,
   STEP_SIZE,
   WHITE,
   type Measure,
@@ -78,14 +79,14 @@ describe('the story pages set in the Standard look', () => {
   /** A step's words, in order, as read (the dropped letter put back, a word broken at a line's end joined again). */
   const read = (runs: Run[]): string =>
     runs
-      .filter((r) => r.face !== 'initial')
+      .filter((r) => r.face !== 'capital')
       .map((r) => r.text)
       .join(' ')
       .replace(/- /g, '')
-      .replace(/^/, runs.find((r) => r.face === 'initial')?.text ?? '');
-  const top = (runs: Run[]): number => Math.min(...runs.filter((r) => r.face === 'body').map((r) => r.y));
+      .replace(/^/, runs.find((r) => r.face === 'capital')?.text ?? '');
+  const top = (runs: Run[]): number => Math.min(...runs.filter((r) => r.face === STEP_FACE).map((r) => r.y));
 
-  it('reads a page a paragraph at a time at the one size, each a little lower than the last, every word kept', () => {
+  it("reads a page a paragraph at a time in the game's lettering at the one size, each lower than the last, every word kept", () => {
     const paras = [
       'From nowhere, smoky wisps of clouds begin to form in the clear, moonlit sky. In a few short moments the sky is filled with dark clouds.',
       '{As you look at the light, a darkening begins to appear in its center.',
@@ -102,29 +103,30 @@ describe('the story pages set in the Standard look', () => {
       for (const r of runs) {
         expect(r.step).toBe(true);
         expect(r.x).toBeGreaterThanOrEqual(160 * 4);
-        if (r.face === 'body') expect(r.size).toBe(STEP_SIZE);
+        if (r.face === STEP_FACE) expect(r.size).toBe(STEP_SIZE);
       }
     });
     // The first letter dropped on the first step alone.
-    expect(steps[0].some((r) => r.face === 'initial')).toBe(true);
-    expect(steps.slice(1).some((runs) => runs.some((r) => r.face === 'initial'))).toBe(false);
+    expect(steps[0].find((r) => r.face === 'capital')).toMatchObject({ text: 'F', colour: COPPER });
+    expect(steps.slice(1).some((runs) => runs.some((r) => r.face === 'capital'))).toBe(false);
     // Each step starts lower than the one before: the eye walks down the page.
     expect(top(steps[1])).toBeGreaterThan(top(steps[0]));
     expect(top(steps[2])).toBeGreaterThan(top(steps[1]));
   });
 
   it('cuts a paragraph too tall for the space at its sentences, as evenly as they allow', () => {
-    // Ten sentences of two lines each: twenty lines, where sixteen go. Cut greedily it would be eight and two.
+    // Fourteen sentences of two lines each: twenty-eight lines, where twenty-three go. Cut greedily it would be
+    // twenty-two and six.
     const sentence = (i: number): string => `Sentence ${i} ${'runs on and on '.repeat(6)}to its end.`;
-    const para = [...Array(10).keys()].map(sentence).join(' ');
+    const para = [...Array(14).keys()].map(sentence).join(' ');
     const steps = setSteps(
       [para],
       page((x) => x < 160),
       measure,
     )!;
     expect(steps).toHaveLength(2);
-    expect(read(steps[0])).toBe([0, 1, 2, 3, 4].map(sentence).join(' '));
-    expect(read(steps[1])).toBe([5, 6, 7, 8, 9].map(sentence).join(' '));
+    expect(read(steps[0])).toBe([0, 1, 2, 3, 4, 5, 6].map(sentence).join(' '));
+    expect(read(steps[1])).toBe([7, 8, 9, 10, 11, 12, 13].map(sentence).join(' '));
   });
 
   it('gives up where one sentence alone will not fit (the page then set in one block)', () => {

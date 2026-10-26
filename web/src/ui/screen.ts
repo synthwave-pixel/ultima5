@@ -70,7 +70,7 @@ const FACES: Record<Face, { family: string; file: string; share: number; bold: n
 };
 
 /** The family a run of words is set in: the story's body or initials, or the game's lettering (FACES.mono). */
-const runFamily = (face: RunFace): string => (face === 'body' ? BODY_FACE : face === 'initial' ? INITIAL_FACE : FACES.mono.family);
+const runFamily = (face: RunFace): string => (face === 'body' ? BODY_FACE : face === 'initial' ? INITIAL_FACE : FACES.mono.family); // 'mono' and 'capital' alike
 /** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
 const PANEL = 'rgba(0, 0, 0, 0.72)';
 
