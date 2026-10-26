@@ -116,6 +116,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,png,gif,jpg,svg,wav,json,webmanifest,ttf}'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         globIgnores: [
+          // A shared link's picture (index.html og:image), for the sites that show it, not the game.
+          'share.jpg',
           'tiles.html',
           'deltas.html',
           'grass.html',

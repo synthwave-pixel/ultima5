@@ -90,7 +90,7 @@ function createWindow() {
       event.preventDefault();
     }
   });
-  // Links out of the game (there are none today) open in the system browser, never in the app.
+  // Links out of the game (the installer's to GOG) open in the system browser, never in the app.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) void shell.openExternal(url);
     return { action: 'deny' };

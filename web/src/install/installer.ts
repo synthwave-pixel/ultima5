@@ -19,6 +19,9 @@ import { saveInstalled } from './store.ts';
 import { readZip } from './zip.ts';
 import { driveMenu, usable } from '../ui/pageMenu.ts';
 
+/** Where the game is sold (README's link too): Ultima V with IV and VI. */
+export const GOG = 'https://www.gog.com/en/game/ultima_456';
+
 const STYLE = `
 .u5-install { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   background: #000; color: #aaa; font: 16px/1.5 ui-monospace, Menlo, Consolas, monospace; padding: 16px; box-sizing: border-box; z-index: 10; }
@@ -102,6 +105,7 @@ export function runInstaller(notice?: string): Promise<GameFiles> {
       <p>This is a new engine for Ultima V. It plays your own copy of the MS-DOS game, which it does not include.</p>
       <p data-intro>Scan for it where it is usually kept, or give it the game's folder, its files, or a .zip of them: from a GOG
          installation, or the Internet Archive's copy. Everything is kept in this game's own storage.</p>
+      <p>No copy yet? GOG sells it in <a href="${GOG}" target="_blank" rel="noopener" data-gog>Ultima 4+5+6</a>, with Ultima IV and VI.</p>
       <button type="button" data-scan>Scan for game files…</button>
       <div class="drop" tabindex="-1">Drop the Ultima V folder, files or .zip here</div>
       <button type="button" data-pick="folder">Choose folder…</button>
@@ -195,6 +199,15 @@ export function runInstaller(notice?: string): Promise<GameFiles> {
       }
     };
     root.querySelector('[data-scan]')!.addEventListener('click', () => void scan());
+    // GOG's page in the system's browser: a browser's own new tab, the desktop app's (desktop/main.cjs
+    // setWindowOpenHandler), and the Android app's through its plugin, as ui/updates.ts opens a release.
+    root.querySelector('[data-gog]')!.addEventListener('click', (e) => {
+      const plugin = (globalThis as { Capacitor?: { Plugins?: { GameFolder?: { openUrl?: (o: { url: string }) => Promise<unknown> } } } })
+        .Capacitor?.Plugins?.GameFolder;
+      if (!plugin?.openUrl) return;
+      e.preventDefault();
+      void plugin.openUrl({ url: GOG }).catch(() => window.open(GOG, '_blank'));
+    });
     // Android does not scan: its player picks the folder (below), and ?autoscan=true does nothing there.
     const android = androidFolder();
     if (android) {
