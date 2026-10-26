@@ -690,6 +690,13 @@ async function closingPages(g: Game): Promise<void> {
     }
     fx.transfer(1, 0, 0, 0, 0x13f, 199);
     fx.page(0);
+    // The page's other paragraphs, a key each (ui/storyText.ts setSteps).
+    while (fx.proseMore?.()) {
+      g.p.flushKeys();
+      await g.p.waitKey(blinker(g));
+      waitMark(g, false);
+      fx.proseNext?.();
+    }
   }
   playTune(g, closingTune(6), 'closing');
   g.p.flushKeys();

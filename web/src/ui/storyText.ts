@@ -5,8 +5,9 @@
  * the blackletter UnifrakturMaguntia for a page's first letter) rather than the game's proportional one. The words
  * are the player's own (STORY.DAT, QUESTION.DAT, END.DAT); the pictures are the game's, where the game puts them.
  * What changes is where the words go: 1988 ran them in two justified spans round the picture, the lines between
- * pulled wide; here all of a page's prose is one block, ragged right, in whichever clear space of the page lets it
- * be set largest, its first letter dropped two lines in blackletter.
+ * pulled wide; here a page's prose is read a paragraph at a time (setSteps), ragged right at the one size, in the
+ * page's clearest space, each paragraph a little lower than the last, the page's first letter dropped two lines in
+ * blackletter. Where the steps will not go, all of it is one block, as large as it will go (setProse).
  *
  * This is the setting: which space, what size, where each line goes, as runs of text in the colour page's pixels
  * (four to an EGA pixel). The screen draws them (screen.ts).
@@ -32,6 +33,8 @@ export interface Run {
   face: RunFace;
   colour: number;
   panel?: [number, number, number, number];
+  /** A step's words (setSteps): taken off the page as the next step is set in their place. */
+  step?: boolean;
 }
 
 /** How wide `text` is at `size` in `face`, in colour page pixels (the screen's canvas measures). */
@@ -364,4 +367,167 @@ export function setChoice(question: string, left: string, right: string, lit: nu
     );
     return runs;
   }
+}
+
+/** The one size every step is set at (colour page pixels): today's largest page setting was 30. */
+export const STEP_SIZE = 36;
+/** Clear space kept above and below the steps (colour page pixels). */
+const STEP_MARGIN = 12;
+/** How much lower each step starts than the last, in lines, as far as the space allows. */
+const STEP_WALK = 1.5;
+
+/** A paragraph's sentences, each a run of its words: a sentence ends at a word ending in . ! or ?, a closing mark after. */
+function sentences(para: Para): Para[] {
+  const out: Para[] = [];
+  let cur: string[][] = [];
+  for (const w of para.words) {
+    cur.push(w);
+    if (/[.!?][”’"')]*$/.test(w.join(''))) {
+      out.push({ indent: false, words: cur });
+      cur = [];
+    }
+  }
+  if (cur.length) out.push({ indent: false, words: cur });
+  return out;
+}
+
+/** A step: its words, and whether it carries the page's dropped letter. */
+interface Step {
+  para: Para;
+  cap: boolean;
+}
+
+/** A step's lines at STEP_SIZE in a column `width` wide, its first letter dropped where it carries the cap and is long enough to. */
+function stepLines(measure: Measure, step: Step, width: number): Setting['laid'][number] {
+  return setAt(measure, [step.para], STEP_SIZE, width, step.cap).laid[0];
+}
+
+/**
+ * A paragraph as steps that each fit `height`: whole where it does; else cut at its sentences into as few pieces as
+ * will fit, as even as the sentences allow (the tallest piece as short as it can be). Null where one sentence alone
+ * will not fit.
+ */
+function splitPara(measure: Measure, para: Para, cap: boolean, width: number, height: number): Step[] | null {
+  const lh = STEP_SIZE * LEADING;
+  const tall = (st: Step): number => stepLines(measure, st, width).lines.length * lh;
+  if (tall({ para, cap }) <= height) return [{ para, cap }];
+  const parts = sentences(para);
+  const n = parts.length;
+  // The height of sentences i..j-1 as one step (the first carrying the cap).
+  const memo = new Map<string, number>();
+  const span = (i: number, j: number): number => {
+    const key = `${i},${j}`;
+    let h = memo.get(key);
+    if (h === undefined) {
+      h = tall({ para: { indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }, cap: cap && i === 0 });
+      memo.set(key, h);
+    }
+    return h;
+  };
+  for (let pieces = 2; pieces <= n; pieces++) {
+    // best(i, k): the least tallest piece cutting sentences i.. into k pieces, and where the first cut falls.
+    const best = new Map<string, [number, number]>();
+    const solve = (i: number, k: number): [number, number] => {
+      const key = `${i},${k}`;
+      const got = best.get(key);
+      if (got) return got;
+      let out: [number, number] = [Infinity, -1];
+      if (k === 1) out = [span(i, n), n];
+      else
+        for (let j = i + 1; j <= n - k + 1; j++) {
+          const here = span(i, j);
+          if (here > height) break;
+          const tallest = Math.max(here, solve(j, k - 1)[0]);
+          if (tallest < out[0]) out = [tallest, j];
+        }
+      best.set(key, out);
+      return out;
+    };
+    if (solve(0, pieces)[0] > height) continue;
+    const steps: Step[] = [];
+    for (let i = 0, k = pieces; i < n; k--) {
+      const j = solve(i, k)[1];
+      steps.push({ para: { indent: false, words: parts.slice(i, j).flatMap((p) => p.words) }, cap: cap && i === 0 });
+      i = j;
+    }
+    return steps;
+  }
+  return null;
+}
+
+/**
+ * A page's prose (its texts, in order) as steps read one after another over the same picture, each its own runs: a
+ * paragraph a step, at STEP_SIZE, a paragraph too long for the space cut evenly at its sentences. All are set in the
+ * one clear space of the page that takes them in the fewest steps (the largest, of those), each starting a line and
+ * a half lower than the last, as far as the space allows, so the eye walks down the page rather than going back to
+ * its top; the page's first letter dropped on its first step. Null where they will not go at that size (setProse
+ * then sets the page as one block).
+ */
+export function setSteps(texts: string[], lit: Uint8Array, measure: Measure): Run[][] | null {
+  const paras = texts.flatMap(paragraphs);
+  if (!paras.length) return [];
+  const lh = STEP_SIZE * LEADING;
+  let best: { rect: Rect; steps: Step[] } | null = null;
+  for (const rect of clearSpaces(lit)) {
+    const width = rect[2] * K;
+    const height = rect[3] * K - 2 * STEP_MARGIN;
+    const steps: Step[] = [];
+    let fits = true;
+    for (const [pi, para] of paras.entries()) {
+      const got = splitPara(measure, para, pi === 0, width, height);
+      if (!got) {
+        fits = false;
+        break;
+      }
+      steps.push(...got);
+    }
+    if (!fits) continue;
+    if (
+      !best ||
+      steps.length < best.steps.length ||
+      (steps.length === best.steps.length && rect[2] * rect[3] > best.rect[2] * best.rect[3])
+    )
+      best = { rect, steps };
+  }
+  if (!best) return null;
+  const { rect, steps } = best;
+  const width = rect[2] * K;
+  const height = rect[3] * K - 2 * STEP_MARGIN;
+  const top0 = rect[1] * K + STEP_MARGIN;
+  const x0 = rect[0] * K;
+  const laid = steps.map((st) => stepLines(measure, st, width));
+  const n = laid.length;
+  const tallest = Math.max(...laid.map((l) => l.lines.length * lh));
+  const walk = n === 1 ? 0 : Math.min((n - 1) * lh * STEP_WALK, height - tallest);
+  const first = top0 + (height - tallest - walk) / 2;
+  return laid.map((p, k) => {
+    const top = n === 1 ? top0 + (height - p.lines.length * lh) / 2 : first + (walk * k) / (n - 1);
+    const runs: Run[] = [];
+    if (p.cap) {
+      const size = STEP_SIZE;
+      if (p.cap.quote) runs.push({ text: p.cap.quote, x: x0, y: top + size, size, face: 'body', colour: COPPER, step: true });
+      runs.push({
+        text: p.cap.letter,
+        x: x0 + (p.cap.quote ? size * 0.35 : 0),
+        y: top + lh * CAP_LINES - size * 0.28,
+        size: Math.round(lh * CAP_LINES * 0.95),
+        face: 'initial',
+        colour: COPPER,
+        step: true,
+      });
+    }
+    p.lines.forEach((ln, i) => {
+      const off = p.cap && i < CAP_LINES ? p.cap.width : 0;
+      runs.push({
+        text: ln.pieces.join(' '),
+        x: x0 + off,
+        y: top + i * lh + STEP_SIZE,
+        size: STEP_SIZE,
+        face: 'body',
+        colour: WHITE,
+        step: true,
+      });
+    });
+    return runs;
+  });
 }

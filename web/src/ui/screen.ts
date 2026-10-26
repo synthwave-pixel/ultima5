@@ -38,7 +38,7 @@ import {
 import { type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
 import type { Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
-import { setChoice, setProse, type Measure, type Run, type RunFace } from './storyText.ts';
+import { setChoice, setProse, setSteps, type Measure, type Run, type RunFace } from './storyText.ts';
 import { Text, type TextTarget } from './text.ts';
 
 /** The DOS timer's tick; the game animated about once per tick while waiting for a key. */
@@ -549,6 +549,8 @@ export class Screen implements Platform {
   /** Whether the story pages' fonts are to hand; until they are (or if they never are) the pages are set as in 1988. */
   private storyFonts = false;
   private storyCanvas: OffscreenCanvasRenderingContext2D | null = null;
+  /** The steps of the story page last set still to be read (storyText.ts setSteps), each its runs. */
+  private proseLeft: Run[][] = [];
 
   private loadStoryFonts(): void {
     if (typeof FontFace === 'undefined' || typeof document === 'undefined') return;
@@ -770,11 +772,24 @@ export class Screen implements Platform {
       },
       prose: (texts) => {
         const story = this.story;
+        this.proseLeft = [];
         if (!story) return false;
-        const runs = setProse(texts, fb.litMap(fb.page), story.measure);
+        const lit = fb.litMap(fb.page);
+        // A paragraph a step (setSteps); where the steps will not go, the page's prose in one block (setProse).
+        const steps = setSteps(texts, lit, story.measure);
+        const runs = steps ? (steps[0] ?? []) : setProse(texts, lit, story.measure);
         if (!runs) return false;
+        this.proseLeft = steps?.slice(1) ?? [];
         this.drawRuns(story.measure, runs, fb.page);
         return true;
+      },
+      proseMore: () => this.proseLeft.length > 0,
+      proseNext: () => {
+        const story = this.story;
+        const next = this.proseLeft.shift();
+        if (!story || !next) return;
+        fb.words[0] = fb.words[0].filter((w) => !w.run.step);
+        this.drawRuns(story.measure, next, 0);
       },
       choice: (question, left, right, lit) => {
         const story = this.story;

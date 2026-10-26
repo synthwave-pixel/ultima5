@@ -428,6 +428,20 @@ export class Intro {
     }
   }
 
+  /**
+   * The rest of the page on show's prose, a step at a time (ui/storyText.ts setSteps): each after a key, the page's
+   * arrow blinking for it. False where B (or Escape) was pressed instead, to leave the story.
+   */
+  async proseSteps(): Promise<boolean> {
+    while (this.fx.proseMore?.()) {
+      this.g.p.flushKeys();
+      const k = asPad(this.g, await this.anyKey(false, true));
+      if (k === Pad.B || k === K.Escape) return false;
+      this.fx.proseNext?.();
+    }
+    return true;
+  }
+
   // --- Proportional text -----------------------------------------------------------
 
   /**
@@ -901,6 +915,11 @@ export class Intro {
         fx.image(story, 2, 0x28, 0x56);
         await fx.reveal(0x28, 0x56, 0x4b, 0x78);
       }
+      // The page's other paragraphs, a key each.
+      if (!(await this.proseSteps())) {
+        left = true;
+        break;
+      }
     }
     if (!left) {
       playTune(g, introTune(0x15), 'introduction');
@@ -1140,6 +1159,7 @@ export class Intro {
     if (!fx.prose?.([opening])) this.proseText(opening);
     fx.transfer(1, 0, 0, 0, 319, 199);
     this.prose.top = 200;
+    await this.proseSteps();
     await this.anyKey(false, true);
     const m = fresh.members[0];
     this.stats = { int: m.int, dex: m.dex, str: m.str };
@@ -1160,6 +1180,7 @@ export class Intro {
     if (!fx.prose?.([verdict])) this.proseText(verdict);
     this.prose.space = 5;
     fx.transfer(1, 0, 0, 0, 319, 199);
+    await this.proseSteps();
     await this.anyKey(false, true);
     fx.page(1);
     g.printChar(0xff);
