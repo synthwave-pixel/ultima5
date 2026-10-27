@@ -247,7 +247,9 @@ has the whole list; the highlights:
   Ultima V Upgrade's music plays where the Upgrade played it, in four
   soundtracks - Classical, Electronic, Ambient and the Upgrade's own; the
   soundtrack and the Music and Sound FX levels are set in the Pause menu,
-  under Audio.
+  under Audio. The story pages - the introduction, the gypsy, the
+  ending - are read a paragraph at a time, larger and in the game's own
+  lettering.
 - **No more guessing at commands.** Menus offer what makes sense where you
   stand, and "Blocked!" is kept for walls and water. Walking into a chest
   searches and opens it, into a foe attacks, into rocks climbs them, into

@@ -48,6 +48,9 @@ describes how the Modern look is drawn.
   (the game says what differs, and installs it when told to). On Android,
   Choose folder... opens the system's own folder picker, which needs no
   storage permission.
+- **No copy yet?** The installer links to GOG's Ultima 4+5+6, which has
+  it with Ultima IV and VI (in the desktop and Android apps, opened in
+  the system's browser).
 - **By controller**: the installer is a menu like the rest of the game.
   A highlight starts on Scan for game files... (Choose folder... on
   Android); the d-pad, the left stick, the arrows or W A S D move it, A,

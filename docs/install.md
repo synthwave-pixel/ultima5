@@ -2,8 +2,8 @@
 
 Every build asks, the first time, for your own copy of the game: its
 folder, its files or a `.zip` (from GOG's
-[Ultima 4+5+6](https://www.gog.com/en/game/ultima_456), or the Internet Archive). The files
-stay on your device. The desktop app's Scan for game files... finds the
+[Ultima 4+5+6](https://www.gog.com/en/game/ultima_456), which the
+installer links to, or the Internet Archive). The files stay on your device. The desktop app's Scan for game files... finds the
 copy itself: beside the app, at home, and where GOG and the Linux
 launchers install games. The web game's Scan looks for a copy put on
 the site beside it, which suits anyone hosting it themselves (see Hosting
