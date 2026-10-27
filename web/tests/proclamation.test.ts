@@ -29,4 +29,25 @@ describe('the proclamation', () => {
     expect(proclaimed).toBe(true);
     expect(drawnOver).toBe(0);
   });
+
+  it('its pages read back with Left, from a page to the one before, and no further than the first', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    // Each page as it is put on the screen: the last picture drawn before the whole page is copied there.
+    let pic = '';
+    const shown: string[] = [];
+    p.fx.image = (_res, i, x, y) => {
+      pic = `${i},${x},${y}`;
+    };
+    p.fx.transfer = (from, to, x1, y1, x2, y2) => {
+      if (from === 1 && to === 0 && x1 === 0 && y1 === 0 && x2 === 0x13f && y2 === 199) shown.push(pic);
+    };
+    p.keys.push(K.Enter, K.Enter, K.Left, K.Left, K.Left, K.Enter);
+    await endingPages(g).catch((e: unknown) => {
+      if (!/ran out of keys/.test(String(e))) throw e;
+    });
+    const [first, second, third] = shown;
+    expect(new Set([first, second, third]).size).toBe(3);
+    expect(shown).toEqual([first, second, third, second, first, second]);
+  });
 });

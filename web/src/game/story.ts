@@ -16,7 +16,6 @@ import { setActor } from './actors.ts';
 import { reveal, shakeScreen, sleepTicks, TICK_MS } from './effects.ts';
 import { drawMoons, drawVitals, invertMember, setWind, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
-import { blinker, waitMark } from './waitMark.ts';
 import { getChar, getCharYN, getString } from './input.ts';
 import { Intro } from './intro.ts';
 import { Status } from './save.ts';
@@ -659,7 +658,10 @@ async function closingPages(g: Game): Promise<void> {
   const xs = g.data.bytes(0x3de2, 6);
   const ys = g.data.bytes(0x3de8, 6);
   const at = g.data.words(0x3dca, 6);
-  for (let i = 0; i < 6; i++) {
+  // Left goes back a step, from a page's first to the last of the page before (the port's), as the introduction's.
+  let i = 0;
+  let toLast = false;
+  while (i < 6) {
     const pic = res(0x18 + file[i]);
     fx.page(1);
     g.printChar(0xff);
@@ -681,27 +683,21 @@ async function closingPages(g: Game): Promise<void> {
     intro.prose.y = ys[i];
     const words = fileText(g, 'END.DAT', at[i]);
     if (!fx.prose?.([words])) intro.proseText(words);
-    fx.page(1);
-    if (i !== 0) {
-      playTune(g, closingTune(i), 'closing');
-      g.p.flushKeys();
-      await g.p.waitKey(blinker(g)); // the arrow that says the page waits (waitMark.ts)
-      waitMark(g, false);
-    }
     fx.transfer(1, 0, 0, 0, 0x13f, 199);
     fx.page(0);
-    // The page's other paragraphs, a key each (ui/storyText.ts setSteps).
-    while (fx.proseMore?.()) {
-      g.p.flushKeys();
-      await g.p.waitKey(blinker(g));
-      waitMark(g, false);
-      fx.proseNext?.();
+    if (toLast) {
+      while (fx.proseMore?.()) fx.proseNext?.();
+      toLast = false;
     }
+    // The page's other paragraphs, a key each (ui/storyText.ts setSteps); the next page's tune asked for at its last.
+    const tune = (last: boolean): void => {
+      if (last || i !== 0) playTune(g, closingTune(last ? i + 1 : i), 'closing');
+    };
+    if ((await intro.readPage(undefined, tune, i !== 0, false)) === 'back') {
+      i--;
+      toLast = true;
+    } else i++;
   }
-  playTune(g, closingTune(6), 'closing');
-  g.p.flushKeys();
-  await g.p.waitKey(blinker(g));
-  waitMark(g, false);
   fx.page(1);
   g.printChar(0xff);
   fx.image(res(0x1c), 0, 0x28, 0);

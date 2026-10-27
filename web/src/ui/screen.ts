@@ -549,8 +549,9 @@ export class Screen implements Platform {
   /** Whether the story pages' fonts are to hand; until they are (or if they never are) the pages are set as in 1988. */
   private storyFonts = false;
   private storyCanvas: OffscreenCanvasRenderingContext2D | null = null;
-  /** The steps of the story page last set still to be read (storyText.ts setSteps), each its runs. */
-  private proseLeft: Run[][] = [];
+  /** The steps of the story page last set (storyText.ts setSteps), each its runs, and which is on show. */
+  private proseSteps: Run[][] = [];
+  private proseAt = 0;
 
   private loadStoryFonts(): void {
     if (typeof FontFace === 'undefined' || typeof document === 'undefined') return;
@@ -710,6 +711,20 @@ export class Screen implements Platform {
     return { ctx, measure };
   }
 
+  /** Step `k` of the story page last set, on page 0 in place of the step shown: its words, or null where there is none. */
+  private proseStep(k: number): string | null {
+    const story = this.story;
+    const runs = this.proseSteps[k];
+    if (!story || !runs) return null;
+    this.proseAt = k;
+    this.fb.words[0] = this.fb.words[0].filter((w) => !w.run.step);
+    this.drawRuns(story.measure, runs, 0);
+    return runs
+      .filter((r) => !r.panel)
+      .map((r) => r.text)
+      .join(' ');
+  }
+
   /** Runs of the story's words set over a page: kept as words, drawn at the display's size as it is shown (show). */
   private drawRuns(measure: Measure, runs: Run[], page: number): void {
     const words: Words[] = runs.map((run) => ({
@@ -772,29 +787,21 @@ export class Screen implements Platform {
       },
       prose: (texts) => {
         const story = this.story;
-        this.proseLeft = [];
+        this.proseSteps = [];
+        this.proseAt = 0;
         if (!story) return false;
         const lit = fb.litMap(fb.page);
         // A paragraph a step (setSteps); where the steps will not go, the page's prose in one block (setProse).
         const steps = setSteps(texts, lit, story.measure);
         const runs = steps ? (steps[0] ?? []) : setProse(texts, lit, story.measure);
         if (!runs) return false;
-        this.proseLeft = steps?.slice(1) ?? [];
+        this.proseSteps = steps ?? [];
         this.drawRuns(story.measure, runs, fb.page);
         return true;
       },
-      proseMore: () => this.proseLeft.length > 0,
-      proseNext: () => {
-        const story = this.story;
-        const next = this.proseLeft.shift();
-        if (!story || !next) return '';
-        fb.words[0] = fb.words[0].filter((w) => !w.run.step);
-        this.drawRuns(story.measure, next, 0);
-        return next
-          .filter((r) => !r.panel)
-          .map((r) => r.text)
-          .join(' ');
-      },
+      proseMore: () => this.proseAt < this.proseSteps.length - 1,
+      proseNext: () => this.proseStep(this.proseAt + 1) ?? '',
+      proseBack: () => this.proseStep(this.proseAt - 1),
       choice: (question, left, right, lit) => {
         const story = this.story;
         if (!story) return false;

@@ -434,18 +434,37 @@ export class Intro {
   }
 
   /**
-   * The rest of the page on show's prose, a step at a time (ui/storyText.ts setSteps): each after a key, the page's
-   * arrow blinking for it. False where B (or Escape) was pressed instead, to leave the story.
+   * The page on show read (ui/storyText.ts setSteps: a step at a time), each step after a key, the page's arrow blinking
+   * for it, and a last key once all is read. Left goes back a step; at the first, 'back' where `back` lets it (to the
+   * page before), else nothing. `onStep` has each step's words as it is set, read on or read back; `wait` is told of
+   * each wait, and whether it is the last. 'on' once the page is read, 'out' where B (or Escape) was pressed instead -
+   * where `leave` lets them leave; else they are keys as any other.
    */
-  async proseSteps(onStep?: (words: string) => Promise<void>): Promise<boolean> {
-    while (this.fx.proseMore?.()) {
+  async readPage(
+    onStep?: (words: string) => Promise<void>,
+    wait?: (last: boolean) => void,
+    back = false,
+    leave = true,
+  ): Promise<'on' | 'back' | 'out'> {
+    const fx = this.fx;
+    for (;;) {
+      const more = fx.proseMore?.() ?? false;
+      wait?.(!more);
       this.g.p.flushKeys();
-      const k = asPad(this.g, await this.anyKey(false, true));
-      if (k === Pad.B || k === K.Escape) return false;
-      const words = this.fx.proseNext?.() ?? '';
-      await onStep?.(words);
+      const k = asPad(this.g, await this.g.p.waitKey(blinker(this.g)));
+      waitMark(this.g, false);
+      if (leave && (k === Pad.B || k === K.Escape)) return 'out';
+      if (k === K.Left) {
+        const words = fx.proseBack?.() ?? null;
+        if (words !== null) await onStep?.(words);
+        else if (back) return 'back';
+      } else if (!more) return 'on';
+      else {
+        // Set before onStep is asked for: an absent onStep's call would not set it (?.( short-circuits its arguments).
+        const words = fx.proseNext?.() ?? '';
+        await onStep?.(words);
+      }
     }
-    return true;
   }
 
   // --- Proportional text -----------------------------------------------------------
@@ -864,8 +883,11 @@ export class Intro {
     g.printChar(0xff);
     let set = 0;
     let story = this.res('STORY1.16');
-    let left = false;
-    for (let i = 0; i < 0x15; i++) {
+    // A page at a time, read a step at a time; Left goes back a step, from a page's first to the last of the page before
+    // (the port's, for words passed too quickly), where 1988 only went on.
+    let i = 0;
+    let toLast = false;
+    while (i < 0x15) {
       if (set !== sets[i]) {
         set = sets[i];
         story = this.res(`STORY${set + 1}.16`);
@@ -921,38 +943,41 @@ export class Intro {
         // as they stood, and the bolt's strike as "The arrow strikes him full in the chest!" is read.
         else if (i === STRIKE_PAGE && fx.proseMore?.()) fx.image(this.res(`STORY${sets[i - 1] + 1}.16`), pics[i - 1], px[i - 1], py[i - 1]);
       }
-      if (i !== 0) {
-        playTune(g, introTune(i), 'introduction');
-        g.p.flushKeys();
-        // B leaves the story for the title (the port's), where every key turned the next of its twenty-one pages.
-        const k = asPad(g, await this.anyKey(false, true));
-        if (k === Pad.B || k === K.Escape) {
-          left = true;
-          break;
-        }
-      }
       fx.transfer(1, 0, 0, 0, 319, 199);
       if (kinds[i] === 2) {
         fx.page(1);
         fx.image(story, 2, 0x28, 0x56);
         await fx.reveal(0x28, 0x56, 0x4b, 0x78);
       }
-      // The page's other paragraphs, a key each.
-      const strike = async (words: string): Promise<void> => {
-        if (i !== STRIKE_PAGE || !/^The arrow strikes/.test(words)) return;
+      // The bolt's page shows the Shadowlords as they stood until the strike is read, and again if read back past it.
+      let struck = false;
+      const strike = async (words: string, now = false): Promise<void> => {
+        if (i !== STRIKE_PAGE || struck === /^The arrow strikes/.test(words)) return;
+        struck = !struck;
         fx.page(1);
-        fx.image(story, pics[i], px[i], py[i]);
-        await fx.reveal(0, py[i], 319, 199);
+        // The strike dissolves in as it is read; read back, either is there at once, the key not kept waiting.
+        if (struck) fx.image(story, pics[i], px[i], py[i]);
+        else fx.image(this.res(`STORY${sets[i - 1] + 1}.16`), pics[i - 1], px[i - 1], py[i - 1]);
+        if (struck && !now) await fx.reveal(0, py[i], 319, 199);
+        else fx.transfer(1, 0, 0, py[i], 319, 199);
       };
-      if (!(await this.proseSteps(strike))) {
-        left = true;
-        break;
+      if (toLast) {
+        let words = '';
+        while (fx.proseMore?.()) words = fx.proseNext?.() ?? '';
+        await strike(words, true);
+        toLast = false;
       }
-    }
-    if (!left) {
-      playTune(g, introTune(0x15), 'introduction');
-      g.p.flushKeys();
-      await this.anyKey(false, true);
+      // The tune for the page after is asked for at its last step's wait, as 1988 asked at the wait before each page.
+      const tune = (last: boolean): void => {
+        if (last || i !== 0) playTune(g, introTune(last ? i + 1 : i), 'introduction');
+      };
+      // B leaves the story for the title (the port's), where every key turned the next of its twenty-one pages.
+      const read = await this.readPage(strike, tune, i !== 0);
+      if (read === 'out') break;
+      if (read === 'back') {
+        i--;
+        toLast = true;
+      } else i++;
     }
     fx.page(1);
     g.printChar(0xff);
@@ -1187,8 +1212,7 @@ export class Intro {
     if (!fx.prose?.([opening])) this.proseText(opening);
     fx.transfer(1, 0, 0, 0, 319, 199);
     this.prose.top = 200;
-    await this.proseSteps();
-    await this.anyKey(false, true);
+    await this.readPage();
     const m = fresh.members[0];
     this.stats = { int: m.int, dex: m.dex, str: m.str };
     this.used.fill(0);
@@ -1208,8 +1232,7 @@ export class Intro {
     if (!fx.prose?.([verdict])) this.proseText(verdict);
     this.prose.space = 5;
     fx.transfer(1, 0, 0, 0, 319, 199);
-    await this.proseSteps();
-    await this.anyKey(false, true);
+    await this.readPage();
     fx.page(1);
     g.printChar(0xff);
     fx.page(0);
