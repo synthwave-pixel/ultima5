@@ -436,33 +436,40 @@ export class Intro {
   /**
    * The page on show read (ui/storyText.ts setSteps: a step at a time), each step after a key, the page's arrow blinking
    * for it, and a last key once all is read. Left goes back a step; at the first, 'back' where `back` lets it (to the
-   * page before), else nothing. `onStep` has each step's words as it is set, read on or read back; `wait` is told of
-   * each wait, and whether it is the last. 'on' once the page is read, 'out' where B (or Escape) was pressed instead -
+   * page before), else nothing. `onStep` has each step's words as it is set, read on or read back - and gives back the
+   * key that cut its picture short, if one did, to be read as the next; `wait` is told of each wait, and whether it is
+   * the last. 'on' once the page is read, 'out' where B (or Escape) was pressed instead -
    * where `leave` lets them leave; else they are keys as any other.
    */
   async readPage(
-    onStep?: (words: string) => Promise<void>,
+    onStep?: (words: string) => Promise<number | void>,
     wait?: (last: boolean) => void,
     back = false,
     leave = true,
   ): Promise<'on' | 'back' | 'out'> {
     const fx = this.fx;
+    let ahead = 0;
     for (;;) {
       const more = fx.proseMore?.() ?? false;
       wait?.(!more);
-      this.g.p.flushKeys();
-      const k = asPad(this.g, await this.g.p.waitKey(blinker(this.g)));
-      waitMark(this.g, false);
+      let k = ahead;
+      ahead = 0;
+      if (!k) {
+        this.g.p.flushKeys();
+        k = await this.g.p.waitKey(blinker(this.g));
+        waitMark(this.g, false);
+      }
+      k = asPad(this.g, k);
       if (leave && (k === Pad.B || k === K.Escape)) return 'out';
       if (k === K.Left) {
         const words = fx.proseBack?.() ?? null;
-        if (words !== null) await onStep?.(words);
+        if (words !== null) ahead = (await onStep?.(words)) || 0;
         else if (back) return 'back';
       } else if (!more) return 'on';
       else {
         // Set before onStep is asked for: an absent onStep's call would not set it (?.( short-circuits its arguments).
         const words = fx.proseNext?.() ?? '';
-        await onStep?.(words);
+        ahead = (await onStep?.(words)) || 0;
       }
     }
   }
@@ -951,15 +958,17 @@ export class Intro {
       }
       // The bolt's page shows the Shadowlords as they stood until the strike is read, and again if read back past it.
       let struck = false;
-      const strike = async (words: string, now = false): Promise<void> => {
-        if (i !== STRIKE_PAGE || struck === /^The arrow strikes/.test(words)) return;
+      const strike = async (words: string, now = false): Promise<number> => {
+        if (i !== STRIKE_PAGE || struck === /^The arrow strikes/.test(words)) return 0;
         struck = !struck;
         fx.page(1);
-        // The strike dissolves in as it is read; read back, either is there at once, the key not kept waiting.
+        // The strike dissolves in as it is read, a key cutting it short read as the next; read back, either is there at
+        // once, the key not kept waiting.
         if (struck) fx.image(story, pics[i], px[i], py[i]);
         else fx.image(this.res(`STORY${sets[i - 1] + 1}.16`), pics[i - 1], px[i - 1], py[i - 1]);
-        if (struck && !now) await fx.reveal(0, py[i], 319, 199);
-        else fx.transfer(1, 0, 0, py[i], 319, 199);
+        if (struck && !now) return fx.reveal(0, py[i], 319, 199);
+        fx.transfer(1, 0, 0, py[i], 319, 199);
+        return 0;
       };
       if (toLast) {
         let words = '';

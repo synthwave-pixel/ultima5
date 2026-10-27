@@ -904,11 +904,12 @@ export class Screen implements Platform {
           if (main.done % perTick === perTick - 1) {
             fb.dirty = true;
             words(main.done / main.total);
-            if (this.pollKey()) {
+            const k = this.pollKey();
+            if (k) {
               words(1);
               fb.transfer(1, 0, x1, y1, x2, y2);
               if (also) fb.transfer(1, 0, ...also);
-              return true;
+              return k;
             }
             await tick();
           }
@@ -916,7 +917,7 @@ export class Screen implements Platform {
         keepUp();
         words(1);
         fb.dirty = true;
-        return false;
+        return 0;
       },
       originLogo: () => this.originLogo(),
       showWD: async (maskRes) => {

@@ -322,11 +322,11 @@ export interface Effects {
   /** Copy a rectangle between pages. */
   transfer(from: number, to: number, x1: number, y1: number, x2: number, y2: number, dx?: number, dy?: number): void;
   /**
-   * Copy page 1 to page 0 a pixel at a time in a scattered order; true if a key cut it short. `also`, a second
+   * Copy page 1 to page 0 a pixel at a time in a scattered order; the key that cut it short, else 0. `also`, a second
    * rectangle, dissolves in step with the first, as far through it at every moment. `ms`, how long it takes (else 512
    * pixels a tick, the intro's pace: some three seconds for the view).
    */
-  reveal(x1: number, y1: number, x2: number, y2: number, also?: [number, number, number, number], ms?: number): Promise<boolean>;
+  reveal(x1: number, y1: number, x2: number, y2: number, also?: [number, number, number, number], ms?: number): Promise<number>;
   /** The Origin logo drawn line by line from page 1; true if a key cut it short. */
   originLogo(): Promise<boolean>;
   /** "Warriors of Destiny" appearing through its mask (the four frames are on page 1). */

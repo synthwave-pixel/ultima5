@@ -57,7 +57,7 @@ export class FakePlatform implements Platform {
     image: () => {},
     bitImage: () => {},
     transfer: () => {},
-    reveal: async () => false,
+    reveal: async () => 0,
     originLogo: async () => false,
     showWD: async () => {},
     nextWDFrame: () => {},
