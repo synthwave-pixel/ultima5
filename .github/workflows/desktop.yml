@@ -13,8 +13,9 @@
 # A release's notes are GitHub's generated ones (the compare link). The
 # release job first looks for a section of the root README headed with
 # the release's version ("### v1.0.37", or "### v1.0.37, <date>"), through
-# desktop/release-notes.cjs, and puts it above them; a release without
-# one says so in a warning and goes out with the generated notes alone. Desktop builds are unsigned: see "Desktop app,
+# desktop/release-notes.cjs, and puts it above them; the README has no
+# such section, so a release says so in a warning and goes out with the
+# generated notes alone. Desktop builds are unsigned: see "Desktop app,
 # and the Steam Deck" in docs/install.md for what that means on each
 # platform. The APK is signed with the committed sideload key unless the
 # ANDROID_KEYSTORE_* secrets provide a release key. Linux gets a Flatpak

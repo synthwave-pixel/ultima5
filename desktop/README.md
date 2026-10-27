@@ -46,8 +46,8 @@ A release's notes are GitHub's generated ones, the compare link with
 the release before it. The release job first runs `release-notes.cjs`,
 which looks in the root README for a section headed with the release's
 version (`### v1.0.27`, or `### v1.0.27, September 18, 2026`) and prints
-it with each wrapped item joined onto one line; where it has no such
-section, the job warns and the release goes out with the generated
+it with each wrapped item joined onto one line; the README has no such
+section, so the job warns and the release goes out with the generated
 notes alone. Adding a section headed `### v<version>` to the README
 before the run would put its text above them; since the patch is the run
 number, the heading must name the number the run will get, one more than

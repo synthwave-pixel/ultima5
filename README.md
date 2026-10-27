@@ -143,19 +143,6 @@ update has downloaded. The desktop and Android apps say in the game when
 a newer version is out, and offer it - the restart into it, or its
 release's page to read and download from.
 
-### v1.1.153
-
-- The story pages (the introduction, the gypsy, the ending) are read a
-  paragraph at a time, larger and in the game's own lettering, each
-  paragraph a little lower on the page than the last, with the first
-  letter dropped in copper.
-- Long paragraphs are split at their sentences, and the introduction is
-  broken in more places for easier reading.
-- Iolo's portrait stays in the upper right through his tale.
-- The Shadowlord's bolt strikes Shamino as that sentence is read.
-- Left goes back a step in the story pages, to reread what was passed
-  too quickly.
-
 ## New to Ultima V?
 
 Ultima V is a role-playing game from 1988. You are the Avatar, called back
