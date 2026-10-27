@@ -199,6 +199,8 @@ const ADDRESSED: readonly [string, number][] = [
  */
 /** The introduction's page of the Shadowlord's bolt (its picture the bolt striking, the page before's before it). */
 const STRIKE_PAGE = 11;
+/** Where the Standard look holds Iolo's portrait through his pages (kinds 4-6): the upper right, 144 pixels wide. */
+const IOLO_X = 176;
 
 export async function askAddress(g: Game): Promise<number | null> {
   const t = g.text;
@@ -882,8 +884,15 @@ export class Intro {
           fx.image(text, 3, 0xf8, 0);
         }
       }
-      fx.image(story, pics[i], px[i], py[i]);
-      if (kinds[i] >= 4) fx.image(story, kinds[i] * 2 - 5, px[i], py[i] + 0x37);
+      // Iolo's pages (kinds 4-6) draw his head, and his hands below it. 1988 moved him corner to corner, page to page;
+      // where the page is set the Standard look's way he holds still in the upper right (the port's).
+      const portrait = (x: number, y: number): void => {
+        fx.image(story, pics[i], x, y);
+        if (kinds[i] >= 4) fx.image(story, kinds[i] * 2 - 5, x, y + 0x37);
+      };
+      const held = kinds[i] >= 4;
+      if (held) portrait(IOLO_X, 0);
+      else portrait(px[i], py[i]);
       this.prose.left = [pages[i * 2], pages[i * 2 + 1]];
       this.prose.right = [rights[i * 2], rights[i * 2 + 1]];
       this.prose.top = tops[i];
@@ -901,7 +910,13 @@ export class Intro {
         }
       } else {
         const words = this.fileText('STORY.DAT', storyAt[i]);
-        if (!fx.prose?.([words])) this.proseText(words);
+        const laid = fx.prose?.([words]) ?? false;
+        if (!laid && held) {
+          // Set as 1988 did: his portrait where 1988 had it, for its spans to run round.
+          g.printChar(0xff);
+          portrait(px[i], py[i]);
+        }
+        if (!laid) this.proseText(words);
         // The Shadowlord's bolt read in steps (the port's): the page opens on the picture before it, the Shadowlords
         // as they stood, and the bolt's strike as "The arrow strikes him full in the chest!" is read.
         else if (i === STRIKE_PAGE && fx.proseMore?.()) fx.image(this.res(`STORY${sets[i - 1] + 1}.16`), pics[i - 1], px[i - 1], py[i - 1]);
