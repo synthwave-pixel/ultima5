@@ -13,7 +13,7 @@
 // one thing it may ask of the disk (preload.cjs, scan.cjs). Launched from a
 // non-Steam shortcut, the app puts Steam's library artwork in place, once
 // (steamArt.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
-// (updates.cjs).
+// (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs).
 const electron = require('electron');
 const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
@@ -24,6 +24,11 @@ const { scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const { applyUpdate, checkForUpdates, currentOffer, onOffer, toldOfUpdate } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
+const { portableData } = require('./portable.cjs');
+
+// The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it.
+const beside = portableData({ env: process.env, old: app.getPath('userData') });
+if (beside) app.setPath('userData', beside);
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
 // its seccomp sandbox has killed apps Steam launched. The game is a 2D canvas that needs neither, so under gamescope

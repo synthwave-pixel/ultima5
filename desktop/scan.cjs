@@ -142,11 +142,14 @@ function findCopies(rootList, wanted, { platform, home } = {}) {
   return copies;
 }
 
-/** This machine's roots: the app's own place (its .app bundle's folder on macOS), home, and every fixed drive. */
+/** This machine's roots: the app's own place (its .app bundle's folder on macOS; the portable .exe's own folder, not
+ * the temporary one it runs from), home, and every fixed drive. */
 function scanForGameFiles(wanted) {
   const { app } = require('electron');
   const exe = app.getPath('exe');
-  const appDir = process.platform === 'darwin' ? dirname(exe.replace(/\/Contents\/MacOS\/[^/]+$/, '')) : dirname(exe);
+  const appDir =
+    process.env.PORTABLE_EXECUTABLE_DIR ||
+    (process.platform === 'darwin' ? dirname(exe.replace(/\/Contents\/MacOS\/[^/]+$/, '')) : dirname(exe));
   const drives = process.platform === 'win32' ? 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => `${l}:`).filter((d) => existsSync(`${d}\\`)) : [];
   const platform = process.platform;
   const home = app.getPath('home');

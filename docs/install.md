@@ -85,7 +85,12 @@ Steam's Game Mode no page is offered, and a downloaded update is
 installed when the game quits.
 
 - **Windows**: an installer and a portable `.exe`. Both are unsigned, so
-  SmartScreen asks once; choose More info, then Run anyway.
+  SmartScreen asks once; choose More info, then Run anyway. The installed
+  game keeps its save and settings in `AppData\Roaming\Ultima V`; the
+  portable `.exe` keeps them in an `Ultima V Data` folder beside itself,
+  so the two move together (a portable copy that last ran from AppData
+  brings its save along the first time). Where that folder cannot be
+  written, as on a read-only drive, it falls back to AppData.
 - **macOS**: an Apple Silicon `.dmg`, for macOS 13 (Ventura) or later
   (Intel Macs: use the web version). Signed by no Apple developer, so the first launch is refused. Try to open the app
   once, then open System Settings, choose Privacy & Security, scroll down
