@@ -160,9 +160,18 @@ describes how the Modern look is drawn.
   into it, or Read sign - then gives way to its English in the same wave,
   a key held against it letting it run on, and is runes again once the
   party has stepped away. Without the party's light, a sign is not seen.
-- **The story pages** (the introduction, the gypsy, the ending) are set in
-  a real book face, their words still read from the player's files, with
-  the first letter dropped two lines in copper blackletter.
+- **The story pages** (the introduction, the gypsy, the ending) are read a
+  paragraph at a time, in the game's own lettering at a size meant for
+  reading, their words still read from the player's files. Each paragraph
+  is set a little lower on the page than the one before, so the eye walks
+  down the page rather than going back to the top; one too long for the
+  space is split evenly at its sentences, and a few long ones are broken
+  where the telling turns. A page's first letter is dropped two lines in
+  copper. Iolo's portrait holds still in the upper right through his
+  tale, where 1988 moved it corner to corner, and the Shadowlord's bolt
+  strikes Shamino as that sentence is read. Where a page's words will not
+  go a paragraph at a time, they are set in one block in a book face
+  instead. The PC (1988) look keeps 1988's pages as they were.
 - **Music.** The DOS game had none; the Ultima V Upgrade (The Exodus
   Project, 2001) gave it the Apple II and Commodore 128 versions' songs as
   MIDI, and they play where the Upgrade plays them, read from its driver

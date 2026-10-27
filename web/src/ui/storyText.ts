@@ -1,13 +1,14 @@
 /**
  * storyText.ts
  *
- * The Standard look's story pages - the introduction, the gypsy, the ending - set in a real font (IM Fell English,
- * the blackletter UnifrakturMaguntia for a page's first letter) rather than the game's proportional one. The words
- * are the player's own (STORY.DAT, QUESTION.DAT, END.DAT); the pictures are the game's, where the game puts them.
- * What changes is where the words go: 1988 ran them in two justified spans round the picture, the lines between
- * pulled wide; here a page's prose is read a paragraph at a time (setSteps), ragged right at the one size, in the
- * page's clearest space, each paragraph a little lower than the last, the page's first letter dropped two lines in
- * blackletter. Where the steps will not go, all of it is one block, as large as it will go (setProse).
+ * The Standard look's story pages - the introduction, the gypsy, the ending - set anew rather than in the game's
+ * proportional font. The words are the player's own (STORY.DAT, QUESTION.DAT, END.DAT); the pictures are the game's,
+ * where the game puts them (but Iolo's, intro.ts). What changes is where the words go: 1988 ran them in two justified
+ * spans round the picture, the lines between pulled wide; here a page's prose is read a paragraph at a time
+ * (setSteps), in the game's own lettering (Sixtyfour), ragged right at the one size, in the page's clearest space,
+ * each paragraph a little lower than the last, the page's first letter dropped two lines in copper. Where the steps
+ * will not go, all of it is one block in a book face (IM Fell English, its first letter in the blackletter
+ * UnifrakturMaguntia), as large as it will go (setProse).
  *
  * This is the setting: which space, what size, where each line goes, as runs of text in the colour page's pixels
  * (four to an EGA pixel). The screen draws them (screen.ts).
