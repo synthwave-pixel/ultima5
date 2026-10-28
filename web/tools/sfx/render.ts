@@ -32,7 +32,7 @@ import { REPEATED, standard } from '../../src/audio/chip.ts';
 import { u3Effect } from '../../src/audio/chip3.ts';
 import { RULES } from '../../src/audio/effects.ts';
 import { playRemaster } from '../../src/audio/remaster.ts';
-import { BANKED, cueKey, NOTE_BANK, noteKey, sfxKey, soften, SUITES, type Suite } from '../../src/audio/sfxKeys.ts';
+import { BANKED, cueKey, NOTE_BANK, noteKey, sfxKey, type SfxManifest, soften, SUITES, type Suite } from '../../src/audio/sfxKeys.ts';
 import { arrangementsFor, type Soundtrack } from '../../src/audio/soundtracks.ts';
 import type { XmiEvent, XmiSequence } from '../../src/audio/xmi.ts';
 import { TUNE_FILES } from '../../src/game/music.ts';
@@ -56,9 +56,6 @@ const RING = 0.5;
 const LEVEL = { standout: -20, repeated: -27, other: -24 };
 /** Opus at 48 kbps, in Ogg, as the music is. */
 const CODEC = ['-c:a', 'libopus', '-b:a', '48k'];
-
-/** Where each sound lies in a suite's file: its variants, each `[at, length]` in seconds. */
-export type SfxManifest = Record<Suite, { file: string; slices: Record<string, [number, number][]> }>;
 
 /** The soundtrack a suite sits on. */
 export const SOUNDTRACK: Record<Suite, Soundtrack> = { classical: 'classical', electronic: 'electronic', ambient: 'remastered' };

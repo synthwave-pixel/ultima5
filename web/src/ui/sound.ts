@@ -36,13 +36,25 @@ import {
   waterfallRoar,
 } from '../audio/chip3.ts';
 import { identify, type Kind, type WordSource } from '../audio/effects.ts';
+import sfxManifest from '../audio/sfxManifest.json';
+import { cueKey, sfxKey, type SfxManifest, soften, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { noiseRuns, pulseRuns, renderRuns, runsLength, sweepRuns, toneRuns } from '../audio/speaker.ts';
 import type { Hold } from '../game/io.ts';
 import { TUNE_FILES } from '../game/music.ts';
 import { MUSIC, MusicPlayer } from './music.ts';
+import { bankRate, SfxBank, type Slice } from './sfxBank.ts';
+
+/**
+ * The effects that can play: the Standard chip set, the Original PC speaker, or one of the suites that match the
+ * soundtracks (audio/sfxKeys.ts), each effect a slice of the suite's rendered file (sfxBank.ts).
+ */
+export type EffectsSet = SoundSet | Suite;
+const isSuite = (set: EffectsSet): set is Suite => (SUITES as readonly string[]).includes(set);
+/** A slice of a suite's file, played at a rate (a bank's note put at its pitch, a repeated effect varied). */
+type Played = Slice & { rate: number };
 
 /** The effects' level into the mix (the chip voices are levelled in chip.ts; the speaker is a full-scale 0 or 1). */
-const EFFECT_LEVEL = { standard: 1, original: 0.3 };
+const EFFECT_LEVEL: Record<EffectsSet, number> = { standard: 1, original: 0.3, classical: 1, electronic: 1, ambient: 1 };
 /**
  * The music's gain at full (100%): the rendered tunes are levelled at an RMS of -20 dBFS, their peaks at -1 dBFS at
  * most (tools/music/pcm.ts level), so unity is their own level, with room under full scale for the effects at their
@@ -62,7 +74,7 @@ export function musicGain(level: number): number {
  * or level that is none (a script's, or a setting from before the mixer: 'off') sounds as the Standard set, or not at
  * all, rather than giving the audio a gain of NaN, which throws.
  */
-export function effectsGain(set: SoundSet, level: number): number {
+export function effectsGain(set: EffectsSet, level: number): number {
   const gain = ((EFFECT_LEVEL[set] ?? EFFECT_LEVEL.standard) / levelGain(8)) * levelGain(level);
   return Number.isFinite(gain) ? gain : 0;
 }
@@ -147,7 +159,11 @@ export class PcSound implements Sound {
   /** How near what the next ambient call sounds is (squares, squared: frame.ts ambientSound). */
   private near2 = 0;
   /** Which effects play (the Sound FX setting). */
-  private effects: SoundSet = 'standard';
+  private effects: EffectsSet = 'standard';
+  /** The suites' rendered files, the one in use fetched and decoded when it is chosen. */
+  private bank = new SfxBank(sfxManifest as unknown as SfxManifest, (file) =>
+    fetch(`${import.meta.env.BASE_URL}${file}`).then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(res.statusText)))),
+  );
   /** How loud they play (the Sound FX level, 0-10); at 0 none is started. */
   private effectsLevel = 8;
   private readonly player = new MusicPlayer(() => this.ctx, musicGain(6));
@@ -238,7 +254,7 @@ export class PcSound implements Sound {
    * and waited a moment at most. The footfalls a turn repeats are a little different each time.
    */
   async cue(name: string, whole = false): Promise<void> {
-    if (this.effects !== 'standard' || this.effectsLevel === 0) return;
+    if (this.effects === 'original' || this.effectsLevel === 0) return;
     const varies = name === 'HorseWalk';
     let pcm = varies ? null : (this.cues.get(name) ?? null);
     if (!pcm) {
@@ -246,7 +262,8 @@ export class PcSound implements Sound {
       if (!varies) this.cues.set(name, pcm);
     }
     const ctx = this.ctx;
-    if (ctx && this.out) this.play(ctx, pcm, `cue:${name}`);
+    const voice = pcm;
+    if (ctx && this.out) this.play(ctx, isSuite(this.effects) ? () => this.inSuite(cueKey(name), null, () => voice) : voice, `cue:${name}`);
     await this.wait((whole ? pcm.length / RATE : Math.min(pcm.length / RATE, PACE)) * 1000);
   }
 
@@ -256,35 +273,65 @@ export class PcSound implements Sound {
 
   /** Start an effect now, as the ultima3 port mixes them - water in the Standard set kept sounding instead. */
   private start(ctx: AudioContext, kind: Kind, args: number[], name: string): void {
-    if (WATERS[name] && this.effects === 'standard') return this.water(ctx, name);
-    this.play(ctx, () => (this.effects === 'original' ? renderRuns(RUNS[kind](args), RATE) : this.chip(kind, args)), name);
+    if (WATERS[name] && this.effects !== 'original') return this.water(ctx, name);
+    if (this.effects === 'original') return this.play(ctx, () => renderRuns(RUNS[kind](args), RATE), name);
+    if (!isSuite(this.effects)) return this.play(ctx, () => this.chip(kind, args), name);
+    const effect = identify(this.data, kind, args);
+    const key = sfxKey(effect, kind, args);
+    if (key === 'silent') return;
+    const varies = !!effect && REPEATED.has(effect.name);
+    this.play(ctx, () => this.inSuite(key?.key ?? null, key?.hz ?? (varies ? 0 : null), () => this.chip(kind, args)), name);
+  }
+
+  /**
+   * What a suite plays for `key`: its slice - at the bank note's pitch `hz`, or varied a little where `hz` is 0 (an
+   * effect a turn repeats), or as rendered - or, before the suite's file has come, nothing; and for a key it has no
+   * sound for (or none), `voice`, the chip's, softened.
+   */
+  private inSuite(key: string | null, hz: number | null, voice: () => Float32Array): Played | Float32Array | null {
+    const suite = this.effects as Suite;
+    if (key && this.bank.has(suite, key)) {
+      const slice = this.bank.slice(suite, key, Math.random);
+      if (!slice) return null;
+      const rate = hz ? bankRate(hz, key) : hz === 0 ? Math.pow(2, ((Math.random() - 0.5) * 0.8) / 12) : 1;
+      return { ...slice, rate };
+    }
+    return soften(voice());
   }
 
   /**
    * Play effect `name` now, as the ultima3 port mixes: not again within a few dozen milliseconds, and not over a long
    * one still sounding. `make` gives its sound, made only when it plays.
    */
-  private play(ctx: AudioContext, make: Float32Array | (() => Float32Array), name: string): void {
+  private play(ctx: AudioContext, make: Float32Array | (() => Float32Array | Played | null), name: string): void {
     // Held, the clock stands still: a sound started now would wait there and sound with the rest on the hold's lifting.
     if (ctx.state !== 'running') return;
     const now = performance.now();
     if (now - (this.lastStart.get(name) ?? -Infinity) < MIN_INTERVAL_MS) return;
     if ((this.ends.get(name) ?? 0) > ctx.currentTime) return; // a long one still sounding
+    const sound = typeof make === 'function' ? make() : make;
+    if (!sound) return;
     this.lastStart.set(name, now);
-    this.sound(ctx, typeof make === 'function' ? make() : make, name);
+    this.sound(ctx, sound, name);
   }
 
-  /** Sound `pcm` into the mix: a long one marked as sounding, and the music lowered under it. */
-  private sound(ctx: AudioContext, pcm: Float32Array, name: string): void {
-    if (pcm.length <= 1) return;
-    const played = pcm.length / RATE;
+  /** Sound `pcm` (or a suite's slice) into the mix: a long one marked as sounding, and the music lowered under it. */
+  private sound(ctx: AudioContext, pcm: Float32Array | Played, name: string): void {
+    if (pcm instanceof Float32Array && pcm.length <= 1) return;
+    const played = pcm instanceof Float32Array ? pcm.length / RATE : pcm.length / pcm.rate;
     const start = ctx.currentTime + 0.005;
-    const buf = ctx.createBuffer(1, pcm.length, RATE);
-    buf.copyToChannel(pcm as Float32Array<ArrayBuffer>, 0);
     const src = ctx.createBufferSource();
-    src.buffer = buf;
+    if (pcm instanceof Float32Array) {
+      const buf = ctx.createBuffer(1, pcm.length, RATE);
+      buf.copyToChannel(pcm as Float32Array<ArrayBuffer>, 0);
+      src.buffer = buf;
+    } else {
+      src.buffer = pcm.buffer;
+      src.playbackRate.value = pcm.rate;
+    }
     src.connect(this.out!);
-    src.start(start);
+    if (pcm instanceof Float32Array) src.start(start);
+    else src.start(start, pcm.at, pcm.length);
     if (played >= LONG && !TIMED.has(name)) this.ends.set(name, start + played);
     if (ducks(name, played)) this.player.duck(start, start + played);
   }
@@ -454,11 +501,12 @@ export class PcSound implements Sound {
     this.musicAgain();
   }
 
-  /** The Sound FX setting changed: the set, and the level it is heard at. */
-  setEffects(set: SoundSet, level: number): void {
+  /** The Sound FX setting changed: the set, and the level it is heard at. A suite's file is fetched once it is chosen. */
+  setEffects(set: EffectsSet, level: number): void {
     this.effects = set;
     this.effectsLevel = level;
-    if (set !== 'standard' || level === 0) this.hush(true);
+    if (set === 'original' || level === 0) this.hush(true);
+    if (isSuite(set) && this.ctx) void this.bank.load(this.ctx, set);
     if (this.out) this.out.gain.value = effectsGain(set, level);
   }
 

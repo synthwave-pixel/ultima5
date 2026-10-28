@@ -1,3 +1,5 @@
 dist
 node_modules
 public
+# Written by the effects render (tools/sfx/render.ts) as it lays the sounds out.
+src/audio/sfxManifest.json

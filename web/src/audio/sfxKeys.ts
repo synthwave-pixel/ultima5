@@ -63,3 +63,6 @@ export function soften(pcm: Float32Array, rate = 44100): Float32Array {
   for (let i = 0; i < pcm.length; i++) out[i] = y += k * (pcm[i] - y);
   return out;
 }
+
+/** Where each sound lies in a suite's file (tools/sfx/render.ts): its variants, each `[at, length]` in seconds. */
+export type SfxManifest = Record<Suite, { file: string; slices: Record<string, [number, number][]> }>;
