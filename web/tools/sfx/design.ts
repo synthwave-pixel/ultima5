@@ -5,7 +5,7 @@
  * (smooth, even noise through a low-pass that opens and closes, over a sub body), a power riser (a glitter of digital
  * partials climbing in steps, flickering), an air shimmer (tiny high sparkles), a sub drop and a sub impact, and a
  * room for them to ring in. Each layer is stereo, at 44.1 kHz; the sub layers carry a quieter octave above, so their
- * weight still reads on a phone's or a handheld's small speakers. For the magic's audition (audition.ts).
+ * weight still reads on a phone's or a handheld's small speakers. The magic is made of them (magic.ts).
  */
 
 import type { Stereo } from '../music/pcm.ts';

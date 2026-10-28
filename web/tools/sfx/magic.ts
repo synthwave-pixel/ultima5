@@ -3,7 +3,7 @@
  *
  * The magic, as sound design rather than music (design.ts), the same in all three suites (render.ts puts it in every
  * suite's file): air and weight, nothing bright, neither good nor ill - a spell may heal or harm, so it sounds like
- * power, not like a mood. Built from what the user picked by ear in the audition (audition.ts): the whoomph, the
+ * power, not like a mood. Built from what the user picked by ear in an audition of candidates: the whoomph, the
  * impact, the collapse and the implosion, the fizzle, the swirl, the soft open air, the sinking breath.
  *
  *   spells        a whoomph growing with the circle; a blow joins it from the fourth, the ground rumbles from the seventh
