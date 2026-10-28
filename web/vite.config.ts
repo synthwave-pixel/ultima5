@@ -112,8 +112,10 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         // The music (some 60 MB) is not fetched with the page: each tune is fetched the first time it plays, then kept
-        // (runtimeCaching below). The XMI files are only the render's source (tools/music).
-        globPatterns: ['**/*.{js,css,html,png,gif,jpg,svg,wav,json,webmanifest,ttf}'],
+        // (runtimeCaching below). The XMI files are only the render's source (tools/music). The effects are: the three
+        // suites (some 5 MB, tools/sfx/render.ts) are fetched with the page, so an effect never waits on the network and
+        // changing the Sound never needs it.
+        globPatterns: ['**/*.{js,css,html,png,gif,jpg,svg,wav,json,webmanifest,ttf}', 'sfx/*.ogg'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         globIgnores: [
           // A shared link's picture (index.html og:image), for the sites that show it, not the game.
