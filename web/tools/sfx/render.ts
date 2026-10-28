@@ -8,7 +8,9 @@
  * as the Classical styles are), Ambient through remaster.ts's voices,
  * Electronic through engine.ts's playSfx. Each sound is cut half a second
  * past its score's length (faded), set at its level (the loudest 100 ms:
- * a standout -20 dBFS, an effect a turn repeats -27, the rest -24), and laid
+ * a standout -20 dBFS, an effect a turn repeats -27, the rest -24), softened
+ * where its highs stand above its soundtrack's music more than the rules
+ * allow (tame), and laid
  * end to end into one Opus file a suite, web/public/sfx/<suite>.<hash>.ogg,
  * with web/src/audio/sfxManifest.json saying where each sound lies in it.
  * The effects no score voices (steps, blows, water...) are the chip's,
@@ -40,7 +42,7 @@ import { CUES } from '../../src/dev/sfxCatalogue.ts';
 import { renderOriginal } from '../music/original.ts';
 import { encode, type Stereo } from '../music/pcm.ts';
 import { playSfx } from '../music/styles/engine.ts';
-import { type Bands, bandsAverage, checkSuite, type Checked, loudest } from './check.ts';
+import { type Bands, bandsAverage, bandsLoudest, checkSuite, type Checked, loudest } from './check.ts';
 import { bankScore, type Score, SCORES, VARIANTS } from './scores.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -88,6 +90,39 @@ export function levelSlice(pcm: Stereo, targetDb: number, peakDb = -1): void {
   if (peak === 0) return;
   const gain = Math.min(Math.pow(10, (targetDb - now) / 20), Math.pow(10, peakDb / 20) / peak);
   for (const c of pcm) for (let i = 0; i < c.length; i++) c[i] *= gain;
+}
+
+/** A one-pole low-pass at `hz`, applied twice (12 dB an octave). */
+function lowPass(pcm: Stereo, hz: number): Stereo {
+  const k = 1 - Math.exp((-2 * Math.PI * hz) / RATE);
+  return pcm.map((c) => {
+    const out = Float32Array.from(c);
+    for (let pass = 0; pass < 2; pass++) {
+      let y = 0;
+      for (let i = 0; i < out.length; i++) out[i] = y += k * (out[i] - y);
+    }
+    return out;
+  }) as Stereo;
+}
+
+/**
+ * `pcm` (levelled to `level`) as the rules allow it: where its highs stand more than `margin` dB above `music`'s in a
+ * band (check.ts), softened by a low-pass, lower step by step until they do not, and levelled again; `pcm` itself
+ * where it passes. The voice keeps all the brightness the rule allows.
+ */
+export function tame(pcm: Stereo, music: Bands, margin: number, level: number): Stereo {
+  const passes = (p: Stereo): boolean => {
+    const b = bandsLoudest(p);
+    return b.presence <= music.presence + margin + 0.05 && b.sibilance <= music.sibilance + margin + 0.05;
+  };
+  if (passes(pcm)) return pcm;
+  let out = pcm;
+  for (const hz of [8000, 6000, 4500, 3500, 2800, 2200, 1800, 1400, 1100, 900, 700]) {
+    out = lowPass(pcm, hz);
+    levelSlice(out, level);
+    if (passes(out)) return out;
+  }
+  return out;
 }
 
 /** `pcm` cut `RING` past `length` where it runs on, faded over that last stretch; its last 10 ms faded in any case. */
@@ -210,8 +245,9 @@ async function main(): Promise<void> {
     process.stdout.write(', rendering');
     const done: { key: string; pcm: Stereo; standout: boolean }[] = [];
     for (const s of sounds()) {
-      const pcm = finish(await renderScore(suite, s.score), s.score.length);
-      levelSlice(pcm, s.level);
+      const rendered = finish(await renderScore(suite, s.score), s.score.length);
+      levelSlice(rendered, s.level);
+      const pcm = tame(rendered, ref, s.score.standout ? 10 : 6, s.level);
       done.push({ key: s.key, pcm, standout: !!s.score.standout });
       if (done.length % 20 === 0) process.stdout.write('.');
     }

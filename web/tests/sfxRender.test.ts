@@ -2,8 +2,8 @@ import { OfflineAudioContext } from 'node-web-audio-api';
 import { describe, expect, it } from 'vitest';
 import type { XmiSequence } from '../src/audio/xmi.ts';
 import { playSfx } from '../tools/music/styles/engine.ts';
-import { checkSuite, loudest, LIMITS } from '../tools/sfx/check.ts';
-import { finish, layOutAtlas, levelSlice, toSequence } from '../tools/sfx/render.ts';
+import { bandsLoudest, checkSuite, loudest, LIMITS } from '../tools/sfx/check.ts';
+import { finish, layOutAtlas, levelSlice, tame, toSequence } from '../tools/sfx/render.ts';
 import type { Stereo } from '../tools/music/pcm.ts';
 
 /** Notes as a sequence: each `[at, program, note, length]` on a channel of its own. */
@@ -118,5 +118,26 @@ describe('the render of the suites', () => {
     expect(failures.length).toBeGreaterThanOrEqual(1);
     expect(failures.every((f) => f.includes('bright'))).toBe(true);
     expect(failures.some((f) => f.includes('2-5 kHz'))).toBe(true);
+  });
+
+  it('tames a slice whose highs break the rule until they pass, its loudness kept', () => {
+    // A bright square at 600 Hz: its harmonics fill 2-10 kHz.
+    const sq = Float32Array.from({ length: RATE / 2 }, (_, i) => (Math.sin((2 * Math.PI * 600 * i) / RATE) >= 0 ? 0.3 : -0.3));
+    const pcm: Stereo = [sq, Float32Array.from(sq)];
+    levelSlice(pcm, -24);
+    const music = { presence: -45, sibilance: -55 };
+    const before = bandsLoudest(pcm);
+    expect(before.presence).toBeGreaterThan(music.presence + 6);
+    const out = tame(pcm, music, 6, -24);
+    const after = bandsLoudest(out);
+    expect(after.presence).toBeLessThanOrEqual(music.presence + 6 + 0.05);
+    expect(after.sibilance).toBeLessThanOrEqual(music.sibilance + 6 + 0.05);
+    expect(loudest(out)).toBeCloseTo(-24, 0);
+  });
+
+  it('leaves a slice that passes as it is', () => {
+    const pcm = sine(0.5, 0.25, 220);
+    levelSlice(pcm, -24);
+    expect(tame(pcm, { presence: -45, sibilance: -55 }, 6, -24)).toBe(pcm);
   });
 });
