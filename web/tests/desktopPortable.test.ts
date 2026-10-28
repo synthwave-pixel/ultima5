@@ -1,6 +1,6 @@
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DATA, portableData } from '../../desktop/portable.cjs';
 
@@ -15,13 +15,13 @@ describe('the portable .exe keeps its data beside itself', () => {
   });
 
   it('is nothing for any other copy', () => {
-    expect(portableData({ env: {}, old: '/nowhere' })).toBeNull();
+    expect(portableData({ env: {}, appData: '/nowhere', name: 'Ultima V' })).toBeNull();
   });
 
   it('makes a folder next to the .exe', () => {
     const exeDir = join(fresh(), 'games');
     mkdirSync(exeDir);
-    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, old: join(root, 'none') });
+    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, appData: join(root, 'none'), name: 'Ultima V' });
     expect(data).toBe(join(exeDir, DATA));
     expect(existsSync(data!)).toBe(true);
   });
@@ -36,7 +36,7 @@ describe('the portable .exe keeps its data beside itself', () => {
     writeFileSync(join(old, 'SingletonLock'), '');
     const exeDir = join(root, 'stick');
     mkdirSync(exeDir);
-    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, old })!;
+    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, appData: dirname(old), name: basename(old) })!;
     expect(readFileSync(join(data, 'Local Storage', 'leveldb', '000003.log'), 'utf8')).toBe('the save');
     expect(existsSync(join(data, 'window.json'))).toBe(true);
     for (const gone of ['Code Cache', 'GPUCache', 'SingletonLock']) expect(existsSync(join(data, gone))).toBe(false);
@@ -50,7 +50,7 @@ describe('the portable .exe keeps its data beside itself', () => {
     const exeDir = join(root, 'exe');
     mkdirSync(join(exeDir, DATA), { recursive: true });
     writeFileSync(join(old, 'window.json'), 'stale');
-    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, old })!;
+    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, appData: dirname(old), name: basename(old) })!;
     expect(existsSync(join(data, 'window.json'))).toBe(false);
   });
 
@@ -59,7 +59,19 @@ describe('the portable .exe keeps its data beside itself', () => {
     mkdirSync(exeDir);
     chmodSync(exeDir, 0o555);
     chmodSync(root, 0o555);
-    expect(portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, old: '/nowhere' })).toBeNull();
+    expect(portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, appData: '/nowhere', name: 'Ultima V' })).toBeNull();
     chmodSync(exeDir, 0o755);
+  });
+
+  it("finds an earlier copy's data in AppData by the app's name, without asking Electron for it", () => {
+    // Asking Electron for its default data folder (app.getPath('userData')) makes it, empty, though the portable .exe
+    // keeps its data elsewhere: the folder is named from AppData and the app's name instead.
+    const appData = join(fresh(), 'Roaming');
+    mkdirSync(join(appData, 'Ultima V'), { recursive: true });
+    writeFileSync(join(appData, 'Ultima V', 'window.json'), '{}');
+    const exeDir = join(root, 'stick');
+    mkdirSync(exeDir);
+    const data = portableData({ env: { PORTABLE_EXECUTABLE_DIR: exeDir }, appData, name: 'Ultima V' })!;
+    expect(existsSync(join(data, 'window.json'))).toBe(true);
   });
 });

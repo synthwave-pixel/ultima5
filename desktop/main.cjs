@@ -26,8 +26,9 @@ const { applyUpdate, checkForUpdates, currentOffer, onOffer, toldOfUpdate } = re
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 
-// The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it.
-const beside = portableData({ env: process.env, old: app.getPath('userData') });
+// The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it - and
+// before anything asks for the data folder, which Electron makes as it is asked (portable.cjs).
+const beside = portableData({ env: process.env, appData: app.getPath('appData'), name: app.getName() });
 if (beside) app.setPath('userData', beside);
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and

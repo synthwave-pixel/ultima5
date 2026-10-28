@@ -4,7 +4,9 @@
 // copy. Instead they go in a folder next to the .exe, so the game moves with it (a USB stick, a games folder).
 // A portable copy that ran before this kept its data in AppData: the first time, that is copied over (not moved, as an
 // installed copy may share it), less Chromium's caches. A folder beside the .exe that cannot be written (a read-only
-// stick, Program Files) leaves the data where Electron would keep it.
+// stick, Program Files) leaves the data where Electron would keep it. That old folder is found by AppData and the app's
+// name, not by asking Electron for its data folder: asked for (app.getPath('userData')), Electron makes it at once, and
+// the portable .exe would leave an empty Ultima V folder in AppData that it never uses.
 const { cpSync, existsSync, mkdirSync, renameSync, rmSync } = require('node:fs');
 const { basename, join } = require('node:path');
 
@@ -13,11 +15,15 @@ const DATA = 'Ultima V Data';
 /** Chromium's own throwaway files: caches, crash reports, the running instance's locks. */
 const throwaway = (name) => /cache/i.test(name) || name === 'Crashpad' || name.startsWith('Singleton') || name === 'lockfile';
 
-/** The folder the portable .exe's data goes in, made (and filled from `old` the first time) if need be; null when
- * this is not the portable .exe, or the folder beside it cannot be written. */
-function portableData({ env, old }) {
+/**
+ * The folder the portable .exe's data goes in, made (and filled the first time from an earlier copy's, in `appData`
+ * under the app's `name`) if need be; null when this is not the portable .exe, or the folder beside it cannot be
+ * written.
+ */
+function portableData({ env, appData, name }) {
   const dir = env.PORTABLE_EXECUTABLE_DIR;
   if (!dir) return null;
+  const old = appData && name ? join(appData, name) : undefined;
   const data = join(dir, DATA);
   try {
     if (existsSync(data)) return data;
