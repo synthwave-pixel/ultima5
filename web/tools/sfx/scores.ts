@@ -80,7 +80,7 @@ const run = (at: number, ns: number[], step: number, program: number, velocity =
 const spread = (at: number, ns: number[], step: number, until: number, program: number = P.harp, velocity = 75): SfxNote[] =>
   ns.map((n, i) => note(at + i * step, n, Math.max(0.05, until - at - i * step), program, velocity));
 /** A score of `length`: every note cut to end within it. */
-const score = (length: number, parts: SfxNote[][], standout = false): Score => ({
+const score = (length: number, parts: (SfxNote | SfxNote[])[], standout = false): Score => ({
   length,
   notes: parts.flat().map((n) => ({ ...n, length: Math.max(0.02, Math.min(n.length, length - n.at)) })),
   ...(standout ? { standout } : {}),
