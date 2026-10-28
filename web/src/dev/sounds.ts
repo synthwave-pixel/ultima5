@@ -120,8 +120,9 @@ const OFTEN_ORDER = ['every step', 'every blow', 'often', 'now and then', 'rare'
 /** What a suite plays for a sound (its key, or null for the shared voice), in words. */
 function suiteVoice(suite: Suite, key: ReturnType<typeof sfxKey>): string {
   if (key === 'silent') return 'folded: silent alone';
-  if (!key || !SFX[suite]?.slices[key.key]) return 'shared: the chip voice, softened';
-  return key.hz ? 'a note of its bank, at the pitch' : 'its score';
+  if (key && (key.key === 'watrfall' || key.key === 'fountain')) return "the water's loops, as in Standard";
+  if (!key || !SFX[suite]?.slices[key.key]) return 'the chip voice, softened';
+  return key.hz ? 'a note of its bank, at the pitch' : "rendered in the suite's file";
 }
 
 /** The music: a row a tune, a column a soundtrack, a button an arrangement it plays there; played on its own context. */

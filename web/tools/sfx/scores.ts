@@ -160,6 +160,8 @@ export const SCORES: Record<string, (variant: number) => Score> = {
   tickhigh: (v) => score(0.15, [[note(0, 72, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
   ticklow: (v) => score(0.15, [[note(0, 67, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
   denyhi: (v) => score(0.17, [run(0, [69, 64], 0.06, P.pizz, [80, 90, 85][v % 3], 0.11)]),
+  // A drip in a dungeon: one soft drop, a little different each time, nowhere near the bright glide it was.
+  drip0: (v) => score(0.15, [[note(0, [74, 76, 72][v % 3], 0.12, P.marimba, [45, 55, 50][v % 3])]]),
   denylo: (v) => score(0.19, [run(0, [64, 59], 0.06, P.pizz, [80, 90, 85][v % 3], 0.13)]),
   // --- Combat ---
   victory1: () =>
@@ -323,6 +325,7 @@ export const VARIANTS: Record<string, number> = {
   ticklow: 3,
   denyhi: 3,
   denylo: 3,
+  drip0: 3,
   ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, 3])),
 };
 
