@@ -1,11 +1,12 @@
 /**
  * audition.ts
  *
- * A listening aid, not the game's: one magic gesture played on each of MuseScore General's candidate presets, alone
- * and in three blends, to choose the magic's sound by ear (the sound test page's Audition section). The gesture is
- * neutral - neither good nor ill: a stack of fourths (no major or minor), drawn up and let settle, glints strewn
- * through, a fourth circle's length; the blends also play it sinking (magic undone). Rendered through the SoundFont
- * to web/public/sfx/audition.<hash>.ogg, its slices in web/src/dev/audition.json.
+ * A listening aid, not the game's: candidates for the magic's sound, to choose by ear (the sound test page's Audition
+ * section). Sound design, not music (design.ts), after the layering of a bought pack's spell effects the user likes -
+ * a whoomph of air over a sub body, a power riser's digital glitter, an air shimmer, a sub drop and impact, a room -
+ * each neutral, neither good nor ill. The bright ones come twice, as designed and tamed under 3.5 kHz, to hear whether
+ * magic may be brighter than the rest of the effects. Rendered to web/public/sfx/audition.<hash>.ogg, its slices in
+ * web/src/dev/audition.json.
  *
  *   node --import ./tools/node-ts.mjs tools/sfx/audition.ts
  */
@@ -14,122 +15,176 @@ import { createHash } from 'node:crypto';
 import { readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderOriginal } from '../music/original.ts';
-import { encode } from '../music/pcm.ts';
-import { finish, layOutAtlas, levelSlice, toSequence } from './render.ts';
-import type { Score, SfxNote } from './scores.ts';
+import { encode, type Stereo } from '../music/pcm.ts';
+import { impact, layer, riser, room, seeded, sparkle, subDrop, whoomph } from './design.ts';
+import { layOutAtlas, levelSlice } from './render.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, '..', '..');
-const FONT = join(HERE, '..', 'music', '.cache', 'MuseScore_General.sf3');
 const RATE = 44100;
-const SECONDS = 0.85;
 
-/** The presets heard, by General MIDI program. */
-const PRESETS: [number, string, 'bed' | 'glints' | 'swell'][] = [
-  [92, 'Bowed Glass', 'bed'],
-  [94, 'Halo Pad', 'bed'],
-  [91, 'Space Voice', 'bed'],
-  [88, 'Fantasia', 'bed'],
-  [99, 'Atmosphere', 'bed'],
-  [97, 'Soundtrack', 'bed'],
-  [95, 'Sweep Pad', 'bed'],
-  [89, 'Warm Pad', 'bed'],
-  [53, 'Voice Oohs', 'bed'],
-  [44, 'Strings Tremolo', 'bed'],
-  [98, 'Crystal', 'glints'],
-  [96, 'Ice Rain', 'glints'],
-  [102, 'Echo Drops', 'glints'],
-  [103, 'Star Theme', 'glints'],
-  [112, 'Tinker Bell', 'glints'],
-  [8, 'Celesta', 'glints'],
-  [11, 'Vibraphone', 'glints'],
-  [46, 'Harp', 'glints'],
-  [119, 'Reverse Cymbal', 'swell'],
+/** A whoomph, a soft riser and a soft shimmer together, `seconds` long: the spell of a circle. */
+const blend = (seconds: number, r: () => number): Stereo =>
+  room(
+    layer(
+      [whoomph({ seconds, peak: seconds * 0.25, fall: seconds * 0.8, open: 3500, sub: 65 }, r), 0, 1],
+      [riser({ seconds: seconds * 0.7, from: 300, to: 900 + seconds * 400, steps: 5, flicker: 24, bright: false }, r), 0.03, 0.35],
+      [sparkle({ seconds, count: Math.round(10 + seconds * 20), lo: 1500, hi: 3800 }, r), seconds * 0.1, 0.25],
+    ),
+    1.3,
+    0.22,
+  );
+
+/** The candidates: id, label, sound. */
+const CANDIDATES: [string, string, (r: () => number) => Stereo][] = [
+  [
+    'w1',
+    'Whoomph (a cast: air rushing in and away over a sub body)',
+    (r) => room(whoomph({ seconds: 1.1, peak: 0.2, fall: 0.8, open: 4000, sub: 65 }, r), 1.4, 0.25),
+  ],
+  [
+    'w2',
+    'Whoomph, long (a high circle), a soft shimmer through it',
+    (r) =>
+      room(
+        layer(
+          [whoomph({ seconds: 1.6, peak: 0.3, fall: 1.2, open: 5000, sub: 55 }, r), 0, 1],
+          [sparkle({ seconds: 1.2, count: 30, lo: 1500, hi: 3500 }, r), 0.2, 0.3],
+        ),
+        1.8,
+        0.25,
+      ),
+  ],
+  [
+    'p1',
+    'Power riser, bright (digital glitter climbing, a sub drop under its end)',
+    (r) =>
+      room(
+        layer(
+          [riser({ seconds: 0.7, from: 400, to: 1600, steps: 6, flicker: 28, bright: true }, r), 0, 0.8],
+          [whoomph({ seconds: 0.8, peak: 0.4, fall: 0.4, open: 3000, sub: 70 }, r), 0, 0.6],
+          [subDrop({ seconds: 0.45, from: 110, to: 35 }), 0.45, 0.8],
+        ),
+        1,
+        0.2,
+      ),
+  ],
+  [
+    'p2',
+    'Power riser, tamed (the same, soft above 3.5 kHz)',
+    (r) =>
+      room(
+        layer(
+          [riser({ seconds: 0.7, from: 400, to: 1600, steps: 6, flicker: 28, bright: false }, r), 0, 0.8],
+          [whoomph({ seconds: 0.8, peak: 0.4, fall: 0.4, open: 3000, sub: 70 }, r), 0, 0.6],
+          [subDrop({ seconds: 0.45, from: 110, to: 35 }), 0.45, 0.8],
+        ),
+        1,
+        0.2,
+      ),
+  ],
+  [
+    's1',
+    'Air shimmer, bright (a soft thump, then high sparkles hanging in the air)',
+    (r) =>
+      room(
+        layer(
+          [impact({ hz: 60, seconds: 0.5 }, r), 0, 0.5],
+          [sparkle({ seconds: 1, count: 45, lo: 5000, hi: 12000 }, r), 0.02, 1],
+          [whoomph({ seconds: 0.9, peak: 0.12, fall: 0.7, open: 6000, sub: 60 }, r), 0, 0.4],
+        ),
+        1.6,
+        0.3,
+      ),
+  ],
+  [
+    's2',
+    'Air shimmer, tamed (the sparkles lower, 1.5-4 kHz)',
+    (r) =>
+      room(
+        layer(
+          [impact({ hz: 60, seconds: 0.5 }, r), 0, 0.5],
+          [sparkle({ seconds: 1, count: 45, lo: 1500, hi: 4000 }, r), 0.02, 1],
+          [whoomph({ seconds: 0.9, peak: 0.12, fall: 0.7, open: 3500, sub: 60 }, r), 0, 0.4],
+        ),
+        1.6,
+        0.3,
+      ),
+  ],
+  [
+    'i1',
+    'Impact cast (a deep blow, the air rolling away after it)',
+    (r) =>
+      room(
+        layer(
+          [impact({ hz: 55, seconds: 1.2 }, r), 0, 1],
+          [whoomph({ seconds: 1.2, peak: 0.05, fall: 1.1, open: 2500, sub: 50 }, r), 0.02, 0.6],
+        ),
+        1.8,
+        0.3,
+      ),
+  ],
+  [
+    'u1',
+    'Undone: power draining (the riser falling, the air drawn in, a sub drop), tamed',
+    (r) =>
+      room(
+        layer(
+          [riser({ seconds: 0.7, from: 1600, to: 300, steps: 6, flicker: 22, bright: false }, r), 0, 0.8],
+          [whoomph({ seconds: 0.7, peak: 0.6, fall: 0.2, open: 3000, sub: 70, reverse: true }, r), 0, 0.6],
+          [subDrop({ seconds: 0.4, from: 90, to: 30 }), 0.6, 0.9],
+        ),
+        1,
+        0.2,
+      ),
+  ],
+  [
+    'u2',
+    'Undone: power draining, bright',
+    (r) =>
+      room(
+        layer(
+          [riser({ seconds: 0.7, from: 1600, to: 300, steps: 6, flicker: 22, bright: true }, r), 0, 0.8],
+          [whoomph({ seconds: 0.7, peak: 0.6, fall: 0.2, open: 3000, sub: 70, reverse: true }, r), 0, 0.6],
+          [subDrop({ seconds: 0.4, from: 90, to: 30 }), 0.6, 0.9],
+        ),
+        1,
+        0.2,
+      ),
+  ],
+  [
+    'u3',
+    'Undone: collapse (the air drawn in to a stop, a dull blow)',
+    (r) =>
+      room(
+        layer(
+          [whoomph({ seconds: 0.7, peak: 0.6, fall: 0.2, open: 2500, sub: 60, reverse: true }, r), 0, 1],
+          [impact({ hz: 50, seconds: 0.8 }, r), 0.68, 0.8],
+        ),
+        1.4,
+        0.25,
+      ),
+  ],
+  ['c1', 'Blend, first circle (whoomph, a soft riser, a soft shimmer)', (r) => blend(0.55, r)],
+  ['c4', 'Blend, fourth circle', (r) => blend(0.85, r)],
+  ['c8', 'Blend, eighth circle', (r) => blend(1.5, r)],
 ];
 
-/** The fourths the gesture is built of: D, G, C, F, B-flat, E-flat - no third, so no major or minor. */
-const FOURTHS = [50, 55, 60, 65, 70, 75];
-
-const note = (at: number, n: number, length: number, program: number, velocity: number): SfxNote => ({
-  at,
-  note: n,
-  length,
-  velocity,
-  program,
-});
-
-/** A held cluster of fourths on `program`, low to middle, entering one by one as the spell is drawn up. */
-const bed = (program: number, sinking = false): SfxNote[] =>
-  (sinking ? [65, 60, 55, 50] : [50, 55, 60, 65]).map((n, i) => note(i * 0.06, n, SECONDS - i * 0.06, program, 70 - i * 6));
-
-/** Glints: the fourths struck here and there, unmetered, on `program`; falling where the gesture sinks. */
-function glints(program: number, sinking = false): SfxNote[] {
-  const times = [0.05, 0.17, 0.26, 0.38, 0.47, 0.6];
-  const notes = sinking ? [...FOURTHS].reverse() : [FOURTHS[2], FOURTHS[4], FOURTHS[3], FOURTHS[5], FOURTHS[1], FOURTHS[4]];
-  return times.map((at, i) => note(at, notes[i] + (program === 46 ? 0 : 12) - 12, 0.35, program, 55 - (i % 3) * 8));
-}
-
-/** A swell rushing in (the Reverse Cymbal): one note, held through. */
-const swell = (program: number): SfxNote[] => [note(0, 60, SECONDS, program, 70)];
-
-const score = (notes: SfxNote[]): Score => ({ length: SECONDS, notes });
-
-/** The blends proposed for each suite: [label, notes]. */
-const BLENDS: [string, (sinking: boolean) => SfxNote[]][] = [
-  [
-    'Blend: Classical (Voice Oohs, Strings Tremolo, Harp, Tinker Bell, Reverse Cymbal)',
-    (s) => [
-      ...bed(53, s),
-      ...bed(44, s).map((n) => ({ ...n, velocity: n.velocity - 20 })),
-      ...glints(46, s),
-      ...glints(112, s).slice(0, 3),
-      ...(s ? [] : swell(119)),
-    ],
-  ],
-  [
-    'Blend: Electronic (Crystal, Echo Drops, Ice Rain, Sweep Pad)',
-    (s) => [...bed(95, s), ...glints(98, s), ...glints(102, s).slice(0, 3), ...glints(96, s).slice(3)],
-  ],
-  [
-    'Blend: Ambient (Halo Pad, Bowed Glass, Space Voice, Atmosphere)',
-    (s) => [
-      ...bed(94, s),
-      ...bed(92, s).map((n) => ({ ...n, velocity: n.velocity - 15 })),
-      ...bed(91, s).slice(0, 2),
-      ...glints(99, s).slice(0, 4),
-    ],
-  ],
-];
-
-async function main(): Promise<void> {
-  const items: { id: string; label: string; score: Score }[] = [];
-  for (const [program, name, kind] of PRESETS)
-    items.push({
-      id: `p${program}`,
-      label: `${name} (${program})`,
-      score: score(kind === 'bed' ? bed(program) : kind === 'glints' ? glints(program) : swell(program)),
-    });
-  BLENDS.forEach(([label, notes], i) => {
-    items.push({ id: `b${i}`, label: `${label}: cast`, score: score(notes(false)) });
-    items.push({ id: `b${i}u`, label: `${label}: undone`, score: score(notes(true)) });
-  });
-  const done = [];
-  for (const it of items) {
-    const pcm = finish(await renderOriginal(toSequence(it.score), SECONDS + 2, RATE, FONT), SECONDS);
+function main(): void {
+  const done = CANDIDATES.map(([id, , make], i) => {
+    const pcm = make(seeded(101 + i * 7919));
     levelSlice(pcm, -24);
-    done.push({ key: it.id, pcm });
-    process.stdout.write('.');
-  }
+    return { key: id, pcm };
+  });
   const { pcm, slices } = layOutAtlas(done);
-  const bytes = encode(pcm, RATE, 'ogg', ['-c:a', 'libopus', '-b:a', '64k']);
+  const bytes = encode(pcm, RATE, 'ogg', ['-c:a', 'libopus', '-b:a', '96k']);
   const dir = join(WEB, 'public', 'sfx');
   const name = `audition.${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}.ogg`;
   writeFileSync(join(dir, name), bytes);
   for (const old of readdirSync(dir)) if (old.startsWith('audition.') && old !== name) rmSync(join(dir, old));
-  const out = { file: `sfx/${name}`, items: items.map((it) => ({ id: it.id, label: it.label, slice: slices[it.id][0] })) };
+  const out = { file: `sfx/${name}`, items: CANDIDATES.map(([id, label]) => ({ id, label, slice: slices[id][0] })) };
   writeFileSync(join(WEB, 'src', 'dev', 'audition.json'), `${JSON.stringify(out, null, 2)}\n`);
-  console.log(` ${name}, ${items.length} sounds`);
+  console.log(`${name}, ${CANDIDATES.length} sounds`);
 }
 
-await main();
+main();
