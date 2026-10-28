@@ -155,10 +155,33 @@ export function layOutAtlas(slices: { key: string; pcm: Stereo }[], gap = 0.1): 
   return { pcm, slices: where };
 }
 
-/** `score` rendered in `suite`'s sound, with time for its room to ring. */
+/** How loud a score's texture is laid in, its peak: it leads, the notes a bed under it. */
+const TEXTURE_PEAK = 0.5;
+
+/** `score` rendered in `suite`'s sound, with time for its room to ring: its notes, and its texture under them. */
 async function renderScore(suite: Suite, score: Score): Promise<Stereo> {
-  const seq = toSequence(score);
   const seconds = score.length + RING + 1;
+  const pcm: Stereo = score.notes.length
+    ? await renderNotes(suite, score, seconds)
+    : [new Float32Array(Math.ceil(seconds * RATE)), new Float32Array(Math.ceil(seconds * RATE))];
+  if (score.texture) {
+    let seed = 0x2545;
+    const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const t = score.texture(suite, r);
+    const peak = t.reduce((m, v) => Math.max(m, Math.abs(v)), 0) || 1;
+    const n = Math.min(t.length, pcm[0].length);
+    for (let i = 0; i < n; i++) {
+      const v = (t[i] / peak) * TEXTURE_PEAK;
+      pcm[0][i] += v;
+      pcm[1][i] += v;
+    }
+  }
+  return pcm;
+}
+
+/** `score`'s notes rendered in `suite`'s sound, `seconds` long. */
+async function renderNotes(suite: Suite, score: Score, seconds: number): Promise<Stereo> {
+  const seq = toSequence(score);
   if (suite === 'classical') return renderOriginal(seq, seconds, RATE, FONT);
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
   const base = ctx as unknown as BaseAudioContext;

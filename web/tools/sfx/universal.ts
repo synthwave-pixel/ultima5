@@ -4,23 +4,27 @@
  * The effects made once and played the same in all three suites (render.ts puts them in every suite's file): sounds
  * of things, not of music, so no soundtrack's instruments - a horse's whinny as it is mounted, a fall through the air
  * and the landing, the trapdoor's latch and the fall under it, a cactus's prick and a monster's missile, both softer
- * than the Standard set's. Synthesized here, soft above 2-3 kHz, mono at 44.1 kHz.
+ * than the Standard set's, and magic undone, its spell coming apart. Synthesized here, soft above 2-3 kHz, mono at
+ * 44.1 kHz. Here too the magic's textures (magicTexture), which the spells, the moongate, the healer's light and sleep
+ * are made of in every suite, each suite's its own way (scores.ts).
  */
+
+import type { Suite } from '../../src/audio/sfxKeys.ts';
 
 const RATE = 44100;
 
-type Curve = (t: number) => number;
+export type Curve = (t: number) => number;
 
 const buffer = (seconds: number): Float32Array => new Float32Array(Math.round(seconds * RATE));
 
 /** Attack over `a`, a curved fall to nothing by `length`. */
-const ad =
+export const ad =
   (a: number, length: number, curve = 2): Curve =>
   (t) =>
     t < a ? t / a : Math.max(0, 1 - (t - a) / Math.max(1e-6, length - a)) ** curve;
 
 /** A one-pole low-pass at `hz` (or a curve of it), applied twice. */
-function lowpass(x: Float32Array, hz: number | Curve): Float32Array {
+export function lowpass(x: Float32Array, hz: number | Curve): Float32Array {
   const f = typeof hz === 'number' ? (): number => hz : hz;
   const out = Float32Array.from(x);
   for (let pass = 0; pass < 2; pass++) {
@@ -31,7 +35,7 @@ function lowpass(x: Float32Array, hz: number | Curve): Float32Array {
 }
 
 /** White noise from `r`, enveloped. */
-function noise(seconds: number, env: Curve, r: () => number): Float32Array {
+export function noise(seconds: number, env: Curve, r: () => number): Float32Array {
   const out = buffer(seconds);
   let s = Math.floor(r() * 0x7fffffff) || 1;
   for (let i = 0; i < out.length; i++) {
@@ -60,7 +64,7 @@ function tone(seconds: number, hz: Curve, env: Curve, wave: 'sine' | 'tri' | 'bu
 }
 
 /** `parts`, each at its start (seconds), summed into one. */
-function mix(...parts: [Float32Array, number, number?][]): Float32Array {
+export function mix(...parts: [Float32Array, number, number?][]): Float32Array {
   const length = Math.max(...parts.map(([p, at]) => Math.round(at * RATE) + p.length));
   const out = new Float32Array(length);
   for (const [p, at, gain = 1] of parts) {
@@ -71,7 +75,7 @@ function mix(...parts: [Float32Array, number, number?][]): Float32Array {
 }
 
 /** A band of noise around `hz` (a curve): the noise low-passed at it, less what lies an octave below. */
-function band(seconds: number, hz: Curve, env: Curve, r: () => number): Float32Array {
+export function band(seconds: number, hz: Curve, env: Curve, r: () => number): Float32Array {
   const n = noise(seconds, env, r);
   const hi = lowpass(n, hz);
   const lo = lowpass(n, (t) => hz(t) / 2);
@@ -151,4 +155,126 @@ export const UNIVERSAL: Record<string, (r: () => number) => Float32Array> = {
       ],
       [band(0.16, (t) => 1100 - 600 * (t / 0.16), ad(0.01, 0.16, 2), r), 0, 0.7],
     ),
+  // Magic undone (a ring lost, a thing unmade): the spell coming apart - its grains thinning out as the air sinks, and
+  // a low breath going out with it.
+  'cue:Dissolve': (r) => {
+    const seconds = 0.78;
+    const thinning: Curve = (t) => Math.max(0, 1 - t / seconds) ** 1.5;
+    const grains = shimmer(seconds, 26, 500, 2000, thinning, r, 2200);
+    const air = band(
+      seconds,
+      (t) => 1600 * Math.pow(300 / 1600, t / seconds),
+      (t) => swellAt(0.15)(t / seconds),
+      r,
+    );
+    const low = tone(seconds, (t) => 180 * Math.pow(110 / 180, t / seconds), ad(0.05, seconds, 2), 'sine');
+    return mix([grains, 0, 0.9], [air, 0, 0.6], [low, 0, 0.25]);
+  },
 };
+
+// --- The magic's textures ----------------------------------------------------------------------------
+
+/** A Hann window's value at `x` (0-1). */
+const hann = (x: number): number => 0.5 - 0.5 * Math.cos(2 * Math.PI * Math.max(0, Math.min(1, x)));
+
+/**
+ * Grains of light: `count` short bursts of noise, each a band at a pitch between `lo` and `hi` Hz, softly windowed,
+ * strewn over `seconds` thicker where `where` is higher - a dusting, not notes.
+ */
+export function shimmer(seconds: number, count: number, lo: number, hi: number, where: Curve, r: () => number, soft = 2600): Float32Array {
+  const out = new Float32Array(Math.round(seconds * RATE));
+  for (let g = 0; g < count; g++) {
+    // A time where `where` is high: the likelier of two tries.
+    const [a, b] = [r() * seconds, r() * seconds];
+    const at = where(a) >= where(b) ? a : b;
+    const len = 0.02 + r() * 0.05;
+    const hz = lo * Math.pow(hi / lo, r());
+    const grain = band(
+      len,
+      () => hz,
+      (t) => hann(t / len),
+      r,
+    );
+    const o = Math.round(at * RATE);
+    const gain = 0.4 + 0.6 * r();
+    for (let i = 0; i < grain.length && o + i < out.length; i++) out[o + i] += grain[i] * gain;
+  }
+  return lowpass(out, soft);
+}
+
+/** A two-pole resonant low-pass (a state-variable filter) of `x`, its cutoff a curve, `q` its resonance. */
+function resonant(x: Float32Array, hz: Curve, q: number): Float32Array {
+  const out = new Float32Array(x.length);
+  let [low, bandv] = [0, 0];
+  for (let i = 0; i < x.length; i++) {
+    const f = 2 * Math.sin((Math.PI * Math.min(8000, hz(i / RATE))) / RATE);
+    low += f * bandv;
+    const high = x[i] - low - bandv / q;
+    bandv += f * high;
+    out[i] = low;
+  }
+  return out;
+}
+
+/** `x` with a soft echo: `taps` repeats `gap` seconds apart, each `fall` of the last, darker each time. */
+function echoes(x: Float32Array, gap: number, fall: number, taps: number): Float32Array {
+  const out = new Float32Array(x.length + Math.round(gap * taps * RATE));
+  out.set(x);
+  let tap = x;
+  for (let k = 1; k <= taps; k++) {
+    tap = lowpass(tap, 2400 - k * 300);
+    const o = Math.round(gap * k * RATE);
+    for (let i = 0; i < tap.length; i++) out[o + i] += tap[i] * Math.pow(fall, k);
+  }
+  return out;
+}
+
+/** How a magic sound moves: its air rising or falling (`from` to `to`, Hz, a curve of the way 0-1), its swell, its grains. */
+export interface Gesture {
+  seconds: number;
+  from: number;
+  to: number;
+  /** The air's loudness over the way (0-1 of `seconds`). */
+  swell: Curve;
+  /** Grains of light, and the band they lie in. */
+  grains: number;
+  lo: number;
+  hi: number;
+  /** A wavering of the air's pitch (the moongate's swirl): its depth (0-1) and rate (Hz). */
+  waver?: [number, number];
+}
+
+/**
+ * A magic sound's texture in `suite`'s way: Classical's a breath - smooth air through a wide band, the grains soft;
+ * Electronic's air through a resonant filter sweeping, the grains a little clearer; Ambient's slower to swell, the
+ * grains soft, and an echo after.
+ */
+export function magicTexture(suite: Suite, g: Gesture, r: () => number): Float32Array {
+  const way: Curve = (t) => {
+    const k = Math.max(0, Math.min(1, t / g.seconds));
+    const wobble = g.waver ? 1 + g.waver[0] * Math.sin(2 * Math.PI * g.waver[1] * t) : 1;
+    return g.from * Math.pow(g.to / g.from, k) * wobble;
+  };
+  const swell: Curve = (t) => g.swell(Math.max(0, Math.min(1, t / g.seconds)));
+  const where: Curve = (t) => swell(t);
+  if (suite === 'electronic') {
+    const air = resonant(noise(g.seconds, swell, r), way, 4);
+    const grains = shimmer(g.seconds, g.grains, g.lo, g.hi, where, r, 3400);
+    return mix([lowpass(air, 3000), 0, 0.5], [grains, 0, 0.8]);
+  }
+  if (suite === 'ambient') {
+    const slow: Curve = (t) => swell(t) * Math.min(1, t / Math.max(0.05, g.seconds * 0.3));
+    const air = band(g.seconds, way, slow, r);
+    const grains = shimmer(g.seconds, g.grains, g.lo, g.hi * 0.8, where, r, 2000);
+    return echoes(mix([air, 0, 0.8], [grains, 0, 0.7]), Math.min(0.18, g.seconds / 4), 0.45, 3);
+  }
+  const air = band(g.seconds, way, swell, r);
+  const grains = shimmer(g.seconds, g.grains, g.lo, g.hi, where, r, 2400);
+  return mix([air, 0, 0.9], [grains, 0, 0.6]);
+}
+
+/** A swell's shape: up by `peak` (0-1 of the way), down after. */
+export const swellAt =
+  (peak: number, power = 1.5): Curve =>
+  (k) =>
+    (k < peak ? k / peak : Math.max(0, 1 - (k - peak) / (1 - peak))) ** power;

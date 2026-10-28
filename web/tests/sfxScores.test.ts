@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { standard } from '../src/audio/chip.ts';
 import { u3Effect } from '../src/audio/chip3.ts';
 import { RULES } from '../src/audio/effects.ts';
-import { BANKED, NOTE_BANK } from '../src/audio/sfxKeys.ts';
+import { BANKED, NOTE_BANK, SUITES } from '../src/audio/sfxKeys.ts';
 import { bankScore, SCORES, sourceOf, VARIANTS } from '../tools/sfx/scores.ts';
 import { UNIVERSAL } from '../tools/sfx/universal.ts';
 import { bandsLoudest } from '../tools/sfx/check.ts';
@@ -52,7 +52,7 @@ describe('the scores of the new suites', () => {
       ...BANKED.flatMap((f) => [bankScore(f, NOTE_BANK.low), bankScore(f, NOTE_BANK.high)]),
     ];
     for (const s of scores) {
-      expect(s.notes.length).toBeGreaterThan(0);
+      expect(s.notes.length + (s.texture ? 1 : 0)).toBeGreaterThan(0);
       for (const n of s.notes) {
         expect(n.program).toBeGreaterThanOrEqual(0);
         expect(n.program).toBeLessThanOrEqual(127);
@@ -72,9 +72,13 @@ describe('the scores of the new suites', () => {
     expect(sourceOf('tickhigh')).toBe('electronic');
     expect(sourceOf('air')).toBe('electronic');
     expect(sourceOf('blackthorn2')).toBe('electronic');
-    expect(sourceOf('spell3')).toBe('ambient');
+    expect(sourceOf('cue:MonsterSpell')).toBe('electronic');
+    expect(sourceOf('possess')).toBe('electronic');
+    expect(sourceOf('gatein')).toBe('ambient');
     expect(sourceOf('chant:65')).toBe('ambient');
-    for (const k of ['status', 'spiritin', 'raise', 'shrine1', 'shrine2', 'cue:Invocation']) expect(sourceOf(k), k).toBe('ambient');
+    for (const k of ['spiritin', 'raise', 'shrine1', 'shrine2', 'cue:Invocation']) expect(sourceOf(k), k).toBe('ambient');
+    // The magic is each suite's own again.
+    for (const k of ['spell3', 'status', 'failure', 'moongate', 'shop0']) expect(sourceOf(k), k).toBeNull();
     for (const k of ['drip0', 'cue:Upwards', 'cue:Downwards', 'denyhi', 'denylo']) expect(sourceOf(k), k).toBe('standard');
     expect(sourceOf('moongate')).toBeNull();
     expect(sourceOf('harpsichord:65')).toBeNull();
@@ -118,5 +122,45 @@ describe('the sounds made once for every suite', () => {
       levelSlice(now, -24);
       expect(bandsLoudest(now).presence, key).toBeLessThan(bandsLoudest(was).presence - 3);
     }
+  });
+
+  it('makes magic undone a sound, not a tune', () => {
+    const pcm = UNIVERSAL['cue:Dissolve'](r);
+    expect(pcm.length / 44100).toBeGreaterThanOrEqual(0.62);
+    expect(pcm.length / 44100).toBeLessThanOrEqual(0.98);
+    expect(pcm.every(Number.isFinite)).toBe(true);
+    expect(SCORES['cue:Dissolve']).toBeUndefined();
+    expect(SCORES['cue:Absorbed']).toBeDefined(); // the Mirror's sting kept
+  });
+});
+
+describe('the magic', () => {
+  const magic = ['failure', 'absorb', 'summon', 'artifact', 'sceptuse', 'moongate', 'shop0', 'shop1', 'shop2', 'status'];
+  const keys = [...Array.from({ length: 8 }, (_, i) => `spell${i + 1}`), ...magic];
+
+  it('is a texture in each suite, the notes under it a low bed with no tune above the treble staff', () => {
+    for (const k of keys)
+      for (const suite of SUITES) {
+        const s = SCORES[k](0);
+        expect(s.texture, k).toBeDefined();
+        const t = s.texture!(suite, () => 0.5);
+        expect(t.every(Number.isFinite), `${k} ${suite}`).toBe(true);
+        expect(
+          t.reduce((m, v) => Math.max(m, Math.abs(v)), 0),
+          `${k} ${suite}`,
+        ).toBeGreaterThan(0.001);
+        for (const n of s.notes) expect(n.note, k).toBeLessThanOrEqual(67);
+      }
+  });
+
+  it('sounds different in each suite', () => {
+    const t = (suite: (typeof SUITES)[number]): Float32Array => SCORES.spell4(0).texture!(suite, () => 0.5);
+    const [a, b, c] = SUITES.map(t);
+    const differ = (x: Float32Array, y: Float32Array): boolean => x.length !== y.length || x.some((v, i) => Math.abs(v - y[i]) > 1e-3);
+    expect(differ(a, b) && differ(b, c) && differ(a, c)).toBe(true);
+  });
+
+  it('grows with the circle', () => {
+    expect(SCORES.spell8(0).length).toBeGreaterThan(SCORES.spell1(0).length);
   });
 });

@@ -24,6 +24,7 @@
  */
 
 import { BANKED, type Suite } from '../../src/audio/sfxKeys.ts';
+import { type Gesture, magicTexture, swellAt } from './universal.ts';
 
 export interface SfxNote {
   at: number;
@@ -38,6 +39,8 @@ export interface Score {
   notes: SfxNote[];
   /** A moment meant to stand out (a victory, the apparition, a shrine): levelled louder (render.ts). */
   standout?: boolean;
+  /** A sound under the notes, not of them (the magic's air and grains): in each suite's own way, mono at 44.1 kHz. */
+  texture?: (suite: Suite, r: () => number) => Float32Array;
 }
 
 /** General MIDI programs. */
@@ -93,20 +96,35 @@ const BLACKTHORN = [55, 55, 57, 55, 58, 57];
 /** A spell of `circle`'s length (chip3.ts spell). */
 const spellLength = (circle: number): number => 0.55 * Math.pow(1.5 / 0.55, (circle - 1) / 7);
 
-/** A spell: a soft bloom on D, the circle's notes climbing through D minor, and D major at the top. */
+/**
+ * A magic sound: its texture (universal.ts magicTexture: air and grains, each suite its own way) over `bed`, a quiet
+ * low bed of held notes - an open fifth, a cluster - with no tune: the casting heard, not a song played.
+ */
+const magic = (gesture: Gesture, bed: SfxNote[][] = [], standout = false): Score => ({
+  ...score(gesture.seconds, bed, standout),
+  texture: (suite, r) => magicTexture(suite, gesture, r),
+});
+
+/** A spell of `circle`: the air drawn up and let go, wider and longer and its grains thicker the higher the circle. */
 function spell(circle: number, variant: number): Score {
-  const length = spellLength(circle);
-  const climb = [50, 53, 57, 60, 62, 65, 69, 74].slice(8 - Math.min(8, circle + 1));
-  const lead = [P.harp, P.pizz, P.celesta][variant % 3];
-  const step = Math.min(0.09, (length * 0.55) / climb.length);
-  const top = 0.05 + climb.length * step;
-  return score(length, [
-    chord(0, [38, 45], length, P.slow, 60),
-    note(0, 38, 0.4, P.timp, 50 + variant * 6),
-    run(0.05, climb, step, lead, 80),
-    chord(top, [50, 54, 57, 62], length - top, P.strings, 75),
-    spread(top, [62, 66, 69], 0.03, length, P.harp, 70),
-  ]);
+  const seconds = spellLength(circle);
+  const k = (circle - 1) / 7;
+  return magic(
+    {
+      seconds,
+      from: 260 - variant * 20,
+      to: 700 + 700 * k + variant * 60,
+      swell: swellAt(0.35 + 0.1 * k),
+      grains: 6 + circle * 4,
+      lo: 500,
+      hi: 1300 + 900 * k,
+    },
+    [
+      chord(0, [38, 45], seconds, P.slow, 34 + circle * 2),
+      circle >= 4 ? chord(seconds * 0.2, [50], seconds * 0.8, P.choir, 30 + circle * 2) : [],
+      circle >= 7 ? chord(seconds * 0.3, [57], seconds * 0.7, P.choir, 28 + circle) : [],
+    ],
+  );
 }
 
 /** The apparition's arrival: the castle's tune (MONARCH, F minor), its opening at 0.72 of its time, ending on F major. */
@@ -166,23 +184,68 @@ export const SCORES: Record<string, (variant: number) => Score> = {
       [run(0, [55, 59, 62, 67, 71], 0.1, P.horn, 95, 0.5), chord(0.4, [43, 50, 55], 0.5, P.strings, 85), [note(0.4, 43, 0.4, P.timp, 90)]],
       true,
     ),
-  failure: () => score(0.25, [[note(0, 58, 0.09, P.bassoon, 85)], run(0.09, [57, 52, 48, 45], 0.04, P.pizz, 80, 0.06)]),
   // --- Magic ---
-  ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, (v: number) => spell(i + 1, v)])),
-  summon: () =>
-    score(0.96, [[note(0, 36, 0.5, P.timp, 95)], chord(0.06, [48, 52, 55, 60], 0.9, P.slow, 85), spread(0.06, [60, 64, 67], 0.06, 0.96)]),
   gatein: () =>
     score(0.96, [[note(0, 33, 0.5, P.timp, 95)], chord(0.06, [45, 48, 52, 57], 0.9, P.slow, 85), spread(0.06, [57, 60, 64], 0.06, 0.96)]),
   possess: () => score(0.8, [chord(0, [45, 46], 0.8, P.slow, 80), [note(0, 33, 0.8, P.bass, 75)]]),
-  absorb: () => score(0.75, [run(0, [43, 42, 40, 38, 36], 0.12, P.bass, 85, 0.27), [note(0, 31, 0.4, P.timp, 70)]]),
   air: () =>
     score(1.24, [
       run(0, [48, 53, 55, 56, 58, 55], 0.14, P.clarinet, 85),
       chord(0.84, [52, 40], 0.4, P.bassoon, 85),
       chord(0.84, [40], 0.4, P.cello, 70),
     ]),
+  // --- Magic: the casting's air and light over a low bed, not tunes ---
+  ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, (v: number) => spell(i + 1, v)])),
+  // Failed: the air drawn up, and it falls apart - a short fizzle over a low, uneasy second.
+  failure: () =>
+    magic({ seconds: 0.25, from: 300, to: 160, swell: swellAt(0.3, 2), grains: 5, lo: 400, hi: 900 }, [
+      chord(0, [38, 39], 0.25, P.slow, 40),
+    ]),
+  // Magic absorbed: the air drawn inward, falling, and a low swell taking it.
+  absorb: () =>
+    magic({ seconds: 0.75, from: 1200, to: 220, swell: swellAt(0.7), grains: 12, lo: 500, hi: 1400 }, [
+      chord(0.2, [31, 38], 0.55, P.slow, 50),
+    ]),
+  // Summoning: the air rising from below, a low fifth swelling with it.
+  summon: () =>
+    magic({ seconds: 0.96, from: 180, to: 800, swell: swellAt(0.6), grains: 14, lo: 400, hi: 1200 }, [
+      chord(0, [36, 43], 0.96, P.slow, 50),
+      [note(0, 36, 0.5, P.timp, 40)],
+    ]),
+  // An artifact used: a long shimmer over F, the light gathering and settling.
+  artifact: () =>
+    magic(
+      { seconds: 1.6, from: 300, to: 900, swell: swellAt(0.45), grains: 34, lo: 600, hi: 1800 },
+      [chord(0, [41, 48, 53], 1.6, P.slow, 45), chord(0.3, [57], 1.3, P.choir, 35)],
+      true,
+    ),
+  // The Sceptre wielded: power surging up, over a low F and C.
+  sceptuse: () =>
+    magic({ seconds: 0.86, from: 200, to: 1000, swell: swellAt(0.5), grains: 16, lo: 500, hi: 1500 }, [
+      chord(0, [41, 48], 0.86, P.slow, 55),
+    ]),
+  // A moongate: the air swirling, rising and falling about itself, and a dim shimmer over a low hum.
   moongate: () =>
-    score(1.1, [chord(0, [57, 64], 1.1, P.slow, 75), spread(0.15, [57, 60, 64, 69, 72], 0.12, 1.1), [note(0, 33, 1.1, P.bass, 55)]]),
+    magic({ seconds: 1.1, from: 450, to: 650, swell: swellAt(0.5, 1.2), grains: 18, lo: 500, hi: 1500, waver: [0.35, 1.3] }, [
+      chord(0, [45, 52], 1.1, P.slow, 40),
+    ]),
+  // The healer's light: warmth rising, turning, settling - soft air over a soft chord, no notes picked out. The last is
+  // also the menus' back-out note: short and low.
+  shop0: () =>
+    magic({ seconds: 0.5, from: 300, to: 800, swell: swellAt(0.6), grains: 6, lo: 600, hi: 1200 }, [
+      chord(0, [48, 55, 60], 0.5, P.choir, 40),
+    ]),
+  shop1: () =>
+    magic({ seconds: 0.5, from: 500, to: 900, swell: swellAt(0.5), grains: 6, lo: 600, hi: 1300 }, [
+      chord(0, [53, 57, 60], 0.5, P.choir, 40),
+    ]),
+  shop2: () =>
+    magic({ seconds: 0.31, from: 700, to: 350, swell: swellAt(0.2), grains: 3, lo: 500, hi: 1000 }, [[note(0, 55, 0.3, P.harp, 55)]]),
+  // Put to sleep: a breath sinking and slowing, over a low hum fading.
+  status: () =>
+    magic({ seconds: 1.69, from: 700, to: 180, swell: swellAt(0.15, 2.2), grains: 8, lo: 400, hi: 900 }, [
+      chord(0, [36, 43], 1.69, P.slow, 35),
+    ]),
   // --- The story's set pieces ---
   spiritin: () => apparition(),
   raise: () => score(0.86, [run(0, [62, 66, 69, 74], 0.12, P.horn, 90, 0.5), chord(0.36, [50, 57, 62], 0.5, P.strings, 80)], true),
@@ -207,20 +270,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
     ),
   sceptre: () =>
     score(0.72, [run(0, [72, 69, 70, 67], 0.1, P.flute, 90), [note(0.4, 65, 0.32, P.flute, 90)], spread(0.4, [53, 57, 60], 0.04, 0.72)]),
-  sceptuse: () => score(0.86, [run(0, BRITANNIA, 0.07, P.horn, 90, 0.37), run(0, [41, 48, 53], 0.18, P.cello, 80, 0.5)]),
-  artifact: () =>
-    score(
-      1.6,
-      [
-        chord(0, [53, 57, 60, 65], 0.45, P.slow, 80),
-        chord(0.45, [58, 62, 65, 70], 0.45, P.slow, 80),
-        chord(0.9, [53, 57, 60, 65, 69], 0.7, P.slow, 85),
-        spread(0, [53, 57, 60, 65], 0.05, 0.45),
-        spread(0.45, [58, 62, 65, 70], 0.05, 0.9),
-        spread(0.9, [53, 57, 60, 65, 69], 0.05, 1.6),
-      ],
-      true,
-    ),
   blackapp: () =>
     score(1.02, [
       run(0, BLACKTHORN.slice(0, 3), 0.14, P.clarinet, 90),
@@ -254,28 +303,7 @@ export const SCORES: Record<string, (variant: number) => Score> = {
     ),
   shrine1: () => score(1.2, [chord(0, [45, 57, 60, 64], 1.2, P.slow, 80), spread(0.1, [57, 60, 64, 69], 0.1, 1.2)], true),
   shrine2: () => score(1.0, [chord(0, [43, 55, 59, 62], 1.0, P.slow, 80), spread(0.1, [55, 59, 62, 67], 0.1, 1.0)], true),
-  status: () =>
-    score(1.69, [
-      (
-        [
-          [67, 0.16, 70],
-          [64, 0.16, 66],
-          [65, 0.18, 60],
-          [62, 0.2, 54],
-          [64, 0.22, 46],
-          [60, 0.28, 38],
-          [55, 0.49, 30],
-        ] as const
-      ).reduce<{ at: number; notes: SfxNote[] }>(
-        (acc, [n, d, v]) => ({ at: acc.at + d, notes: [...acc.notes, note(acc.at, n, d * 1.3, P.harp, v)] }),
-        { at: 0, notes: [] },
-      ).notes,
-      chord(0, [48, 55], 1.69, P.slow, 45),
-    ]),
   // --- Shops ---
-  shop0: () => score(0.5, [spread(0, [60, 64, 67], 0.07, 0.5, P.harp, 80), chord(0, [48], 0.5, P.slow, 60)]),
-  shop1: () => score(0.5, [spread(0, [65, 69, 72], 0.07, 0.5, P.harp, 80), chord(0, [53], 0.5, P.slow, 60)]),
-  shop2: () => score(0.31, [[note(0, 74, 0.12, P.harp, 75), note(0.09, 67, 0.22, P.harp, 80)]]),
   chime: () => score(0.55, [[note(0, 64, 0.55, P.bells, 80), note(0, 52, 0.55, P.bells, 45)]]),
   // --- Moving about ---
   whirl: () =>
@@ -295,7 +323,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
     ]),
   'cue:MonsterSpell': () => score(0.55, [run(0, [57, 54, 51, 48, 45], 0.07, P.bassoon, 85, 0.27), [note(0, 33, 0.55, P.bass, 70)]]),
   'cue:Invocation': () => score(1.1, [chord(0, [48, 55, 60, 64], 1.1, P.choir, 85), chord(0, [48, 55], 1.1, P.slow, 60)]),
-  'cue:Dissolve': () => score(0.78, [run(0, [72, 69, 64, 60, 57], 0.1, P.harp, 70, 0.38), chord(0, [57, 64], 0.78, P.slow, 50)]),
   'cue:Absorbed': () => score(1.0, [run(0, [72, 69, 64, 60, 57, 52], 0.12, P.harp, 70, 0.4), chord(0, [52, 57, 64], 1.0, P.slow, 50)]),
   'cue:DeathMale': () => score(1.05, [run(0, [57, 55, 53, 52], 0.15, P.cello, 90), [note(0.6, 45, 0.45, P.cello, 90)]]),
   'cue:DeathFemale': () => score(1.05, [run(0, [69, 67, 65, 64], 0.15, P.flute, 85), [note(0.6, 57, 0.45, P.flute, 85)]]),
@@ -333,8 +360,8 @@ export function bankScore(family: (typeof BANKED)[number], midi: number): Score 
  */
 const SOURCES: [RegExp, Suite | 'standard'][] = [
   [/^(drip0|denyhi|denylo|cue:Upwards|cue:Downwards)$/, 'standard'],
-  [/^(victory1|cue:CombatStart|tickhigh|ticklow|air|blackthorn\d)$/, 'electronic'],
-  [/^(spell\d|status|spiritin|raise|shrine1|shrine2|cue:Invocation|chant:\d+)$/, 'ambient'],
+  [/^(victory1|cue:CombatStart|tickhigh|ticklow|air|blackthorn\d|cue:MonsterSpell|possess)$/, 'electronic'],
+  [/^(spiritin|raise|shrine1|shrine2|cue:Invocation|chant:\d+|gatein)$/, 'ambient'],
 ];
 
 /** Where sound `key` comes from (SOURCES). */
