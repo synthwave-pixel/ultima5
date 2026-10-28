@@ -108,11 +108,34 @@ const TIMED = new Set([
   'endmoon',
   'raise',
 ]);
-/** The water heard every tick near it (a waterfall, a fountain): it never lowers the music. */
-const AMBIENT = new Set(['watrfall', 'fountain']);
-/** Whether effect `name`, `played` seconds long, lowers the music: a long one does, but for the water near it. */
+/**
+ * Effects heard so often that lowering the music for each would have it dip all the while: the water heard every
+ * tick near it (a waterfall, a fountain), a fall climbing the mountains, the blows and fire of a fight (a foe's swing,
+ * a member hit, a fire field, a foe's spell, the ship's guns), the clock's chime, the stairs and ladders, a torch lit,
+ * mounting a horse, the healer's notes, a few a visit, and a first-circle spell (Magic Missile, light, a heal),
+ * cast over and over. They never lower the music.
+ */
+const UNDUCKED = new Set([
+  'watrfall',
+  'fountain',
+  'fall',
+  'damage',
+  'cannon',
+  'chime',
+  'shop0',
+  'shop1',
+  'spell1',
+  'cue:Attack',
+  'cue:Immolate',
+  'cue:MonsterSpell',
+  'cue:Upwards',
+  'cue:Downwards',
+  'cue:TorchIgnite',
+  'cue:MountHorse',
+]);
+/** Whether effect `name`, `played` seconds long, lowers the music: a long one does, but for the ones heard often. */
 export function ducks(name: string, played: number): boolean {
-  return played >= DUCK_SECONDS && !AMBIENT.has(name);
+  return played >= DUCK_SECONDS && !UNDUCKED.has(name);
 }
 /**
  * Water in the suites - a waterfall, a fountain - not heard again for this long (ms) - the party gone from it, or

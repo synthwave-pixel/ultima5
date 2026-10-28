@@ -134,6 +134,14 @@ function putAway(g: Game, always = false): void {
 }
 
 /**
+ * The box shown, read, put away while the speaker goes on (combat.ts blessings): what comes before their next words -
+ * the old man's flash over the view - not drawn over its words, which it would wipe and leave the frame.
+ */
+export function putAside(g: Game): void {
+  putAway(g);
+}
+
+/**
  * The townsman speaks: their window chosen (after the log had the party's words). The log's line ended first where
  * the party's left it open - an answer typed as nothing, whose line the townsman's reply would have ended in the log.
  */

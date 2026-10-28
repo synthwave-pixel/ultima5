@@ -90,3 +90,34 @@ describe('Clone', () => {
     expect(start).toEqual([4, 6]);
   });
 });
+
+describe('a spell cast as a bolt', () => {
+  const GRAV_POR = 0x01;
+  /** What the speaker is asked for as the Avatar casts Magic Missile at the rat, with `choice` the Sound. */
+  async function heard(choice: 'classical' | 'upgrade'): Promise<{ calls: string[]; slept: number[] }> {
+    const { g, p, s } = fight(1, [5, 5]);
+    g.options.soundChoice = choice;
+    Object.assign(s.members[0], { level: 8, mp: 99 });
+    s.mixtures[GRAV_POR] = 1;
+    const calls: string[] = [];
+    // The pause between the spell and the shot: a sleep while the spell's sound is the last heard.
+    const slept: number[] = [];
+    (p as { sleep: (ms: number) => Promise<void> }).sleep = async (ms) => {
+      if (calls.at(-1)?.startsWith('noise 800')) slept.push(ms);
+    };
+    p.sound.noise = async (...a: number[]) => void calls.push(`noise ${a.join(',')}`);
+    p.sound.sweep = async (...a: number[]) => void calls.push(`sweep ${a.join(',')}`);
+    p.next = () => (s.crosshair ? K.Enter : K.Escape);
+    g.castPreset = { caster: 0, spell: GRAV_POR };
+    await castCommand(g);
+    return { calls, slept };
+  }
+
+  it("is cast and then shot: its circle's spell, then the whoosh a beat into it in the suites, at once in Upgrade (2001)", async () => {
+    for (const choice of ['classical', 'upgrade'] as const) {
+      const { calls, slept } = await heard(choice);
+      expect(calls.slice(0, 2), choice).toEqual(['noise 800,9600,700', 'sweep 1300,300,5,100']);
+      expect(slept[0] ?? 0, choice).toBe(choice === 'upgrade' ? 0 : 350);
+    }
+  });
+});

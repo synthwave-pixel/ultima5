@@ -413,8 +413,6 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
     for (;;) {
       const k = await rawKey(g, idle, false, true);
       let key = k;
-      // A warning that a shot might hit an ally holds only for the X straight after it (combat.ts allyAtRisk).
-      if (k !== Pad.X) g.allyWarned = -1;
       // Enter is A too, but for Classic input in a dungeon, where it turns the party about as in 1988.
       const turns = where === 'dungeon' && g.options.input !== 'controller';
       if (k === Pad.A || k === K.Tab || (k === K.Enter && !turns)) key = await menu.commandMenu(g);

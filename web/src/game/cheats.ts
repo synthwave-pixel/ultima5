@@ -2,8 +2,9 @@
  * cheats.ts
  *
  * The cheats, in the pause menu under Help (the ultima3 port keeps them
- * behind Help's Y): small changes to the world to spare the grind, for
- * testing and for anyone who wants them. None of this was in the 1988 game. The ones that skip the
+ * behind Help's Y): small changes to the world to spare the grind, and an
+ * escape home to Lord British's castle, for testing and for anyone who
+ * wants them. None of this was in the 1988 game. The ones that skip the
  * story or the climb (levels, unsealing the dungeons, the quest's items, leaving a dungeon, going anywhere, above
  * or below) are
  * offered only in development builds.
@@ -119,6 +120,15 @@ export const CHEATS: Cheat[] = [
       }
       g.vitalsDirty = 1;
       return 'Everyone is whole again.';
+    },
+  },
+  {
+    // An escape home (the port's): the end of Lord British's raising of a fallen party alone (story.ts returnToCastle).
+    label: 'Return to castle',
+    available: notInCombat,
+    async apply(g) {
+      const { returnToCastle } = await import('./story.ts');
+      return returnToCastle(g);
     },
   },
   {

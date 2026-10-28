@@ -183,6 +183,25 @@ async function dying(g: Game): Promise<void> {
     s.members[i].hp = s.members[i].maxHp;
     drawVitals(g);
   }
+  await vertigo(g);
+  if (s.karma < 0x4b) s.karma = 0x4b;
+  s.mapId = 0x11;
+  g.chromePlace = null; // back on the map: a fight or a camp is where it is again
+  s.level = 1;
+  s.x = s.y = 10;
+  s.protection = 0;
+  atCastleAtDawn(g);
+  s.d58a7 = s.d58a6 = 0;
+  if (s.food === 0) s.food = 0x3f;
+  if (from !== 0 && from < 0x21) {
+    const { enterTown } = await import('./town.ts');
+    await enterTown(g, true);
+  }
+}
+
+/** The end of the raising (BLCKTHRN_0910): "Vertigo...", and the view gone dark to the party alone, revealed. */
+async function vertigo(g: Game): Promise<void> {
+  const d = g.draw;
   g.say(0x71ea); // "\n\nVertigo...\n"
   await wait(g, 4);
   g.p.fx.page(1);
@@ -191,20 +210,28 @@ async function dying(g: Game): Promise<void> {
   d.tile(0x11c, 5, 5);
   g.p.fx.page(0);
   await g.p.fx.reveal(8, 8, 0xb7, 0xb7);
-  if (s.karma < 0x4b) s.karma = 0x4b;
-  s.mapId = 0x11;
-  g.chromePlace = null; // back on the map: a fight or a camp is where it is again
-  s.level = 1;
+}
+
+/** The party as the raising leaves it: on foot (a ship, a horse left where it was), and six in the morning. */
+function atCastleAtDawn(g: Game): void {
+  const s = g.s;
   s.partyTile = 0x1c;
-  s.x = s.y = 10;
-  s.icon = s.protection = 0;
+  s.icon = 0;
   while (s.hour !== 6) passTime(g, 9);
-  s.d58a7 = s.d58a6 = 0;
-  if (s.food === 0) s.food = 0x3f;
-  if (from !== 0 && from < 0x21) {
-    const { enterTown } = await import('./town.ts');
-    await enterTown(g, true);
-  }
+}
+
+/**
+ * The Return to castle cheat (cheats.ts): the end of Lord British's raising of a fallen party alone, with no death -
+ * vertigo, and the party in his castle at six in the morning, all else as it was (no experience lost, no karma given,
+ * no food). The main loop goes on from there (cheats.ts relocate).
+ */
+export async function returnToCastle(g: Game): Promise<never> {
+  const { restoreView } = await import('./menu.ts');
+  await restoreView(g);
+  await vertigo(g);
+  atCastleAtDawn(g);
+  const { relocate } = await import('./cheats.ts');
+  return relocate(g, 0x11, 10, 10, 1);
 }
 
 // --- Blackthorn ------------------------------------------------------------------------------------------

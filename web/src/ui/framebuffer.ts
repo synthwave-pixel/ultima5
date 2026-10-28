@@ -704,6 +704,41 @@ export class Framebuffer {
     this.dirty = true;
   }
 
+  /**
+   * The Standard look's warning on the 16-pixel square at (x, y) (combat.ts allyRisks): a red badge in its middle, five
+   * game pixels wide and seven high with rounded corners, a half-black rim round it, and an exclamation mark punched
+   * through it, the square showing there. On the colour page only, and within the map.
+   */
+  warn(x: number, y: number): void {
+    const h = this.hx;
+    const g = HI; // one game pixel
+    const cx = (x + 8) * HI;
+    const cy = (y + 8) * HI;
+    const [hw, hh, r] = [2.5 * g, 3.5 * g, 1.5 * g]; // its half width and half height, and its corners' radius
+    const lo = VIEW_LEFT * HI;
+    const hi = (VIEW_RIGHT + 1) * HI;
+    const red = (0xff000000 | (36 << 16) | (36 << 8) | 228) >>> 0;
+    // The mark, a game pixel wide: its stroke from a game pixel below the badge's top to just below its middle, its dot
+    // below that.
+    const punched = (px: number, py: number): boolean =>
+      Math.abs(px - cx) < 0.5 * g && ((py >= cy - 2.5 * g && py < cy + 0.5 * g) || (py >= cy + 1.5 * g && py < cy + 2.5 * g));
+    for (let py = Math.floor(cy - hh - g); py < cy + hh + g; py++) {
+      if (py < lo || py >= hi) continue;
+      for (let px = Math.floor(cx - hw - g); px < cx + hw + g; px++) {
+        if (px < lo || px >= hi) continue;
+        // How far outside the rounded rectangle (none, inside).
+        const dx = Math.max(Math.abs(px + 0.5 - cx) - (hw - r), 0);
+        const dy = Math.max(Math.abs(py + 0.5 - cy) - (hh - r), 0);
+        const out = Math.hypot(dx, dy) - r;
+        const i = py * HI_WIDTH + px;
+        if (out > g) continue;
+        if (out > 0) h[i] = halfDark(h[i]);
+        else if (!punched(px + 0.5, py + 0.5)) h[i] = red;
+      }
+    }
+    this.dirty = true;
+  }
+
   /** What an overlay (a burst, a spell's pulse) covered on the colour page, to put back: its rectangle and pixels. */
   private covered: { x: number; y: number; w: number; h: number; px: Uint32Array } | null = null;
 

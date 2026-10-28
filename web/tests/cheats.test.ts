@@ -44,6 +44,26 @@ describe('the cheats', () => {
     expect(g.combat[2].flags & CF.Charmed).toBe(CF.Charmed);
   });
 
+  it("Return to castle: vertigo, then Lord British's castle at six in the morning, on foot, nothing else changed", async () => {
+    const { g, p } = game();
+    const s = g.s;
+    s.mapId = 0;
+    s.hour = 22;
+    s.icon = 0x20; // aboard a ship
+    Object.assign(s.members[0], { exp: 500, level: 3 });
+    const [karma, food, gold] = [s.karma, s.food, s.gold];
+    const cheat = cheatsFor(g, false).find((c) => c.label === 'Return to castle')!;
+    expect(cheat).toBeDefined();
+    await expect(Promise.resolve(cheat.apply(g))).rejects.toBeInstanceOf(Relocate);
+    expect(p.log).toMatch(/Vertigo/);
+    expect([s.mapId, s.level, s.x, s.y, s.hour]).toEqual([0x11, 1, 10, 10, 6]);
+    expect([s.icon, s.partyTile]).toEqual([0, 0x1c]);
+    expect([s.members[0].exp, s.members[0].level, s.karma, s.gold]).toEqual([500, 3, karma, gold]);
+    expect(s.food).toBeLessThanOrEqual(food); // the night passed eats, as any night does
+    s.mapId = 0xff; // not from a fight
+    expect(cheatsFor(g, false).map((c) => c.label)).not.toContain('Return to castle');
+  });
+
   it('offer a player no way to jump about the world or skip the climb, outside development', () => {
     const { g } = game();
     const labels = cheatsFor(g, false).map((c) => c.label);

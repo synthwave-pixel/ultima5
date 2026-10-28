@@ -117,7 +117,7 @@ describe('the words of the quest, by controller', () => {
     };
 
     journeyOnward(g);
-    for (const c of [...CHEATS, ...DEV_CHEATS]) if (!/Go to|Exit|Lord British|Add word/.test(c.label)) await c.apply(g);
+    for (const c of [...CHEATS, ...DEV_CHEATS]) if (!/Go to|Exit|Lord British|Add word|Return to castle/.test(c.label)) await c.apply(g);
     stashWorldActors(g);
     Object.assign(g.s, { mapId: town, level: 0, x: 15, y: 30, karma: 99 });
     await enterTown(g, true);

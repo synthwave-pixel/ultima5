@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { attackCommand, charm, enemy, strayRisk } from '../src/game/combat.ts';
+import { allyRisks, attackCommand, charm, enemy, strayRisk } from '../src/game/combat.ts';
 import { CF } from '../src/game/game.ts';
-import { getCommandKey } from '../src/game/input.ts';
-import { Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 
@@ -40,17 +38,13 @@ function fight(rats: [number, number][], seed = 1234) {
   return { g, p, s, shoot };
 }
 
-/** Auto aim's shots spare the party a stray (combat.ts strayRisk, allyAtRisk). */
+/** Auto aim's shots and the party's side (combat.ts strayRisk, allyRisks). */
 describe("Auto aim and the party's side", () => {
-  it('will not shoot at a foe beside a friend without asking, and shoots when X is pressed again', async () => {
+  it('shoots at a foe beside a friend at one press, the friend marked with a warning beforehand', async () => {
     const { g, p, s, shoot } = fight([[6, 5]]); // the rat beside the member at (7, 5)
+    g.commandPrompt = 'combat';
+    expect(allyRisks(g)).toEqual([1]);
     await shoot();
-    // (The log keeps no space where a line wrapped.)
-    expect(p.log).toMatch(new RegExp(`${s.members[0].name} might hit\\s*ally, confirm\\?`));
-    expect(g.cancelled).toBe(true); // the turn not spent
-    expect(s.equipment[ARROWS]).toBe(20);
-    p.log = '';
-    await shoot(); // X again, straight away
     expect(p.log).not.toMatch(/might hit/);
     expect(s.equipment[ARROWS]).toBe(19);
   });
@@ -77,12 +71,16 @@ describe("Auto aim and the party's side", () => {
     expect(strayRisk(g, 0, 8)).toBe(false);
   });
 
-  it('forgets the warning once any other key is pressed', async () => {
-    const { g, p, shoot } = fight([[6, 5]]);
-    await shoot();
-    expect(g.allyWarned).toBe(0);
-    p.keys.push(Pad.B);
-    await getCommandKey(g, 'combat');
-    expect(g.allyWarned).toBe(-1);
+  it('warns only with Snap targets on, and of no one where the snap target has no friend beside it', () => {
+    const { g } = fight([[6, 5]]);
+    g.commandPrompt = 'combat';
+    g.options.snapTargets = false;
+    expect(allyRisks(g)).toEqual([]);
+    const alone = fight([
+      [6, 5],
+      [2, 9],
+    ]).g;
+    alone.commandPrompt = 'combat';
+    expect(allyRisks(alone)).toEqual([]);
   });
 });

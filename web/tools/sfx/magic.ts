@@ -13,8 +13,9 @@
  * and the eighth circle is everything at once: those three at their fullest, the bloom throbbing, the air swirling,
  * swept across and drawn in, its echo arriving backwards, and held after, as if time slowed.
  *
- *   spells        the whoomph and the bloom growing with the circle, the chamber from the third, the whispers from the
- *                 sixth, a rumble from the seventh, all at the eighth
+ *   spells        the whoomph and the bloom growing with the circle - the bloom's growl (its body) through the fifth,
+ *                 half at the sixth, where the whispers come to be heard instead - the chamber from the third, the
+ *                 whispers from the sixth, a rumble from the seventh, all at the eighth
  *   failed        the air drawn up and cut short, a small bloom dying
  *   magic undone  the air drawn in to a stop, a bloom, a chamber ringing out: power leaving
  *   absorbed      the air drawn in and sinking, landing on a bloom
@@ -68,7 +69,17 @@ export function spell(circle: number, r: () => number): Stereo {
   if (full) air = swirl(air, 1.5, 9, 0.55);
   const parts: [Stereo, number, number][] = [
     [air, pre, 1],
-    [subBloom({ hz: 50 - 5 * k, seconds: 0.6 + 0.6 * k, attack: 0.04, ...(full ? { beat: 1.4 } : {}) }), at, 0.6 + 0.3 * k],
+    [
+      subBloom({
+        hz: 50 - 5 * k,
+        seconds: 0.6 + 0.6 * k,
+        attack: 0.04,
+        body: circle <= 5 ? 1 : circle === 6 ? 0.5 : 0,
+        ...(full ? { beat: 1.4 } : {}),
+      }),
+      at,
+      0.6 + 0.3 * k,
+    ],
   ];
   if (circle >= 3) parts.push([chamber({ hz: 110, seconds: 0.8 + 0.8 * k }, r), at, 0.12 + 0.28 * ((circle - 3) / 5)]);
   if (circle >= 6) parts.push([rising(at, 0.6 + 0.25 * (circle - 6), r), 0, 0.8 + 0.3 * (circle - 6)]);

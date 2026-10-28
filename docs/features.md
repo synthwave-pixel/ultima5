@@ -976,8 +976,11 @@ other hurt in the game kills as it always did.
   which raises the hidden karma to 75 if it is lower (where the party's
   death would put it, and enough for every word the townsfolk keep for
   the virtuous), saying so in the game's own words and never as a number,
-  and Add word, which makes a word from a guide known as if it had been
-  heard. None of it was in the 1988 game.
+  Add word, which makes a word from a guide known as if it had been
+  heard, and Return to castle, an escape home: the end of Lord British's
+  raising of a fallen party alone - "Vertigo...", and the party on foot
+  in his castle at six in the morning, nothing else changed. None of it
+  was in the 1988 game.
 
 ## Fixes to the 1988 game
 

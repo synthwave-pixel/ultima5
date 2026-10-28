@@ -99,6 +99,12 @@ describe('the Standard set’s waterfall', () => {
     expect(ducks('fountain', 1)).toBe(false);
     expect(ducks('explode', 1)).toBe(true);
   });
+
+  it('nor do the effects heard often - a fall on the mountains, a blow, the stairs - while the rare ones do', () => {
+    for (const name of ['fall', 'damage', 'cannon', 'chime', 'shop0', 'cue:Attack', 'cue:Upwards', 'cue:MountHorse', 'spell1'])
+      expect(ducks(name, 1.5)).toBe(false);
+    for (const name of ['spell2', 'spell8', 'victory1', 'trapfall', 'cue:CombatStart', 'cue:BigDeath']) expect(ducks(name, 1.5)).toBe(true);
+  });
 });
 
 describe('the Standard set’s fountain', () => {

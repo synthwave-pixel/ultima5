@@ -268,6 +268,7 @@ export class Screen implements Platform {
         fb.dirty = true;
       },
       aim: (x, y, mark, small) => fb.aim(TILE_X + x * 16, TILE_Y + y * 16, performance.now(), mark, small),
+      warn: (x, y) => fb.warn(TILE_X + x * 16, TILE_Y + y * 16),
       burst: (x, y, frame, magic) => {
         if (this.look === 'standard') fb.burst(x, y, frame, magic);
       },

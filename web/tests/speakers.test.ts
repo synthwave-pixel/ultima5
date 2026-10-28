@@ -6,7 +6,7 @@ import { jimmyCommand } from '../src/game/items.ts';
 import { putNpc } from '../src/game/npc.ts';
 import { enterWorld, outdoorsLoop, stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { waitsForKey } from '../src/game/speech.ts';
+import { boxShown, waitsForKey } from '../src/game/speech.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { T } from '../src/game/tiles.ts';
 import { begone, callGuards, enterTown, townLoop } from '../src/game/town.ts';
@@ -191,6 +191,30 @@ describe('those who speak outside a conversation', () => {
       said(heard, /Thou art now level/);
       if (play) expect(heard.box).not.toMatch(/ {2}/); // (1988's karma words: "achieved  the")
       expect(flat(heard.log)).toMatch(/vanishes/);
+    });
+
+    it(`${dialog}: the old man raising two: no box of words left up for his flash to wipe, each member's own`, async () => {
+      const { g, p } = newGame();
+      journeyOnward(g);
+      const s = g.s;
+      Object.assign(g.options, { dialog, rules: 'modern' });
+      s.members[0].exp = s.members[1].exp = 400; // two levels due
+      const dice = g.random.bind(g);
+      g.random = (lo: number, hi: number): number => (lo === 0 && hi === 99 ? 0 : dice(lo, hi));
+      const heard = listen(g, p);
+      p.keys.push(...Array<number>(12).fill(K.Space));
+      const atFlash: unknown[] = [];
+      const invert = g.draw.invert.bind(g.draw);
+      g.draw.invert = (...a: Parameters<typeof invert>) => {
+        atFlash.push(boxShown(g));
+        invert(...a);
+      };
+      await campOutdoors(g, -1, 9).catch((e: Error) => {
+        if (!e.message.includes('ran out')) throw e;
+      });
+      expect(atFlash.length).toBeGreaterThanOrEqual(2);
+      expect(atFlash.every((b) => b === null)).toBe(true);
+      said(heard, /Hail, Shamino!/);
     });
   }
 });

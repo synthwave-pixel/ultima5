@@ -59,6 +59,24 @@ function lowpass(x: Float32Array, hz: Curve, q = 0.7): Float32Array {
   return out;
 }
 
+/** A two-pole high-pass (a state-variable filter's high output) at `hz`, run twice: what lies above it alone. */
+function highpass(x: Float32Array, hz: number): Float32Array {
+  let out = x;
+  const f = 2 * Math.sin((Math.PI * hz) / RATE);
+  for (let pass = 0; pass < 2; pass++) {
+    const y = new Float32Array(out.length);
+    let [low, band] = [0, 0];
+    for (let i = 0; i < out.length; i++) {
+      low += f * band;
+      const high = out[i] - low - band / 0.7;
+      band += f * high;
+      y[i] = high;
+    }
+    out = y;
+  }
+  return out;
+}
+
 /** Mono into stereo, a little apart: the right a few milliseconds behind, as air arriving from a side. */
 const wide = (m: Float32Array, lag = 0.004): Stereo => {
   const d = samples(lag);
@@ -184,8 +202,16 @@ export function rumble(seconds: number, r: () => number): Stereo {
   return wide(roll, 0.011);
 }
 
-/** A sub bloom: pressure without a beater - a deep tone at one pitch (and its octave) swelling in over `attack`, fading. */
-export function subBloom(o: { hz: number; seconds: number; attack: number; beat?: number }): Stereo {
+/** How loud a sub bloom's growl is at its fullest (body 1), against the bloom: as loud, where the ear hears, as a blow. */
+const GROWL = 6;
+
+/**
+ * A sub bloom: pressure without a beater - a deep tone at one pitch (and its octave) swelling in over `attack`, fading.
+ * With `body` (0 to 1), its overtones too: the tone driven into saturation and only what lies above it kept,
+ * darkened - a growl in the hundreds of hertz, so that the bloom is heard where it is too deep for the ear (whose
+ * lows are dull) or the speaker (whose lows are gone) alone.
+ */
+export function subBloom(o: { hz: number; seconds: number; attack: number; beat?: number; body?: number }): Stereo {
   const n = samples(o.seconds);
   const m = Float32Array.from({ length: n }, (_, i) => {
     const t = i / RATE;
@@ -194,6 +220,16 @@ export function subBloom(o: { hz: number; seconds: number; attack: number; beat?
     // With `beat`, two tones that far apart (Hz), beating against each other: the pressure throbbing as it fades.
     return (o.beat ? (tone(o.hz) + tone(o.hz + o.beat)) / 2 : tone(o.hz)) * env;
   });
+  if (o.body) {
+    const over = lowpass(
+      highpass(
+        m.map((v) => Math.tanh(5 * v)),
+        240,
+      ),
+      () => 1800,
+    );
+    for (let i = 0; i < n; i++) m[i] += o.body * GROWL * over[i];
+  }
   return [m, Float32Array.from(m)];
 }
 

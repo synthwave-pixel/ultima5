@@ -205,6 +205,11 @@ export interface Draw {
    */
   aim?(x: number, y: number, mark?: Mark, small?: boolean): void;
   /**
+   * The Standard look's warning on viewport cell (x, y): a red badge with an exclamation mark punched through, on one of
+   * the party's side a snap attack's stray shot might strike (combat.ts allyRisks). Absent in a look that has none.
+   */
+  warn?(x: number, y: number): void;
+  /**
    * One step of drawing `tile` into cell (x, y) a pixel at a time: step 0
    * is the top-left pixel, then an 8-bit LFSR (mask 0xb8) picks the rest
    * (u5d GRAP_BUF_PutTileRevealStep).

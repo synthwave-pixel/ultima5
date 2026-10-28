@@ -27,6 +27,7 @@ import { earnedLevel, Status } from './save.ts';
 import { gameDay, passTime } from './time.ts';
 import {
   armourBonus,
+  effectsOf,
   balancedXp,
   eased,
   keepsLastThrow,
@@ -45,6 +46,7 @@ import { castCommand, useCommand, wieldSceptre } from './magic.ts';
 import { followMap, musicForMap, playTune, Tune } from './music.ts';
 import { PgDn, PgUp, Home, End } from './zstats.ts';
 import { cue, deathCue } from './cues.ts';
+import { putAside } from './speech.ts';
 import { devMode } from '../devMode.ts';
 
 /** Enemy flags (u5d macros.h ENEMY_FLAG_*). */
@@ -1580,6 +1582,9 @@ function missed(g: Game, i: number): void {
   }
 }
 
+/** A spell's bolt, in the suites: how far into its spell's sound the shot flies (ms) - its swell come, before its last. */
+const BOLT_BEAT_MS = 350;
+
 /** COMSUBS_0a68: a ranged attack: aim, fly, hit (boomerangs come back). */
 async function rangedAttack(g: Game, i: number, weapon: number, missile: number): Promise<void> {
   const s = g.s;
@@ -1596,7 +1601,12 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number)
     await melee(g, i, beside, weapon);
     return;
   }
-  if (!g.soundOff) await g.sound.sweep(0x514, 300, 5, 100);
+  // A spell's bolt (s.d588f, its circle) sounded as its aim was let go (aim): in the suites the whoosh as it flies waits
+  // a beat into that, cast and then shot, where at once it hid the spell; the 1988 speaker's, as Upgrade's, at once.
+  if (!g.soundOff) {
+    if (s.d588f !== 0 && effectsOf(g.options.soundChoice) !== 'original') await g.p.sleep(BOLT_BEAT_MS);
+    await g.sound.sweep(0x514, 300, 5, 100);
+  }
   if (weapon === 0x13) {
     if (s.equipment[weapon] !== 0) s.equipment[weapon]--;
     else unequip(g, g.combat[s.combatTurn].who, weapon);
@@ -1725,19 +1735,14 @@ type Bumped = NonNullable<Game['bumpFoe']>;
  * hand's blow is skipped. A weapon that leaves the hand reaches only a neighbour, so a blow the player did not choose
  * throws nothing away - but for a foe pointed at past a friend (foePast), which it is thrown at; an arrow, bolt,
  * stone or magic axe goes only where no wall stops it. A snap attack's every hand goes the same way from its snap
- * target (`walkedInto.snap`), but for a shot at it that might stray into a friend.
+ * target (`walkedInto.snap`), a friend a stray might strike marked beforehand (allyRisks); `careful`, a blow sent on
+ * to another foe passes over one a stray from it might strike a friend beside.
  */
 export function followUpFoe(g: Game, i: number, weapon: number, walkedInto: Bumped | null, careful = false): Bumped | null {
   const reaches = (j: number, pointed = false): boolean => reachesFoe(g, i, weapon, j, pointed);
   const risky = careful && strays(g, weapon);
   const there = walkedInto ? combatantAt(g, walkedInto.x, walkedInto.y) : -1;
-  if (
-    walkedInto &&
-    standingFoe(g, there) &&
-    reaches(there, walkedInto.pointed === true) &&
-    !(walkedInto.snap && risky && strayRisk(g, i, there))
-  )
-    return walkedInto;
+  if (walkedInto && standingFoe(g, there) && reaches(there, walkedInto.pointed === true)) return walkedInto;
   let best = -1;
   for (let j = 0; j < 0x20; j++) {
     if (j === i || !standingFoe(g, j) || !reaches(j) || (risky && strayRisk(g, i, j))) continue;
@@ -1758,19 +1763,25 @@ function strays(g: Game, weapon: number): boolean {
 }
 
 /**
- * Whether a missed shot from `i` at foe `j` might strike one of the party's side: it lands on a square about the
- * foe, the archer's own aside (nearSquare), and strikes whoever stands there - a member, charmed or not, or a
- * creature fighting for the party.
+ * Those of the party's side a missed shot from `i` at foe `j` might strike: it lands on a square about the foe, the
+ * archer's own aside (nearSquare), and strikes whoever stands there - a member, charmed or not, or a creature
+ * fighting for the party.
  */
-export function strayRisk(g: Game, i: number, j: number): boolean {
+function atStrayRisk(g: Game, i: number, j: number): number[] {
   const f = g.combat[j];
+  const out: number[] = [];
   for (let k = 0; k < 0x20; k++) {
     const c = g.combat[k];
     if (k === i || k === j || c.flags === 0 || c.flags & CF.Dead || combatantAt(g, c.x, c.y) !== k) continue;
     if (!(c.flags & CF.Player) && onMonsterSide(g, k)) continue;
-    if (Math.abs(c.x - f.x) <= 1 && Math.abs(c.y - f.y) <= 1) return true;
+    if (Math.abs(c.x - f.x) <= 1 && Math.abs(c.y - f.y) <= 1) out.push(k);
   }
-  return false;
+  return out;
+}
+
+/** Whether a missed shot from `i` at foe `j` might strike one of the party's side (atStrayRisk). */
+export function strayRisk(g: Game, i: number, j: number): boolean {
+  return atStrayRisk(g, i, j).length > 0;
 }
 
 /**
@@ -1878,23 +1889,8 @@ function nothingInReach(g: Game): void {
   g.cancelled = true;
 }
 
-/**
- * A snap attack's X with every foe in reach a risk to the party (the port's): a missed shot strays to a square about the
- * foe (missileAt), and strikes whoever stands there. Said, and the turn given back; X again, straight away, shoots.
- */
-function allyAtRisk(g: Game, i: number): void {
-  if (g.text.win.x > 1) g.printChar('\n');
-  const c = g.combat[i];
-  g.print(`${c.flags & CF.Player ? g.s.members[c.who].name : 'Ally'} might hit ally, confirm?\n`);
-  g.allyWarned = i;
-  g.cancelled = true;
-}
-
 async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
   const s = g.s;
-  // A snap attack passes over a foe a stray shot might hit a friend beside (strayRisk) - but for the X that confirms it.
-  const careful = g.allyWarned !== i;
-  g.allyWarned = -1;
   if ((g.combat[i].flags & CF.Player) === 0 || weapons === 0) {
     // X's bare hands (a member with no weapon), Snap attacks on: at the snap target beside them (snapTarget) - the
     // weakest of those as near, as a weapon's blow goes, or the one last struck or chosen - or "Out of reach!". (A
@@ -1927,12 +1923,12 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
     g.aimFrom = g.bumpFoe;
     g.bumpFoe = null;
   }
-  const reached = (wary: boolean): boolean =>
-    [0, 2, 3].some((h) => strikes(g, m.equips[h]) && followUpFoe(g, i, m.equips[h], null, wary) !== null);
-  const auto = !walkedInto && g.autoAim && reached(careful);
-  if (g.autoAim && !walkedInto && !auto) return careful && reached(false) ? allyAtRisk(g, i) : nothingInReach(g);
-  // A snap attack's first blow at the snap target (snapTarget: the foe marked), the hands after it from there.
-  const pick = auto ? snapTarget(g, i, careful) : -1;
+  const reached = [0, 2, 3].some((h) => strikes(g, m.equips[h]) && followUpFoe(g, i, m.equips[h], null) !== null);
+  const auto = !walkedInto && g.autoAim && reached;
+  if (g.autoAim && !walkedInto && !auto) return nothingInReach(g);
+  // A snap attack's first blow at the snap target (snapTarget: the foe marked, any friend a stray might strike marked
+  // too - allyRisks), the hands after it from there.
+  const pick = auto ? snapTarget(g, i) : -1;
   const snap: Bumped | null = pick >= 0 ? { x: g.combat[pick].x, y: g.combat[pick].y, snap: true } : null;
   // Once a hand has struck, a hand after it with no foe left in its reach is not asked where to strike (the port's):
   // the foe the first blow killed was the only one near.
@@ -1947,7 +1943,7 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
     const weapon = m.equips[hand];
     if ((struck || someReach) && strikes(g, weapon) && !foeInReach(g, i, weapon)) continue;
     if ((walkedInto || auto) && strikes(g, weapon)) {
-      const foe = followUpFoe(g, i, weapon, walkedInto ?? snap, careful);
+      const foe = followUpFoe(g, i, weapon, walkedInto ?? snap, true);
       if (!foe) continue;
       g.bumpFoe = foe;
     } else if (on && aimedAt >= 0 && strikes(g, weapon) && standingFoe(g, aimedAt) && reachesFoe(g, i, weapon, aimedAt, true)) {
@@ -1978,11 +1974,10 @@ function nearestFirst(g: Game, i: number, js: number[]): number[] {
 
 /**
  * The foes member combatant `i`'s snap attack (X, Snap attacks on) could open on, as attackEach would: those the first
- * hand to reach one reaches - a shot only along a clear line, and past any a stray might carry into a friend, but for
- * the X confirming it (allyAtRisk; `careful` false) - or with no weapon, those beside them; the nearest first. None,
- * for a creature.
+ * hand to reach one reaches - a shot only along a clear line - or with no weapon, those beside them; the nearest
+ * first. None, for a creature.
  */
-export function snapTargets(g: Game, i: number, careful = g.allyWarned !== i): number[] {
+export function snapTargets(g: Game, i: number): number[] {
   const c = g.combat[i];
   if (!c || (c.flags & CF.Player) === 0 || onMonsterSide(g, i)) return [];
   const foes: number[] = [];
@@ -1995,21 +1990,32 @@ export function snapTargets(g: Game, i: number, careful = g.allyWarned !== i): n
       foes.filter((j) => between(g, i, j) <= 1),
     );
   for (const w of hands) {
-    const risky = careful && strays(g, w);
-    const reached = foes.filter((j) => reachesFoe(g, i, w, j, false) && !(risky && strayRisk(g, i, j)));
+    const reached = foes.filter((j) => reachesFoe(g, i, w, j, false));
     if (reached.length) return nearestFirst(g, i, reached);
   }
   return [];
 }
 
 /**
- * The foe member combatant `i`'s snap attack opens on: the one they last struck or chose (Game.snapMemory) while it
- * is still one to open on, else the nearest (snapTargets); -1 where there is none.
+ * Those of the party's side a stray from member combatant `i`'s snap attack at foe `j` might strike: about the foe,
+ * where a hand's shot or throw that reaches it would land if it missed (strays, atStrayRisk).
  */
-export function snapTarget(g: Game, i: number, careful = g.allyWarned !== i): number {
-  const list = snapTargets(g, i, careful);
+function snapRisks(g: Game, i: number, j: number): number[] {
+  const c = g.combat[i];
+  const hands = [0, 2, 3].map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
+  return hands.some((w) => strays(g, w) && reachesFoe(g, i, w, j, false)) ? atStrayRisk(g, i, j) : [];
+}
+
+/**
+ * The foe member combatant `i`'s snap attack opens on: the one they last struck or chose (Game.snapMemory) while it
+ * is still one to open on, else the nearest a stray could not carry into a friend, else the nearest (snapTargets);
+ * -1 where there is none.
+ */
+export function snapTarget(g: Game, i: number): number {
+  const list = snapTargets(g, i);
   if (!list.length) return -1;
-  return list.includes(g.snapMemory[i]) ? g.snapMemory[i] : list[0];
+  if (list.includes(g.snapMemory[i])) return g.snapMemory[i];
+  return list.find((j) => !snapRisks(g, i, j).length) ?? list[0];
 }
 
 /** The foe member combatant `i` has struck - `at`, or where the crosshair was - theirs to open on again (snapTarget). */
@@ -2042,6 +2048,15 @@ export function snapMark(g: Game): number {
   if (g.commandPrompt !== 'combat' || s.crosshair !== 0 || !o.autoAim || !o.snapTargets || autoPlaysTurn(g)) return -1;
   if (o.input !== 'controller' && g.lastSource === 'keyboard') return -1;
   return snapTarget(g, s.combatTurn);
+}
+
+/**
+ * Those of the party's side an X's stray shot might strike, marked with a warning (drawCombatMarks) as the snap target
+ * is (snapMark, Snap targets on): about it, where a missed shot or throw at it lands.
+ */
+export function allyRisks(g: Game): number[] {
+  const j = snapMark(g);
+  return j < 0 ? [] : snapRisks(g, g.s.combatTurn, j);
 }
 
 /**
@@ -3365,18 +3380,20 @@ async function camp(g: Game, flags: number, guard: number, hours: number): Promi
 export const OLD_MAN_EVERY = 14;
 
 /**
- * Whether the old man comes to a camp outdoors that rested. 1988's one time in four, every camp (the Classic rules).
- * The Story and Modern rules (the port's): always where a member has a level due - he alone grants them - and
- * otherwise one time in four, but not within two weeks of his last coming. 1988 noted the month he came (D_588d) and
- * never read it; a camp every night had him back as often as not, to heal a party with nothing to be given.
+ * Whether the old man comes to a camp outdoors that rested. 1988's one time in four, every camp, in Britannia and the
+ * Underworld alike (the Classic rules). The Story and Modern rules (the port's): always where a member has a level due
+ * - he alone grants them - and otherwise one time in four, but not within two weeks of his last coming, and never in
+ * the Underworld, below his realm, but for a level. 1988 noted the month he came (D_588d) and never read it; a camp
+ * every night had him back as often as not, to heal a party with nothing to be given.
  */
-function apparitionComes(g: Game): boolean {
+export function apparitionComes(g: Game): boolean {
   const s = g.s;
   if (!easedRules(g)) return g.random(0, 99) < 0x19;
   for (let m = 0; m < s.partySize; m++) {
     const p = s.members[m];
     if (p.status !== Status.Dead && earnedLevel(p.exp) > p.level) return true;
   }
+  if (s.level === 0xff) return false; // the Underworld (fog.ts): only for a level
   const since = g.oldManDay < 0 ? Infinity : gameDay(s) - g.oldManDay;
   // (A day before the one noted - a save taken up from another calendar - counts as long since.)
   return (since >= OLD_MAN_EVERY || since < 0) && g.random(0, 99) < 0x19;
@@ -3428,6 +3445,8 @@ async function blessings(
       }
     }
     figure.tile = figure.anim = classTiles[CLASSES.indexOf(String.fromCharCode(p.cls))];
+    // The Dialog setting's box, the last member's words read, put away before the flash, which would wipe them.
+    putAside(g);
     man.b6 = 0;
     await sleepTicks(g, 1);
     await snd?.pulse(5500, 1, 5000, 200, 13);
@@ -3514,6 +3533,8 @@ export function drawCombatMarks(g: Game): void {
   // The foe an X would strike: the crosshair's mark, small (snapMark) - over the turn's outline, a foe beside them.
   const snap = marks ? snapMark(g) : -1;
   if (snap >= 0) d.aim!(g.combat[snap].x, g.combat[snap].y, 'attack', true);
+  // A friend its stray might strike: warned of, over the figure (with Snap targets on, as the foe is marked).
+  for (const k of allyRisks(g)) warnMark(g, g.combat[k].x, g.combat[k].y);
   if (standard || s.blink === 0 || s.combatTurn === 0xff || onMonsterSide(g, s.combatTurn)) {
     if (standard) crosshair(g);
     return;
@@ -3529,6 +3550,27 @@ export function drawCombatMarks(g: Game): void {
   }
   snapArrows(g); // over the turn's square, a foe beside them
   crosshair(g);
+}
+
+/**
+ * A warning on the square at (x, y) (allyRisks): the Standard look's red badge with an exclamation mark punched
+ * through it; the EGA look's the same in bright red, in the square's middle.
+ */
+function warnMark(g: Game, x: number, y: number): void {
+  const d = g.draw;
+  if (g.options.tileSet === 'standard' && d.warn) return d.warn(x, y);
+  const cx = x * 16 + 8 + 8;
+  const cy = y * 16 + 8 + 8;
+  d.pen = Colour.brightRed;
+  // Five pixels wide and seven high, its corners cut; its middle column left out where the mark is (rows -2 to 0, and 2).
+  for (let dy = -3; dy <= 3; dy++) {
+    const half = Math.abs(dy) === 3 ? 1 : 2;
+    if (dy === 1 || Math.abs(dy) === 3) d.line(cx - half, cy + dy, cx + half, cy + dy);
+    else {
+      d.line(cx - half, cy + dy, cx - 1, cy + dy);
+      d.line(cx + 1, cy + dy, cx + half, cy + dy);
+    }
+  }
 }
 
 /**

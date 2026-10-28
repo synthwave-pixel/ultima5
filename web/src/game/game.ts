@@ -325,11 +325,6 @@ export class Game {
   bumpFoe: { x: number; y: number; pointed?: boolean; snap?: boolean } | null = null;
   /** X pressed in a fight with Snap attacks on: the attack that follows finds its own foes (combat.ts attackEach). */
   autoAim = false;
-  /**
-   * The member told their snap attack's shot might hit one of the party's side (combat.ts allyAtRisk): their next X, with
-   * no other key between, shoots all the same. -1 for none.
-   */
-  allyWarned = -1;
   /** Another window playing this character, not yet warned of (otherWindows.ts); and those warned of. */
   otherWindow: string | null = null;
   readonly windowsWarnedOf = new Set<string>();

@@ -94,6 +94,32 @@ describe('the apparition at camp', () => {
     expect(dead.log).not.toContain('An apparition!');
   });
 
+  it('comes to an Underworld camp with the Story and Modern rules only for a level, and by chance with the Classic', async () => {
+    const under = (g: ReturnType<typeof newGame>['g']): void => {
+      g.s.level = 0xff;
+    };
+    for (const rules of ['story', 'modern'] as const) {
+      const set = (g: ReturnType<typeof newGame>['g']): void => {
+        under(g);
+        g.options.rules = rules;
+      };
+      expect((await camp(0, set)).log, rules).not.toContain('An apparition!');
+      const due = await camp(99, (g) => {
+        set(g);
+        Object.assign(g.s.members[0], { exp: 250, level: 1 });
+      });
+      expect(due.log, rules).toContain('Thou art now level 3');
+    }
+    expect(
+      (
+        await camp(0, (g) => {
+          under(g);
+          classic(g);
+        })
+      ).log,
+    ).toContain('An apparition!');
+  });
+
   it('comes only to a camp that rested', async () => {
     const { g, p } = newGame();
     journeyOnward(g);
