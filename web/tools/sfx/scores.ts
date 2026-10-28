@@ -23,7 +23,7 @@
  * reveal while the game waits its 1.7 s as before.
  */
 
-import { BANKED } from '../../src/audio/sfxKeys.ts';
+import { BANKED, type Suite } from '../../src/audio/sfxKeys.ts';
 
 export interface SfxNote {
   at: number;
@@ -159,10 +159,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
   // --- Every turn ---
   tickhigh: (v) => score(0.15, [[note(0, 72, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
   ticklow: (v) => score(0.15, [[note(0, 67, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
-  denyhi: (v) => score(0.17, [run(0, [69, 64], 0.06, P.pizz, [80, 90, 85][v % 3], 0.11)]),
-  // A drip in a dungeon: one soft drop, a little different each time, nowhere near the bright glide it was.
-  drip0: (v) => score(0.15, [[note(0, [74, 76, 72][v % 3], 0.12, P.marimba, [45, 55, 50][v % 3])]]),
-  denylo: (v) => score(0.19, [run(0, [64, 59], 0.06, P.pizz, [80, 90, 85][v % 3], 0.13)]),
   // --- Combat ---
   victory1: () =>
     score(
@@ -170,7 +166,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
       [run(0, [55, 59, 62, 67, 71], 0.1, P.horn, 95, 0.5), chord(0.4, [43, 50, 55], 0.5, P.strings, 85), [note(0.4, 43, 0.4, P.timp, 90)]],
       true,
     ),
-  vanish: () => score(0.18, [run(0, [67, 71, 74], 0.035, P.harp, 70, 0.11)]),
   failure: () => score(0.25, [[note(0, 58, 0.09, P.bassoon, 85)], run(0.09, [57, 52, 48, 45], 0.04, P.pizz, 80, 0.06)]),
   // --- Magic ---
   ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, (v: number) => spell(i + 1, v)])),
@@ -288,19 +283,16 @@ export const SCORES: Record<string, (variant: number) => Score> = {
       run(0, [76, 74, 72, 69, 67, 64, 62, 60, 57, 55, 52, 50, 48, 45], 0.085, P.harp, 80, 0.2),
       chord(0, [45, 52], 1.3, P.slow, 65),
     ]),
-  fall: () =>
-    score(1.2, [run(0, [64, 62, 60, 57, 55, 52, 50, 48, 45, 43, 40, 38, 36], 0.08, P.strings, 85, 0.24), [note(1.0, 33, 0.2, P.timp, 80)]]),
-  trapfall: () =>
-    score(1.02, [
-      [note(0, 45, 0.12, P.timp, 85), note(0, 57, 0.08, P.pizz, 75)],
-      run(0.12, [69, 66, 64, 61, 59, 57, 54, 52, 49, 47, 45], 0.07, P.strings, 85, 0.2),
-    ]),
   // --- The port's own cues ---
-  'cue:Upwards': () => score(0.48, [run(0, [55, 57, 59, 62, 64], 0.085, P.marimba, 80, 0.14)]),
-  'cue:Downwards': () => score(0.48, [run(0, [64, 62, 59, 57, 55], 0.085, P.marimba, 80, 0.14)]),
-  'cue:MountHorse': () => score(0.24, [run(0, [55, 62], 0.12, P.pizz, 85)]),
   'cue:CombatStart': () =>
     score(0.63, [run(0, [45, 45, 48, 52], 0.11, P.horn, 85, 0.3), chord(0, [33, 45], 0.63, P.cello, 75), [note(0, 33, 0.4, P.timp, 95)]]),
+  // The guards called: an alarm bell struck fast, and a horn's call to arms over the strings.
+  'cue:Alarm': () =>
+    score(0.6, [
+      [0, 0.1, 0.2, 0.3].map((at, i) => note(at, 64, 0.25, P.bells, 85 - i * 6)),
+      run(0.1, [57, 62, 62], 0.12, P.horn, 90, 0.26),
+      chord(0, [45, 52], 0.6, P.strings, 70),
+    ]),
   'cue:MonsterSpell': () => score(0.55, [run(0, [57, 54, 51, 48, 45], 0.07, P.bassoon, 85, 0.27), [note(0, 33, 0.55, P.bass, 70)]]),
   'cue:Invocation': () => score(1.1, [chord(0, [48, 55, 60, 64], 1.1, P.choir, 85), chord(0, [48, 55], 1.1, P.slow, 60)]),
   'cue:Dissolve': () => score(0.78, [run(0, [72, 69, 64, 60, 57], 0.1, P.harp, 70, 0.38), chord(0, [57, 64], 0.78, P.slow, 50)]),
@@ -323,9 +315,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
 export const VARIANTS: Record<string, number> = {
   tickhigh: 3,
   ticklow: 3,
-  denyhi: 3,
-  denylo: 3,
-  drip0: 3,
   ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, 3])),
 };
 
@@ -335,4 +324,20 @@ export const BANK_PROGRAMS: Record<(typeof BANKED)[number], number> = { harpsich
 /** One note of a bank: `family`'s instrument on `midi`, struck and let ring. */
 export function bankScore(family: (typeof BANKED)[number], midi: number): Score {
   return score(0.7, [[note(0, midi, 0.6, BANK_PROGRAMS[family], 90)]]);
+}
+
+/**
+ * Where a sound comes from, for the ones one soundtrack's version (or the Standard set's own) is played in all three
+ * suites, as the user chose them: 'standard' for the chip's voice as it is today, a suite for its rendering; null for
+ * a sound each suite renders its own way.
+ */
+const SOURCES: [RegExp, Suite | 'standard'][] = [
+  [/^(drip0|denyhi|denylo|cue:Upwards|cue:Downwards)$/, 'standard'],
+  [/^(victory1|cue:CombatStart|tickhigh|ticklow|air|blackthorn\d)$/, 'electronic'],
+  [/^(spell\d|status|spiritin|raise|shrine1|shrine2|cue:Invocation|chant:\d+)$/, 'ambient'],
+];
+
+/** Where sound `key` comes from (SOURCES). */
+export function sourceOf(key: string): Suite | 'standard' | null {
+  return SOURCES.find(([re]) => re.test(key))?.[1] ?? null;
 }

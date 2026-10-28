@@ -44,7 +44,8 @@ import { renderOriginal } from '../music/original.ts';
 import { encode, type Stereo } from '../music/pcm.ts';
 import { playSfx } from '../music/styles/engine.ts';
 import { type Bands, bandsAverage, bandsLoudest, checkSuite, type Checked, loudest } from './check.ts';
-import { bankScore, type Score, SCORES, VARIANTS } from './scores.ts';
+import { bankScore, type Score, SCORES, sourceOf, VARIANTS } from './scores.ts';
+import { UNIVERSAL } from './universal.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, '..', '..');
@@ -193,30 +194,56 @@ const WATER = new Set(['watrfall', 'fountain']);
 function sharedSounds(music: Bands): Checked[] {
   const out: Checked[] = [];
   const add = (key: string, voice: (r: () => number) => Float32Array | null, repeated: boolean): void => {
-    for (let v = 0; v < (repeated ? 3 : 1); v++) {
-      let seed = 7 + v * 1013;
-      const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      const mono = voice(r);
-      if (!mono || mono.length <= 1) return;
-      const pcm: Stereo = [Float32Array.from(mono), Float32Array.from(mono)];
-      const level = repeated ? LEVEL.repeated : LEVEL.other;
-      levelSlice(pcm, level);
-      out.push({ key, pcm: tame(pcm, music, 6, level), standout: false });
-    }
+    out.push(...variants(key, voice, repeated, { music, level: repeated ? LEVEL.repeated : LEVEL.other }));
   };
   const seen = new Set<string>();
   for (const [kind, args, name] of RULES) {
     if (seen.has(name) || WATER.has(name)) continue;
     seen.add(name);
     const key = sfxKey({ name }, kind, args);
-    if (key === 'silent' || (key && SCORES[key.key])) continue;
+    if (key === 'silent' || (key && (SCORES[key.key] || UNIVERSAL[key.key] || sourceOf(key.key)))) continue;
     add(name, (r) => standard({ name }, kind, args, r), REPEATED.has(name));
   }
   for (const name of Object.keys(CUES)) {
-    if (SCORES[cueKey(name)]) continue;
-    add(cueKey(name), () => u3Effect(name), false);
+    const key = cueKey(name);
+    if (SCORES[key] || UNIVERSAL[key] || sourceOf(key)) continue;
+    add(key, () => u3Effect(name), false);
   }
   return out;
+}
+
+/**
+ * A sound made by `voice` (mono, 44.1 kHz) from a seeded random source: three of it, each its own, where `repeated`,
+ * else one. Set at `level` and softened as `music` allows (tame); as made, where neither is given (a Standard sound
+ * kept as it is).
+ */
+function variants(
+  key: string,
+  voice: (r: () => number) => Float32Array | null,
+  repeated: boolean,
+  shape?: { music: Bands; level: number },
+): Checked[] {
+  const out: Checked[] = [];
+  for (let v = 0; v < (repeated ? 3 : 1); v++) {
+    let seed = 7 + v * 1013;
+    const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const mono = voice(r);
+    if (!mono || mono.length <= 1) break;
+    let pcm: Stereo = [Float32Array.from(mono), Float32Array.from(mono)];
+    if (shape) {
+      levelSlice(pcm, shape.level);
+      pcm = tame(pcm, shape.music, 6, shape.level);
+    }
+    out.push({ key, pcm, standout: false });
+  }
+  return out;
+}
+
+/** The Standard set's voice for `key` (an effect's name, or a cue's key), from `r`: kept as it is today. */
+function standardVoice(key: string, r: () => number): Float32Array | null {
+  if (key.startsWith('cue:')) return u3Effect(key.slice(4));
+  const rule = RULES.find(([, , name]) => name === key);
+  return rule ? standard({ name: key }, rule[0], rule[1], r) : null;
 }
 
 /** The music's manifest (src/audio/musicManifest.json): each tune's file, by arrangement. */
@@ -254,26 +281,46 @@ async function main(): Promise<void> {
   const report: string[] = ['# The effects suites, checked', ''];
   const failures: string[] = [];
   process.stdout.write('measuring the music');
-  const refs = new Map<Suite, Bands>(suites.map((suite) => [suite, reference(SOUNDTRACK[suite])]));
-  // The shared effects, made once, against the strictest of the soundtracks measured; they go in every suite's file.
+  // Every soundtrack measured, whichever suites are rendered: a sound taken from one suite for all is made with its.
+  const refs = new Map<Suite, Bands>(SUITES.map((suite) => [suite, reference(SOUNDTRACK[suite])]));
+  // The shared effects, made once, against the strictest of the soundtracks; they go in every suite's file.
   const strictest: Bands = {
     presence: Math.min(...[...refs.values()].map((r) => r.presence)),
     sibilance: Math.min(...[...refs.values()].map((r) => r.sibilance)),
   };
   const shared = sharedSounds(strictest);
   console.log(`, ${shared.length} shared sounds`);
+  /** A score rendered in `suite`'s sound, cut, levelled and softened as its music allows. */
+  const rendered = async (suite: Suite, s: { key: string; score: Score; level: number }): Promise<Checked> => {
+    const pcm = finish(await renderScore(suite, s.score), s.score.length);
+    levelSlice(pcm, s.level);
+    return { key: s.key, pcm: tame(pcm, refs.get(suite)!, s.score.standout ? 10 : 6, s.level), standout: !!s.score.standout };
+  };
+  // The sounds one suite's version of (or the Standard's own) plays in all three, and the universal ones: made once.
+  process.stdout.write('the sounds for all suites');
+  const fromOne = new Map<string, Checked[]>();
+  for (const s of sounds()) {
+    const from = sourceOf(s.key);
+    if (from && from !== 'standard') fromOne.set(from, [...(fromOne.get(from) ?? []), await rendered(from, s)]);
+  }
+  const kept = [...new Set(RULES.map(([, , name]) => name)), ...Object.keys(CUES).map(cueKey)]
+    .filter((key) => sourceOf(key) === 'standard')
+    .flatMap((key) => variants(key, (r) => standardVoice(key, r), REPEATED.has(key)));
+  const universal = Object.entries(UNIVERSAL).flatMap(([key, voice]) =>
+    variants(key, voice, REPEATED.has(key), { music: strictest, level: REPEATED.has(key) ? LEVEL.repeated : LEVEL.other }),
+  );
+  const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal];
+  console.log(`: ${forAll.length}`);
   for (const suite of suites) {
     const ref = refs.get(suite)!;
     process.stdout.write(`${suite}: rendering`);
     const done: Checked[] = [];
     for (const s of sounds()) {
-      const rendered = finish(await renderScore(suite, s.score), s.score.length);
-      levelSlice(rendered, s.level);
-      const pcm = tame(rendered, ref, s.score.standout ? 10 : 6, s.level);
-      done.push({ key: s.key, pcm, standout: !!s.score.standout });
+      if (sourceOf(s.key)) continue;
+      done.push(await rendered(suite, s));
       if (done.length % 20 === 0) process.stdout.write('.');
     }
-    const { pcm, slices } = layOutAtlas([...done, ...shared]);
+    const { pcm, slices } = layOutAtlas([...done, ...forAll, ...shared]);
     const bytes = encode(pcm, RATE, 'ogg', CODEC);
     const name = `${suite}.${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}.ogg`;
     writeFileSync(join(OUT, name), bytes);
@@ -281,16 +328,22 @@ async function main(): Promise<void> {
     manifest[suite] = { file: `sfx/${name}`, slices };
     const found = checkSuite(suite, done, ref);
     failures.push(...found);
-    report.push(`## ${suite}`, '', `${name}: ${(bytes.length / 1e6).toFixed(2)} MB, ${done.length} sounds and the shared.`, '');
+    report.push(`## ${suite}`, '', `${name}: ${(bytes.length / 1e6).toFixed(2)} MB, ${done.length} of its own, and those for all.`, '');
     report.push(...(found.length ? found.map((f) => `- ${f}`) : ['Nothing breaks the rules.']), '');
     console.log(` ${name} (${(bytes.length / 1e6).toFixed(2)} MB), ${found.length} over`);
   }
-  const sharedFound = checkSuite('shared', shared, strictest);
-  failures.push(...sharedFound);
+  const forAllFound = [
+    ...[...fromOne.entries()].flatMap(([from, list]) => checkSuite(`${from}, for all`, list, refs.get(from as Suite))),
+    ...checkSuite('universal', universal, strictest),
+    ...checkSuite('shared', shared, strictest),
+  ];
+  failures.push(...forAllFound);
   report.push(
-    '## shared (the chip voices, levelled and softened, in every suite)',
+    "## for all suites (one suite's version, the universal sounds, and the shared chip voices)",
     '',
-    ...(sharedFound.length ? sharedFound.map((f) => `- ${f}`) : ['Nothing breaks the rules.']),
+    `Kept as the Standard set has them, not checked: ${[...new Set(kept.map((k) => k.key))].join(', ')}.`,
+    '',
+    ...(forAllFound.length ? forAllFound.map((f) => `- ${f}`) : ['Nothing breaks the rules.']),
     '',
   );
   writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
