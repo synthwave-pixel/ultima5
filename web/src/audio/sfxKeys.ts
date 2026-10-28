@@ -16,8 +16,8 @@ import type { Effect, Kind } from './effects.ts';
 export const SUITES = ['classical', 'electronic', 'ambient'] as const;
 export type Suite = (typeof SUITES)[number];
 
-/** The notes a bank is rendered over (MIDI). */
-export const NOTE_BANK = { low: 36, high: 96 };
+/** The notes a bank is rendered over (MIDI): about the families' notes, two octaves down (BANK_TRANSPOSE), 61 to 77. */
+export const NOTE_BANK = { low: 55, high: 84 };
 /** The families played from a bank of notes. */
 export const BANKED = ['harpsichord', 'lute', 'chant'] as const;
 /**

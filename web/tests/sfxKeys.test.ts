@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pulseShape } from '../src/audio/chip.ts';
-import { BANK_TRANSPOSE, sfxKey } from '../src/audio/sfxKeys.ts';
+import { BANK_TRANSPOSE, NOTE_BANK, sfxKey } from '../src/audio/sfxKeys.ts';
 import { newGame } from './helpers.ts';
 
 describe("the new suites' effect keys", () => {
@@ -20,8 +20,8 @@ describe("the new suites' effect keys", () => {
       if (!key || key === 'silent') throw new Error(`harpsichord ${i}: ${String(key)}`);
       const m = Number(key.key.split(':')[1]);
       expect(key.key).toBe(`harpsichord:${m}`);
-      expect(m).toBeGreaterThanOrEqual(36);
-      expect(m).toBeLessThanOrEqual(96);
+      expect(m).toBeGreaterThanOrEqual(NOTE_BANK.low);
+      expect(m).toBeLessThanOrEqual(NOTE_BANK.high);
       expect(key.hz).toBeCloseTo(pulseShape(args).hz * BANK_TRANSPOSE, 6);
       expect(Math.abs(12 * Math.log2(key.hz! / 440) + 69 - m)).toBeLessThanOrEqual(0.5);
     }

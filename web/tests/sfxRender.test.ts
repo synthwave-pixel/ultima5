@@ -99,4 +99,24 @@ describe('the render of the suites', () => {
     expect(failures).toHaveLength(1);
     expect(failures[0]).toContain('loud');
   });
+
+  it("fails a slice whose highs stand louder above the music's than the rule allows", () => {
+    // Quiet enough overall, but all of it at 3 kHz, where the music at its default level has little.
+    const bright = sine(0.5, 0.25, 3000);
+    levelSlice(bright, LIMITS.everyday - 1);
+    const warm = sine(0.5, 0.25, 220);
+    levelSlice(warm, LIMITS.everyday - 1);
+    const music = { presence: LIMITS.everyday - 20, sibilance: LIMITS.everyday - 30 };
+    const failures = checkSuite(
+      'classical',
+      [
+        { key: 'bright', pcm: bright, standout: false },
+        { key: 'warm', pcm: warm, standout: false },
+      ],
+      music,
+    );
+    expect(failures.length).toBeGreaterThanOrEqual(1);
+    expect(failures.every((f) => f.includes('bright'))).toBe(true);
+    expect(failures.some((f) => f.includes('2-5 kHz'))).toBe(true);
+  });
 });

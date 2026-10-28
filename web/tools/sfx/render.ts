@@ -39,9 +39,8 @@ import { TUNE_FILES } from '../../src/game/music.ts';
 import { CUES } from '../../src/dev/sfxCatalogue.ts';
 import { renderOriginal } from '../music/original.ts';
 import { encode, type Stereo } from '../music/pcm.ts';
-import { type Fatigue, measure } from '../music/spectrum.ts';
 import { playSfx } from '../music/styles/engine.ts';
-import { checkSuite, type Checked, gentlest, loudest } from './check.ts';
+import { type Bands, bandsAverage, checkSuite, type Checked, loudest } from './check.ts';
 import { bankScore, type Score, SCORES, VARIANTS } from './scores.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -55,8 +54,8 @@ const RATE = 44100;
 const RING = 0.5;
 /** Each sound's level: its loudest 100 ms, dBFS. */
 const LEVEL = { standout: -20, repeated: -27, other: -24 };
-/** Opus at 64 kbps, in Ogg. */
-const CODEC = ['-c:a', 'libopus', '-b:a', '64k'];
+/** Opus at 48 kbps, in Ogg, as the music is. */
+const CODEC = ['-c:a', 'libopus', '-b:a', '48k'];
 
 /** Where each sound lies in a suite's file: its variants, each `[at, length]` in seconds. */
 export type SfxManifest = Record<Suite, { file: string; slices: Record<string, [number, number][]> }>;
@@ -184,8 +183,8 @@ function decode(file: string): Float32Array {
   return new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4);
 }
 
-/** The gentlest of a soundtrack's music on each measure: every file it plays, measured. */
-function reference(soundtrack: Soundtrack): ReturnType<typeof gentlest> {
+/** A soundtrack's music in the bands: the median of every file it plays. */
+function reference(soundtrack: Soundtrack): Bands {
   const files = new Set<string>();
   for (const tune of TUNE_FILES)
     for (const occasion of [undefined, 'title', 'shrine', 'introduction', 'closing', 'night'] as const)
@@ -193,8 +192,9 @@ function reference(soundtrack: Soundtrack): ReturnType<typeof gentlest> {
         const entry = MUSIC[tune]?.[a];
         if (entry) files.add(entry.file);
       }
-  const measured: Fatigue[] = [...files].map((f) => measure(decode(join(WEB, 'public', 'music', f)), RATE));
-  return gentlest(measured);
+  const measured = [...files].map((f) => bandsAverage(decode(join(WEB, 'public', 'music', f)), RATE));
+  const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1];
+  return { presence: median(measured.map((m) => m.presence)), sibilance: median(measured.map((m) => m.sibilance)) };
 }
 
 async function main(): Promise<void> {
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
   const manifest = (existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {}) as Partial<SfxManifest>;
   const report: string[] = ['# The effects suites, checked', ''];
   const failures: string[] = [];
-  const refs = new Map<Suite, ReturnType<typeof gentlest>>();
+  const refs = new Map<Suite, Bands>();
   for (const suite of suites) {
     process.stdout.write(`${suite}: measuring its music`);
     const ref = reference(SOUNDTRACK[suite]);
@@ -231,10 +231,9 @@ async function main(): Promise<void> {
     console.log(` ${name} (${(bytes.length / 1e6).toFixed(2)} MB), ${found.length} over`);
   }
   // The shared effects, against the strictest of the soundtracks measured.
-  const strictest = {
+  const strictest: Bands = {
     presence: Math.min(...[...refs.values()].map((r) => r.presence)),
     sibilance: Math.min(...[...refs.values()].map((r) => r.sibilance)),
-    tilt: Math.min(...[...refs.values()].map((r) => r.tilt)),
   };
   const sharedFound = checkSuite('shared', shared(), refs.size ? strictest : undefined);
   failures.push(...sharedFound);
