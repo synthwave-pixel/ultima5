@@ -1,92 +1,84 @@
 {
-  "file": "sfx/audition.38ee4997.ogg",
+  "file": "sfx/audition.bf9fe720.ogg",
   "items": [
     {
-      "id": "now1",
-      "label": "As built: first circle (for reference)",
+      "id": "now8",
+      "label": "As built: eighth circle (the baseline)",
       "slice": [
         0,
-        2.15
-      ]
-    },
-    {
-      "id": "now8",
-      "label": "As built: eighth circle (for reference)",
-      "slice": [
-        2.25,
         3.4
       ]
     },
     {
-      "id": "l4",
-      "label": "Ladder, fourth circle (a blow joins the whoomph)",
+      "id": "base",
+      "label": "Baseline, rebuilt here (should sound the same as the one above)",
       "slice": [
-        5.75,
-        2.445487528344671
+        3.5,
+        3.4
       ]
     },
     {
-      "id": "l5",
-      "label": "Ladder, fifth circle (+ the air drawn in first)",
+      "id": "sw",
+      "label": "+ sweep (the whoomph travelling across)",
       "slice": [
-        8.29548752834467,
-        2.868526077097506
+        7,
+        3.4
       ]
     },
     {
-      "id": "l6",
-      "label": "Ladder, sixth circle (+ a sub drop under the release)",
+      "id": "dr",
+      "label": "+ air draw (drawn in, peaking on the blow)",
       "slice": [
-        11.264013605442177,
-        3.0639909297052155
+        10.5,
+        3.53
       ]
     },
     {
-      "id": "l7",
-      "label": "Ladder, seventh circle (+ a short charge, a second blow, a rumble)",
+      "id": "ch",
+      "label": "+ charge (a build ending on the blow)",
       "slice": [
-        14.428004535147393,
-        4.139614512471655
+        14.13,
+        3.58
       ]
     },
     {
-      "id": "l8",
-      "label": "Ladder, eighth circle: everything, no embers (a longer charge, heavier blows, the sweep)",
+      "id": "sd",
+      "label": "+ sub drop (more weight in the one landing)",
       "slice": [
-        18.66761904761905,
-        4.55
+        17.81,
+        3.4
       ]
     },
     {
-      "id": "c8",
-      "label": "Eighth, a longer charge (half a second of tension)",
+      "id": "hv",
+      "label": "+ heavier (the one blow stronger)",
       "slice": [
-        23.317619047619047,
-        4.7
+        21.31,
+        3.4
       ]
     },
     {
-      "id": "h8",
-      "label": "Eighth, heavier still (the blows and the drop half again as strong)",
+      "id": "sd2",
+      "label": "Sweep + air draw",
       "slice": [
-        28.117619047619048,
-        4.55
+        24.81,
+        3.53
       ]
     },
     {
-      "id": "s8",
-      "label": "Eighth, a gentler sweep (half as far across)",
+      "id": "sd3",
+      "label": "Sweep + air draw + sub drop",
       "slice": [
-        32.76761904761905,
-        4.55
+        28.44,
+        3.53
       ]
     },
     {
-      "id": "r8",
-      "label": "Eighth, no rumble (cleaner after the second blow)",
+      "id": "all",
+      "label": "Sweep + air draw + charge + sub drop + heavier",
       "slice": [
-        37.41761904761905,
-        3.9
+        32.07,
+        3.58
       ]
     }
   ]
