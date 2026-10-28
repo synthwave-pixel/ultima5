@@ -141,7 +141,7 @@ function level(out: Float32Array, peakDb: number): Float32Array {
 // --- The original's shape, read from its call ----------------------------------------------------------
 
 /** A pulse call's pitch (Hz), length (s) and the rate its width sweeps a full turn (Hz). */
-function pulseShape(args: number[]): { hz: number; length: number; pwm: number; width: number; inc: number } {
+export function pulseShape(args: number[]): { hz: number; length: number; pwm: number; width: number; inc: number } {
   const [freq, delay, dur, width, inc] = args;
   const pass = pulsePassUs(delay) / 1e6;
   return { hz: freq / 65536 / pass, length: dur * pass, pwm: Math.abs(inc) / 65536 / pass, width, inc };
