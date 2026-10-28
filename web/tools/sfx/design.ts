@@ -124,20 +124,42 @@ export function layer(...layers: [Stereo, number, number][]): Stereo {
  * little, with its octave. `reverse`: the air drawn in to a sudden stop instead (an undoing).
  */
 export function whoomph(
-  o: { seconds: number; peak: number; fall: number; open: number; sub: number; reverse?: boolean },
+  o: {
+    seconds: number;
+    peak: number;
+    fall: number;
+    open: number;
+    sub: number;
+    reverse?: boolean;
+    /** Swept across, from one side to the other (-1 left to 1 right). */
+    pan?: [number, number];
+    /** The low-pass wavering - its depth (0-1) and rate (Hz): air swirling. */
+    wobble?: [number, number];
+  },
   r: () => number,
 ): Stereo {
   const n = samples(o.seconds);
   const env = o.reverse ? (t: number): number => swell(o.seconds - 0.02, 0.05, 3)(t) : swell(o.peak, o.fall);
   const shape: Curve = (t) => env(t);
-  const cutoff: Curve = (t) => 250 + (o.open - 250) * shape(t) ** 0.7;
+  const swirl: Curve = (t) => (o.wobble ? 1 + o.wobble[0] * Math.sin(2 * Math.PI * o.wobble[1] * t) : 1);
+  const cutoff: Curve = (t) => (250 + (o.open - 250) * shape(t) ** 0.7) * swirl(t);
   const air = lowpass(pink(n, r), cutoff, 0.9).map((v, i) => v * shape(i / RATE));
+  const pan = o.pan;
+  const placed: Stereo = pan
+    ? ([0, 1].map((c) =>
+        air.map((v, i) => {
+          const p = pan[0] + (pan[1] - pan[0]) * Math.min(1, i / n);
+          const angle = ((p + 1) / 2) * (Math.PI / 2);
+          return v * (c === 0 ? Math.cos(angle) : Math.sin(angle)) * Math.SQRT2;
+        }),
+      ) as Stereo)
+    : wide(air);
   const body = Float32Array.from({ length: n }, (_, i) => {
     const t = i / RATE;
     const f = o.sub * (1 - 0.25 * Math.min(1, t / o.seconds));
     return (Math.sin(2 * Math.PI * f * t) + 0.35 * Math.sin(4 * Math.PI * f * t)) * shape(t);
   });
-  return layer([wide(air), 0, 1], [[body, Float32Array.from(body)], 0, 0.5]);
+  return layer([placed, 0, 1], [[body, Float32Array.from(body)], 0, 0.5]);
 }
 
 /**
@@ -212,4 +234,13 @@ export function impact(o: { hz: number; seconds: number }, r: () => number): Ste
   const n = samples(0.25);
   const burst = lowpass(pink(n, r), () => 900, 0.7).map((v, i) => v * Math.pow(0.001, i / n) * 2);
   return layer([drop, 0, 1], [wide(burst), 0, 0.6]);
+}
+
+/** A rumble: the low end of air, dark and rolling, fading over `seconds` - the ground still moving after a blow. */
+export function rumble(seconds: number, r: () => number): Stereo {
+  const n = samples(seconds);
+  const roll = lowpass(pink(n, r), (t) => 180 + 60 * Math.sin(2 * Math.PI * 2.3 * t), 0.8).map(
+    (v, i) => v * 3 * Math.min(1, i / samples(0.05)) * Math.pow(0.001, i / n),
+  );
+  return wide(roll, 0.011);
 }
