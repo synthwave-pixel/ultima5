@@ -19,18 +19,19 @@ beforeEach(() => {
 afterEach(() => delete (globalThis as { localStorage?: unknown }).localStorage);
 
 describe('the mixer’s settings', () => {
-  it('begin at Music 60% and Sound FX 80%, the Classical soundtrack', () => {
-    expect(DEFAULTS).toMatchObject({ musicLevel: 6, effectsLevel: 8, musicVoice: 'classical', soundSet: 'standard' });
+  it('begin at Music 60% and Sound FX 80%, the Classical Sound', () => {
+    expect(DEFAULTS).toMatchObject({ musicLevel: 6, effectsLevel: 8, soundChoice: 'classical' });
     expect('music' in DEFAULTS).toBe(false);
   });
 
-  it('carry over the settings from before: music off is Music 0%, Sound FX off is 0% of the Standard set', () => {
+  it('carry over the settings from before: music off is Music 0%, Sound FX off is 0%', () => {
     store.set(SETTINGS_KEY, JSON.stringify({ music: false, soundSet: 'off' }));
     const o = loadOptions();
-    expect(o).toMatchObject({ musicLevel: 0, effectsLevel: 0, soundSet: 'standard' });
+    expect(o).toMatchObject({ musicLevel: 0, effectsLevel: 0 });
     expect('music' in o).toBe(false);
+    expect('soundSet' in o).toBe(false);
     store.set(SETTINGS_KEY, JSON.stringify({ music: true, soundSet: 'original' }));
-    expect(loadOptions()).toMatchObject({ musicLevel: 6, effectsLevel: 8, soundSet: 'original' });
+    expect(loadOptions()).toMatchObject({ musicLevel: 6, effectsLevel: 8 });
   });
 
   it('carry over a game played with the sound off, as a level of 0', () => {
@@ -44,25 +45,25 @@ describe('the mixer’s settings', () => {
     expect(loadOptions().musicLevel).toBe(4);
   });
 
-  it('take a sound set that is not one the game has as the Standard', () => {
-    store.set(SETTINGS_KEY, JSON.stringify({ soundSet: 'kazoo' }));
-    expect(loadOptions().soundSet).toBe('standard');
-    store.set(SETTINGS_KEY, JSON.stringify({ soundSet: 7 }));
-    expect(loadOptions().soundSet).toBe('standard');
+  it('drop a sound set of an earlier build, whatever it was', () => {
+    for (const soundSet of ['kazoo', 7, 'standard']) {
+      store.set(SETTINGS_KEY, JSON.stringify({ soundSet }));
+      expect('soundSet' in loadOptions()).toBe(false);
+    }
   });
 
   it('are normalised on their own, for settings from a file: what is not there stays not there', () => {
-    expect(normaliseOptions({ music: false, soundSet: 'off' } as never)).toEqual({ musicLevel: 0, effectsLevel: 0, soundSet: 'standard' });
+    expect(normaliseOptions({ music: false, soundSet: 'off' })).toEqual({ musicLevel: 0, effectsLevel: 0 });
     expect(normaliseOptions({ scanlines: true })).toEqual({ scanlines: true });
   });
 
-  it('keep the soundtrack a game chose, and give one that chose none the Classical', () => {
-    for (const voice of ['original', 'remastered', 'electronic', 'classical']) {
-      store.set(SETTINGS_KEY, JSON.stringify({ musicVoice: voice }));
-      expect(loadOptions().musicVoice).toBe(voice);
+  it('keep the Sound a game chose, and give one that chose none the Classical', () => {
+    for (const choice of ['upgrade', 'ambient', 'electronic', 'classical']) {
+      store.set(SETTINGS_KEY, JSON.stringify({ soundChoice: choice }));
+      expect(loadOptions().soundChoice).toBe(choice);
     }
     store.set(SETTINGS_KEY, JSON.stringify({ musicLevel: 5 }));
-    expect(loadOptions().musicVoice).toBe('classical');
+    expect(loadOptions().soundChoice).toBe('classical');
   });
 
   it('begin on the Modern rules, keep rules only where they are some, and drop the six settings they replaced', () => {
@@ -79,9 +80,9 @@ describe('the mixer’s settings', () => {
     for (const key of Object.keys(old)) expect(o[key]).toBeUndefined();
   });
 
-  it('keep a level within 0 to 10, whole, and a music voice that is one', () => {
-    store.set(SETTINGS_KEY, JSON.stringify({ musicLevel: 14, effectsLevel: -2.5, musicVoice: 'kazoo' }));
-    expect(loadOptions()).toMatchObject({ musicLevel: 10, effectsLevel: 0, musicVoice: 'classical' });
+  it('keep a level within 0 to 10, whole, and a Sound that is one', () => {
+    store.set(SETTINGS_KEY, JSON.stringify({ musicLevel: 14, effectsLevel: -2.5, soundChoice: 'kazoo' }));
+    expect(loadOptions()).toMatchObject({ musicLevel: 10, effectsLevel: 0, soundChoice: 'classical' });
     store.set(SETTINGS_KEY, JSON.stringify({ musicLevel: 3.6 }));
     expect(loadOptions().musicLevel).toBe(4);
   });

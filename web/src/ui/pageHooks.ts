@@ -9,7 +9,7 @@
 
 import type { Game } from '../game/game.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
-import { saveOptions, type Options } from '../game/settings.ts';
+import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
 import { clearInstalled } from '../install/store.ts';
 import { GamepadInput } from './gamepad.ts';
 import type { CapacitorLike } from './platform.ts';
@@ -264,8 +264,8 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     wakeInput();
     scanlines.enabled = o.tileSet === 'standard' ? o.scanlines : o.pcScanlines;
     g.soundOff = o.effectsLevel === 0;
-    sound.setEffects(o.soundSet, o.effectsLevel);
-    sound.setMusicVoice(o.musicVoice);
+    sound.setEffects(effectsOf(o.soundChoice), o.effectsLevel);
+    sound.setMusicVoice(soundtrackOf(o.soundChoice));
     sound.setMusic(o.musicLevel);
     screen.setTileArt(o.tileSet, o.tileSet === 'standard' ? o.tiles : o.pcTiles, o.outlines);
     g.draw.avatar?.(g.appearance, addressedAsLady(g));

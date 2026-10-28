@@ -57,7 +57,7 @@ describe('the ultima3 cues', () => {
   const listening = (set: 'standard' | 'original' | 'off') => {
     const { g } = newGame();
     const heard: string[] = [];
-    g.options.soundSet = set === 'off' ? 'standard' : set;
+    g.options.soundChoice = set === 'original' ? 'upgrade' : 'classical';
     g.soundOff = set === 'off';
     g.sound.cue = async (name) => void heard.push(`cue:${name}`);
     const sweep = g.sound.sweep.bind(g.sound);
@@ -68,7 +68,7 @@ describe('the ultima3 cues', () => {
     return { g, heard };
   };
 
-  it('plays the cue in the Standard set, the DOS sound in the Original, and nothing with sound off', async () => {
+  it("plays the cue in the port's effects, the DOS sound in Upgrade (2001)'s, and nothing with sound off", async () => {
     for (const [set, want] of [
       ['standard', ['cue:Attack']],
       ['original', ['sweep']],

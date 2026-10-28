@@ -392,7 +392,7 @@ export interface Sound {
    * comes back while the pause menu is up leaves the music paused, as the menu does.
    */
   setHeld(reason: Hold, held: boolean): void;
-  /** The music heard though a menu holds it (the Music or Music level line under the bar), or held again. */
+  /** The music heard though a menu holds it (the Sound or Music level line under the bar), or held again. */
   hearMusic?(on: boolean): void;
 }
 

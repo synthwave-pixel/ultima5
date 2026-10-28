@@ -858,10 +858,10 @@ describe('a character’s settings, put to use', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 3, 10));
     const iolo = make('Iolo', 7);
-    saveOptions({ ...loadOptions(), tileSet: 'original', pcScanlines: true, musicLevel: 0, soundSet: 'original' });
+    saveOptions({ ...loadOptions(), tileSet: 'original', pcScanlines: true, musicLevel: 0, soundChoice: 'upgrade' });
     vi.setSystemTime(new Date(2026, 9, 3, 11));
     const dupre = make('Dupre', 8);
-    saveOptions({ ...loadOptions(), tileSet: 'standard', musicLevel: 6, soundSet: 'standard' });
+    saveOptions({ ...loadOptions(), tileSet: 'standard', musicLevel: 6, soundChoice: 'classical' });
     chooseCharacter(null);
     vi.useRealTimers();
     return { iolo, dupre };
@@ -873,12 +873,12 @@ describe('a character’s settings, put to use', () => {
     // Journey Onward; the second line of the list (Iolo).
     const { g, done } = await atTitleWith((game) => (game.hooks.applyOptions = (o) => void applied.push({ ...o })), Pad.A, K.Down, Pad.A);
     expect(done).toBe(true);
-    expect(applied.at(-1)).toMatchObject({ tileSet: 'original', pcScanlines: true, musicLevel: 0, soundSet: 'original' });
+    expect(applied.at(-1)).toMatchObject({ tileSet: 'original', pcScanlines: true, musicLevel: 0, soundChoice: 'upgrade' });
     expect(g.options).toMatchObject({ tileSet: 'original', musicLevel: 0 });
     // Changed in play, they are Iolo's: Dupre's untouched.
     saveOptions({ ...g.options, musicLevel: 6 });
     chooseCharacter(characters().find((c) => avatarName(c.data) === 'Dupre')!.id);
-    expect(loadOptions()).toMatchObject({ tileSet: 'standard', soundSet: 'standard' });
+    expect(loadOptions()).toMatchObject({ tileSet: 'standard', soundChoice: 'classical' });
   });
 
   it('puts the latest character’s back when the list is backed out of', async () => {

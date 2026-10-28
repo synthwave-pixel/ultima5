@@ -6,7 +6,8 @@
  * each play as they like; with no character, the machine's.
  */
 
-import { SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
+import type { Suite } from '../audio/sfxKeys.ts';
+import type { Soundtrack } from '../audio/soundtracks.ts';
 import { charKey, chosenCharacter } from './characters.ts';
 
 /** Auto combat's choices, in the order the Pause menu's line turns through them. */
@@ -24,8 +25,6 @@ export interface Options {
   scanlines: boolean;
   /** Scanlines in the PC (1988) look: on until turned off, as an old monitor showed it. */
   pcScanlines: boolean;
-  /** Sound effects: the Standard chip voices or the Original PC speaker (their level is effectsLevel). */
-  soundSet: SoundSet;
   /** The look: Modern ('standard', the port's screen) or PC (1988) ('original', the EGA game's screen and tiles). */
   tileSet: TileSet;
   /** The Modern look's tiles (Tiles): Modern PC, Apple ][ or PC EGA. */
@@ -34,8 +33,12 @@ export interface Options {
   pcTiles: PcTiles;
   /** Modern PC's people and creatures drawn with a fine black line round them, to be seen on busy ground. */
   outlines: boolean;
-  /** Which soundtrack of the Upgrade's songs plays: Classical (the default), Electronic, Remastered or Original. */
-  musicVoice: MusicVoice;
+  /**
+   * The Sound setting: the music and its effects together - Classical (the default), Electronic or Ambient, each its
+   * soundtrack and the suite of effects in its sound, or Upgrade (2001), the Upgrade's MIDI and the PC speaker's effects.
+   * (Not `sound`: settings of an earlier build carry a `sound` of their own, an on or off.)
+   */
+  soundChoice: SoundChoice;
   /** The music's level, 0 (Off) to 10 (100%), in tens of percent. */
   musicLevel: number;
   /** The sound effects' level, 0 (Off) to 10 (100%), in tens of percent. */
@@ -170,11 +173,28 @@ export type DungeonMap = 'off' | 'small' | 'full';
 /** The Standard look's dungeon: the first-person view, or the whole level's map (dungeonMap.ts). */
 export type DungeonView = 'mini' | 'full';
 
+/** The effects that can play: the Standard chip voices (retired from the settings), or the Original PC speaker. */
 export type SoundSet = 'standard' | 'original';
-const SOUND_SETS: readonly SoundSet[] = ['standard', 'original'];
 /** The music's soundtracks (audio/soundtracks.ts): Classical, Electronic, Remastered, Original. */
 export type MusicVoice = Soundtrack;
-export const MUSIC_VOICES: readonly MusicVoice[] = SOUNDTRACKS;
+/** The Sound setting's choices, in the order its line turns through them. */
+export const SOUND_CHOICES = ['classical', 'electronic', 'ambient', 'upgrade'] as const;
+export type SoundChoice = (typeof SOUND_CHOICES)[number];
+/** The soundtrack a Sound choice plays (Ambient is the Remastered's, Upgrade (2001) the Original's). */
+export function soundtrackOf(c: SoundChoice): Soundtrack {
+  return c === 'ambient' ? 'remastered' : c === 'upgrade' ? 'original' : c;
+}
+/** The effects a Sound choice plays: its suite (audio/sfxKeys.ts), or Upgrade (2001)'s the PC speaker's. */
+export function effectsOf(c: SoundChoice): Suite | 'original' {
+  return c === 'upgrade' ? 'original' : c;
+}
+/** The Sound choice a soundtrack of an earlier build's Music setting becomes. */
+const CHOICE_OF: Record<string, SoundChoice> = {
+  classical: 'classical',
+  electronic: 'electronic',
+  remastered: 'ambient',
+  original: 'upgrade',
+};
 /** The mixer's steps: a level is 0 to LEVELS, each a tenth. */
 export const LEVELS = 10;
 
@@ -217,12 +237,11 @@ export const DEFAULTS: Options = {
   autoCombat: 'off',
   scanlines: false,
   pcScanlines: true,
-  soundSet: 'standard',
   tileSet: 'standard',
   tiles: 'modern-pc',
   pcTiles: 'pc-ega',
   outlines: true,
-  musicVoice: 'classical',
+  soundChoice: 'classical',
   musicLevel: 6,
   effectsLevel: 8,
   dungeonMap: 'small',
@@ -242,6 +261,9 @@ type Saved = Omit<Partial<Options>, 'autoCombat'> & {
   autoCombat?: AutoCombat | boolean;
   sound?: boolean;
   music?: boolean;
+  /** The effects set (Standard, Original) and the soundtrack, before they were one Sound setting. */
+  soundSet?: string;
+  musicVoice?: string;
   autoAimY?: boolean;
   notes?: boolean;
 };
@@ -264,14 +286,10 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   // Settings from before the sound sets: effects off stays off.
   if (saved.sound === false && !saved.soundSet) saved.effectsLevel = 0;
   delete saved.sound;
-  // Settings from before the mixer: Music Off is a level of 0; Sound FX Off is a level of 0, the set Standard.
-  const was = saved as { music?: boolean; musicLevel?: number; soundSet?: string };
-  if (was.music === false && was.musicLevel === undefined) saved.musicLevel = 0;
-  delete was.music;
-  if (was.soundSet === 'off') {
-    saved.soundSet = 'standard';
-    if (saved.effectsLevel === undefined) saved.effectsLevel = 0;
-  }
+  // Settings from before the mixer: Music Off is a level of 0; Sound FX Off (a set of 'off') is a level of 0.
+  if (saved.music === false && saved.musicLevel === undefined) saved.musicLevel = 0;
+  delete saved.music;
+  if (saved.soundSet === 'off' && saved.effectsLevel === undefined) saved.effectsLevel = 0;
   // A level whole and within the steps; one that is no number is the default's.
   for (const key of ['musicLevel', 'effectsLevel'] as const) {
     const n: unknown = saved[key];
@@ -279,9 +297,13 @@ export function normaliseOptions(from: Saved): Partial<Options> {
     if (typeof n === 'number' && Number.isFinite(n)) saved[key] = Math.max(0, Math.min(LEVELS, Math.round(n)));
     else delete saved[key];
   }
-  // A set this build does not have would give the sound a gain of NaN.
-  if (saved.soundSet !== undefined && !SOUND_SETS.includes(saved.soundSet)) delete saved.soundSet;
-  if (saved.musicVoice !== undefined && !MUSIC_VOICES.includes(saved.musicVoice)) delete saved.musicVoice;
+  // The Music and Sound FX settings one now (Sound): the soundtrack the player had chosen is their Sound, its effects
+  // with it; the effects set they had chosen is dropped. A choice this build does not have is the default's.
+  if (saved.soundChoice === undefined && typeof saved.musicVoice === 'string' && CHOICE_OF[saved.musicVoice])
+    saved.soundChoice = CHOICE_OF[saved.musicVoice];
+  delete saved.musicVoice;
+  delete saved.soundSet;
+  if (saved.soundChoice !== undefined && !SOUND_CHOICES.includes(saved.soundChoice)) delete saved.soundChoice;
   // The rules one setting now (Rules): what the six it replaced said is dropped, and the default's taken. A value this
   // build does not have would give a member's defence no bonus at all, as NaN.
   const old = saved as Record<string, unknown>;

@@ -23,7 +23,7 @@ describe('the settings, at the title and in play', () => {
   it('keep the music and sound in Audio: none of it in Settings, nor on the Pause menu, which opens Audio', async () => {
     const { g, p } = newGame();
     journeyOnward(g);
-    expect(names(audioLines(g).map((l) => l.label))).toEqual(['Back', 'Music', 'Music level', 'Sound FX', 'Sound FX level']);
+    expect(names(audioLines(g).map((l) => l.label))).toEqual(['Back', 'Sound', 'Music level', 'Sound FX level']);
     for (const title of [true, false]) expect(settingLines(g, title).some((l) => /^(Music|Sound)/.test(l.label))).toBe(false);
     let pause: string[] = [];
     p.next = () => {

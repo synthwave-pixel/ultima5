@@ -39,7 +39,7 @@ const transcript = async (
   };
   // The sounds asked for, in their place: the Standard set's cues (cues.ts).
   g.soundOff = false;
-  g.options.soundSet = 'standard';
+  g.options.soundChoice = 'classical';
   g.sound.cue = async (name) => {
     flushLog();
     ev.push(`SOUND ${name}`);

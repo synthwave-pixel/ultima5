@@ -20,14 +20,14 @@ function recorded() {
 describe('backing out of a menu', () => {
   it("is a tap of its own, not the healer's light", () => {
     const { g, asked } = recorded();
-    g.options.soundSet = 'standard';
+    g.options.soundChoice = 'classical';
     menuSound(g, 'back');
     expect(asked).toEqual(['cue Back']);
   });
 
-  it("keeps the PC speaker's low note in the Original", () => {
+  it("keeps the PC speaker's low note in Upgrade (2001)", () => {
     const { g, asked } = recorded();
-    g.options.soundSet = 'original';
+    g.options.soundChoice = 'upgrade';
     menuSound(g, 'back');
     expect(asked).toEqual(['pulse 2300,1,18000,1,2']);
   });

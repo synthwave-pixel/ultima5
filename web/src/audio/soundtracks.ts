@@ -1,7 +1,7 @@
 /**
  * soundtracks.ts
  *
- * The four soundtracks the Music setting chooses among, and which of the
+ * The four soundtracks the Sound setting chooses among, and which of the
  * tunes' arrangements each plays where. Original and Remastered are each one
  * arrangement of every tune; Electronic and Classical were chosen tune by
  * tune from the arrangements rendered in many styles (tools/music/styles),
@@ -29,7 +29,7 @@ export const ARRANGEMENTS = [
 ] as const;
 export type Arrangement = (typeof ARRANGEMENTS)[number];
 
-/** The soundtracks (the Music setting), Classical the default. */
+/** The soundtracks (the Sound setting's: game/settings.ts soundtrackOf), Classical the default. */
 export const SOUNDTRACKS = ['classical', 'electronic', 'remastered', 'original'] as const;
 export type Soundtrack = (typeof SOUNDTRACKS)[number];
 

@@ -61,6 +61,7 @@ import { K } from './io.ts';
 import { nightSky, viewGem } from './look.ts';
 import { toMoonstone } from './moongate.ts';
 import { Status } from './save.ts';
+import { effectsOf } from './settings.ts';
 import { resurrect } from './shops.ts';
 import { A, T } from './tiles.ts';
 import { itemCounts, listBox, nextHeld, pickItem } from './zstats.ts';
@@ -532,8 +533,8 @@ async function anYlem(g: Game): Promise<number> {
     ![T.T5B, T.Chair90, T.Chair91, T.Chair92, T.Chair93, 0x9d, T.Desk, T.Barrel, T.Vanity, 0xa9, T.Dresser, 0xae, T.Trunk].includes(map[i])
   )
     return 0;
-  // The Standard set lets the spell's sound open first (it sounds on, unwaited), then the thing is pulled away.
-  if (!g.soundOff && g.options.soundSet === 'standard') await g.p.sleep(UNMAKE_BEAT_MS);
+  // The port's effects let the spell's sound open first (it sounds on, unwaited), then the thing is pulled away.
+  if (!g.soundOff && effectsOf(g.options.soundChoice) !== 'original') await g.p.sleep(UNMAKE_BEAT_MS);
   map[i] = T.T44;
   g.say(0x459a); // "POOF!\n"
   g.viewDirty |= 2;

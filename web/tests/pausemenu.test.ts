@@ -210,13 +210,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
     expect(paused).not.toContain('Map');
     const { audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');
     const name = (l: { label: string }): string => l.label.replace(/:.*/, '');
-    expect(audioLines(g).map((l) => l.label)).toEqual([
-      'Back',
-      'Music: Classical',
-      'Music level: 60%',
-      'Sound FX: Standard',
-      'Sound FX level: 80%',
-    ]);
+    expect(audioLines(g).map((l) => l.label)).toEqual(['Back', 'Sound: Classical', 'Music level: 60%', 'Sound FX level: 80%']);
     expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Snap attacks']);
     expect(settingLines(g).map(name)).toEqual([
       'Back',
@@ -291,10 +285,10 @@ describe('the Pause menu, Gameplay and Settings', () => {
     expect(heard[heard.length - 1]).toBe(false);
   });
 
-  it('cycles the Music line through the four soundtracks, each named within the menu’s width', async () => {
+  it('cycles the Sound line through the four, each named within the menu’s width', async () => {
     const { audioLines } = await import('../src/game/menu.ts');
     const { g } = newGame();
-    const music = () => audioLines(g).find((l) => l.label.startsWith('Music:'))!;
+    const music = () => audioLines(g).find((l) => l.label.startsWith('Sound:'))!;
     const seen: string[] = [];
     for (let i = 0; i < 4; i++) {
       const line = music();
@@ -302,8 +296,8 @@ describe('the Pause menu, Gameplay and Settings', () => {
       expect(line.label.length).toBeLessThanOrEqual(21);
       await line.act?.();
     }
-    expect(seen).toEqual(['Music: Classical', 'Music: Electronic', 'Music: Ambient', 'Music: Upgrade (2001)']);
-    expect(music().label).toBe('Music: Classical'); // round again
+    expect(seen).toEqual(['Sound: Classical', 'Sound: Electronic', 'Sound: Ambient', 'Sound: Upgrade (2001)']);
+    expect(music().label).toBe('Sound: Classical'); // round again
   });
 
   it('touches no hold at the title, where nothing is held', async () => {

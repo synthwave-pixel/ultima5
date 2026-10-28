@@ -213,7 +213,7 @@ describe('a game carried through 7-bit ASCII', () => {
     back.p.keys.push(K.Enter, K.Up, K.Enter);
     expect(await importGame(back.g)).toBe(true);
     const { loadOptions } = await import('../src/game/settings');
-    expect(loadOptions()).toMatchObject({ musicLevel: 0, effectsLevel: 0, soundSet: 'standard', scanlines: true });
+    expect(loadOptions()).toMatchObject({ musicLevel: 0, effectsLevel: 0, scanlines: true });
   });
 
   it('takes an older export, with letters past ASCII as they are, as before', async () => {

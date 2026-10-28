@@ -55,7 +55,6 @@ import {
   AUTO_COMBAT,
   RULES,
   LEVELS,
-  MUSIC_VOICES,
   PC_TILES,
   saveOptions,
   TILES,
@@ -63,8 +62,9 @@ import {
   type AutoCombat,
   type DungeonMap,
   type InputMode,
-  type MusicVoice,
   type Rules,
+  SOUND_CHOICES,
+  type SoundChoice,
 } from './settings.ts';
 import { A, T } from './tiles.ts';
 import { tileAt } from './world.ts';
@@ -1654,7 +1654,6 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
 
 const onOff = (b: boolean): string => (b ? 'On' : 'Off');
 const MAP_NAMES: Record<DungeonMap, string> = { off: 'Off', small: 'Corner', full: 'Whole view' };
-const SOUND_NAMES = { standard: 'Standard', original: 'Original' } as const;
 const RULES_NAMES: Record<Rules, string> = { story: 'Story', modern: 'Modern', classic: 'Classic' };
 const RULES_NOTES: Record<Rules, string> = {
   story: 'As Modern, never hungry, fights eased more.',
@@ -1718,39 +1717,29 @@ function musicLine(g: Game): Setting {
   };
 }
 
-/** Each soundtrack's name on the Music line (the menu is 21 columns: the year of the 2026 ones is in their note). */
-const SOUNDTRACK_NAMES: Record<MusicVoice, string> = {
+/** Each Sound choice's name on its line (the menu is 21 columns: the year of the 2026 ones is in their note). */
+const SOUND_NAMES: Record<SoundChoice, string> = {
   classical: 'Classical',
   electronic: 'Electronic',
-  remastered: 'Ambient',
-  original: 'Upgrade (2001)',
+  ambient: 'Ambient',
+  upgrade: 'Upgrade (2001)',
 };
-/** What each soundtrack is, under the Music line. */
-const SOUNDTRACK_NOTES: Record<MusicVoice, string> = {
-  classical: 'Classical (2026): strings, orchestra, consort, Celtic and piano.',
-  electronic: 'Electronic (2026): analog synths, drum machines and keys.',
-  remastered: 'Ambient (2026): soft synth pads, bells and mallets, calm.',
-  original: "Upgrade (2001): the Ultima V Upgrade's MIDI, on a sound card.",
+/** What each Sound choice is, under its line: its music, and its effects with it. */
+const SOUND_NOTES: Record<SoundChoice, string> = {
+  classical: 'Classical (2026): orchestra, consort, piano; effects to match.',
+  electronic: 'Electronic (2026): analog synths and keys; effects to match.',
+  ambient: 'Ambient (2026): soft pads, bells, mallets; effects to match.',
+  upgrade: "Upgrade (2001): the Upgrade's MIDI and 1988's PC speaker.",
 };
 
-/** Which soundtrack plays (Audio). */
-function musicVoiceLine(g: Game): Setting {
-  const o = g.options;
-  return {
-    label: `Music: ${SOUNDTRACK_NAMES[o.musicVoice]}`,
-    note: SOUNDTRACK_NOTES[o.musicVoice],
-    listen: true,
-    act: () => void (o.musicVoice = MUSIC_VOICES[(MUSIC_VOICES.indexOf(o.musicVoice) + 1) % MUSIC_VOICES.length]),
-  };
-}
-
-/** The sound effects' set (Audio). */
+/** The Sound: the music and its effects together (Audio). */
 function soundLine(g: Game): Setting {
   const o = g.options;
   return {
-    label: `Sound FX: ${SOUND_NAMES[o.soundSet]}`,
-    note: "Standard: the port's chip sounds. Original: the PC speaker, as in 1988.",
-    act: () => void (o.soundSet = o.soundSet === 'standard' ? 'original' : 'standard'),
+    label: `Sound: ${SOUND_NAMES[o.soundChoice]}`,
+    note: SOUND_NOTES[o.soundChoice],
+    listen: true,
+    act: () => void (o.soundChoice = SOUND_CHOICES[(SOUND_CHOICES.indexOf(o.soundChoice) + 1) % SOUND_CHOICES.length]),
   };
 }
 
@@ -1967,9 +1956,9 @@ export async function gameplayMenu(g: Game): Promise<number> {
   return optionsMenu(g, 'Gameplay', () => gameplayLines(g));
 }
 
-/** Audio: the soundtrack, the sound effects and how loud each is - the Pause menu's, and Settings' at the title. */
+/** Audio: the Sound (the music and its effects) and how loud each is - the Pause menu's, and Settings' at the title. */
 export function audioLines(g: Game): Setting[] {
-  return [{ label: 'Back', note: '' }, musicVoiceLine(g), musicLine(g), soundLine(g), effectsLevelLine(g)];
+  return [{ label: 'Back', note: '' }, soundLine(g), musicLine(g), effectsLevelLine(g)];
 }
 
 /** Audio (audioLines). */

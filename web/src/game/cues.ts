@@ -14,6 +14,7 @@
  */
 
 import type { Game } from './game.ts';
+import { effectsOf } from './settings.ts';
 
 export type Cue =
   | 'TorchIgnite'
@@ -43,12 +44,12 @@ export type Cue =
   | 'Back';
 
 /**
- * Sound cue `name` in the Standard set; in the Original, the DOS game's own sound for the moment (`original`), or
- * none. Waits as an effect does: a moment at most.
+ * Sound cue `name` in the port's effects (the three suites); in Upgrade (2001)'s PC speaker, the DOS game's own sound
+ * for the moment (`original`), or none. Waits as an effect does: a moment at most.
  */
 export async function cue(g: Game, name: Cue, original?: () => Promise<void>, whole = false): Promise<void> {
   if (g.soundOff) return;
-  if (g.options.soundSet === 'standard' && g.sound.cue) return g.sound.cue(name, whole);
+  if (effectsOf(g.options.soundChoice) !== 'original' && g.sound.cue) return g.sound.cue(name, whole);
   if (original) return original();
 }
 

@@ -157,7 +157,7 @@ export class PcSound implements Sound {
   private readonly waterLoops = new Map<string, Float32Array[]>();
   /** How near what the next ambient call sounds is (squares, squared: frame.ts ambientSound). */
   private near2 = 0;
-  /** Which effects play (the Sound FX setting). */
+  /** Which effects play (the Sound setting's: game/settings.ts effectsOf). */
   private effects: EffectsSet = 'standard';
   /** The suites' rendered files, the one in use fetched and decoded when it is chosen. */
   private bank = new SfxBank(SFX_MANIFEST, (file) =>
@@ -168,7 +168,7 @@ export class PcSound implements Sound {
   private readonly player = new MusicPlayer(() => this.ctx, musicGain(6));
   /** Whether music plays at all (the Music level above none). */
   musicOn = true;
-  /** Which soundtrack plays (the Music setting). */
+  /** Which soundtrack plays (the Sound setting's: game/settings.ts soundtrackOf). */
   private voice: MusicVoice = 'classical';
   /** The tune asked for, and on what occasion, so it can start once audio is unlocked, music is turned on, or its file has come. */
   private wanted = 0;
@@ -493,14 +493,14 @@ export class PcSound implements Sound {
     this.music(this.wanted, this.occasion);
   }
 
-  /** The Music setting's soundtrack: the tune playing taken up again in it, crossfaded. */
+  /** The Sound setting's soundtrack: the tune playing taken up again in it, crossfaded. */
   setMusicVoice(voice: MusicVoice): void {
     if (voice === this.voice) return;
     this.voice = voice;
     this.musicAgain();
   }
 
-  /** The Sound FX setting changed: the set, and the level it is heard at. A suite's file is fetched once it is chosen. */
+  /** The Sound setting or the Sound FX level changed: the effects, and the level they are heard at. A suite's file is fetched once it is chosen. */
   setEffects(set: EffectsSet, level: number): void {
     this.effects = set;
     this.effectsLevel = level;
@@ -518,7 +518,7 @@ export class PcSound implements Sound {
 
   /** What is holding the sound: the page is away, the pause menu, a list of settings or the harpsichord is up. */
   private readonly holds = new Set<Hold>();
-  /** The music heard over a menu's hold: the bar on the Music or Music level line (hearMusic). */
+  /** The music heard over a menu's hold: the bar on the Sound or Music level line (hearMusic). */
   private hearing = false;
 
   /**
@@ -538,7 +538,7 @@ export class PcSound implements Sound {
     } else if (this.ctx.state === 'running') void this.ctx.suspend().catch(() => undefined);
   }
 
-  /** The music heard though a menu holds it (the Music or Music level line under the bar, its dial), or held again. */
+  /** The music heard though a menu holds it (the Sound or Music level line under the bar, its dial), or held again. */
   hearMusic(on: boolean): void {
     this.hearing = on;
     this.holdMusic();
