@@ -871,6 +871,9 @@ export function u3Effect(name: string, k = 1, circle = 1, r: () => number = () =
       return peak(run([55, 62], 0.12, 'p25'), -14);
     case 'Attack':
       return peak(blow(160 * k, 0.04, 0.45, 0x1234), -11);
+    case 'Back':
+      // Backing out of a menu: a very soft tap - a muffled click and a little low knock, gone at once.
+      return peak(mix(lowpass(noise(0.03, 3000, perc(0.004, 0.03), 0x3131), 1500), [tone(0.045, 210, 'tri', perc(0.006, 0.045)), 0]), -26);
     case 'Ouch':
       return peak(tone(0.22, glide(520, 200, 0.12), 'tri', perc(0.06, 0.22)), -12);
     case 'Immolate':

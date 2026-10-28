@@ -8,6 +8,7 @@
  * letter picker that lets a controller type names and words.
  */
 
+import { cue } from './cues.ts';
 import { saysWord, talkingHorseBeside } from './cmds.ts';
 import { actorTileAt } from './actors.ts';
 import { foesAbout } from './bumpAct.ts';
@@ -1328,7 +1329,8 @@ function everything(g: Game): Item[] {
 
 /**
  * What a menu answers a key with (the port's, from the ultima3 port): a
- * step as the cursor moves, and a low note on backing out. A choice is
+ * step as the cursor moves, and on backing out a very soft tap (the Back
+ * cue; the Original's low note of the shop counter, the healer's). A choice is
  * silent - what it opens or does says it, and a sound at every choice was
  * too much. They go through the same effects as the game's own sounds, so
  * the Standard set voices them as chip tones and Original as the PC
@@ -1339,7 +1341,7 @@ export function menuSound(g: Game, what: 'move' | 'back'): void {
   // The game's own effects, by the parameters the original passes for them, so each set voices them its way.
   if (what === 'move')
     void g.sound.noise(1, 0x19, 1000); // a step
-  else void g.sound.pulse(2300, 1, 18000, 1, 2); // the low note of the shop counter
+  else void cue(g, 'Back', () => g.sound.pulse(2300, 1, 18000, 1, 2)); // the Original's: the low note of the shop counter
 }
 
 /** Whether the Map command switches the dungeon's view (the Standard look, in a dungeon) rather than showing the world's map. */

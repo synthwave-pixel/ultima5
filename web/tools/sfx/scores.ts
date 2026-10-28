@@ -105,6 +105,19 @@ const magic = (gesture: Gesture, bed: SfxNote[][] = [], standout = false): Score
   texture: (suite, r) => magicTexture(suite, gesture, r),
 });
 
+/**
+ * A cloud of glints: `count` faint notes of a whole-tone scale (no key, no tune) on the celesta, unmetered, strewn
+ * through the swell - each suite's renderer giving them its own glass or bells.
+ */
+function cloud(seconds: number, count: number, variant: number): SfxNote[] {
+  const WHOLE = [62, 64, 66, 68, 70, 72, 74, 76];
+  let seed = 31 + variant * 977 + count * 13;
+  const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  return Array.from({ length: count }, () =>
+    note(seconds * (0.1 + 0.7 * r()), WHOLE[Math.floor(r() * WHOLE.length)], 0.4, P.celesta, 20 + Math.floor(r() * 20)),
+  );
+}
+
 /** A spell of `circle`: the air drawn up and let go, wider and longer and its grains thicker the higher the circle. */
 function spell(circle: number, variant: number): Score {
   const seconds = spellLength(circle);
@@ -120,6 +133,7 @@ function spell(circle: number, variant: number): Score {
       hi: 1300 + 900 * k,
     },
     [
+      cloud(seconds, 2 + circle, variant),
       chord(0, [38, 45], seconds, P.slow, 34 + circle * 2),
       circle >= 4 ? chord(seconds * 0.2, [50], seconds * 0.8, P.choir, 30 + circle * 2) : [],
       circle >= 7 ? chord(seconds * 0.3, [57], seconds * 0.7, P.choir, 28 + circle) : [],

@@ -57,7 +57,7 @@ const RATE = 44100;
 /** How long a sound may ring past its score's length, faded over that time (seconds). */
 const RING = 0.5;
 /** Each sound's level: its loudest 100 ms, dBFS. */
-const LEVEL = { standout: -20, repeated: -27, other: -24 };
+const LEVEL = { standout: -20, repeated: -27, other: -24, tap: -34 };
 /** Opus at 48 kbps, in Ogg, as the music is. */
 const CODEC = ['-c:a', 'libopus', '-b:a', '48k'];
 
@@ -330,7 +330,10 @@ async function main(): Promise<void> {
     .filter((key) => sourceOf(key) === 'standard')
     .flatMap((key) => variants(key, (r) => standardVoice(key, r), REPEATED.has(key)));
   const universal = Object.entries(UNIVERSAL).flatMap(([key, voice]) =>
-    variants(key, voice, REPEATED.has(key), { music: strictest, level: REPEATED.has(key) ? LEVEL.repeated : LEVEL.other }),
+    variants(key, voice, REPEATED.has(key), {
+      music: strictest,
+      level: key === 'cue:Back' ? LEVEL.tap : REPEATED.has(key) ? LEVEL.repeated : LEVEL.other,
+    }),
   );
   const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal];
   console.log(`: ${forAll.length}`);

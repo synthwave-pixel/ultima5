@@ -6,6 +6,7 @@ import { BANKED, NOTE_BANK, SUITES } from '../src/audio/sfxKeys.ts';
 import { bankScore, SCORES, sourceOf, VARIANTS } from '../tools/sfx/scores.ts';
 import { UNIVERSAL } from '../tools/sfx/universal.ts';
 import { bandsLoudest } from '../tools/sfx/check.ts';
+import { fft } from '../tools/music/spectrum.ts';
 import { levelSlice } from '../tools/sfx/render.ts';
 import type { Stereo } from '../tools/music/pcm.ts';
 
@@ -138,7 +139,7 @@ describe('the magic', () => {
   const magic = ['failure', 'absorb', 'summon', 'artifact', 'sceptuse', 'moongate', 'shop0', 'shop1', 'shop2', 'status'];
   const keys = [...Array.from({ length: 8 }, (_, i) => `spell${i + 1}`), ...magic];
 
-  it('is a texture in each suite, the notes under it a low bed with no tune above the treble staff', () => {
+  it('is a texture in each suite, the notes a low bed and faint glints, no tune', () => {
     for (const k of keys)
       for (const suite of SUITES) {
         const s = SCORES[k](0);
@@ -149,7 +150,10 @@ describe('the magic', () => {
           t.reduce((m, v) => Math.max(m, Math.abs(v)), 0),
           `${k} ${suite}`,
         ).toBeGreaterThan(0.001);
-        for (const n of s.notes) expect(n.note, k).toBeLessThanOrEqual(67);
+        for (const n of s.notes) {
+          expect(n.note, k).toBeLessThanOrEqual(80);
+          if (n.note > 67) expect(n.velocity, `${k}: a glint, faint`).toBeLessThanOrEqual(45);
+        }
       }
   });
 
@@ -162,5 +166,20 @@ describe('the magic', () => {
 
   it('grows with the circle', () => {
     expect(SCORES.spell8(0).length).toBeGreaterThan(SCORES.spell1(0).length);
+  });
+
+  it('is made of tones, not noise: its sound in a few pitches, not spread over a band', () => {
+    // The middle of a spell's texture, as a spectrum: tones put most of their power in a few bins, noise in many.
+    for (const suite of SUITES) {
+      const t = SCORES.spell6(0).texture!(suite, () => 0.5);
+      const at = Math.max(0, (t.length >> 1) - 4096);
+      const re = Float64Array.from({ length: 8192 }, (_, i) => (t[at + i] ?? 0) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / 8192)));
+      const im = new Float64Array(8192);
+      fft(re, im);
+      const power = Array.from({ length: 4096 }, (_, k) => re[k] * re[k] + im[k] * im[k]).sort((a, b) => b - a);
+      const total = power.reduce((a, b) => a + b, 0);
+      const top = power.slice(0, 82).reduce((a, b) => a + b, 0); // the strongest 2%
+      expect(top / total, suite).toBeGreaterThan(0.9);
+    }
   });
 });

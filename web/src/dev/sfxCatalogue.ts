@@ -397,4 +397,14 @@ export const CUES: Record<string, About & { original?: string }> = {
     'Places and events',
   ),
   Invocation: a('The Codex speaks', 'The Codex of Ultimate Wisdom answering.', 'once', 'shrine.ts', 'The story'),
+  Back: {
+    ...a(
+      'Backing out',
+      'Backing out of a menu: a very soft tap (the Original its low shop note).',
+      'often',
+      'menu.ts menuSound',
+      'The menus',
+    ),
+    original: 'shop2',
+  },
 };
