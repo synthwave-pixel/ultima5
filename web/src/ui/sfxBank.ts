@@ -12,7 +12,7 @@ import sfxManifest from '../audio/sfxManifest.json';
 import { NOTE_BANK, type SfxManifest, type Suite } from '../audio/sfxKeys.ts';
 
 /** The render's manifest (tools/sfx/render.ts): where each suite's sounds lie in its file. */
-export const SFX_MANIFEST: SfxManifest = sfxManifest;
+export const SFX_MANIFEST = sfxManifest as SfxManifest;
 
 /** A slice of a suite's file: where it starts and how long it is (seconds). */
 export interface Slice {

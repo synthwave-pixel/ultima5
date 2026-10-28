@@ -17,7 +17,7 @@ export const SUITES = ['classical', 'electronic', 'ambient'] as const;
 export type Suite = (typeof SUITES)[number];
 
 /** The notes a bank is rendered over (MIDI): about the families' notes, two octaves down (BANK_TRANSPOSE), 61 to 77. */
-export const NOTE_BANK = { low: 55, high: 84 };
+export const NOTE_BANK = { low: 55, high: 79 };
 /** The families played from a bank of notes. */
 export const BANKED = ['harpsichord', 'lute', 'chant'] as const;
 /**

@@ -13,10 +13,11 @@
  * allow (tame), and laid
  * end to end into one Opus file a suite, web/public/sfx/<suite>.<hash>.ogg,
  * with web/src/audio/sfxManifest.json saying where each sound lies in it.
- * The effects no score voices (steps, blows, water...) are the chip's,
- * softened (sfxKeys.ts soften), and checked with the rest (check.ts): the
- * report goes to screenshots/sfx-check.md, and the run fails if anything
- * breaks the rules, its files written all the same.
+ * The effects no score voices (steps, blows, thunder, doors...) are the
+ * chip's, levelled and softened as the strictest soundtrack allows, and go
+ * in every suite's file; everything is checked (check.ts): the report goes
+ * to screenshots/sfx-check.md, and the run fails if anything breaks the
+ * rules, its files written all the same.
  *
  *   npm run sfx                  every suite
  *   npm run sfx -- ambient       one suite
@@ -34,7 +35,7 @@ import { REPEATED, standard } from '../../src/audio/chip.ts';
 import { u3Effect } from '../../src/audio/chip3.ts';
 import { RULES } from '../../src/audio/effects.ts';
 import { playRemaster } from '../../src/audio/remaster.ts';
-import { BANKED, cueKey, NOTE_BANK, noteKey, sfxKey, type SfxManifest, soften, SUITES, type Suite } from '../../src/audio/sfxKeys.ts';
+import { BANKED, cueKey, NOTE_BANK, noteKey, sfxKey, type SfxManifest, SUITES, type Suite } from '../../src/audio/sfxKeys.ts';
 import { arrangementsFor, type Soundtrack } from '../../src/audio/soundtracks.ts';
 import type { XmiEvent, XmiSequence } from '../../src/audio/xmi.ts';
 import { TUNE_FILES } from '../../src/game/music.ts';
@@ -172,7 +173,7 @@ function sounds(): { key: string; score: Score; level: number }[] {
   for (const [key, make] of Object.entries(SCORES))
     for (let v = 0; v < (VARIANTS[key] ?? 1); v++) {
       const score = make(v);
-      const level = score.standout ? LEVEL.standout : REPEATED.has(key) || VARIANTS[key] ? LEVEL.repeated : LEVEL.other;
+      const level = score.standout ? LEVEL.standout : REPEATED.has(key) ? LEVEL.repeated : LEVEL.other;
       out.push({ key, score, level });
     }
   for (const family of BANKED)
@@ -181,24 +182,39 @@ function sounds(): { key: string; score: Score; level: number }[] {
   return out;
 }
 
-/** The effects no score voices, as the suites play them: the chip's voice, softened. */
-function shared(): Checked[] {
+/** Water, which the page keeps sounding in loops of its own (ui/sound.ts WATERS), not from a suite's file. */
+const WATER = new Set(['watrfall', 'fountain']);
+
+/**
+ * The effects no score voices - steps, blows, thunder, doors, the port's other cues - as all three suites play them:
+ * the chip's voice (chip.ts, chip3.ts), set at its level and softened as `music` (the strictest soundtrack's) allows;
+ * three of each that a turn repeats, each a little different, as the chip varies them.
+ */
+function sharedSounds(music: Bands): Checked[] {
   const out: Checked[] = [];
+  const add = (key: string, voice: (r: () => number) => Float32Array | null, repeated: boolean): void => {
+    for (let v = 0; v < (repeated ? 3 : 1); v++) {
+      let seed = 7 + v * 1013;
+      const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const mono = voice(r);
+      if (!mono || mono.length <= 1) return;
+      const pcm: Stereo = [Float32Array.from(mono), Float32Array.from(mono)];
+      const level = repeated ? LEVEL.repeated : LEVEL.other;
+      levelSlice(pcm, level);
+      out.push({ key, pcm: tame(pcm, music, 6, level), standout: false });
+    }
+  };
   const seen = new Set<string>();
   for (const [kind, args, name] of RULES) {
-    if (seen.has(name)) continue;
+    if (seen.has(name) || WATER.has(name)) continue;
     seen.add(name);
     const key = sfxKey({ name }, kind, args);
     if (key === 'silent' || (key && SCORES[key.key])) continue;
-    const pcm = soften(standard({ name }, kind, args, () => 0.5));
-    if (pcm.length > 1) out.push({ key: name, pcm: [pcm, pcm], standout: false });
+    add(name, (r) => standard({ name }, kind, args, r), REPEATED.has(name));
   }
   for (const name of Object.keys(CUES)) {
     if (SCORES[cueKey(name)]) continue;
-    const voice = u3Effect(name);
-    if (!voice) continue;
-    const pcm = soften(voice);
-    out.push({ key: cueKey(name), pcm: [pcm, pcm], standout: false });
+    add(cueKey(name), () => u3Effect(name), false);
   }
   return out;
 }
@@ -237,13 +253,19 @@ async function main(): Promise<void> {
   const manifest = (existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {}) as Partial<SfxManifest>;
   const report: string[] = ['# The effects suites, checked', ''];
   const failures: string[] = [];
-  const refs = new Map<Suite, Bands>();
+  process.stdout.write('measuring the music');
+  const refs = new Map<Suite, Bands>(suites.map((suite) => [suite, reference(SOUNDTRACK[suite])]));
+  // The shared effects, made once, against the strictest of the soundtracks measured; they go in every suite's file.
+  const strictest: Bands = {
+    presence: Math.min(...[...refs.values()].map((r) => r.presence)),
+    sibilance: Math.min(...[...refs.values()].map((r) => r.sibilance)),
+  };
+  const shared = sharedSounds(strictest);
+  console.log(`, ${shared.length} shared sounds`);
   for (const suite of suites) {
-    process.stdout.write(`${suite}: measuring its music`);
-    const ref = reference(SOUNDTRACK[suite]);
-    refs.set(suite, ref);
-    process.stdout.write(', rendering');
-    const done: { key: string; pcm: Stereo; standout: boolean }[] = [];
+    const ref = refs.get(suite)!;
+    process.stdout.write(`${suite}: rendering`);
+    const done: Checked[] = [];
     for (const s of sounds()) {
       const rendered = finish(await renderScore(suite, s.score), s.score.length);
       levelSlice(rendered, s.level);
@@ -251,7 +273,7 @@ async function main(): Promise<void> {
       done.push({ key: s.key, pcm, standout: !!s.score.standout });
       if (done.length % 20 === 0) process.stdout.write('.');
     }
-    const { pcm, slices } = layOutAtlas(done);
+    const { pcm, slices } = layOutAtlas([...done, ...shared]);
     const bytes = encode(pcm, RATE, 'ogg', CODEC);
     const name = `${suite}.${createHash('sha256').update(bytes).digest('hex').slice(0, 8)}.ogg`;
     writeFileSync(join(OUT, name), bytes);
@@ -259,19 +281,14 @@ async function main(): Promise<void> {
     manifest[suite] = { file: `sfx/${name}`, slices };
     const found = checkSuite(suite, done, ref);
     failures.push(...found);
-    report.push(`## ${suite}`, '', `${name}: ${(bytes.length / 1e6).toFixed(2)} MB, ${done.length} sounds.`, '');
+    report.push(`## ${suite}`, '', `${name}: ${(bytes.length / 1e6).toFixed(2)} MB, ${done.length} sounds and the shared.`, '');
     report.push(...(found.length ? found.map((f) => `- ${f}`) : ['Nothing breaks the rules.']), '');
     console.log(` ${name} (${(bytes.length / 1e6).toFixed(2)} MB), ${found.length} over`);
   }
-  // The shared effects, against the strictest of the soundtracks measured.
-  const strictest: Bands = {
-    presence: Math.min(...[...refs.values()].map((r) => r.presence)),
-    sibilance: Math.min(...[...refs.values()].map((r) => r.sibilance)),
-  };
-  const sharedFound = checkSuite('shared', shared(), refs.size ? strictest : undefined);
+  const sharedFound = checkSuite('shared', shared, strictest);
   failures.push(...sharedFound);
   report.push(
-    '## shared (the chip voices, softened)',
+    '## shared (the chip voices, levelled and softened, in every suite)',
     '',
     ...(sharedFound.length ? sharedFound.map((f) => `- ${f}`) : ['Nothing breaks the rules.']),
     '',
