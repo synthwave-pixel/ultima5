@@ -107,10 +107,12 @@ describe('a sound asked for while the sound is held', () => {
     const inner = sound as unknown as { ctx: unknown; out: unknown };
     inner.ctx = ctx;
     inner.out = {};
-    await sound.cue('DoorOpen');
+    // A call the suites have no sound of their own for: its chip voice, softened, plays at once (a suite's own would
+    // wait for its file).
+    await sound.pulse(1234, 1, 5000, 6, 7);
     expect(started).toBe(0); // the clock is frozen: a sound would wait there to sound with the rest
     ctx.state = 'running';
-    await sound.cue('DoorOpen');
+    await sound.pulse(1234, 1, 5000, 6, 7);
     expect(started).toBe(1);
   });
 });

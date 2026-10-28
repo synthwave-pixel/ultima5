@@ -5,9 +5,9 @@
  * the DOS game's effects (u5d's names), its families of notes, and the
  * port's own cues (game/cues.ts) - with what each is, when and how often
  * the game plays it, where in the code, and the voice it has; a button
- * plays it through the game's own PcSound, as today's Standard set (to
- * compare), as each of the three suites that match the soundtracks
- * (audio/sfxKeys.ts), or as Upgrade (2001)'s PC speaker. Above them, the
+ * plays it through the game's own PcSound, as each of the three suites that
+ * match the soundtracks (audio/sfxKeys.ts), or as Upgrade (2001)'s PC
+ * speaker. Above them, the
  * music: every tune in every arrangement each soundtrack plays, so an
  * effect can be heard over the tune it will sit on.
  */
@@ -15,7 +15,6 @@
 import { gameFiles } from '../boot.ts';
 import { GameData } from '../game/data.ts';
 import { identify, RULES, type Kind } from '../audio/effects.ts';
-import { FOLDED, SHARED } from '../audio/chip.ts';
 import { cueKey, sfxKey, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { type Arrangement, arrangementsFor, SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
 import { TUNE_FILES } from '../game/music.ts';
@@ -86,10 +85,9 @@ function entries(data: GameData): Entry[] {
   return out;
 }
 
-/** The ways the page plays the effects: today's Standard (to compare), the three suites, and Upgrade (2001)'s speaker. */
-type PlayAs = 'standard' | Suite | 'original';
+/** The ways the page plays the effects: the three suites, and Upgrade (2001)'s speaker - the Sound setting's four. */
+type PlayAs = Suite | 'original';
 const PLAY_AS: [PlayAs, string][] = [
-  ['standard', 'Standard (today)'],
   ['classical', 'Classical'],
   ['electronic', 'Electronic'],
   ['ambient', 'Ambient'],
@@ -121,7 +119,7 @@ const OFTEN_ORDER = ['every step', 'every blow', 'often', 'now and then', 'rare'
 /** What a suite plays for a sound (its key, or null for the shared voice), in words. */
 function suiteVoice(suite: Suite, key: ReturnType<typeof sfxKey>): string {
   if (key === 'silent') return 'folded: silent alone';
-  if (key && (key.key === 'watrfall' || key.key === 'fountain')) return "the water's loops, as in Standard";
+  if (key && (key.key === 'watrfall' || key.key === 'fountain')) return "the water's loops (the chip's, kept sounding)";
   if (!key || !SFX[suite]?.slices[key.key]) return 'the chip voice, softened';
   return key.hz ? 'a note of its bank, at the pitch' : "rendered in the suite's file";
 }
@@ -299,21 +297,12 @@ async function start(): Promise<void> {
       if (seen.has(family)) continue;
       seen.add(family);
       const members = all.filter((m) => m.name === family || m.name.startsWith(`${family} `));
-      const standardVoice =
-        family === 'cast circle'
-          ? 'folded into the spell (ultima3 Spell): silent alone'
-          : family === 'blackthorn'
-            ? "Blackthorn's theme, a note a call (BlackthornNote)"
-            : SHARED[family]
-              ? `ultima3 ${SHARED[family]}`
-              : 'own chip voice, from the call';
       rows.push({
         name: family,
         about: FAMILY[family],
-        voice: (set) => (set === 'standard' ? standardVoice : set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(members[0]))),
+        voice: (set) => (set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(members[0]))),
         plays: members.map((m) => {
-          const folded = (set: PlayAs): boolean =>
-            set === 'standard' ? family === 'cast circle' : isSuite(set) ? keyOf(m) === 'silent' : false;
+          const folded = (set: PlayAs): boolean => isSuite(set) && keyOf(m) === 'silent';
           return {
             label: m.name === family ? '▶' : m.name.slice(family.length + 1),
             folded,
@@ -330,17 +319,11 @@ async function start(): Promise<void> {
       unknown.push(e.name);
       continue;
     }
-    const shared = SHARED[e.name] ?? (e.name.startsWith('spell') ? 'Spell' : undefined);
-    const standardVoice = FOLDED[e.name]
-      ? `folded into ${FOLDED[e.name]}: silent alone`
-      : shared
-        ? `ultima3 ${shared}`
-        : 'own chip voice, from the call';
-    const folded = (set: PlayAs): boolean => (set === 'standard' ? !!FOLDED[e.name] : isSuite(set) ? keyOf(e) === 'silent' : false);
+    const folded = (set: PlayAs): boolean => isSuite(set) && keyOf(e) === 'silent';
     rows.push({
       name: e.name,
       about,
-      voice: (set) => (set === 'standard' ? standardVoice : set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(e))),
+      voice: (set) => (set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(e))),
       plays: [{ label: '▶', folded, run: (set) => (folded(set) ? null : calls(e)(set)) }],
     });
   }
@@ -350,13 +333,11 @@ async function start(): Promise<void> {
       name,
       about,
       voice: (set) =>
-        set === 'standard'
-          ? `ultima3 ${name} (the port's own)`
-          : set === 'original'
-            ? fallback
-              ? `the PC speaker's ${fallback.name}`
-              : 'none: the DOS game was silent'
-            : suiteVoice(set, { key: cueKey(name) }),
+        set === 'original'
+          ? fallback
+            ? `the PC speaker's ${fallback.name}`
+            : 'none: the DOS game was silent'
+          : suiteVoice(set, { key: cueKey(name) }),
       plays: [
         {
           label: '▶',
@@ -378,7 +359,7 @@ async function start(): Promise<void> {
   }
 
   const controls = document.getElementById('controls')!;
-  let set: PlayAs = 'standard';
+  let set: PlayAs = 'classical';
   const setButtons = PLAY_AS.map(([v, label]) => {
     const b = document.createElement('button');
     b.textContent = label;

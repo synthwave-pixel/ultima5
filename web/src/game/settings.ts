@@ -173,8 +173,6 @@ export type DungeonMap = 'off' | 'small' | 'full';
 /** The Standard look's dungeon: the first-person view, or the whole level's map (dungeonMap.ts). */
 export type DungeonView = 'mini' | 'full';
 
-/** The effects that can play: the Standard chip voices (retired from the settings), or the Original PC speaker. */
-export type SoundSet = 'standard' | 'original';
 /** The music's soundtracks (audio/soundtracks.ts): Classical, Electronic, Remastered, Original. */
 export type MusicVoice = Soundtrack;
 /** The Sound setting's choices, in the order its line turns through them. */

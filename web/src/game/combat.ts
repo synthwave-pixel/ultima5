@@ -754,7 +754,7 @@ async function monsterShoots(g: Game, i: number, target: number, reflected: bool
   const missile = g.data.bytes(0x15cc, 0x30)[kind];
   if ((kind !== 0x1a && g.random(0, 0xff) >= 0x80) || ((enemyFlags(g, kind) & EF.Magic) !== 0 && (s.icon === 0x4e || g.regalia === 0x1c)))
     return false;
-  // A monster's spell, in the Standard set, is its own sound; its arrows and breath are the missile's (game/cues.ts).
+  // A monster's spell, in the suites, is its own sound; its arrows and breath are the missile's (game/cues.ts).
   const shoot = (): Promise<void> => g.sound.sweep(0x2ee, 400, 5, 0x96);
   if (enemyFlags(g, kind) & EF.Magic) await cue(g, 'MonsterSpell', shoot);
   else if (!g.soundOff) await shoot();
@@ -1634,7 +1634,7 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number)
 
 /** COMSUBS_0bf8: a blow at a neighbour. */
 export async function melee(g: Game, i: number, target: number, weapon: number): Promise<void> {
-  // A monster's blow, in the Standard set, is its own sound, where the party's is the swing (game/cues.ts).
+  // A monster's blow, in the suites, is its own sound, where the party's is the swing (game/cues.ts).
   const swing = (): Promise<void> => g.sound.sweep(400, 0x2ee, 5, 0x96);
   if (!(g.combat[i].flags & CF.Player)) await cue(g, 'Attack', swing);
   else if (!g.soundOff) await swing();

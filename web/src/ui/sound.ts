@@ -1,9 +1,11 @@
 /**
  * sound.ts
  *
- * The DOS game's sound, through Web Audio: the PC speaker's four routines
- * (ULTIMA_2192 pulse, 223c noise, 22c0 tone, 43ae sweep) as square waves
- * and noise, timed as u5d's synthesized driver times them, and the music,
+ * The DOS game's sound, through Web Audio: its effects in one of the three
+ * suites that match the soundtracks (audio/sfxKeys.ts; Classical, Electronic,
+ * Ambient), or as the PC speaker's four routines (ULTIMA_2192 pulse, 223c
+ * noise, 22c0 tone, 43ae sweep) sounded them - square waves and noise, timed
+ * as u5d's synthesized driver times them - for Upgrade (2001); and the music,
  * the Ultima V Upgrade's tunes as rendered files (tools/music), played by
  * ui/music.ts: each fetched the first time it plays - kept by the service
  * worker on the web, carried in the bundle in the apps.
@@ -23,7 +25,7 @@
  */
 
 import type { Sound } from '../game/io.ts';
-import { levelGain, type MusicVoice, type SoundSet } from '../game/settings.ts';
+import { levelGain, type MusicVoice } from '../game/settings.ts';
 import { arrangementsFor, pick, type Arrangement, type Occasion } from '../audio/soundtracks.ts';
 import { REPEATED, standard } from '../audio/chip.ts';
 import {
@@ -44,16 +46,16 @@ import { MUSIC, MusicPlayer } from './music.ts';
 import { bankRate, SFX_MANIFEST, SfxBank, type Slice } from './sfxBank.ts';
 
 /**
- * The effects that can play: the Standard chip set, the Original PC speaker, or one of the suites that match the
- * soundtracks (audio/sfxKeys.ts), each effect a slice of the suite's rendered file (sfxBank.ts).
+ * The effects that can play: one of the suites that match the soundtracks (audio/sfxKeys.ts), each effect a slice of
+ * the suite's rendered file (sfxBank.ts), or the Original PC speaker (Upgrade (2001)'s).
  */
-export type EffectsSet = SoundSet | Suite;
+export type EffectsSet = Suite | 'original';
 const isSuite = (set: EffectsSet): set is Suite => (SUITES as readonly string[]).includes(set);
 /** A slice of a suite's file, played at a rate (a bank's note put at its pitch, a repeated effect varied). */
 type Played = Slice & { rate: number };
 
-/** The effects' level into the mix (the chip voices are levelled in chip.ts; the speaker is a full-scale 0 or 1). */
-const EFFECT_LEVEL: Record<EffectsSet, number> = { standard: 1, original: 0.3, classical: 1, electronic: 1, ambient: 1 };
+/** The effects' level into the mix (the suites are levelled in their render, tools/sfx; the speaker is a full-scale 0 or 1). */
+const EFFECT_LEVEL: Record<EffectsSet, number> = { original: 0.3, classical: 1, electronic: 1, ambient: 1 };
 /**
  * The music's gain at full (100%): the rendered tunes are levelled at an RMS of -20 dBFS, their peaks at -1 dBFS at
  * most (tools/music/pcm.ts level), so unity is their own level, with room under full scale for the effects at their
@@ -70,11 +72,11 @@ export function musicGain(level: number): number {
 }
 /**
  * The effects' gain for a set at a level (0-10): the default level (80%) is each set's level as it always was. A set
- * or level that is none (a script's, or a setting from before the mixer: 'off') sounds as the Standard set, or not at
+ * or level that is none (a script's, or a setting from before the mixer: 'off') sounds as a suite does, or not at
  * all, rather than giving the audio a gain of NaN, which throws.
  */
 export function effectsGain(set: EffectsSet, level: number): number {
-  const gain = ((EFFECT_LEVEL[set] ?? EFFECT_LEVEL.standard) / levelGain(8)) * levelGain(level);
+  const gain = ((EFFECT_LEVEL[set] ?? EFFECT_LEVEL.classical) / levelGain(8)) * levelGain(level);
   return Number.isFinite(gain) ? gain : 0;
 }
 /** An effect at least this long lowers the music. */
@@ -113,14 +115,14 @@ export function ducks(name: string, played: number): boolean {
   return played >= DUCK_SECONDS && !AMBIENT.has(name);
 }
 /**
- * Water in the Standard set - a waterfall, a fountain - not heard again for this long (ms) - the party gone from it, or
+ * Water in the suites - a waterfall, a fountain - not heard again for this long (ms) - the party gone from it, or
  * the game's ticks stopped - fades away. Its call comes every tick (frame.ts ambientSound, a few times a second).
  */
 const WATER_QUIET_MS = 1200;
 /** About how long water's sound takes to fade in, to fade away, and to follow the party nearer or further (s). */
 const WATER_EASE = 2;
 
-/** The water the Standard set keeps sounding while the party is near, by effect: its loops, and its level by nearness. */
+/** The water the suites keep sounding while the party is near, by effect: its loops, and its level by nearness. */
 const WATERS: Record<string, { loops: (r: () => number) => Float32Array[]; level: (d2: number) => number }> = {
   watrfall: { loops: (r) => [waterfallRoar(r), waterfallBabble(r)], level: waterfallLevel },
   fountain: { loops: (r) => [fountainSplash(r), fountainDroplets(r)], level: fountainLevel },
@@ -147,7 +149,7 @@ export class PcSound implements Sound {
   private readonly chips = new Map<string, Float32Array>();
   private readonly cues = new Map<string, Float32Array>();
   /**
-   * Water's sound near it, in the Standard set, by effect (WATERS): its loops (chip3.ts), made once, sounding on and on
+   * Water's sound near it, in the suites, by effect (WATERS): its loops (chip3.ts), made once, sounding on and on
    * while its call keeps coming, at a level by how near it is; and when it is to fade.
    */
   private readonly waters = new Map<
@@ -158,7 +160,7 @@ export class PcSound implements Sound {
   /** How near what the next ambient call sounds is (squares, squared: frame.ts ambientSound). */
   private near2 = 0;
   /** Which effects play (the Sound setting's: game/settings.ts effectsOf). */
-  private effects: EffectsSet = 'standard';
+  private effects: EffectsSet = 'classical';
   /** The suites' rendered files, the one in use fetched and decoded when it is chosen. */
   private bank = new SfxBank(SFX_MANIFEST, (file) =>
     fetch(`${import.meta.env.BASE_URL}${file}`).then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(res.statusText)))),
@@ -233,7 +235,7 @@ export class PcSound implements Sound {
 
   /**
    * One call of the four routines: the Original set plays the speaker as it
-   * sounded, the Standard set its chip voice. The sound starts at once; the
+   * sounded, a suite its slice of its file. The sound starts at once; the
    * game waits a moment at most, or the whole of it where the sound is the
    * timing (TIMED).
    */
@@ -249,7 +251,7 @@ export class PcSound implements Sound {
   }
 
   /**
-   * One of the ultima3 port's sounds by name (game/cues.ts), in the Standard set: started at once, as an effect is,
+   * One of the port's own sounds by name (game/cues.ts), in a suite: started at once, as an effect is,
    * and waited a moment at most. The footfalls a turn repeats are a little different each time.
    */
   async cue(name: string, whole = false): Promise<void> {
@@ -262,7 +264,7 @@ export class PcSound implements Sound {
     }
     const ctx = this.ctx;
     const voice = pcm;
-    if (ctx && this.out) this.play(ctx, isSuite(this.effects) ? () => this.inSuite(cueKey(name), null, () => voice) : voice, `cue:${name}`);
+    if (ctx && this.out) this.play(ctx, () => this.inSuite(cueKey(name), null, () => voice), `cue:${name}`);
     await this.wait((whole ? pcm.length / RATE : Math.min(pcm.length / RATE, PACE)) * 1000);
   }
 
@@ -270,11 +272,10 @@ export class PcSound implements Sound {
     this.near2 = d2;
   }
 
-  /** Start an effect now, as the ultima3 port mixes them - water in the Standard set kept sounding instead. */
+  /** Start an effect now, as the ultima3 port mixes them - water in a suite kept sounding instead. */
   private start(ctx: AudioContext, kind: Kind, args: number[], name: string): void {
     if (WATERS[name] && this.effects !== 'original') return this.water(ctx, name);
     if (this.effects === 'original') return this.play(ctx, () => renderRuns(RUNS[kind](args), RATE), name);
-    if (!isSuite(this.effects)) return this.play(ctx, () => this.chip(kind, args), name);
     const effect = identify(this.data, kind, args);
     const key = sfxKey(effect, kind, args);
     if (key === 'silent') return;
@@ -336,7 +337,7 @@ export class PcSound implements Sound {
   }
 
   /**
-   * Water's call (a waterfall's, a fountain's), in the Standard set: its loops sound on - begun, faded in, if they were
+   * Water's call (a waterfall's, a fountain's), in a suite: its loops sound on - begun, faded in, if they were
    * not - at the level for how near it is, eased to; and if no call comes again for a while, they fade away (hush).
    */
   private water(ctx: AudioContext, name: string): void {
@@ -396,7 +397,7 @@ export class PcSound implements Sound {
     }
   }
 
-  /** The Standard voice, cached unless it varies each play. */
+  /** The chip's voice (chip.ts) for a call the suites have no sound of their own for, cached unless it varies each play. */
   private chip(kind: Kind, args: number[]): Float32Array {
     const effect = identify(this.data, kind, args);
     const varies = !!effect && (REPEATED.has(effect.name) || effect.name.startsWith('spell'));

@@ -8,9 +8,9 @@
  * leaving the field and one dragged under, and magic undone - a ring lost, one absorbed by the Mirror of Truth, a thing
  * unmade by Negate Matter - where the DOS game sounded its vanishing for them all; and a merchant yelling the party out
  * of their shop, where the Dialog setting's Play says it in the box without the log's "yells Max."; and backing out of a
- * menu, a tap of its own where the DOS game's healer's note served. The Standard sound set plays
- * them (audio/chip3.ts); the Original set keeps the DOS game's own - its sound where it had one, silence where
- * it had none.
+ * menu, a tap of its own where the DOS game's healer's note served. The three suites play them (each its own
+ * sound, or the chip's of audio/chip3.ts levelled and softened); Upgrade (2001)'s PC speaker keeps the DOS game's own -
+ * its sound where it had one, silence where it had none.
  */
 
 import type { Game } from './game.ts';

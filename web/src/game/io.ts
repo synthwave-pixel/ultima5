@@ -376,8 +376,7 @@ export interface Sound {
    */
   music(tune: number, occasion?: Occasion): void;
   /**
-   * One of the ultima3 port's sounds by name (game/cues.ts), where the Standard set gives one the DOS game had
-   * not; a moment's wait at most - or, `whole`, until it has sounded out (what follows it is not to sound over it).
+   * One of the port's own sounds by name (game/cues.ts), where the suites give one the DOS game had not; a moment's wait at most - or, `whole`, until it has sounded out (what follows it is not to sound over it).
    * Absent where there is no such set.
    */
   cue?(name: string, whole?: boolean): Promise<void>;

@@ -131,13 +131,13 @@ describe('the levels heard', () => {
     expect(musicGain(6)).toBeCloseTo(0.36);
     expect(musicGain(0)).toBe(0);
     expect(musicGain(10)).toBeGreaterThan(musicGain(6));
-    expect(effectsGain('standard', 8)).toBeCloseTo(1);
+    expect(effectsGain('classical', 8)).toBeCloseTo(1);
     expect(effectsGain('original', 8)).toBeCloseTo(0.3);
-    expect(effectsGain('standard', 0)).toBe(0);
+    expect(effectsGain('classical', 0)).toBe(0);
   });
 
-  it('never give the audio a gain of NaN, which throws: an unknown set sounds as the Standard, no level as none', () => {
+  it('never give the audio a gain of NaN, which throws: an unknown set sounds as a suite, no level as none', () => {
     expect(effectsGain('off' as never, 8)).toBeCloseTo(1); // a setting from before the mixer, written by a script
-    expect(effectsGain('standard', Number.NaN)).toBe(0);
+    expect(effectsGain('classical', Number.NaN)).toBe(0);
   });
 });

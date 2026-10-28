@@ -404,7 +404,7 @@ async function move(g: Game, key: number): Promise<boolean> {
   return edge;
 }
 
-/** ULTIMA_433e: a footstep - a horse's hooves, in the Standard set, with the party riding (game/cues.ts). */
+/** ULTIMA_433e: a footstep - a horse's hooves, in the suites, with the party riding (game/cues.ts). */
 export async function footstep(g: Game): Promise<void> {
   if (g.soundOff) return;
   const hooves = async (): Promise<void> => {

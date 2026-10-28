@@ -303,11 +303,7 @@ export const SHARED: Record<string, string> = {
   endmoon: 'Ending',
 };
 
-/**
- * Calls the Standard set folds into another's sound, so they are silent: the victory tune's last note (in its
- * fanfare), a spell's two hums (in the spell), and the second note of each of the healer's three (in its chord).
- */
-export const FOLDED: Record<string, string> = { victory2: 'victory1', cast: 'spell1-8' };
+/** The second note of each of the healer's three, folded into its chord: silent. */
 const HEALER_SECONDS: number[][] = [
   [0x100e, 1, 0x57e4, 0x6b6c, -1],
   [0x11b2, 1, 40000, 40000, -1],

@@ -97,6 +97,8 @@ function sound(voice: MusicVoice = 'remastered', random: () => number = () => 0)
   const s = new PcSound({} as never);
   s.random = random;
   s.setMusicVoice(voice);
+  // The PC speaker's effects, which fetch nothing: the files fetched and decoded here are the music's alone.
+  s.setEffects('original', 8);
   s.unlock();
   return s;
 }

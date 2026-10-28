@@ -146,4 +146,18 @@ describe('a suite played', () => {
     await sound.pulse(...MOONGATE);
     expect(started).toHaveLength(1);
   });
+
+  it('plays the Classical suite before any set is chosen: the Standard chip set is no more', async () => {
+    const { sound, started, release } = soundWith(manifest({ moongate: [[2, 1.1]] }));
+    const inner = sound as unknown as { bank: SfxBank; ctx: BaseAudioContext; effects: string };
+    expect(inner.effects).toBe('classical');
+    await sound.pulse(...MOONGATE); // its file not asked for yet: silent, not a chip voice
+    expect(started).toHaveLength(0);
+    const loading = inner.bank.load(inner.ctx, 'classical');
+    await release();
+    await loading;
+    await sound.pulse(...MOONGATE);
+    expect(started).toHaveLength(1);
+    expect(started[0].buffer).toMatchObject({ kind: 'atlas' });
+  });
 });

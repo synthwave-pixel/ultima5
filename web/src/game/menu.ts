@@ -1333,8 +1333,7 @@ function everything(g: Game): Item[] {
  * cue; the Original's low note of the shop counter, the healer's). A choice is
  * silent - what it opens or does says it, and a sound at every choice was
  * too much. They go through the same effects as the game's own sounds, so
- * the Standard set voices them as chip tones and Original as the PC
- * speaker.
+ * each suite voices them its way and Upgrade (2001) as the PC speaker.
  */
 export function menuSound(g: Game, what: 'move' | 'back'): void {
   if (g.soundOff) return;
