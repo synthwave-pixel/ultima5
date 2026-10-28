@@ -1,0 +1,101 @@
+{
+  "file": "sfx/audition.9e319541.ogg",
+  "items": [
+    {
+      "id": "now1",
+      "label": "As built: first circle (for reference)",
+      "slice": [
+        0,
+        2.15
+      ]
+    },
+    {
+      "id": "now8",
+      "label": "As built: eighth circle (for reference)",
+      "slice": [
+        2.25,
+        3.4
+      ]
+    },
+    {
+      "id": "l4",
+      "label": "Ladder, fourth circle (a blow joins the whoomph)",
+      "slice": [
+        5.75,
+        2.445487528344671
+      ]
+    },
+    {
+      "id": "l5",
+      "label": "Ladder, fifth circle (+ the air drawn in first)",
+      "slice": [
+        8.29548752834467,
+        2.868526077097506
+      ]
+    },
+    {
+      "id": "l6",
+      "label": "Ladder, sixth circle (+ a sub drop under the release)",
+      "slice": [
+        11.264013605442177,
+        3.0639909297052155
+      ]
+    },
+    {
+      "id": "l7",
+      "label": "Ladder, seventh circle (+ a second blow, a rumble)",
+      "slice": [
+        14.428004535147393,
+        3.9396145124716555
+      ]
+    },
+    {
+      "id": "l8",
+      "label": "Ladder, eighth circle (+ the air sweeping across, embers in the tail)",
+      "slice": [
+        18.46761904761905,
+        4.4
+      ]
+    },
+    {
+      "id": "h8",
+      "label": "Eighth, heavy (the blows and the drop half again as strong, deeper)",
+      "slice": [
+        22.96761904761905,
+        4.4
+      ]
+    },
+    {
+      "id": "c8",
+      "label": "Eighth, long charge (tension building for half a second before the release)",
+      "slice": [
+        27.46761904761905,
+        4.9
+      ]
+    },
+    {
+      "id": "m8",
+      "label": "Eighth, motion (swept across in and out, embers scattered wide, no rumble)",
+      "slice": [
+        32.467619047619046,
+        4.4
+      ]
+    },
+    {
+      "id": "e8",
+      "label": "Eighth, embers (a long crackling tail of energy spending itself)",
+      "slice": [
+        36.967619047619046,
+        4.4
+      ]
+    },
+    {
+      "id": "a8",
+      "label": "Eighth, everything (a charge, heavier blows, the sweep, embers)",
+      "slice": [
+        41.467619047619046,
+        4.75
+      ]
+    }
+  ]
+}

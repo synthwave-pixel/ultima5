@@ -3,3 +3,5 @@ node_modules
 public
 # Written by the effects render (tools/sfx/render.ts) as it lays the sounds out.
 src/audio/sfxManifest.json
+# Written by the magic's audition (tools/sfx/audition.ts).
+src/dev/audition.json

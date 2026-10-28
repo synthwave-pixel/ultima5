@@ -19,6 +19,7 @@ import { FOLDED, SHARED } from '../audio/chip.ts';
 import { cueKey, sfxKey, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { type Arrangement, arrangementsFor, SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
 import { TUNE_FILES } from '../game/music.ts';
+import audition from './audition.json';
 import { MUSIC, MusicPlayer } from '../ui/music.ts';
 import { SFX_MANIFEST as SFX } from '../ui/sfxBank.ts';
 import { musicGain, PcSound } from '../ui/sound.ts';
@@ -187,7 +188,81 @@ function musicTable(host: HTMLElement): void {
   host.append(h, note, stop, table);
 }
 
+/**
+ * The audition (tools/sfx/audition.ts): candidates for a sound, to choose by ear; a star marks a favourite (kept in this browser), and
+ * the picks are listed to copy.
+ */
+function auditionTable(host: HTMLElement): void {
+  let ctx: AudioContext | null = null;
+  let buffer: Promise<AudioBuffer | null> | null = null;
+  const KEY = 'u5-audition-picks';
+  const picks = new Set<string>(
+    ((): string[] => {
+      try {
+        return JSON.parse(localStorage.getItem(KEY) ?? '[]') as string[];
+      } catch {
+        return [];
+      }
+    })(),
+  );
+  const play = async (at: number, length: number): Promise<void> => {
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') await ctx.resume();
+    buffer ??= fetch(`${import.meta.env.BASE_URL}${audition.file}`)
+      .then((res) => res.arrayBuffer())
+      .then((bytes) => ctx!.decodeAudioData(bytes))
+      .catch(() => null);
+    const b = await buffer;
+    if (!b) return;
+    const src = ctx.createBufferSource();
+    src.buffer = b;
+    src.connect(ctx.destination);
+    src.start(ctx.currentTime + 0.01, at, length);
+  };
+  const h = document.createElement('h2');
+  h.textContent = "Audition: the spells' higher circles";
+  const note = document.createElement('p');
+  note.className = 'about';
+  note.textContent =
+    'The spells as built, then a ladder adding a layer each circle from the fourth, then the eighth leaning different ways (tools/sfx/audition.ts). Star the ones you like.';
+  const list = document.createElement('p');
+  list.className = 'about';
+  const showPicks = (): void => {
+    list.textContent = `Your picks: ${[...picks].join('; ') || 'none yet'}`;
+    try {
+      localStorage.setItem(KEY, JSON.stringify([...picks]));
+    } catch {
+      // (Not kept: the picks are still listed.)
+    }
+  };
+  const table = document.createElement('table');
+  const body = table.createTBody();
+  for (const it of audition.items) {
+    const tr = body.insertRow();
+    const cell = tr.insertCell();
+    cell.className = 'play';
+    const b = document.createElement('button');
+    b.textContent = '▶';
+    b.addEventListener('click', () => void play(it.slice[0], it.slice[1]));
+    const star = document.createElement('button');
+    const mark = (): void => void (star.textContent = picks.has(it.label) ? '★' : '☆');
+    mark();
+    star.title = 'A favourite';
+    star.addEventListener('click', () => {
+      if (picks.has(it.label)) picks.delete(it.label);
+      else picks.add(it.label);
+      mark();
+      showPicks();
+    });
+    cell.append(b, star);
+    tr.insertCell().textContent = it.label;
+  }
+  showPicks();
+  host.append(h, note, table, list);
+}
+
 async function start(): Promise<void> {
+  auditionTable(document.getElementById('audition')!);
   musicTable(document.getElementById('music')!);
   const files = await gameFiles();
   const data = new GameData(files);
