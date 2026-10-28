@@ -59,7 +59,7 @@ function soundWith(manifest: SfxManifest) {
 }
 
 const MOONGATE = [5900, 1, 30000, 2000, 2] as const;
-const manifest = (slices: Record<string, [number, number][]>): SfxManifest => ({
+const manifest = (slices: Record<string, [number, number, number?][]>): SfxManifest => ({
   classical: { file: 'sfx/classical.x.ogg', slices },
   electronic: { file: 'sfx/electronic.x.ogg', slices },
   ambient: { file: 'sfx/ambient.x.ogg', slices },
@@ -208,5 +208,20 @@ describe('a suite played', () => {
     expect(bank.slice('classical', 'moongate', () => 0)).not.toBeNull();
     bank.forget();
     expect(bank.slice('classical', 'moongate', () => 0)).toBeNull();
+  });
+
+  it('takes a short effect as short, though its slice rings on: no music lowered, not kept from starting again', async () => {
+    // A clock's tick: its slice rings 0.65 s, but the tick itself is 0.15 s.
+    const { sound, started, release } = soundWith(manifest({ tickhigh: [[4, 0.65, 0.15]] }));
+    const ducked: number[] = [];
+    (sound as unknown as { player: { duck: (a: number, b: number) => void } }).player.duck = (a) => void ducked.push(a);
+    sound.setEffects('classical', 8);
+    await release();
+    await sound.tone(3000, 3);
+    await new Promise((r) => setTimeout(r, 100));
+    await sound.tone(3000, 3);
+    expect(started).toHaveLength(2);
+    expect(started[0].duration).toBe(0.65); // the whole of it heard
+    expect(ducked).toHaveLength(0);
   });
 });

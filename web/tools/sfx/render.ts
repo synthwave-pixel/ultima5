@@ -142,7 +142,10 @@ export function finish(pcm: Stereo, length: number): Stereo {
 }
 
 /** Sounds laid end to end, `gap` seconds of silence after each, and where each lies. */
-export function layOutAtlas(slices: { key: string; pcm: Stereo }[], gap = 0.1): { pcm: Stereo; slices: SfxManifest[Suite]['slices'] } {
+export function layOutAtlas(
+  slices: { key: string; pcm: Stereo; nominal?: number }[],
+  gap = 0.1,
+): { pcm: Stereo; slices: SfxManifest[Suite]['slices'] } {
   const pad = Math.round(gap * RATE);
   const total = slices.reduce((n, s) => n + s.pcm[0].length + pad, 0);
   const pcm: Stereo = [new Float32Array(total), new Float32Array(total)];
@@ -151,7 +154,9 @@ export function layOutAtlas(slices: { key: string; pcm: Stereo }[], gap = 0.1): 
   for (const s of slices) {
     pcm[0].set(s.pcm[0], at);
     pcm[1].set(s.pcm[1], at);
-    (where[s.key] ??= []).push([at / RATE, s.pcm[0].length / RATE]);
+    (where[s.key] ??= []).push(
+      s.nominal === undefined ? [at / RATE, s.pcm[0].length / RATE] : [at / RATE, s.pcm[0].length / RATE, s.nominal],
+    );
     at += s.pcm[0].length + pad;
   }
   return { pcm, slices: where };
@@ -236,7 +241,7 @@ function variants(
       levelSlice(pcm, shape.level);
       pcm = tame(pcm, shape.music, 6, shape.level);
     }
-    out.push({ key, pcm, standout: false });
+    out.push({ key, pcm, standout: false, nominal: mono.length / RATE });
   }
   return out;
 }
@@ -296,7 +301,12 @@ async function main(): Promise<void> {
   const rendered = async (suite: Suite, s: { key: string; score: Score; level: number }): Promise<Checked> => {
     const pcm = finish(await renderScore(suite, s.score), s.score.length);
     levelSlice(pcm, s.level);
-    return { key: s.key, pcm: tame(pcm, refs.get(suite)!, s.score.standout ? 10 : 6, s.level), standout: !!s.score.standout };
+    return {
+      key: s.key,
+      pcm: tame(pcm, refs.get(suite)!, s.score.standout ? 10 : 6, s.level),
+      standout: !!s.score.standout,
+      nominal: s.score.length,
+    };
   };
   // The sounds one suite's version of (or the Standard's own) plays in all three, and the universal ones: made once.
   process.stdout.write('the sounds for all suites');
@@ -319,7 +329,7 @@ async function main(): Promise<void> {
     Array.from({ length: m.variants }, (_, v): Checked => {
       const pcm = finish(m.make(seeded(4099 + v * 7919)), m.length);
       levelSlice(pcm, LEVEL.other);
-      return { key, pcm: tame(pcm, strictest, 6, LEVEL.other), standout: false };
+      return { key, pcm: tame(pcm, strictest, 6, LEVEL.other), standout: false, nominal: m.length };
     }),
   );
   const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal, ...magic];

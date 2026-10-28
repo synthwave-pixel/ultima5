@@ -64,5 +64,8 @@ export function soften(pcm: Float32Array, rate = 44100): Float32Array {
   return out;
 }
 
-/** Where each sound lies in a suite's file (tools/sfx/render.ts): its variants, each `[at, length]` in seconds. */
-export type SfxManifest = Record<Suite, { file: string; slices: Record<string, [number, number][]> }>;
+/**
+ * Where each sound lies in a suite's file (tools/sfx/render.ts): its variants, each `[at, length, nominal]` in seconds -
+ * the nominal length the sound's own, without the ring after it, what the game takes its length to be.
+ */
+export type SfxManifest = Record<Suite, { file: string; slices: Record<string, [number, number, number?][]> }>;

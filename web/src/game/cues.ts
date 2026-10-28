@@ -16,32 +16,35 @@
 import type { Game } from './game.ts';
 import { effectsOf } from './settings.ts';
 
-export type Cue =
-  | 'TorchIgnite'
-  | 'Upwards'
-  | 'Downwards'
-  | 'MountHorse'
-  | 'HorseWalk'
-  | 'DeathMale'
-  | 'DeathFemale'
-  | 'BigDeath'
-  | 'CombatStart'
-  | 'Ouch'
-  | 'Immolate'
-  | 'DoorOpen'
-  | 'DoorClose'
-  | 'Alarm'
-  | 'ForceField'
-  | 'Invocation'
-  | 'MonsterSpell'
-  | 'Attack'
-  | 'Graze'
-  | 'Withdraw'
-  | 'DraggedUnder'
-  | 'Dissolve'
-  | 'Absorbed'
-  | 'Yell'
-  | 'Back';
+/** The cues, by name: each in the sound catalogue (dev/sfxCatalogue.ts CUES), so each suite renders it. */
+export const CUE_NAMES = [
+  'TorchIgnite',
+  'Upwards',
+  'Downwards',
+  'MountHorse',
+  'HorseWalk',
+  'DeathMale',
+  'DeathFemale',
+  'BigDeath',
+  'CombatStart',
+  'Ouch',
+  'Immolate',
+  'DoorOpen',
+  'DoorClose',
+  'Alarm',
+  'ForceField',
+  'Invocation',
+  'MonsterSpell',
+  'Attack',
+  'Graze',
+  'Withdraw',
+  'DraggedUnder',
+  'Dissolve',
+  'Absorbed',
+  'Yell',
+  'Back',
+] as const;
+export type Cue = (typeof CUE_NAMES)[number];
 
 /**
  * Sound cue `name` in the port's effects (the three suites); in Upgrade (2001)'s PC speaker, the DOS game's own sound

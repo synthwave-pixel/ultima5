@@ -75,6 +75,13 @@ describe('the render of the suites', () => {
     expect(short[0].length).toBe(Math.round(0.4 * RATE));
   });
 
+  it('keeps beside a slice how long its sound is, without the ring after it', () => {
+    const { slices } = layOutAtlas([{ key: 'tick', pcm: sine(0.65, 0.1), nominal: 0.15 }]);
+    expect(slices.tick[0][0]).toBe(0);
+    expect(slices.tick[0][1]).toBeCloseTo(0.65, 6);
+    expect(slices.tick[0][2]).toBe(0.15);
+  });
+
   it('lays slices end to end with gaps and says where each is', () => {
     const { pcm, slices } = layOutAtlas([
       { key: 'a', pcm: sine(0.5, 0.1) },

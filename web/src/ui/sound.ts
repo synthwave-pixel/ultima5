@@ -318,7 +318,9 @@ export class PcSound implements Sound {
   /** Sound `pcm` (or a suite's slice) into the mix: a long one marked as sounding, and the music lowered under it. */
   private sound(ctx: AudioContext, pcm: Float32Array | Played, name: string): void {
     if (pcm instanceof Float32Array && pcm.length <= 1) return;
-    const played = pcm instanceof Float32Array ? pcm.length / RATE : pcm.length / pcm.rate;
+    // How long it is: a slice's own sound, not its ring (sfxBank.ts Slice nominal) - what lowers the music and keeps it
+    // from starting again.
+    const played = pcm instanceof Float32Array ? pcm.length / RATE : pcm.nominal / pcm.rate;
     const start = ctx.currentTime + 0.005;
     const src = ctx.createBufferSource();
     if (pcm instanceof Float32Array) {

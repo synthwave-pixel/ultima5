@@ -19,6 +19,8 @@ export interface Slice {
   buffer: AudioBuffer;
   at: number;
   length: number;
+  /** How long the sound itself is, without its ring: what lowers the music and keeps it from starting again. */
+  nominal: number;
 }
 
 /** The playback rate that puts bank note `key` (`family:midi`) at `hz`: within an octave either way. */
@@ -100,7 +102,7 @@ export class SfxBank {
     }
     const variants = this.manifest[suite].slices[key];
     if (!variants?.length) return null;
-    const [at, length] = variants[Math.min(variants.length - 1, Math.floor(r() * variants.length))];
-    return { buffer: this.loaded.buffer, at, length };
+    const [at, length, nominal] = variants[Math.min(variants.length - 1, Math.floor(r() * variants.length))];
+    return { buffer: this.loaded.buffer, at, length, nominal: nominal ?? length };
   }
 }

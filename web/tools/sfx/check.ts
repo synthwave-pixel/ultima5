@@ -97,6 +97,8 @@ export interface Checked {
   key: string;
   pcm: Stereo;
   standout: boolean;
+  /** How long the sound itself is (seconds), without the ring after it: what the game takes its length to be. */
+  nominal?: number;
 }
 
 /**

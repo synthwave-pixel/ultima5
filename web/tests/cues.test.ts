@@ -146,3 +146,18 @@ describe('the ultima3 cues', () => {
     expect(deathCue(0x0c)).toBe('DeathFemale');
   });
 });
+
+describe('every cue', () => {
+  it('is in the sound catalogue, so each suite renders it and the sound test page plays it', async () => {
+    const { CUE_NAMES } = await import('../src/game/cues.ts');
+    const { CUES } = await import('../src/dev/sfxCatalogue.ts');
+    for (const name of CUE_NAMES) expect(CUES[name], name).toBeDefined();
+  });
+
+  it("has its sound in every suite's file", async () => {
+    const { CUE_NAMES } = await import('../src/game/cues.ts');
+    const { SFX_MANIFEST } = await import('../src/ui/sfxBank.ts');
+    for (const suite of ['classical', 'electronic', 'ambient'] as const)
+      for (const name of CUE_NAMES) expect(SFX_MANIFEST[suite].slices[`cue:${name}`]?.length, `${suite} ${name}`).toBeGreaterThan(0);
+  });
+});
