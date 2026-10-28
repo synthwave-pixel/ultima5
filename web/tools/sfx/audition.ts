@@ -1,12 +1,13 @@
 /**
  * audition.ts
  *
- * A listening aid, not the game's: candidates for the eighth circle's blow, to choose by ear (the sound test page's
- * Audition section). The eighth as built has one rise and one blow - the shape the user wants - but its blow (a sine
- * swept down under a burst of noise, as a kick drum is made) sounds like a drum. So here the blow is swapped for ones
- * with no drumhead - an air blast, a softer bloom, a sub bloom at one pitch, a concussion, a shatter of air, the sub
- * drop alone, none at all, and a blast with a bloom - the whoomph and the rumble the same in each. Rendered to
- * web/public/sfx/audition.<hash>.ogg, its slices in web/src/dev/audition.json.
+ * A listening aid, not the game's: candidates for the spells' higher circles, to choose by ear (the sound test page's
+ * Audition section). The user's pick so far is the eighth circle as built - one rise, one blow - its blow a sub bloom
+ * (pressure without a beater). The higher circles want more, mystical but not musical, and still one rise and one
+ * bloom: whispers (breath through a voice's vowels), a pre-verb (the air's echo backwards into the bloom), a swirl (a
+ * sweeping comb), a throb (the bloom beating), a chamber (inharmonic resonances of a stone hall), a hover (the air held
+ * and smeared after); then some together. Rendered to web/public/sfx/audition.<hash>.ogg, its slices in
+ * web/src/dev/audition.json.
  *
  *   node --import ./tools/node-ts.mjs tools/sfx/audition.ts
  */
@@ -16,57 +17,80 @@ import { readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encode, type Stereo } from '../music/pcm.ts';
-import { airBlast, concussion, impact, layer, room, rumble, seeded, shatter, subBloom, subDrop, whoomph } from './design.ts';
-import { spell, spellLength } from './magic.ts';
+import { chamber, hover, impact, layer, preverb, room, rumble, seeded, subBloom, swirl, whispers, whoomph } from './design.ts';
+import { spellLength } from './magic.ts';
 import { layOutAtlas, levelSlice } from './render.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, '..', '..');
 const RATE = 44100;
 
-/** The blow's kinds: the as-built kick, and ones without a drumhead. */
-type Blow = 'kick' | 'blast' | 'bloom' | 'sub' | 'concussion' | 'shatter' | 'drop' | 'none' | 'blast+sub';
+/** What the higher circles may add to the eighth as picked. */
+interface Mystic {
+  whispers?: boolean;
+  preverb?: boolean;
+  swirl?: boolean;
+  throb?: boolean;
+  chamber?: boolean;
+  hover?: boolean;
+  /** The sweep across and the air drawn in to the bloom (from an earlier round). */
+  sweep?: boolean;
+}
 
 /**
- * The eighth circle as built (magic.ts spell(8): a whoomph, one blow at 0.18 of its length, a rumble, a room), its blow
- * `blow`. The whoomph and the rumble are drawn first from `r`, as the game's are, so they sound the same in each; where
- * there is no blow the whoomph's peak is sharpened to be the moment instead.
+ * The eighth circle as the user picked it - the as-built whoomph and rumble with a sub bloom for its blow (pressure
+ * without a beater) - with `add`. The base is drawn from `r` as the pick was (the whoomph, the kick drawn but unused,
+ * the rumble), so it sounds the same; whatever leads into the bloom comes before, and the rest shifts later by as much.
  */
-function eighth(r: () => number, blow: Blow): Stereo {
+function eighth(r: () => number, add: Mystic = {}): Stereo {
   const s = spellLength(8);
   const hit = s * 0.18;
-  const air =
-    blow === 'none'
-      ? whoomph({ seconds: s, peak: hit, fall: s * 0.7, open: 5200, sub: 55 }, r)
-      : whoomph({ seconds: s, peak: s * 0.22, fall: s * 0.8, open: 4300, sub: 55 }, r);
-  const kick = impact({ hz: 52, seconds: s * 0.9 }, r); // drawn in every one, so the rumble's draws match the game's
+  const lead = Math.max(add.preverb ? 0.6 : 0, add.sweep ? 0.4 : 0);
+  const pre = Math.max(0, lead - hit);
+  const at = pre + hit; // the bloom
+  let air = whoomph(
+    { seconds: s, peak: s * 0.22, fall: s * 0.8, open: 4300, sub: 55, ...(add.sweep ? { pan: [-0.7, 0.7] as [number, number] } : {}) },
+    r,
+  );
+  impact({ hz: 52, seconds: s * 0.9 }, r); // drawn as the pick's was, so the rumble's draws match
   const roll = rumble(s, r);
+  if (add.swirl) air = swirl(air, 1.5, 9, 0.55);
   const parts: [Stereo, number, number][] = [
-    [air, 0, 1],
-    [roll, s * 0.2, 0.5],
+    [air, pre, 1],
+    [roll, pre + s * 0.2, 0.5],
+    [subBloom({ hz: 45, seconds: 1.2, attack: 0.04, ...(add.throb ? { beat: 1.4 } : {}) }), at, 0.9],
   ];
-  const at = (sound: Stereo, gain: number): void => void parts.push([sound, hit, gain]);
-  if (blow === 'kick') at(kick, 0.9);
-  if (blow === 'blast' || blow === 'blast+sub') at(airBlast({ seconds: 0.9, attack: 0.004 }, r), 0.8);
-  if (blow === 'bloom') at(airBlast({ seconds: 1, attack: 0.025, open: 5000 }, r), 0.9);
-  if (blow === 'sub' || blow === 'blast+sub') at(subBloom({ hz: 45, seconds: 1.2, attack: 0.04 }), blow === 'sub' ? 0.9 : 0.6);
-  if (blow === 'concussion') at(concussion({ seconds: 1.1 }, r), 0.8);
-  if (blow === 'shatter') at(shatter({ seconds: 0.9, count: 40, spread: 0.12 }, r), 0.8);
-  if (blow === 'drop') at(subDrop({ seconds: 0.7, from: 120, to: 30 }), 0.9);
+  if (add.sweep)
+    parts.push([
+      whoomph({ seconds: 0.4, peak: 0.39, fall: 0.06, open: 2600, sub: 60, reverse: true, pan: [-0.9, -0.3] }, r),
+      at - 0.4,
+      0.75,
+    ]);
+  if (add.whispers) {
+    const span = at + 1.1;
+    parts.push([whispers({ seconds: span, swell: (t) => (t < at ? (t / at) ** 2 : Math.pow(0.001, (t - at) / (span - at))) }, r), 0, 1.4]);
+  }
+  if (add.preverb) parts.push([preverb({ seconds: 0.6 }, r), at - 0.6, 0.7]);
+  if (add.chamber) parts.push([chamber({ hz: 110, seconds: 1.6 }, r), at, 0.35]);
+  if (add.hover) parts.push([hover(air, { at: s * 0.22, seconds: 1.1 }, r), at + 0.08, 1.2]);
   return room(layer(...parts), 2.5, 0.3);
 }
 
 /** The candidates: id, label, sound. */
 const CANDIDATES: [string, string, (r: () => number) => Stereo][] = [
-  ['now8', 'As built: eighth circle (its blow the drum-like kick)', (r) => spell(8, r)],
-  ['bl', 'Air blast (displaced air flaring open and closing - no pitch)', (r) => eighth(r, 'blast')],
-  ['bm', 'Soft bloom (the blast with a slower attack: a surge, not a hit)', (r) => eighth(r, 'bloom')],
-  ['sb', 'Sub bloom (pressure without a beater: a deep tone swelling in, no falling pitch)', (r) => eighth(r, 'sub')],
-  ['co', 'Concussion (a dark, driven burst of low air, a muffled blast far off)', (r) => eighth(r, 'concussion')],
-  ['sh', 'Shatter of air (soft fragments overlapping, no single attack)', (r) => eighth(r, 'shatter')],
-  ['dp', 'Sub drop only (the falling weight, smooth, no noise on top)', (r) => eighth(r, 'drop')],
-  ['no', 'No impact (the whoomph alone, its peak sharpened to be the moment)', (r) => eighth(r, 'none')],
-  ['bs', 'Air blast + sub bloom (air and weight, still no beater)', (r) => eighth(r, 'blast+sub')],
+  ['base', 'Your pick: the eighth with the sub bloom (the base for all below)', (r) => eighth(r)],
+  // --- One mystical layer each ---
+  ['wh', "+ whispers (breath through a voice's vowels, ah to oo: ghostly voices, no pitch)", (r) => eighth(r, { whispers: true })],
+  ['pv', "+ pre-verb (the air's own echo played backwards, arriving out of nothing into the bloom)", (r) => eighth(r, { preverb: true })],
+  ['sw', '+ swirl (the air through a slowly sweeping comb: an otherworldly phasing)', (r) => eighth(r, { swirl: true })],
+  ['th', '+ throb (the bloom two tones a hair apart, beating: the pressure pulsing as it fades)', (r) => eighth(r, { throb: true })],
+  ['ch', "+ chamber (the air ringing a stone hall's resonances, inharmonic, no chord)", (r) => eighth(r, { chamber: true })],
+  ['hv', '+ hover (the air held and smeared after the bloom, as if time slowed)', (r) => eighth(r, { hover: true })],
+  ['sd', '+ sweep and draw (from an earlier round: across, and drawn in to the bloom)', (r) => eighth(r, { sweep: true })],
+  // --- Together ---
+  ['c1', 'Whispers + throb + sweep and draw', (r) => eighth(r, { whispers: true, throb: true, sweep: true })],
+  ['c2', 'Pre-verb + chamber + hover', (r) => eighth(r, { preverb: true, chamber: true, hover: true })],
+  ['c3', 'Swirl + throb + hover', (r) => eighth(r, { swirl: true, throb: true, hover: true })],
 ];
 
 function main(): void {

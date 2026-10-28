@@ -278,12 +278,14 @@ export function airBlast(o: { seconds: number; attack: number; open?: number }, 
 }
 
 /** A sub bloom: pressure without a beater - a deep tone at one pitch (and its octave) swelling in over `attack`, fading. */
-export function subBloom(o: { hz: number; seconds: number; attack: number }): Stereo {
+export function subBloom(o: { hz: number; seconds: number; attack: number; beat?: number }): Stereo {
   const n = samples(o.seconds);
   const m = Float32Array.from({ length: n }, (_, i) => {
     const t = i / RATE;
     const env = t < o.attack ? Math.sin((Math.PI / 2) * (t / o.attack)) : Math.pow(0.001, (t - o.attack) / (o.seconds - o.attack));
-    return (Math.sin(2 * Math.PI * o.hz * t) + 0.35 * Math.sin(4 * Math.PI * o.hz * t)) * env;
+    const tone = (hz: number): number => Math.sin(2 * Math.PI * hz * t) + 0.35 * Math.sin(4 * Math.PI * hz * t);
+    // With `beat`, two tones that far apart (Hz), beating against each other: the pressure throbbing as it fades.
+    return (o.beat ? (tone(o.hz) + tone(o.hz + o.beat)) / 2 : tone(o.hz)) * env;
   });
   return [m, Float32Array.from(m)];
 }
@@ -316,4 +318,117 @@ export function shatter(o: { seconds: number; count: number; spread: number }, r
   }
   // The fragments' air ringing on after them.
   return layer([out, 0, 1], [airBlast({ seconds: o.seconds, attack: 0.02, open: 2500 }, r), 0, 0.4]);
+}
+
+// --- The mystical: what the higher circles may add ------------------------------------------------------------
+
+/** A band-pass (a state-variable filter's band output) of `x`, its centre a curve, sharpness `q`. */
+function bandpass(x: Float32Array, hz: Curve, q: number): Float32Array {
+  const out = new Float32Array(x.length);
+  let [low, band] = [0, 0];
+  for (let i = 0; i < x.length; i++) {
+    const f = 2 * Math.sin((Math.PI * Math.min(12000, Math.max(20, hz(i / RATE)))) / RATE);
+    low += f * band;
+    const high = x[i] - low - band / q;
+    band += f * high;
+    out[i] = band;
+  }
+  return out;
+}
+
+/** The vowels' formants (Hz): ah, oh, oo. */
+const VOWELS: Record<'ah' | 'oh' | 'oo', [number, number, number]> = {
+  ah: [700, 1220, 2600],
+  oh: [450, 800, 2830],
+  oo: [325, 700, 2530],
+};
+
+/**
+ * Whispers: breath shaped by a voice's formants, the vowel moving from ah through oh to oo over `seconds` - two
+ * voices, a little apart, one each side: ghostly voices breathing, no pitch, so no song.
+ */
+export function whispers(o: { seconds: number; swell: Curve }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const voice = (shift: number): Float32Array => {
+    const breath = pink(n, r);
+    const at = (k: number, f: number): number => {
+      const [a, b, c] = [VOWELS.ah[f], VOWELS.oh[f], VOWELS.oo[f]];
+      return (k < 0.5 ? a + (b - a) * k * 2 : b + (c - b) * (k - 0.5) * 2) * shift;
+    };
+    const parts = [0, 1, 2].map((f) => bandpass(breath, (t) => at(Math.min(1, t / o.seconds), f), 8));
+    return Float32Array.from({ length: n }, (_, i) => (parts[0][i] + 0.6 * parts[1][i] + 0.25 * parts[2][i]) * o.swell(i / RATE) * 3);
+  };
+  return [voice(1), voice(1.06)];
+}
+
+/** `pcm` backwards. */
+const reversed = (pcm: Stereo): Stereo => pcm.map((c) => Float32Array.from(c).reverse()) as Stereo;
+
+/**
+ * A pre-verb: a short breath of air sent into a long room and the room's ring played backwards - a ghostly swell that
+ * arrives out of nothing, ending abruptly at `seconds` where whatever it leads into takes over.
+ */
+export function preverb(o: { seconds: number }, r: () => number): Stereo {
+  const breath = whoomph({ seconds: 0.25, peak: 0.03, fall: 0.2, open: 3500, sub: 60 }, r);
+  const wet = room(breath, o.seconds + 0.5, 1, o.seconds + 0.5);
+  const back = reversed(wet);
+  const keep = samples(o.seconds);
+  return back.map((c) => c.subarray(c.length - keep).map((v, i) => v * Math.min(1, i / samples(0.05)))) as Stereo;
+}
+
+/** `pcm` through a slowly sweeping comb (a flanger): its copy delayed from `from` to `to` ms and back, a swirl. */
+export function swirl(pcm: Stereo, from: number, to: number, rate: number): Stereo {
+  return pcm.map((c, side) =>
+    c.map((v, i) => {
+      const t = i / RATE;
+      const ms = from + (to - from) * (0.5 - 0.5 * Math.cos(2 * Math.PI * rate * t + side * 0.9));
+      const d = (ms / 1000) * RATE;
+      const j = i - d;
+      const k = Math.floor(j);
+      const late = k >= 0 ? c[k] + (c[k + 1] - c[k]) * (j - k) : 0;
+      return (v + late) * 0.7;
+    }),
+  ) as Stereo;
+}
+
+/**
+ * A chamber: the air ringing an imagined stone hall's resonances - breath through a few sharp band-passes at
+ * inharmonic ratios to `hz` (no chord), ringing on and dying over `seconds`.
+ */
+export function chamber(o: { hz: number; seconds: number }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const env: Curve = (t) => Math.min(1, t / 0.03) * Math.pow(0.001, t / o.seconds);
+  const excite = pink(n, r).map((v, i) => v * env(i / RATE));
+  const side = (shift: number): Float32Array => {
+    const out = new Float32Array(n);
+    [1, 1.47, 2.09, 2.83, 3.71].forEach((ratio, k) => {
+      const ring = bandpass(excite, () => o.hz * ratio * shift, 40);
+      for (let i = 0; i < n; i++) out[i] += ring[i] * (1 / (1 + k * 0.6)) * 4;
+    });
+    return out;
+  };
+  return [side(1), side(1.012)];
+}
+
+/**
+ * A hover: `pcm` held at `at` seconds and smeared - short windowed slices from around that moment, laid over each
+ * other and drifting, held for half of `seconds` and then fading: the air hanging as if time slowed.
+ */
+export function hover(pcm: Stereo, o: { at: number; seconds: number }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const out: Stereo = [new Float32Array(n), new Float32Array(n)];
+  const grain = samples(0.09);
+  const hop = samples(0.03);
+  for (let start = 0; start + grain < n; start += hop) {
+    const from = samples(o.at + (r() - 0.5) * 0.06);
+    // Held level through the first half, as if time stood still, then let go.
+    const k = start / n;
+    const gain = (k < 0.5 ? 1 : Math.pow(0.001, (k - 0.5) / 0.5)) * 0.55;
+    for (let c = 0; c < 2; c++)
+      for (let i = 0; i < grain; i++) {
+        const w = Math.sin((Math.PI * i) / grain) ** 2;
+        out[c][start + i] += (pcm[c][from + i] ?? 0) * w * gain;
+      }
+  }
+  return out;
 }

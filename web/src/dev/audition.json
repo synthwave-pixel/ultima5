@@ -1,75 +1,91 @@
 {
-  "file": "sfx/audition.e12de9ec.ogg",
+  "file": "sfx/audition.0f54f99a.ogg",
   "items": [
     {
-      "id": "now8",
-      "label": "As built: eighth circle (its blow the drum-like kick)",
+      "id": "base",
+      "label": "Your pick: the eighth with the sub bloom (the base for all below)",
       "slice": [
         0,
         3.4
       ]
     },
     {
-      "id": "bl",
-      "label": "Air blast (displaced air flaring open and closing - no pitch)",
+      "id": "wh",
+      "label": "+ whispers (breath through a voice's vowels, ah to oo: ghostly voices, no pitch)",
       "slice": [
         3.5,
         3.4
       ]
     },
     {
-      "id": "bm",
-      "label": "Soft bloom (the blast with a slower attack: a surge, not a hit)",
+      "id": "pv",
+      "label": "+ pre-verb (the air's own echo played backwards, arriving out of nothing into the bloom)",
       "slice": [
         7,
+        3.73
+      ]
+    },
+    {
+      "id": "sw",
+      "label": "+ swirl (the air through a slowly sweeping comb: an otherworldly phasing)",
+      "slice": [
+        10.83,
         3.4
       ]
     },
     {
-      "id": "sb",
-      "label": "Sub bloom (pressure without a beater: a deep tone swelling in, no falling pitch)",
+      "id": "th",
+      "label": "+ throb (the bloom two tones a hair apart, beating: the pressure pulsing as it fades)",
       "slice": [
-        10.5,
+        14.33,
         3.4
       ]
     },
     {
-      "id": "co",
-      "label": "Concussion (a dark, driven burst of low air, a muffled blast far off)",
+      "id": "ch",
+      "label": "+ chamber (the air ringing a stone hall's resonances, inharmonic, no chord)",
       "slice": [
-        14,
+        17.83,
+        3.47
+      ]
+    },
+    {
+      "id": "hv",
+      "label": "+ hover (the air held and smeared after the bloom, as if time slowed)",
+      "slice": [
+        21.4,
         3.4
       ]
     },
     {
-      "id": "sh",
-      "label": "Shatter of air (soft fragments overlapping, no single attack)",
+      "id": "sd",
+      "label": "+ sweep and draw (from an earlier round: across, and drawn in to the bloom)",
       "slice": [
-        17.5,
-        3.4
+        24.9,
+        3.53
       ]
     },
     {
-      "id": "dp",
-      "label": "Sub drop only (the falling weight, smooth, no noise on top)",
+      "id": "c1",
+      "label": "Whispers + throb + sweep and draw",
       "slice": [
-        21,
-        3.4
+        28.53,
+        3.53
       ]
     },
     {
-      "id": "no",
-      "label": "No impact (the whoomph alone, its peak sharpened to be the moment)",
+      "id": "c2",
+      "label": "Pre-verb + chamber + hover",
       "slice": [
-        24.5,
-        3.4
+        32.16,
+        3.8
       ]
     },
     {
-      "id": "bs",
-      "label": "Air blast + sub bloom (air and weight, still no beater)",
+      "id": "c3",
+      "label": "Swirl + throb + hover",
       "slice": [
-        28,
+        36.06,
         3.4
       ]
     }
