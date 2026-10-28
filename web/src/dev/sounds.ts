@@ -220,11 +220,11 @@ function auditionTable(host: HTMLElement): void {
     src.start(ctx.currentTime + 0.01, at, length);
   };
   const h = document.createElement('h2');
-  h.textContent = "Audition: the spells' higher circles";
+  h.textContent = 'Audition: the magic';
   const note = document.createElement('p');
   note.className = 'about';
   note.textContent =
-    'The spells as built, then a ladder adding a layer each circle from the fourth, then the eighth leaning different ways (tools/sfx/audition.ts). Star the ones you like.';
+    'Every magic effect as the game plays it (the same in every suite): the sub bloom under all of it, the chamber from the third circle, the whispers from the sixth, everything at the eighth. Star the ones you like.';
   const list = document.createElement('p');
   list.className = 'about';
   const showPicks = (): void => {

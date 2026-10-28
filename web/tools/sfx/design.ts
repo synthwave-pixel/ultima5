@@ -2,9 +2,9 @@
  * design.ts
  *
  * Magic as sound design rather than music - layers in the manner of a film's or a game's spell effects: a whoomph
- * (smooth, even noise through a low-pass that opens and closes, over a sub body), a power riser (a glitter of digital
- * partials climbing in steps, flickering), an air shimmer (tiny high sparkles), a sub drop and a sub impact, and a
- * room for them to ring in. Each layer is stereo, at 44.1 kHz; the sub layers carry a quieter octave above, so their
+ * (smooth, even noise through a low-pass that opens and closes, over a sub body), a sub bloom (pressure swelling in at
+ * one pitch, no beater), a sub drop, a rumble; the mystical - a chamber's inharmonic resonances, whispers through a
+ * voice's vowels, a pre-verb, a swirl, a hover - and a room for them to ring in. Each layer is stereo, at 44.1 kHz; the sub layers carry a quieter octave above, so their
  * weight still reads on a phone's or a handheld's small speakers. The magic is made of them (magic.ts).
  */
 
@@ -162,59 +162,6 @@ export function whoomph(
   return layer([placed, 0, 1], [[body, Float32Array.from(body)], 0, 0.5]);
 }
 
-/**
- * A power riser: digital glitter - a few partials a little apart, climbing from `from` to `to` Hz in `steps` steps,
- * flickering at `flicker` Hz - over `seconds`, swelling then gone; `bright` keeps the partials' upper harmonics, else
- * it is soft above 3.5 kHz. Falling where `to` is under `from` (a power draining away).
- */
-export function riser(
-  o: { seconds: number; from: number; to: number; steps: number; flicker: number; bright: boolean },
-  r: () => number,
-): Stereo {
-  const n = samples(o.seconds);
-  const out = new Float32Array(n);
-  const phases = [0, 0, 0, 0];
-  const detune = [1, 1.004, 1.5, 2.01];
-  const gains = [1, 0.7, 0.35, 0.25];
-  for (let i = 0; i < n; i++) {
-    const t = i / RATE;
-    const k = Math.min(o.steps - 1, Math.floor((t / o.seconds) * o.steps)) / Math.max(1, o.steps - 1);
-    const f = o.from * Math.pow(o.to / o.from, k);
-    let v = 0;
-    for (let p = 0; p < phases.length; p++) {
-      phases[p] = (phases[p] + (f * detune[p]) / RATE) % 1;
-      // A soft square: its odd harmonics, fewer where it is to be soft.
-      const ph = 2 * Math.PI * phases[p];
-      v += gains[p] * (Math.sin(ph) + (o.bright ? Math.sin(3 * ph) / 3 + Math.sin(5 * ph) / 5 : 0));
-    }
-    const flick = 0.6 + 0.4 * Math.sign(Math.sin(2 * Math.PI * o.flicker * t + r() * 0.2));
-    out[i] = v * flick * swell(o.seconds * 0.7, o.seconds * 0.5, 1.5)(t);
-  }
-  const shaped = o.bright ? out : lowpass(out, () => 3500, 0.7);
-  return wide(shaped, 0.007);
-}
-
-/** An air shimmer: `count` tiny sparkles, sine pings from `lo` to `hi` Hz, thicker early, each a few dozen milliseconds. */
-export function sparkle(o: { seconds: number; count: number; lo: number; hi: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const out: Stereo = [new Float32Array(n), new Float32Array(n)];
-  for (let s = 0; s < o.count; s++) {
-    const at = o.seconds * Math.pow(r(), 1.6) * 0.8;
-    const hz = o.lo * Math.pow(o.hi / o.lo, r());
-    const len = 0.03 + r() * 0.06;
-    const pan = r();
-    const gain = 0.3 + 0.7 * r();
-    const start = samples(at);
-    for (let i = 0; i < samples(len) && start + i < n; i++) {
-      const t = i / RATE;
-      const v = gain * Math.sin(2 * Math.PI * hz * t) * Math.min(1, t / 0.003) * Math.exp((-t / len) * 5);
-      out[0][start + i] += v * (1 - pan);
-      out[1][start + i] += v * pan;
-    }
-  }
-  return out;
-}
-
 /** A sub drop: a sine falling from `from` to `to` Hz over `seconds`, with its octave - weight landing. */
 export function subDrop(o: { seconds: number; from: number; to: number }): Stereo {
   const n = samples(o.seconds);
@@ -228,14 +175,6 @@ export function subDrop(o: { seconds: number; from: number; to: number }): Stere
   return [m, Float32Array.from(m)];
 }
 
-/** A sub impact: a thump at `hz` and a burst of dark noise - a blow landing far off. */
-export function impact(o: { hz: number; seconds: number }, r: () => number): Stereo {
-  const drop = subDrop({ seconds: o.seconds, from: o.hz * 1.8, to: o.hz * 0.7 });
-  const n = samples(0.25);
-  const burst = lowpass(pink(n, r), () => 900, 0.7).map((v, i) => v * Math.pow(0.001, i / n) * 2);
-  return layer([drop, 0, 1], [wide(burst), 0, 0.6]);
-}
-
 /** A rumble: the low end of air, dark and rolling, fading over `seconds` - the ground still moving after a blow. */
 export function rumble(seconds: number, r: () => number): Stereo {
   const n = samples(seconds);
@@ -243,38 +182,6 @@ export function rumble(seconds: number, r: () => number): Stereo {
     (v, i) => v * 3 * Math.min(1, i / samples(0.05)) * Math.pow(0.001, i / n),
   );
   return wide(roll, 0.011);
-}
-
-/**
- * A charge: tension building before a release - air through a resonant low-pass climbing from `from` to `to` Hz,
- * louder as it climbs, cut off at its end where the release takes over. Noise, not tones: a build, not a riser's notes.
- */
-export function charge(o: { seconds: number; from: number; to: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const climb: Curve = (t) => o.from * Math.pow(o.to / o.from, Math.min(1, t / o.seconds));
-  const air = lowpass(pink(n, r), climb, 2.5).map((v, i) => {
-    const k = i / n;
-    return v * k * k * (k > 0.97 ? (1 - k) / 0.03 : 1);
-  });
-  return wide(air, 0.006);
-}
-
-/** `x` driven into a soft saturation (tanh) by `drive`, its level kept: denser, rounder, without new edges. */
-function saturate(x: Float32Array, drive: number): Float32Array {
-  const k = Math.tanh(drive);
-  return x.map((v) => Math.tanh(v * drive) / k);
-}
-
-/**
- * An air blast: displaced air in a burst - air whose low-pass flares wide open as it strikes and closes over `seconds`,
- * its attack `attack` seconds (a few milliseconds for a blast, tens for a bloom). No pitch, so no drum.
- */
-export function airBlast(o: { seconds: number; attack: number; open?: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const open = o.open ?? 6500;
-  const env: Curve = (t) => (t < o.attack ? t / o.attack : Math.pow(0.001, (t - o.attack) / (o.seconds - o.attack)));
-  const air = lowpass(pink(n, r), (t) => 250 + (open - 250) * env(t) ** 1.5, 0.8).map((v, i) => v * env(i / RATE) * 2.5);
-  return wide(saturate(air, 1.5), 0.005);
 }
 
 /** A sub bloom: pressure without a beater - a deep tone at one pitch (and its octave) swelling in over `attack`, fading. */
@@ -288,36 +195,6 @@ export function subBloom(o: { hz: number; seconds: number; attack: number; beat?
     return (o.beat ? (tone(o.hz) + tone(o.hz + o.beat)) / 2 : tone(o.hz)) * env;
   });
   return [m, Float32Array.from(m)];
-}
-
-/** A concussion: a dark burst of low air, driven hard, decaying long - a muffled blast far off. */
-export function concussion(o: { seconds: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const env: Curve = (t) => (t < 0.004 ? t / 0.004 : Math.pow(0.001, (t - 0.004) / o.seconds));
-  const air = lowpass(pink(n, r), (t) => 120 + 500 * env(t), 0.9).map((v, i) => v * env(i / RATE) * 6);
-  return wide(saturate(air, 3), 0.008);
-}
-
-/** A shatter of air: `count` soft fragments of air, each tens of milliseconds, overlapping within `spread` seconds. */
-export function shatter(o: { seconds: number; count: number; spread: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const out: Stereo = [new Float32Array(n), new Float32Array(n)];
-  for (let g = 0; g < o.count; g++) {
-    const at = o.spread * Math.pow(r(), 1.5);
-    const len = samples(0.025 + r() * 0.03);
-    const cut = 900 + r() * 2200;
-    const frag = lowpass(pink(len, r), () => cut, 0.7);
-    const gain = (0.4 + 0.6 * r()) * Math.pow(0.001, at / (o.spread * 3));
-    const pan = r();
-    const start = samples(at);
-    for (let i = 0; i < len && start + i < n; i++) {
-      const w = Math.sin((Math.PI * i) / len); // a soft window: no click at either end
-      out[0][start + i] += frag[i] * gain * w * (1 - pan) * 3;
-      out[1][start + i] += frag[i] * gain * w * pan * 3;
-    }
-  }
-  // The fragments' air ringing on after them.
-  return layer([out, 0, 1], [airBlast({ seconds: o.seconds, attack: 0.02, open: 2500 }, r), 0, 0.4]);
 }
 
 // --- The mystical: what the higher circles may add ------------------------------------------------------------
