@@ -1,5 +1,5 @@
 {
-  "file": "sfx/audition.9e319541.ogg",
+  "file": "sfx/audition.38ee4997.ogg",
   "items": [
     {
       "id": "now1",
@@ -43,58 +43,50 @@
     },
     {
       "id": "l7",
-      "label": "Ladder, seventh circle (+ a second blow, a rumble)",
+      "label": "Ladder, seventh circle (+ a short charge, a second blow, a rumble)",
       "slice": [
         14.428004535147393,
-        3.9396145124716555
+        4.139614512471655
       ]
     },
     {
       "id": "l8",
-      "label": "Ladder, eighth circle (+ the air sweeping across, embers in the tail)",
+      "label": "Ladder, eighth circle: everything, no embers (a longer charge, heavier blows, the sweep)",
       "slice": [
-        18.46761904761905,
-        4.4
-      ]
-    },
-    {
-      "id": "h8",
-      "label": "Eighth, heavy (the blows and the drop half again as strong, deeper)",
-      "slice": [
-        22.96761904761905,
-        4.4
+        18.66761904761905,
+        4.55
       ]
     },
     {
       "id": "c8",
-      "label": "Eighth, long charge (tension building for half a second before the release)",
+      "label": "Eighth, a longer charge (half a second of tension)",
       "slice": [
-        27.46761904761905,
-        4.9
+        23.317619047619047,
+        4.7
       ]
     },
     {
-      "id": "m8",
-      "label": "Eighth, motion (swept across in and out, embers scattered wide, no rumble)",
+      "id": "h8",
+      "label": "Eighth, heavier still (the blows and the drop half again as strong)",
       "slice": [
-        32.467619047619046,
-        4.4
+        28.117619047619048,
+        4.55
       ]
     },
     {
-      "id": "e8",
-      "label": "Eighth, embers (a long crackling tail of energy spending itself)",
+      "id": "s8",
+      "label": "Eighth, a gentler sweep (half as far across)",
       "slice": [
-        36.967619047619046,
-        4.4
+        32.76761904761905,
+        4.55
       ]
     },
     {
-      "id": "a8",
-      "label": "Eighth, everything (a charge, heavier blows, the sweep, embers)",
+      "id": "r8",
+      "label": "Eighth, no rumble (cleaner after the second blow)",
       "slice": [
-        41.467619047619046,
-        4.75
+        37.41761904761905,
+        3.9
       ]
     }
   ]

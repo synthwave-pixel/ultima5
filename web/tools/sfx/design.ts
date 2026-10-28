@@ -258,27 +258,3 @@ export function charge(o: { seconds: number; from: number; to: number }, r: () =
   });
   return wide(air, 0.006);
 }
-
-/**
- * Embers: `count` dark crackles of energy spending itself - each a few milliseconds of air at a pitch from 700 Hz to
- * 2.5 kHz, struck and gone, placed anywhere left to right - thick at first and thinning over `seconds`.
- */
-export function embers(o: { seconds: number; count: number }, r: () => number): Stereo {
-  const n = samples(o.seconds);
-  const out: Stereo = [new Float32Array(n), new Float32Array(n)];
-  for (let e = 0; e < o.count; e++) {
-    const at = o.seconds * Math.pow(r(), 1.8);
-    const len = samples(0.003 + r() * 0.009);
-    const cut = 700 + r() * 1800;
-    const crack = lowpass(pink(len, r), () => cut, 0.8);
-    const gain = (0.5 + r()) * Math.pow(0.001, at / o.seconds / 1.5);
-    const pan = r();
-    const start = samples(at);
-    for (let i = 0; i < len && start + i < n; i++) {
-      const v = crack[i] * gain * 6 * Math.exp(-i / (len / 3));
-      out[0][start + i] += v * (1 - pan);
-      out[1][start + i] += v * pan;
-    }
-  }
-  return out;
-}
