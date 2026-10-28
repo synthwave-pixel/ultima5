@@ -20,7 +20,8 @@
     "runes": "node --import ./tools/node-ts.mjs tools/art/runes.ts",
     "apple2": "node tools/art/apple2.ts",
     "known": "node --import ./tools/node-ts.mjs tools/install/known.ts",
-    "music": "node --import ./tools/node-ts.mjs tools/music/render.ts"
+    "music": "node --import ./tools/node-ts.mjs tools/music/render.ts",
+    "sfx": "node --import ./tools/node-ts.mjs tools/sfx/render.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

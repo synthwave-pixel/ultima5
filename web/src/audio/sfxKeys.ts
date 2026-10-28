@@ -51,3 +51,15 @@ export function sfxKey(effect: Effect | null, kind: Kind, args: number[]): SfxKe
   if (effect.name === 'blackthorn') return { key: `blackthorn${effect.note ?? 0}` };
   return { key: effect.name };
 }
+
+/** Where the shared voices are softened above (Hz): the waterfall's, soft above 3 kHz. */
+const SOFT_HZ = 3000;
+
+/** A chip voice as the suites play it (44.1 kHz): a one-pole low-pass at 3 kHz, its brightness taken off. */
+export function soften(pcm: Float32Array, rate = 44100): Float32Array {
+  const k = 1 - Math.exp((-2 * Math.PI * SOFT_HZ) / rate);
+  const out = new Float32Array(pcm.length);
+  let y = 0;
+  for (let i = 0; i < pcm.length; i++) out[i] = y += k * (pcm[i] - y);
+  return out;
+}

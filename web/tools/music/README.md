@@ -34,3 +34,11 @@ in from the file's head and half a second short of its end (so a decoder's primi
 encoded by ffmpeg (Homebrew) as 48 kbps Opus and named for a hash of its bytes (`BRITLAND.3fa9c01d.ogg`), so a tune
 rendered again is a new URL to every player and the service worker never serves the old; the old file of the tune is
 deleted, and the manifest says where each file is.
+
+## The effects suites
+
+`npm run sfx` renders the effects of the Classical, Electronic and Ambient suites (`tools/sfx/scores.ts`, one score
+an effect, played by each suite's own renderer) to `web/public/sfx/<suite>.<hash>.ogg`, with `web/src/audio/sfxManifest.json`
+saying where each sound lies, and checks every effect for loudness and harshness against its soundtrack's music
+(`tools/sfx/check.ts`), the report in `screenshots/sfx-check.md`. `npm run sfx -- ambient` renders one suite. Classical
+needs MuseScore General, as above.
