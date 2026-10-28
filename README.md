@@ -243,11 +243,12 @@ has the whole list; the highlights:
   taken from your files, cleaned up and toned), *Apple ][* and *PC EGA*
   (1988's tiles exactly). *PC (1988)* is the 1988
   screen as it was, with its own tiles or the Apple ][ set. The
-  PC speaker sounds are there too, beside new chip-tune ones, and the
-  Ultima V Upgrade's music plays where the Upgrade played it, in four
-  soundtracks - Classical, Electronic, Ambient and the Upgrade's own; the
-  soundtrack and the Music and Sound FX levels are set in the Pause menu,
-  under Audio. The story pages - the introduction, the gypsy, the
+  Ultima V Upgrade's music plays where the Upgrade played it, and one
+  Sound setting chooses it with its effects: Classical, Electronic or
+  Ambient, each with effects in the same instruments and its magic made
+  as sound, not tunes - or Upgrade (2001), its MIDI with the 1988 PC
+  speaker. The Sound and the Music and Sound FX levels are set in the
+  Pause menu, under Audio. The story pages - the introduction, the gypsy, the
   ending - are read a paragraph at a time, larger and in the game's own
   lettering.
 - **No more guessing at commands.** Menus offer what makes sense where you

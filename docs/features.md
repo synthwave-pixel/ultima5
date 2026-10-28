@@ -83,35 +83,54 @@ describes how the Modern look is drawn.
 
 ## Looks and sound
 
-- **Two looks and two sounds**, chosen in Settings (UX) and in Audio
-  (Sound FX).
-  *Modern* (the default) is the port's own screen, at the ultima3 port's
-  scale: every one of the 512 tiles redrawn, creatures standing on the
-  ground rather than in black squares, and chip-tune effects (pulse,
-  triangle and noise) in the spirit of the originals. The ones a turn
-  repeats are kept quiet and a little different each time, and the music
-  is lowered under the long ones. Where the DOS game was silent, or one
-  sound served two things, the Standard set has the ultima3 port's too: a
-  torch lit, a ladder climbed up or down, a horse mounted and its hooves,
-  a member's death (a man's voice and a woman's) and the party's, a fight
-  begun, a cactus's prick, a fire field, a door opened, the guards called,
-  an electric field, the Codex's voice, and a monster's own blow and
-  spell. A waterfall is heard as water is, on and on: a soft roar with
-  the babble of its bubbles under it, swelling and easing of its own
-  accord and never on a beat, rising as the party comes near and louder
-  the nearer, dying away as it goes; it never lowers the music, nor does
-  a fountain. *PC (1988)* (UX) and *Original* (Sound FX) are the 1988 PC
-  release's EGA tiles and screen, and the PC speaker as the DOS game drove
-  it.
+- **Two looks**, chosen in Settings (UX). *Modern* (the default) is the
+  port's own screen, at the ultima3 port's scale: every one of the 512
+  tiles redrawn, creatures standing on the ground rather than in black
+  squares. *PC (1988)* is the 1988 PC release's EGA tiles and screen.
+- **One Sound**, chosen in Audio: the music and its effects together.
+  *Classical* (the default), *Electronic* and *Ambient* are each a
+  soundtrack (below) and a suite of effects in its sound: an effect with
+  a note in it is written once and played by each soundtrack's own
+  instruments, so a fight won is the orchestra's in Classical and the
+  synths' in Electronic. *Upgrade (2001)* is the Upgrade's MIDI with the
+  PC speaker as the DOS game drove it - what the Upgrade's players heard.
+  - The suites were tuned by ear to be easy to hear for hours: nothing
+    shrill (the harpsichord, the lute and the shrine chants play their
+    tunes two octaves below the DOS game's piercing pitch), and every
+    effect checked against its soundtrack's music, no louder and no
+    brighter than the rules allow (`web/tools/sfx/check.ts`). The effects
+    a turn repeats are quiet and a little different each time, and the
+    music is lowered under the long ones.
+  - The magic is sound design rather than music, the same in all three:
+    neither good nor ill, as a spell may heal or harm. A spell is air
+    rushing up into a *sub bloom*, a deep swell of pressure; from the
+    third circle a *chamber* rings in it, the resonances of a stone hall,
+    stronger each circle; from the sixth, *whispers*, breath through a
+    voice's vowels; and the eighth is all of it at once. The failed
+    spell, magic undone, a summoning, the Sceptre, an artifact, the
+    moongate, the healer's light and sleep are made of the same.
+  - Where the DOS game was silent, or one sound served two things, the
+    suites have their own: a torch lit, a ladder climbed up or down, a
+    horse mounted and its hooves, a member's death (a man's voice and a
+    woman's) and the party's, a fight begun, a cactus's prick, a fire
+    field, a door opened, the guards called, an electric field, the
+    Codex's voice, a monster's own blow and spell, and a soft tap on
+    backing out of a menu. When the old man's apparition comes to a camp,
+    it is to the opening of his castle's tune, Rule Britannia in F minor,
+    ending in F major.
+  - A waterfall is heard as water is, on and on: a soft roar with the
+    babble of its bubbles under it, swelling and easing of its own accord
+    and never on a beat, rising as the party comes near and louder the
+    nearer, dying away as it goes; it never lowers the music, nor does a
+    fountain.
 - **A mixer**: **Audio** (on the Pause menu, and in Settings at the
-  title) holds the soundtrack, Music level, Sound FX and Sound FX level,
-  each level Off or 10% to 100%, dialled and heard as it turns; Sound FX
-  chooses Standard or Original. Settings from before carry
-  over (music off is none; Sound FX off, none of the Standard set). The
-  Pause menu, Audio and Settings pause the music where it is - it goes on from
-  there after - but for the Music and Music level lines, where it plays
-  while the bar is on them, each soundtrack heard as it is chosen; the
-  menus' own clicks are heard as they are made.
+  title) holds the Sound, Music level and Sound FX level, each level Off
+  or 10% to 100%, dialled and heard as it turns. Settings from before
+  carry over: the soundtrack chosen becomes the Sound, music off is none,
+  Sound FX off is none. The Pause menu, Audio and Settings pause the music
+  where it is - it goes on from there after - but for the Sound and Music
+  level lines, where it plays while the bar is on them, each Sound heard
+  as it is chosen; the menus' own clicks are heard as they are made.
 - **Three sets of tiles** for the Modern look (Settings' Tiles), as the
   ultima3 port has its sets:
   - *Modern PC* (the default): the 1988 game's own land, figures and
@@ -179,7 +198,7 @@ describes how the Modern look is drawn.
   Project, 2001) gave it the Apple II and Commodore 128 versions' songs as
   MIDI, and they play where the Upgrade plays them, read from its driver
   and patches (`web/src/game/music.ts`). Its sixteen tunes come in four
-  soundtracks, chosen in Audio (Music):
+  soundtracks, chosen in Audio (Sound):
   - **Classical** (the default): the tunes arranged anew for a string
     orchestra, a full orchestra, a Renaissance consort, a Celtic band
     and a pedalled piano;
@@ -1206,8 +1225,17 @@ Import's From a file opens Android's picker for a file to read.
   clothes, trim, headgear, the jester's hood, the beard) per figure and
   frame. `docs/standard-originals.md` is the
   tile-by-tile record.
-- **The PC speaker** (Original sound) runs the DOS game's four sound
-  routines as their loops ran at DOSBox's speed.
+- **The PC speaker** (Upgrade (2001)'s effects) runs the DOS game's four
+  sound routines as their loops ran at DOSBox's speed.
+- **The effects suites** are rendered ahead, one Opus file a suite with a
+  manifest of where each sound lies in it (`npm run sfx`,
+  `web/tools/sfx/`): the scores through each soundtrack's own renderer,
+  the magic and the sounds of things made once for all three, everything
+  checked against the music for loudness and harshness. The page keeps
+  the three files with it, offline, and plays an effect as a slice of the
+  chosen one (`web/src/ui/sfxBank.ts`); the sound test page
+  (`sounds.html`) plays every one, the magic in one place, and every tune
+  in every arrangement under it.
 - **The text layer** keeps a record of what it drew, so an overlay (the
   Modern look's full-height party panel is one) can cover part of a text
   window while the window goes on underneath: see `docs/text-overlays.md`.
