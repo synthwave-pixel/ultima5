@@ -507,6 +507,7 @@ export class PcSound implements Sound {
     this.effectsLevel = level;
     if (set === 'original' || level === 0) this.hush(true);
     if (isSuite(set) && this.ctx) void this.bank.load(this.ctx, set);
+    if (!isSuite(set)) this.bank.forget();
     if (this.out) this.out.gain.value = effectsGain(set, level);
   }
 

@@ -28,37 +28,60 @@ export function bankRate(hz: number, key: string): number {
   return Math.min(2, Math.max(0.5, rate));
 }
 
+/** A file that would not load is not tried again for this long (ms), as the music's (sound.ts RETRY_AFTER). */
+const RETRY_AFTER = 60_000;
+
 export class SfxBank {
-  /** The suite last asked for, and its file once decoded. */
+  /** The suite last asked for, and its file once decoded: one suite's at most, a decoded file being some 80 MB. */
   private wanted: Suite | null = null;
   private loaded: { suite: Suite; buffer: AudioBuffer } | null = null;
-  private loading: { suite: Suite; done: Promise<AudioBuffer | null> } | null = null;
+  /** The files on their way, by suite: one fetch a suite, however often it is asked for meanwhile. */
+  private readonly loading = new Map<Suite, Promise<AudioBuffer | null>>();
+  /** When each suite's file last would not load (by `now`), so it is tried again - but not at once. */
+  private readonly failedAt = new Map<Suite, number>();
+  /** The context the file is decoded on, kept to try it again from an effect asked for. */
+  private ctx: BaseAudioContext | null = null;
 
   constructor(
     private readonly manifest: SfxManifest,
     private readonly fetchFile: (file: string) => Promise<ArrayBuffer>,
+    private readonly now: () => number = () => performance.now(),
   ) {}
 
-  /** Suite `suite`'s file, fetched and decoded (once); null where it has none or it would not load. */
+  /**
+   * Suite `suite`'s file, fetched and decoded (once); null where it has none or it would not load - and then it is
+   * tried again when asked for after a minute, not before.
+   */
   load(ctx: BaseAudioContext, suite: Suite): Promise<AudioBuffer | null> {
+    this.ctx = ctx;
     this.wanted = suite;
     if (this.loaded?.suite === suite) return Promise.resolve(this.loaded.buffer);
-    if (this.loading?.suite === suite) return this.loading.done;
+    const inFlight = this.loading.get(suite);
+    if (inFlight) return inFlight;
     const file = this.manifest[suite]?.file;
     if (!file) return Promise.resolve(null);
+    if (this.now() - (this.failedAt.get(suite) ?? -Infinity) < RETRY_AFTER) return Promise.resolve(null);
     const done = this.fetchFile(file)
       .then((bytes) => ctx.decodeAudioData(bytes))
       .then((buffer) => {
+        this.failedAt.delete(suite);
         // Another suite chosen meanwhile: this one is not kept.
         if (this.wanted === suite) this.loaded = { suite, buffer };
         return buffer;
       })
-      .catch(() => null)
-      .finally(() => {
-        if (this.loading?.suite === suite) this.loading = null;
-      });
-    this.loading = { suite, done };
+      .catch(() => {
+        this.failedAt.set(suite, this.now());
+        return null;
+      })
+      .finally(() => this.loading.delete(suite));
+    this.loading.set(suite, done);
     return done;
+  }
+
+  /** No suite wanted (Upgrade (2001)'s speaker chosen): the decoded file let go. */
+  forget(): void {
+    this.wanted = null;
+    this.loaded = null;
   }
 
   /** Whether suite `suite` has a sound for `key`, loaded or not. */
@@ -66,9 +89,15 @@ export class SfxBank {
     return !!this.manifest[suite]?.slices[key]?.length;
   }
 
-  /** Suite `suite`'s sound for `key`, one of its variants picked by `r`; null until the suite has loaded. */
+  /**
+   * Suite `suite`'s sound for `key`, one of its variants picked by `r`; null until the suite has loaded - and where its
+   * file would not load, asking is what tries it again (load: not within a minute).
+   */
   slice(suite: Suite, key: string, r: () => number): Slice | null {
-    if (this.loaded?.suite !== suite) return null;
+    if (this.loaded?.suite !== suite) {
+      if (this.ctx && this.wanted === suite && !this.loading.has(suite)) void this.load(this.ctx, suite);
+      return null;
+    }
     const variants = this.manifest[suite].slices[key];
     if (!variants?.length) return null;
     const [at, length] = variants[Math.min(variants.length - 1, Math.floor(r() * variants.length))];

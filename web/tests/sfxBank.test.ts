@@ -160,4 +160,53 @@ describe('a suite played', () => {
     expect(started).toHaveLength(1);
     expect(started[0].buffer).toMatchObject({ kind: 'atlas' });
   });
+
+  it('tries a file that would not load again, but not within a minute', async () => {
+    let clock = 0;
+    let fetches = 0;
+    let fail = true;
+    const bank = new SfxBank(
+      manifest({ moongate: [[2, 1.1]] }),
+      async () => {
+        fetches++;
+        if (fail) throw new Error('offline');
+        return new ArrayBuffer(8);
+      },
+      () => clock,
+    );
+    const { ctx } = fakeContext();
+    expect(await bank.load(ctx as never, 'classical')).toBeNull();
+    expect(fetches).toBe(1);
+    // Asked for an effect within the minute: not fetched again.
+    clock = 30_000;
+    expect(bank.slice('classical', 'moongate', () => 0)).toBeNull();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetches).toBe(1);
+    // After it: fetched again by the effect asked for, and then played.
+    fail = false;
+    clock = 61_000;
+    expect(bank.slice('classical', 'moongate', () => 0)).toBeNull();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(fetches).toBe(2);
+    expect(bank.slice('classical', 'moongate', () => 0)).not.toBeNull();
+  });
+
+  it("lets a suite's file go when Upgrade (2001)'s speaker is chosen, and fetches it once however often it is asked for", async () => {
+    let fetches = 0;
+    const bank = new SfxBank(manifest({ moongate: [[2, 1.1]] }), async () => {
+      fetches++;
+      return new ArrayBuffer(8);
+    });
+    const { ctx } = fakeContext();
+    const a = bank.load(ctx as never, 'classical');
+    void bank.load(ctx as never, 'ambient');
+    const again = bank.load(ctx as never, 'classical');
+    void bank.load(ctx as never, 'classical');
+    await Promise.all([a, again]);
+    expect(fetches).toBe(2); // classical once, ambient once
+    expect(bank.slice('classical', 'moongate', () => 0)).not.toBeNull();
+    bank.forget();
+    expect(bank.slice('classical', 'moongate', () => 0)).toBeNull();
+  });
 });
