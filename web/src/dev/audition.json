@@ -1,84 +1,76 @@
 {
-  "file": "sfx/audition.bf9fe720.ogg",
+  "file": "sfx/audition.e12de9ec.ogg",
   "items": [
     {
       "id": "now8",
-      "label": "As built: eighth circle (the baseline)",
+      "label": "As built: eighth circle (its blow the drum-like kick)",
       "slice": [
         0,
         3.4
       ]
     },
     {
-      "id": "base",
-      "label": "Baseline, rebuilt here (should sound the same as the one above)",
+      "id": "bl",
+      "label": "Air blast (displaced air flaring open and closing - no pitch)",
       "slice": [
         3.5,
         3.4
       ]
     },
     {
-      "id": "sw",
-      "label": "+ sweep (the whoomph travelling across)",
+      "id": "bm",
+      "label": "Soft bloom (the blast with a slower attack: a surge, not a hit)",
       "slice": [
         7,
         3.4
       ]
     },
     {
-      "id": "dr",
-      "label": "+ air draw (drawn in, peaking on the blow)",
+      "id": "sb",
+      "label": "Sub bloom (pressure without a beater: a deep tone swelling in, no falling pitch)",
       "slice": [
         10.5,
-        3.53
-      ]
-    },
-    {
-      "id": "ch",
-      "label": "+ charge (a build ending on the blow)",
-      "slice": [
-        14.13,
-        3.58
-      ]
-    },
-    {
-      "id": "sd",
-      "label": "+ sub drop (more weight in the one landing)",
-      "slice": [
-        17.81,
         3.4
       ]
     },
     {
-      "id": "hv",
-      "label": "+ heavier (the one blow stronger)",
+      "id": "co",
+      "label": "Concussion (a dark, driven burst of low air, a muffled blast far off)",
       "slice": [
-        21.31,
+        14,
         3.4
       ]
     },
     {
-      "id": "sd2",
-      "label": "Sweep + air draw",
+      "id": "sh",
+      "label": "Shatter of air (soft fragments overlapping, no single attack)",
       "slice": [
-        24.81,
-        3.53
+        17.5,
+        3.4
       ]
     },
     {
-      "id": "sd3",
-      "label": "Sweep + air draw + sub drop",
+      "id": "dp",
+      "label": "Sub drop only (the falling weight, smooth, no noise on top)",
       "slice": [
-        28.44,
-        3.53
+        21,
+        3.4
       ]
     },
     {
-      "id": "all",
-      "label": "Sweep + air draw + charge + sub drop + heavier",
+      "id": "no",
+      "label": "No impact (the whoomph alone, its peak sharpened to be the moment)",
       "slice": [
-        32.07,
-        3.58
+        24.5,
+        3.4
+      ]
+    },
+    {
+      "id": "bs",
+      "label": "Air blast + sub bloom (air and weight, still no beater)",
+      "slice": [
+        28,
+        3.4
       ]
     }
   ]

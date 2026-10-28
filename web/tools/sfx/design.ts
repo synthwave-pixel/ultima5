@@ -258,3 +258,62 @@ export function charge(o: { seconds: number; from: number; to: number }, r: () =
   });
   return wide(air, 0.006);
 }
+
+/** `x` driven into a soft saturation (tanh) by `drive`, its level kept: denser, rounder, without new edges. */
+function saturate(x: Float32Array, drive: number): Float32Array {
+  const k = Math.tanh(drive);
+  return x.map((v) => Math.tanh(v * drive) / k);
+}
+
+/**
+ * An air blast: displaced air in a burst - air whose low-pass flares wide open as it strikes and closes over `seconds`,
+ * its attack `attack` seconds (a few milliseconds for a blast, tens for a bloom). No pitch, so no drum.
+ */
+export function airBlast(o: { seconds: number; attack: number; open?: number }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const open = o.open ?? 6500;
+  const env: Curve = (t) => (t < o.attack ? t / o.attack : Math.pow(0.001, (t - o.attack) / (o.seconds - o.attack)));
+  const air = lowpass(pink(n, r), (t) => 250 + (open - 250) * env(t) ** 1.5, 0.8).map((v, i) => v * env(i / RATE) * 2.5);
+  return wide(saturate(air, 1.5), 0.005);
+}
+
+/** A sub bloom: pressure without a beater - a deep tone at one pitch (and its octave) swelling in over `attack`, fading. */
+export function subBloom(o: { hz: number; seconds: number; attack: number }): Stereo {
+  const n = samples(o.seconds);
+  const m = Float32Array.from({ length: n }, (_, i) => {
+    const t = i / RATE;
+    const env = t < o.attack ? Math.sin((Math.PI / 2) * (t / o.attack)) : Math.pow(0.001, (t - o.attack) / (o.seconds - o.attack));
+    return (Math.sin(2 * Math.PI * o.hz * t) + 0.35 * Math.sin(4 * Math.PI * o.hz * t)) * env;
+  });
+  return [m, Float32Array.from(m)];
+}
+
+/** A concussion: a dark burst of low air, driven hard, decaying long - a muffled blast far off. */
+export function concussion(o: { seconds: number }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const env: Curve = (t) => (t < 0.004 ? t / 0.004 : Math.pow(0.001, (t - 0.004) / o.seconds));
+  const air = lowpass(pink(n, r), (t) => 120 + 500 * env(t), 0.9).map((v, i) => v * env(i / RATE) * 6);
+  return wide(saturate(air, 3), 0.008);
+}
+
+/** A shatter of air: `count` soft fragments of air, each tens of milliseconds, overlapping within `spread` seconds. */
+export function shatter(o: { seconds: number; count: number; spread: number }, r: () => number): Stereo {
+  const n = samples(o.seconds);
+  const out: Stereo = [new Float32Array(n), new Float32Array(n)];
+  for (let g = 0; g < o.count; g++) {
+    const at = o.spread * Math.pow(r(), 1.5);
+    const len = samples(0.025 + r() * 0.03);
+    const cut = 900 + r() * 2200;
+    const frag = lowpass(pink(len, r), () => cut, 0.7);
+    const gain = (0.4 + 0.6 * r()) * Math.pow(0.001, at / (o.spread * 3));
+    const pan = r();
+    const start = samples(at);
+    for (let i = 0; i < len && start + i < n; i++) {
+      const w = Math.sin((Math.PI * i) / len); // a soft window: no click at either end
+      out[0][start + i] += frag[i] * gain * w * (1 - pan) * 3;
+      out[1][start + i] += frag[i] * gain * w * pan * 3;
+    }
+  }
+  // The fragments' air ringing on after them.
+  return layer([out, 0, 1], [airBlast({ seconds: o.seconds, attack: 0.02, open: 2500 }, r), 0, 0.4]);
+}
