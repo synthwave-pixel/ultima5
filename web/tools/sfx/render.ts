@@ -45,6 +45,8 @@ import { encode, type Stereo } from '../music/pcm.ts';
 import { playSfx } from '../music/styles/engine.ts';
 import { type Bands, bandsAverage, bandsLoudest, checkSuite, type Checked, loudest } from './check.ts';
 import { bankScore, type Score, SCORES, sourceOf, VARIANTS } from './scores.ts';
+import { MAGIC } from './magic.ts';
+import { seeded } from './design.ts';
 import { UNIVERSAL } from './universal.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -155,33 +157,10 @@ export function layOutAtlas(slices: { key: string; pcm: Stereo }[], gap = 0.1): 
   return { pcm, slices: where };
 }
 
-/** How loud a score's texture is laid in, its peak: it leads, the notes a bed under it. */
-const TEXTURE_PEAK = 0.5;
-
-/** `score` rendered in `suite`'s sound, with time for its room to ring: its notes, and its texture under them. */
+/** `score` rendered in `suite`'s sound, with time for its room to ring. */
 async function renderScore(suite: Suite, score: Score): Promise<Stereo> {
-  const seconds = score.length + RING + 1;
-  const pcm: Stereo = score.notes.length
-    ? await renderNotes(suite, score, seconds)
-    : [new Float32Array(Math.ceil(seconds * RATE)), new Float32Array(Math.ceil(seconds * RATE))];
-  if (score.texture) {
-    let seed = 0x2545;
-    const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const t = score.texture(suite, r);
-    const peak = t.reduce((m, v) => Math.max(m, Math.abs(v)), 0) || 1;
-    const n = Math.min(t.length, pcm[0].length);
-    for (let i = 0; i < n; i++) {
-      const v = (t[i] / peak) * TEXTURE_PEAK;
-      pcm[0][i] += v;
-      pcm[1][i] += v;
-    }
-  }
-  return pcm;
-}
-
-/** `score`'s notes rendered in `suite`'s sound, `seconds` long. */
-async function renderNotes(suite: Suite, score: Score, seconds: number): Promise<Stereo> {
   const seq = toSequence(score);
+  const seconds = score.length + RING + 1;
   if (suite === 'classical') return renderOriginal(seq, seconds, RATE, FONT);
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * RATE), RATE);
   const base = ctx as unknown as BaseAudioContext;
@@ -224,12 +203,12 @@ function sharedSounds(music: Bands): Checked[] {
     if (seen.has(name) || WATER.has(name)) continue;
     seen.add(name);
     const key = sfxKey({ name }, kind, args);
-    if (key === 'silent' || (key && (SCORES[key.key] || UNIVERSAL[key.key] || sourceOf(key.key)))) continue;
+    if (key === 'silent' || (key && (SCORES[key.key] || UNIVERSAL[key.key] || MAGIC[key.key] || sourceOf(key.key)))) continue;
     add(name, (r) => standard({ name }, kind, args, r), REPEATED.has(name));
   }
   for (const name of Object.keys(CUES)) {
     const key = cueKey(name);
-    if (SCORES[key] || UNIVERSAL[key] || sourceOf(key)) continue;
+    if (SCORES[key] || UNIVERSAL[key] || MAGIC[key] || sourceOf(key)) continue;
     add(key, () => u3Effect(name), false);
   }
   return out;
@@ -335,7 +314,15 @@ async function main(): Promise<void> {
       level: key === 'cue:Back' ? LEVEL.tap : REPEATED.has(key) ? LEVEL.repeated : LEVEL.other,
     }),
   );
-  const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal];
+  // The magic: sound design, not music, the same in every suite (magic.ts) - cut, levelled and softened as the rest.
+  const magic = Object.entries(MAGIC).flatMap(([key, m]) =>
+    Array.from({ length: m.variants }, (_, v): Checked => {
+      const pcm = finish(m.make(seeded(4099 + v * 7919)), m.length);
+      levelSlice(pcm, LEVEL.other);
+      return { key, pcm: tame(pcm, strictest, 6, LEVEL.other), standout: false };
+    }),
+  );
+  const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal, ...magic];
   console.log(`: ${forAll.length}`);
   for (const suite of suites) {
     const ref = refs.get(suite)!;
@@ -361,11 +348,12 @@ async function main(): Promise<void> {
   const forAllFound = [
     ...[...fromOne.entries()].flatMap(([from, list]) => checkSuite(`${from}, for all`, list, refs.get(from as Suite))),
     ...checkSuite('universal', universal, strictest),
+    ...checkSuite('magic', magic, strictest),
     ...checkSuite('shared', shared, strictest),
   ];
   failures.push(...forAllFound);
   report.push(
-    "## for all suites (one suite's version, the universal sounds, and the shared chip voices)",
+    "## for all suites (one suite's version, the universal sounds, the magic, and the shared chip voices)",
     '',
     `Kept as the Standard set has them, not checked: ${[...new Set(kept.map((k) => k.key))].join(', ')}.`,
     '',

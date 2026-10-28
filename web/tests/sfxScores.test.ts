@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { standard } from '../src/audio/chip.ts';
 import { u3Effect } from '../src/audio/chip3.ts';
 import { RULES } from '../src/audio/effects.ts';
-import { BANKED, NOTE_BANK, SUITES } from '../src/audio/sfxKeys.ts';
+import { BANKED, NOTE_BANK } from '../src/audio/sfxKeys.ts';
 import { bankScore, SCORES, sourceOf, VARIANTS } from '../tools/sfx/scores.ts';
 import { UNIVERSAL } from '../tools/sfx/universal.ts';
+import { MAGIC } from '../tools/sfx/magic.ts';
+import { seeded } from '../tools/sfx/design.ts';
 import { bandsLoudest } from '../tools/sfx/check.ts';
-import { fft } from '../tools/music/spectrum.ts';
 import { levelSlice } from '../tools/sfx/render.ts';
 import type { Stereo } from '../tools/music/pcm.ts';
 
@@ -22,8 +23,7 @@ function now(key: string): number | null {
 
 describe('the scores of the new suites', () => {
   it('scores every pitched effect the user named', () => {
-    for (const k of ['spiritin', 'shrine1', 'chime', 'failure', 'cue:CombatStart', 'victory1', 'cue:Alarm'])
-      expect(SCORES[k], k).toBeDefined();
+    for (const k of ['spiritin', 'shrine1', 'chime', 'cue:CombatStart', 'victory1', 'cue:Alarm']) expect(SCORES[k], k).toBeDefined();
     for (const k of ['fall', 'trapfall', 'cue:MountHorse', 'cue:Ouch', 'foefire']) expect(UNIVERSAL[k], k).toBeDefined();
     for (const f of ['harpsichord', 'lute'] as const) expect(bankScore(f, 60).notes.length).toBe(1);
   });
@@ -53,7 +53,7 @@ describe('the scores of the new suites', () => {
       ...BANKED.flatMap((f) => [bankScore(f, NOTE_BANK.low), bankScore(f, NOTE_BANK.high)]),
     ];
     for (const s of scores) {
-      expect(s.notes.length + (s.texture ? 1 : 0)).toBeGreaterThan(0);
+      expect(s.notes.length).toBeGreaterThan(0);
       for (const n of s.notes) {
         expect(n.program).toBeGreaterThanOrEqual(0);
         expect(n.program).toBeLessThanOrEqual(127);
@@ -124,62 +124,60 @@ describe('the sounds made once for every suite', () => {
       expect(bandsLoudest(now).presence, key).toBeLessThan(bandsLoudest(was).presence - 3);
     }
   });
-
-  it('makes magic undone a sound, not a tune', () => {
-    const pcm = UNIVERSAL['cue:Dissolve'](r);
-    expect(pcm.length / 44100).toBeGreaterThanOrEqual(0.62);
-    expect(pcm.length / 44100).toBeLessThanOrEqual(0.98);
-    expect(pcm.every(Number.isFinite)).toBe(true);
-    expect(SCORES['cue:Dissolve']).toBeUndefined();
-    expect(SCORES['cue:Absorbed']).toBeDefined(); // the Mirror's sting kept
-  });
 });
 
-describe('the magic', () => {
-  const magic = ['failure', 'absorb', 'summon', 'artifact', 'sceptuse', 'moongate', 'shop0', 'shop1', 'shop2', 'status'];
-  const keys = [...Array.from({ length: 8 }, (_, i) => `spell${i + 1}`), ...magic];
+describe('the magic, as sound design', () => {
+  const keys = [
+    ...Array.from({ length: 8 }, (_, i) => `spell${i + 1}`),
+    'failure',
+    'cue:Dissolve',
+    'absorb',
+    'summon',
+    'artifact',
+    'sceptuse',
+    'moongate',
+    'shop0',
+    'shop1',
+    'shop2',
+    'status',
+  ];
 
-  it('is a texture in each suite, the notes a low bed and faint glints, no tune', () => {
-    for (const k of keys)
-      for (const suite of SUITES) {
-        const s = SCORES[k](0);
-        expect(s.texture, k).toBeDefined();
-        const t = s.texture!(suite, () => 0.5);
-        expect(t.every(Number.isFinite), `${k} ${suite}`).toBe(true);
-        expect(
-          t.reduce((m, v) => Math.max(m, Math.abs(v)), 0),
-          `${k} ${suite}`,
-        ).toBeGreaterThan(0.001);
-        for (const n of s.notes) {
-          expect(n.note, k).toBeLessThanOrEqual(80);
-          if (n.note > 67) expect(n.velocity, `${k}: a glint, faint`).toBeLessThanOrEqual(45);
-        }
-      }
+  it('is made for every magic effect, once for all suites, and no longer scored', () => {
+    for (const k of keys) {
+      expect(MAGIC[k], k).toBeDefined();
+      expect(SCORES[k], k).toBeUndefined();
+      const pcm = MAGIC[k].make(seeded(1));
+      expect(pcm).toHaveLength(2);
+      expect(pcm[0].every(Number.isFinite) && pcm[1].every(Number.isFinite), k).toBe(true);
+      expect(
+        pcm[0].reduce((m, v) => Math.max(m, Math.abs(v)), 0),
+        k,
+      ).toBeGreaterThan(0.01);
+    }
+    expect(SCORES['cue:Absorbed']).toBeDefined(); // the Mirror's sting kept
   });
 
-  it('sounds different in each suite', () => {
-    const t = (suite: (typeof SUITES)[number]): Float32Array => SCORES.spell4(0).texture!(suite, () => 0.5);
-    const [a, b, c] = SUITES.map(t);
-    const differ = (x: Float32Array, y: Float32Array): boolean => x.length !== y.length || x.some((v, i) => Math.abs(v - y[i]) > 1e-3);
-    expect(differ(a, b) && differ(b, c) && differ(a, c)).toBe(true);
+  it('keeps each about as long as it is now', () => {
+    for (const k of keys) {
+      const was = now(k);
+      if (was === null) continue;
+      const ratio = MAGIC[k].length / was;
+      expect(ratio, `${k}: ${MAGIC[k].length} s against ${was.toFixed(3)} s`).toBeGreaterThanOrEqual(0.8);
+      expect(ratio, `${k}: ${MAGIC[k].length} s against ${was.toFixed(3)} s`).toBeLessThanOrEqual(1.3);
+    }
   });
 
-  it('grows with the circle', () => {
-    expect(SCORES.spell8(0).length).toBeGreaterThan(SCORES.spell1(0).length);
+  it('grows with the circle, each spell varied three ways', () => {
+    expect(MAGIC.spell8.length).toBeGreaterThan(MAGIC.spell1.length);
+    for (let c = 1; c <= 8; c++) expect(MAGIC[`spell${c}`].variants).toBe(3);
   });
 
-  it('is made of tones, not noise: its sound in a few pitches, not spread over a band', () => {
-    // The middle of a spell's texture, as a spectrum: tones put most of their power in a few bins, noise in many.
-    for (const suite of SUITES) {
-      const t = SCORES.spell6(0).texture!(suite, () => 0.5);
-      const at = Math.max(0, (t.length >> 1) - 4096);
-      const re = Float64Array.from({ length: 8192 }, (_, i) => (t[at + i] ?? 0) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / 8192)));
-      const im = new Float64Array(8192);
-      fft(re, im);
-      const power = Array.from({ length: 4096 }, (_, k) => re[k] * re[k] + im[k] * im[k]).sort((a, b) => b - a);
-      const total = power.reduce((a, b) => a + b, 0);
-      const top = power.slice(0, 82).reduce((a, b) => a + b, 0); // the strongest 2%
-      expect(top / total, suite).toBeGreaterThan(0.9);
+  it('is dark: most of its sound low, little where the ear tires', () => {
+    for (const k of keys) {
+      const pcm = MAGIC[k].make(seeded(1));
+      levelSlice(pcm, -24);
+      const b = bandsLoudest(pcm);
+      expect(b.presence, k).toBeLessThan(-40);
     }
   });
 });

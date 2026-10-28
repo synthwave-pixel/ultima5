@@ -9,8 +9,7 @@
  * soundtracks' sounds.
  *
  * What an effect was, it stays: the melodies the Standard set gave them
- * (chip3.ts: the spells' climb onto D major, Blackthorn's theme, Rule
- * Britannia at the sceptre and at the end, the laments, the heals' chords)
+ * (chip3.ts: Blackthorn's theme, Rule Britannia at the end, the laments)
  * are kept, moved down into the middle of the instruments' range where they
  * sat high; a sweep becomes a run of notes over its span; each lasts about
  * as long as it does now. Nothing is written above C6, little above C5, and
@@ -21,10 +20,11 @@
  * (MONARCH.XMI, Rule Britannia in F minor), a little quicker, ending on F
  * major: about three and a half seconds, the end ringing on under the
  * reveal while the game waits its 1.7 s as before.
+ *
+ * The magic is not scored: it is sound design, the same in every suite (magic.ts).
  */
 
 import { BANKED, type Suite } from '../../src/audio/sfxKeys.ts';
-import { type Gesture, magicTexture, swellAt } from './universal.ts';
 
 export interface SfxNote {
   at: number;
@@ -39,8 +39,6 @@ export interface Score {
   notes: SfxNote[];
   /** A moment meant to stand out (a victory, the apparition, a shrine): levelled louder (render.ts). */
   standout?: boolean;
-  /** A sound under the notes, not of them (the magic's air and grains): in each suite's own way, mono at 44.1 kHz. */
-  texture?: (suite: Suite, r: () => number) => Float32Array;
 }
 
 /** General MIDI programs. */
@@ -93,53 +91,6 @@ const score = (length: number, parts: (SfxNote | SfxNote[])[], standout = false)
 const BRITANNIA = [60, 65, 65, 65, 67, 69, 70, 72];
 /** Blackthorn's theme (chip3.ts BLACKTHORN), an octave down. */
 const BLACKTHORN = [55, 55, 57, 55, 58, 57];
-/** A spell of `circle`'s length (chip3.ts spell). */
-const spellLength = (circle: number): number => 0.55 * Math.pow(1.5 / 0.55, (circle - 1) / 7);
-
-/**
- * A magic sound: its texture (universal.ts magicTexture: air and grains, each suite its own way) over `bed`, a quiet
- * low bed of held notes - an open fifth, a cluster - with no tune: the casting heard, not a song played.
- */
-const magic = (gesture: Gesture, bed: SfxNote[][] = [], standout = false): Score => ({
-  ...score(gesture.seconds, bed, standout),
-  texture: (suite, r) => magicTexture(suite, gesture, r),
-});
-
-/**
- * A cloud of glints: `count` faint notes of a whole-tone scale (no key, no tune) on the celesta, unmetered, strewn
- * through the swell - each suite's renderer giving them its own glass or bells.
- */
-function cloud(seconds: number, count: number, variant: number): SfxNote[] {
-  const WHOLE = [62, 64, 66, 68, 70, 72, 74, 76];
-  let seed = 31 + variant * 977 + count * 13;
-  const r = (): number => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  return Array.from({ length: count }, () =>
-    note(seconds * (0.1 + 0.7 * r()), WHOLE[Math.floor(r() * WHOLE.length)], 0.4, P.celesta, 20 + Math.floor(r() * 20)),
-  );
-}
-
-/** A spell of `circle`: the air drawn up and let go, wider and longer and its grains thicker the higher the circle. */
-function spell(circle: number, variant: number): Score {
-  const seconds = spellLength(circle);
-  const k = (circle - 1) / 7;
-  return magic(
-    {
-      seconds,
-      from: 260 - variant * 20,
-      to: 700 + 700 * k + variant * 60,
-      swell: swellAt(0.35 + 0.1 * k),
-      grains: 6 + circle * 4,
-      lo: 500,
-      hi: 1300 + 900 * k,
-    },
-    [
-      cloud(seconds, 2 + circle, variant),
-      chord(0, [38, 45], seconds, P.slow, 34 + circle * 2),
-      circle >= 4 ? chord(seconds * 0.2, [50], seconds * 0.8, P.choir, 30 + circle * 2) : [],
-      circle >= 7 ? chord(seconds * 0.3, [57], seconds * 0.7, P.choir, 28 + circle) : [],
-    ],
-  );
-}
 
 /** The apparition's arrival: the castle's tune (MONARCH, F minor), its opening at 0.72 of its time, ending on F major. */
 function apparition(): Score {
@@ -207,58 +158,6 @@ export const SCORES: Record<string, (variant: number) => Score> = {
       run(0, [48, 53, 55, 56, 58, 55], 0.14, P.clarinet, 85),
       chord(0.84, [52, 40], 0.4, P.bassoon, 85),
       chord(0.84, [40], 0.4, P.cello, 70),
-    ]),
-  // --- Magic: the casting's air and light over a low bed, not tunes ---
-  ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, (v: number) => spell(i + 1, v)])),
-  // Failed: the air drawn up, and it falls apart - a short fizzle over a low, uneasy second.
-  failure: () =>
-    magic({ seconds: 0.25, from: 300, to: 160, swell: swellAt(0.3, 2), grains: 5, lo: 400, hi: 900 }, [
-      chord(0, [38, 39], 0.25, P.slow, 40),
-    ]),
-  // Magic absorbed: the air drawn inward, falling, and a low swell taking it.
-  absorb: () =>
-    magic({ seconds: 0.75, from: 1200, to: 220, swell: swellAt(0.7), grains: 12, lo: 500, hi: 1400 }, [
-      chord(0.2, [31, 38], 0.55, P.slow, 50),
-    ]),
-  // Summoning: the air rising from below, a low fifth swelling with it.
-  summon: () =>
-    magic({ seconds: 0.96, from: 180, to: 800, swell: swellAt(0.6), grains: 14, lo: 400, hi: 1200 }, [
-      chord(0, [36, 43], 0.96, P.slow, 50),
-      [note(0, 36, 0.5, P.timp, 40)],
-    ]),
-  // An artifact used: a long shimmer over F, the light gathering and settling.
-  artifact: () =>
-    magic(
-      { seconds: 1.6, from: 300, to: 900, swell: swellAt(0.45), grains: 34, lo: 600, hi: 1800 },
-      [chord(0, [41, 48, 53], 1.6, P.slow, 45), chord(0.3, [57], 1.3, P.choir, 35)],
-      true,
-    ),
-  // The Sceptre wielded: power surging up, over a low F and C.
-  sceptuse: () =>
-    magic({ seconds: 0.86, from: 200, to: 1000, swell: swellAt(0.5), grains: 16, lo: 500, hi: 1500 }, [
-      chord(0, [41, 48], 0.86, P.slow, 55),
-    ]),
-  // A moongate: the air swirling, rising and falling about itself, and a dim shimmer over a low hum.
-  moongate: () =>
-    magic({ seconds: 1.1, from: 450, to: 650, swell: swellAt(0.5, 1.2), grains: 18, lo: 500, hi: 1500, waver: [0.35, 1.3] }, [
-      chord(0, [45, 52], 1.1, P.slow, 40),
-    ]),
-  // The healer's light: warmth rising, turning, settling - soft air over a soft chord, no notes picked out. The last is
-  // also the menus' back-out note: short and low.
-  shop0: () =>
-    magic({ seconds: 0.5, from: 300, to: 800, swell: swellAt(0.6), grains: 6, lo: 600, hi: 1200 }, [
-      chord(0, [48, 55, 60], 0.5, P.choir, 40),
-    ]),
-  shop1: () =>
-    magic({ seconds: 0.5, from: 500, to: 900, swell: swellAt(0.5), grains: 6, lo: 600, hi: 1300 }, [
-      chord(0, [53, 57, 60], 0.5, P.choir, 40),
-    ]),
-  shop2: () =>
-    magic({ seconds: 0.31, from: 700, to: 350, swell: swellAt(0.2), grains: 3, lo: 500, hi: 1000 }, [[note(0, 55, 0.3, P.harp, 55)]]),
-  // Put to sleep: a breath sinking and slowing, over a low hum fading.
-  status: () =>
-    magic({ seconds: 1.69, from: 700, to: 180, swell: swellAt(0.15, 2.2), grains: 8, lo: 400, hi: 900 }, [
-      chord(0, [36, 43], 1.69, P.slow, 35),
     ]),
   // --- The story's set pieces ---
   spiritin: () => apparition(),
@@ -352,11 +251,10 @@ export const SCORES: Record<string, (variant: number) => Score> = {
     ]),
 };
 
-/** How many ways an effect is rendered, one picked at each play: the ones a turn repeats, and the spells. */
+/** How many ways an effect is rendered, one picked at each play: the ones a turn repeats. */
 export const VARIANTS: Record<string, number> = {
   tickhigh: 3,
   ticklow: 3,
-  ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`spell${i + 1}`, 3])),
 };
 
 /** The instrument each bank's family plays on. */

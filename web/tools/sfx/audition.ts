@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { encode, type Stereo } from '../music/pcm.ts';
 import { impact, layer, room, rumble, seeded, subDrop, whoomph } from './design.ts';
+import { spell } from './magic.ts';
 import { layOutAtlas, levelSlice } from './render.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -43,18 +44,6 @@ const U3 = (r: () => number): Stereo =>
     1.4,
     0.25,
   );
-
-/** A spell of a circle in this language: a whoomph growing with the circle, a blow joining it from the fourth. */
-function spell(circle: number, r: () => number): Stereo {
-  const seconds = 0.55 * Math.pow(1.5 / 0.55, (circle - 1) / 7);
-  const k = (circle - 1) / 7;
-  const parts: [Stereo, number, number][] = [
-    [whoomph({ seconds, peak: seconds * 0.22, fall: seconds * 0.8, open: 2800 + 1500 * k, sub: 70 - 15 * k }, r), 0, 1],
-  ];
-  if (circle >= 4) parts.push([impact({ hz: 60 - 8 * k, seconds: seconds * 0.9 }, r), seconds * 0.18, 0.4 + 0.5 * k]);
-  if (circle >= 7) parts.push([rumble(seconds, r), seconds * 0.2, 0.5]);
-  return room(layer(...parts), 1 + seconds, 0.22 + 0.08 * k);
-}
 
 /** The candidates: id, label, sound. */
 const CANDIDATES: [string, string, (r: () => number) => Stereo][] = [
