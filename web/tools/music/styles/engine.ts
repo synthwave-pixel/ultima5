@@ -557,6 +557,27 @@ export function playKeyboard(ctx: BaseAudioContext, out: AudioNode, seq: XmiSequ
   for (const n of notes) key(m, kind, n.note, n.start, n.end, n.velocity / 127);
 }
 
+/**
+ * An effect's notes (tools/sfx/scores.ts) on the Electronic voices, into `out`: each note on the voice for its General
+ * MIDI program, grouped as remaster.ts's voiceFor groups them, in one calm room - soft above 3.5 kHz, a little wow.
+ */
+export function playSfx(ctx: BaseAudioContext, out: AudioNode, seq: XmiSequence): void {
+  const m = mix(ctx, out, { room: 3, wet: 0.3, bright: 3500, wow: 2 });
+  for (const n of notesOf(seq.events)) {
+    const [f, v, p] = [hz(n.note), n.velocity / 127, n.program];
+    const end = Math.max(n.end, n.start + 0.05);
+    if (p === 47) boom(m, n.start, f, v);
+    else if (p === 119) swell(m, n.start, end, v);
+    else if (p === 6 || p === 46 || (p >= 24 && p < 32)) arpPluck(m, f, n.start, end - n.start, v, 0.35);
+    else if (p >= 8 && p < 16) glass(m, f, n.start, end, v, 0.4, 0);
+    else if (p < 8) keys(m, f, n.start, end, v, 0.3);
+    else if ((p >= 32 && p < 40) || p === 43) sub(m, f, n.start, end, v, 0.15);
+    else if ((p >= 40 && p < 56) || (p >= 80 && p < 104)) pad(m, f, n.start, end, v, 0.45);
+    else if (p >= 56 && p < 80) airLead(m, f, n.start, end, v, 0.35);
+    else glass(m, f, n.start, end, v, 0.4, 0);
+  }
+}
+
 // --- The styles ------------------------------------------------------------------------------
 
 /** The notes of `role`, in time order. */
