@@ -1,0 +1,205 @@
+{
+  "file": "sfx/audition.1352e9bd.ogg",
+  "items": [
+    {
+      "id": "p92",
+      "label": "Bowed Glass (92)",
+      "slice": [
+        0,
+        1.35
+      ]
+    },
+    {
+      "id": "p94",
+      "label": "Halo Pad (94)",
+      "slice": [
+        1.45,
+        1.35
+      ]
+    },
+    {
+      "id": "p91",
+      "label": "Space Voice (91)",
+      "slice": [
+        2.9,
+        1.35
+      ]
+    },
+    {
+      "id": "p88",
+      "label": "Fantasia (88)",
+      "slice": [
+        4.35,
+        1.35
+      ]
+    },
+    {
+      "id": "p99",
+      "label": "Atmosphere (99)",
+      "slice": [
+        5.8,
+        1.35
+      ]
+    },
+    {
+      "id": "p97",
+      "label": "Soundtrack (97)",
+      "slice": [
+        7.25,
+        1.35
+      ]
+    },
+    {
+      "id": "p95",
+      "label": "Sweep Pad (95)",
+      "slice": [
+        8.7,
+        1.35
+      ]
+    },
+    {
+      "id": "p89",
+      "label": "Warm Pad (89)",
+      "slice": [
+        10.15,
+        1.35
+      ]
+    },
+    {
+      "id": "p53",
+      "label": "Voice Oohs (53)",
+      "slice": [
+        11.6,
+        1.35
+      ]
+    },
+    {
+      "id": "p44",
+      "label": "Strings Tremolo (44)",
+      "slice": [
+        13.05,
+        1.35
+      ]
+    },
+    {
+      "id": "p98",
+      "label": "Crystal (98)",
+      "slice": [
+        14.5,
+        1.35
+      ]
+    },
+    {
+      "id": "p96",
+      "label": "Ice Rain (96)",
+      "slice": [
+        15.95,
+        1.35
+      ]
+    },
+    {
+      "id": "p102",
+      "label": "Echo Drops (102)",
+      "slice": [
+        17.4,
+        1.35
+      ]
+    },
+    {
+      "id": "p103",
+      "label": "Star Theme (103)",
+      "slice": [
+        18.85,
+        1.35
+      ]
+    },
+    {
+      "id": "p112",
+      "label": "Tinker Bell (112)",
+      "slice": [
+        20.3,
+        1.35
+      ]
+    },
+    {
+      "id": "p8",
+      "label": "Celesta (8)",
+      "slice": [
+        21.75,
+        1.35
+      ]
+    },
+    {
+      "id": "p11",
+      "label": "Vibraphone (11)",
+      "slice": [
+        23.2,
+        1.35
+      ]
+    },
+    {
+      "id": "p46",
+      "label": "Harp (46)",
+      "slice": [
+        24.65,
+        1.35
+      ]
+    },
+    {
+      "id": "p119",
+      "label": "Reverse Cymbal (119)",
+      "slice": [
+        26.1,
+        1.35
+      ]
+    },
+    {
+      "id": "b0",
+      "label": "Blend: Classical (Voice Oohs, Strings Tremolo, Harp, Tinker Bell, Reverse Cymbal): cast",
+      "slice": [
+        27.55,
+        1.35
+      ]
+    },
+    {
+      "id": "b0u",
+      "label": "Blend: Classical (Voice Oohs, Strings Tremolo, Harp, Tinker Bell, Reverse Cymbal): undone",
+      "slice": [
+        29,
+        1.35
+      ]
+    },
+    {
+      "id": "b1",
+      "label": "Blend: Electronic (Crystal, Echo Drops, Ice Rain, Sweep Pad): cast",
+      "slice": [
+        30.45,
+        1.35
+      ]
+    },
+    {
+      "id": "b1u",
+      "label": "Blend: Electronic (Crystal, Echo Drops, Ice Rain, Sweep Pad): undone",
+      "slice": [
+        31.9,
+        1.35
+      ]
+    },
+    {
+      "id": "b2",
+      "label": "Blend: Ambient (Halo Pad, Bowed Glass, Space Voice, Atmosphere): cast",
+      "slice": [
+        33.35,
+        1.35
+      ]
+    },
+    {
+      "id": "b2u",
+      "label": "Blend: Ambient (Halo Pad, Bowed Glass, Space Voice, Atmosphere): undone",
+      "slice": [
+        34.8,
+        1.35
+      ]
+    }
+  ]
+}

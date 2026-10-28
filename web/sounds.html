@@ -49,12 +49,15 @@
         font-size: 12px;
       }
       main,
+      #audition,
       #music {
         padding: 8px 16px 32px;
       }
-      #music {
+      #music,
+      #audition {
         padding-bottom: 0;
       }
+      #audition .about,
       #music .about {
         color: #999;
         font-size: 12px;
@@ -151,6 +154,7 @@
       </p>
       <div id="controls"></div>
     </header>
+    <section id="audition"></section>
     <section id="music"></section>
     <main id="effects">Loading the game files…</main>
     <script type="module" src="/src/dev/sounds.ts"></script>
