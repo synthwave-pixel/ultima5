@@ -8,7 +8,11 @@
  * suite was chosen is let go. Until it has come, its effects are silent.
  */
 
+import sfxManifest from '../audio/sfxManifest.json';
 import { NOTE_BANK, type SfxManifest, type Suite } from '../audio/sfxKeys.ts';
+
+/** The render's manifest (tools/sfx/render.ts): where each suite's sounds lie in its file. */
+export const SFX_MANIFEST: SfxManifest = sfxManifest;
 
 /** A slice of a suite's file: where it starts and how long it is (seconds). */
 export interface Slice {

@@ -4,16 +4,24 @@
  * The sound test page (sounds.html): every sound the game makes, by name -
  * the DOS game's effects (u5d's names), its families of notes, and the
  * port's own cues (game/cues.ts) - with what each is, when and how often
- * the game plays it, where in the code, and the voice the Standard set
- * gives it; a button plays it, in the Standard set or the Original, through
- * the game's own PcSound.
+ * the game plays it, where in the code, and the voice it has; a button
+ * plays it through the game's own PcSound, as today's Standard set (to
+ * compare), as each of the three suites that match the soundtracks
+ * (audio/sfxKeys.ts), or as Upgrade (2001)'s PC speaker. Above them, the
+ * music: every tune in every arrangement each soundtrack plays, so an
+ * effect can be heard over the tune it will sit on.
  */
 
 import { gameFiles } from '../boot.ts';
 import { GameData } from '../game/data.ts';
-import { RULES, type Kind } from '../audio/effects.ts';
+import { identify, RULES, type Kind } from '../audio/effects.ts';
 import { FOLDED, SHARED } from '../audio/chip.ts';
-import { PcSound } from '../ui/sound.ts';
+import { cueKey, sfxKey, SUITES, type Suite } from '../audio/sfxKeys.ts';
+import { type Arrangement, arrangementsFor, SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
+import { TUNE_FILES } from '../game/music.ts';
+import { MUSIC, MusicPlayer } from '../ui/music.ts';
+import { SFX_MANIFEST as SFX } from '../ui/sfxBank.ts';
+import { musicGain, PcSound } from '../ui/sound.ts';
 import { ABOUT, type About, CUES, FAMILY, GROUPS } from './sfxCatalogue.ts';
 
 interface Entry {
@@ -77,19 +85,109 @@ function entries(data: GameData): Entry[] {
   return out;
 }
 
+/** The ways the page plays the effects: today's Standard (to compare), the three suites, and Upgrade (2001)'s speaker. */
+type PlayAs = 'standard' | Suite | 'original';
+const PLAY_AS: [PlayAs, string][] = [
+  ['standard', 'Standard (today)'],
+  ['classical', 'Classical'],
+  ['electronic', 'Electronic'],
+  ['ambient', 'Ambient'],
+  ['original', 'Upgrade (2001)'],
+];
+const isSuite = (set: PlayAs): set is Suite => (SUITES as readonly string[]).includes(set);
+
+/** The soundtracks as the Audio menu names them (game/menu.ts SOUNDTRACK_NAMES). */
+const SOUNDTRACK_NAMES: Record<Soundtrack, string> = {
+  classical: 'Classical',
+  electronic: 'Electronic',
+  remastered: 'Ambient',
+  original: 'Upgrade (2001)',
+};
+const OCCASIONS = [undefined, 'title', 'shrine', 'introduction', 'closing', 'night'] as const;
+
 /** A row of the page: a sound, what the catalogue says of it, and how to play it. */
 interface Row {
   name: string;
   about: About;
-  /** The Standard voice, in words. */
-  voice: string;
-  /** The ways to play it: one button each (a family has one a note). */
-  plays: { label: string; standard: (() => Promise<void>) | null; original: (() => Promise<void>) | null }[];
+  /** The voice it has, in words, played as `set`. */
+  voice: (set: PlayAs) => string;
+  /** The ways to play it: one button each (a family has one a note); `run` null where `set` makes no sound of it. */
+  plays: { label: string; run: (set: PlayAs) => (() => Promise<void>) | null; folded: (set: PlayAs) => boolean }[];
 }
 
 const OFTEN_ORDER = ['every step', 'every blow', 'often', 'now and then', 'rare', 'once'];
 
+/** What a suite plays for a sound (its key, or null for the shared voice), in words. */
+function suiteVoice(suite: Suite, key: ReturnType<typeof sfxKey>): string {
+  if (key === 'silent') return 'folded: silent alone';
+  if (!key || !SFX[suite]?.slices[key.key]) return 'shared: the chip voice, softened';
+  return key.hz ? 'a note of its bank, at the pitch' : 'its score';
+}
+
+/** The music: a row a tune, a column a soundtrack, a button an arrangement it plays there; played on its own context. */
+function musicTable(host: HTMLElement): void {
+  let ctx: AudioContext | null = null;
+  const player = new MusicPlayer(() => ctx, musicGain(6));
+  const decoded = new Map<string, Promise<AudioBuffer | null>>();
+  let on: HTMLButtonElement | null = null;
+  const play = async (button: HTMLButtonElement, tune: string, arrangement: Arrangement): Promise<void> => {
+    ctx ??= new AudioContext();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const entry = MUSIC[tune][arrangement]!;
+    let got = decoded.get(entry.file);
+    if (!got) {
+      got = fetch(`${import.meta.env.BASE_URL}music/${entry.file}`)
+        .then((res) => res.arrayBuffer())
+        .then((bytes) => ctx!.decodeAudioData(bytes))
+        .catch(() => null);
+      decoded.set(entry.file, got);
+      while (decoded.size > 2) decoded.delete(decoded.keys().next().value!);
+    }
+    on?.classList.remove('on');
+    on = button;
+    button.classList.add('on');
+    const buffer = await got;
+    if (on !== button || !buffer) return;
+    player.play(`${arrangement}/${tune}`, buffer, entry.loopStart, entry.loopEnd);
+  };
+  const h = document.createElement('h2');
+  h.textContent = 'Music';
+  const stop = document.createElement('button');
+  stop.textContent = 'Stop';
+  stop.addEventListener('click', () => {
+    player.stop();
+    on?.classList.remove('on');
+    on = null;
+  });
+  const note = document.createElement('p');
+  note.className = 'about';
+  note.textContent = 'Every tune in every arrangement a soundtrack plays it in, at the default Music level: play an effect over it.';
+  const table = document.createElement('table');
+  const head = table.createTHead().insertRow();
+  for (const t of ['Tune', ...SOUNDTRACKS.map((s) => SOUNDTRACK_NAMES[s])])
+    head.appendChild(Object.assign(document.createElement('th'), { textContent: t }));
+  const body = table.createTBody();
+  for (const tune of TUNE_FILES) {
+    const tr = body.insertRow();
+    tr.insertCell().textContent = tune.replace(/\.XMI$/, '');
+    for (const soundtrack of SOUNDTRACKS) {
+      const cell = tr.insertCell();
+      cell.className = 'play';
+      const arrangements = [...new Set(OCCASIONS.flatMap((o) => arrangementsFor(soundtrack, tune, o)))].filter((a) => MUSIC[tune]?.[a]);
+      for (const a of arrangements) {
+        const b = document.createElement('button');
+        b.textContent = a;
+        b.title = `${tune} in ${a} (${SOUNDTRACK_NAMES[soundtrack]})`;
+        b.addEventListener('click', () => void play(b, tune, a));
+        cell.appendChild(b);
+      }
+    }
+  }
+  host.append(h, note, stop, table);
+}
+
 async function start(): Promise<void> {
+  musicTable(document.getElementById('music')!);
   const files = await gameFiles();
   const data = new GameData(files);
   const sound = new PcSound(data.ovl);
@@ -97,7 +195,7 @@ async function start(): Promise<void> {
   main.textContent = '';
   const all = entries(data);
   let playing = 0;
-  const calls = (e: Entry, set: 'original' | 'standard') => async (): Promise<void> => {
+  const calls = (e: Entry) => (set: PlayAs) => async (): Promise<void> => {
     sound.unlock();
     sound.setEffects(set, 8);
     const mine = ++playing;
@@ -109,9 +207,13 @@ async function start(): Promise<void> {
       else await sound.sweep(args[0], args[1], args[2], args[3]);
     }
   };
+  /** A sound's key in the suites, by its first call. */
+  const keyOf = (e: Entry): ReturnType<typeof sfxKey> => {
+    const [kind, args] = e.calls[0];
+    return sfxKey(identify(data.ovl, kind, args), kind, args);
+  };
   const byName = new Map(all.map((e) => [e.name, e]));
 
-  // The rows: the DOS effects (once each), the families (a button a note), the port's own cues.
   const rows: Row[] = [];
   const unknown: string[] = [];
   const seen = new Set<string>();
@@ -121,22 +223,27 @@ async function start(): Promise<void> {
       if (seen.has(family)) continue;
       seen.add(family);
       const members = all.filter((m) => m.name === family || m.name.startsWith(`${family} `));
+      const standardVoice =
+        family === 'cast circle'
+          ? 'folded into the spell (ultima3 Spell): silent alone'
+          : family === 'blackthorn'
+            ? "Blackthorn's theme, a note a call (BlackthornNote)"
+            : SHARED[family]
+              ? `ultima3 ${SHARED[family]}`
+              : 'own chip voice, from the call';
       rows.push({
         name: family,
         about: FAMILY[family],
-        voice:
-          family === 'cast circle'
-            ? 'folded into the spell (ultima3 Spell): silent alone'
-            : family === 'blackthorn'
-              ? "Blackthorn's theme, a note a call (BlackthornNote)"
-              : SHARED[family]
-                ? `ultima3 ${SHARED[family]}`
-                : 'own chip voice, from the call',
-        plays: members.map((m) => ({
-          label: m.name === family ? '▶' : m.name.slice(family.length + 1),
-          standard: family === 'cast circle' ? null : calls(m, 'standard'),
-          original: calls(m, 'original'),
-        })),
+        voice: (set) => (set === 'standard' ? standardVoice : set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(members[0]))),
+        plays: members.map((m) => {
+          const folded = (set: PlayAs): boolean =>
+            set === 'standard' ? family === 'cast circle' : isSuite(set) ? keyOf(m) === 'silent' : false;
+          return {
+            label: m.name === family ? '▶' : m.name.slice(family.length + 1),
+            folded,
+            run: (set: PlayAs) => (folded(set) ? null : calls(m)(set)),
+          };
+        }),
       });
       continue;
     }
@@ -148,15 +255,17 @@ async function start(): Promise<void> {
       continue;
     }
     const shared = SHARED[e.name] ?? (e.name.startsWith('spell') ? 'Spell' : undefined);
+    const standardVoice = FOLDED[e.name]
+      ? `folded into ${FOLDED[e.name]}: silent alone`
+      : shared
+        ? `ultima3 ${shared}`
+        : 'own chip voice, from the call';
+    const folded = (set: PlayAs): boolean => (set === 'standard' ? !!FOLDED[e.name] : isSuite(set) ? keyOf(e) === 'silent' : false);
     rows.push({
       name: e.name,
       about,
-      voice: FOLDED[e.name]
-        ? `folded into ${FOLDED[e.name]}: silent alone`
-        : shared
-          ? `ultima3 ${shared}`
-          : 'own chip voice, from the call',
-      plays: [{ label: '▶', standard: FOLDED[e.name] ? null : calls(e, 'standard'), original: calls(e, 'original') }],
+      voice: (set) => (set === 'standard' ? standardVoice : set === 'original' ? 'the PC speaker' : suiteVoice(set, keyOf(e))),
+      plays: [{ label: '▶', folded, run: (set) => (folded(set) ? null : calls(e)(set)) }],
     });
   }
   for (const [name, about] of Object.entries(CUES)) {
@@ -164,31 +273,45 @@ async function start(): Promise<void> {
     rows.push({
       name,
       about,
-      voice: `ultima3 ${name} (the port's own)`,
+      voice: (set) =>
+        set === 'standard'
+          ? `ultima3 ${name} (the port's own)`
+          : set === 'original'
+            ? fallback
+              ? `the PC speaker's ${fallback.name}`
+              : 'none: the DOS game was silent'
+            : suiteVoice(set, { key: cueKey(name) }),
       plays: [
         {
           label: '▶',
-          standard: async () => {
-            sound.unlock();
-            sound.setEffects('standard', 8);
-            ++playing;
-            await sound.cue(name);
-          },
-          original: fallback ? calls(fallback, 'original') : null,
+          folded: () => false,
+          run: (set) =>
+            set === 'original'
+              ? fallback
+                ? calls(fallback)(set)
+                : null
+              : async () => {
+                  sound.unlock();
+                  sound.setEffects(set, 8);
+                  ++playing;
+                  await sound.cue(name);
+                },
         },
       ],
     });
   }
 
-  // The controls: which set the buttons play, and a filter by how often.
   const controls = document.getElementById('controls')!;
-  let set: 'standard' | 'original' = 'standard';
-  const setButtons = (['standard', 'original'] as const).map((v) => {
+  let set: PlayAs = 'standard';
+  const setButtons = PLAY_AS.map(([v, label]) => {
     const b = document.createElement('button');
-    b.textContent = v === 'standard' ? 'Standard' : 'Original';
+    b.textContent = label;
     b.addEventListener('click', () => {
       set = v;
       for (const x of setButtons) x.classList.toggle('on', x === b);
+      // A gesture: the audio may start, and a suite's file is fetched now, ready for the first effect.
+      sound.unlock();
+      sound.setEffects(v, 8);
       render();
     });
     return b;
@@ -209,7 +332,7 @@ async function start(): Promise<void> {
       main.appendChild(h);
       const table = document.createElement('table');
       const head = table.createTHead().insertRow();
-      for (const t of ['', 'Sound', 'When it plays', 'How often', 'Where', 'Standard voice'])
+      for (const t of ['', 'Sound', 'When it plays', 'How often', 'Where', 'Voice'])
         head.appendChild(Object.assign(document.createElement('th'), { textContent: t }));
       const body = table.createTBody();
       for (const r of mine.sort((a, b) => OFTEN_ORDER.indexOf(a.about.often) - OFTEN_ORDER.indexOf(b.about.often))) {
@@ -218,13 +341,13 @@ async function start(): Promise<void> {
         play.className = 'play';
         for (const p of r.plays) {
           const b = document.createElement('button');
-          const run = set === 'standard' ? p.standard : p.original;
-          b.textContent = run ? p.label : set === 'standard' ? 'folded' : 'silent';
+          const run = p.run(set);
+          b.textContent = run ? p.label : p.folded(set) ? 'folded' : 'silent';
           b.disabled = !run;
           b.title = run
             ? `Play ${r.name}${p.label === '▶' ? '' : ` ${p.label}`} (${set})`
-            : set === 'standard'
-              ? 'The Standard set plays this within another sound'
+            : p.folded(set)
+              ? 'Played within another sound'
               : 'The DOS game made no sound here';
           if (run) b.addEventListener('click', () => void run());
           play.appendChild(b);
@@ -241,7 +364,7 @@ async function start(): Promise<void> {
         tr.insertCell().className = 'where';
         tr.cells[4].textContent = r.about.where;
         tr.insertCell().className = 'voice';
-        tr.cells[5].textContent = r.voice;
+        tr.cells[5].textContent = r.voice(set);
       }
       main.appendChild(table);
     }

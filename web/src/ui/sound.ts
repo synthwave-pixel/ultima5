@@ -36,13 +36,12 @@ import {
   waterfallRoar,
 } from '../audio/chip3.ts';
 import { identify, type Kind, type WordSource } from '../audio/effects.ts';
-import sfxManifest from '../audio/sfxManifest.json';
-import { cueKey, sfxKey, type SfxManifest, soften, SUITES, type Suite } from '../audio/sfxKeys.ts';
+import { cueKey, sfxKey, soften, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { noiseRuns, pulseRuns, renderRuns, runsLength, sweepRuns, toneRuns } from '../audio/speaker.ts';
 import type { Hold } from '../game/io.ts';
 import { TUNE_FILES } from '../game/music.ts';
 import { MUSIC, MusicPlayer } from './music.ts';
-import { bankRate, SfxBank, type Slice } from './sfxBank.ts';
+import { bankRate, SFX_MANIFEST, SfxBank, type Slice } from './sfxBank.ts';
 
 /**
  * The effects that can play: the Standard chip set, the Original PC speaker, or one of the suites that match the
@@ -161,7 +160,7 @@ export class PcSound implements Sound {
   /** Which effects play (the Sound FX setting). */
   private effects: EffectsSet = 'standard';
   /** The suites' rendered files, the one in use fetched and decoded when it is chosen. */
-  private bank = new SfxBank(sfxManifest as unknown as SfxManifest, (file) =>
+  private bank = new SfxBank(SFX_MANIFEST, (file) =>
     fetch(`${import.meta.env.BASE_URL}${file}`).then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(res.statusText)))),
   );
   /** How loud they play (the Sound FX level, 0-10); at 0 none is started. */

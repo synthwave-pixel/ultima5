@@ -10,8 +10,10 @@
       A test page for hearing the effects, the game does not link to it:
       every sound the game makes - the DOS game's effects (u5d's names), its
       families of notes and the port's own cues - with what each is, when and
-      how often it plays and where, in the Standard set (the chip voices) or
-      the Original (the PC speaker), through the game's own sound.
+      how often it plays and where, through the game's own sound: as today's
+      Standard set (the chip voices), as the Classical, Electronic and Ambient
+      suites, or as Upgrade (2001)'s PC speaker. Above them, every tune in
+      every arrangement each soundtrack plays.
       The game files are the installed copy.
     -->
     <style>
@@ -46,8 +48,22 @@
         color: #999;
         font-size: 12px;
       }
-      main {
+      main,
+      #music {
         padding: 8px 16px 32px;
+      }
+      #music {
+        padding-bottom: 0;
+      }
+      #music .about {
+        color: #999;
+        font-size: 12px;
+        margin: 0 0 6px;
+      }
+      #music button.on {
+        background: #e8c870;
+        color: #111;
+        border-color: #e8c870;
       }
       h2 {
         font-size: 15px;
@@ -129,11 +145,13 @@
     <header>
       <h1>Sound effects</h1>
       <p>
-        Every sound the game makes: what it is, when and how often it plays, where in the code, and the voice the Standard set gives it.
-        Standard is the chip voices; Original the PC speaker emulated. "silent" marks a sound the DOS game did not have.
+        Every sound the game makes: what it is, when and how often it plays, where in the code, and the voice it has. Standard (today) is
+        the chip voices; Classical, Electronic and Ambient the suites that match those soundtracks; Upgrade (2001) the PC speaker emulated.
+        "silent" marks a sound the DOS game did not have; "folded", one played within another.
       </p>
       <div id="controls"></div>
     </header>
+    <section id="music"></section>
     <main id="effects">Loading the game files…</main>
     <script type="module" src="/src/dev/sounds.ts"></script>
   </body>
