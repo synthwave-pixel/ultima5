@@ -1234,8 +1234,8 @@ Import's From a file opens Android's picker for a file to read.
   checked against the music for loudness and harshness. The page keeps
   the three files with it, offline, and plays an effect as a slice of the
   chosen one (`web/src/ui/sfxBank.ts`); the sound test page
-  (`sounds.html`) plays every one, the magic in one place, and every tune
-  in every arrangement under it.
+  (`sounds.html`) plays every one, and every tune in every arrangement
+  under it.
 - **The text layer** keeps a record of what it drew, so an overlay (the
   Modern look's full-height party panel is one) can cover part of a text
   window while the window goes on underneath: see `docs/text-overlays.md`.
