@@ -6,7 +6,9 @@
  *   - the web: the service worker has fetched the new build, which a restart takes up ('restart', the version unsaid);
  *   - the desktop app: its main process (desktop/updates.cjs) - a build electron-updater has downloaded, installed by
  *     a restart ('restart'), or, where it cannot replace the copy (macOS, the portable .exe), a newer release out
- *     ('release'), whose page is opened for the player to read and download from;
+ *     ('release'), whose page is opened for the player to read and download from; the Flatpak's, installed already
+ *     by Flatpak's update portal, a restart playing it (under Steam's Game Mode only a quit, the player starting it
+ *     again), or where the portal fails a release told of - under Game Mode with no page, only the way to it;
  *   - the Android app: a newer release on GitHub than the APK's own version ('release'), its page opened in the
  *     system's browser (the GameFolder plugin's openUrl).
  * The releases page, never the file itself: what changed is read there first, and the download is the player's.
@@ -19,6 +21,11 @@ export interface UpdateOffer {
   version?: string;
   current?: string;
   told: boolean;
+  /** A restart: the update installed already (the Flatpak's), not on quitting; and taking it up only quits. */
+  installed?: boolean;
+  quits?: boolean;
+  /** A release: false where no page can be offered (under Game Mode), the way to it only said. */
+  page?: boolean;
 }
 
 /** The game's view of it (Game.hooks.update): the offer now, taking it up, and the player told of it. */

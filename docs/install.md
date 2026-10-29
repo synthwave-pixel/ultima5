@@ -26,7 +26,8 @@ folder picker.
      [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref).
      The browser saves a small file; open it from the browser's downloads
      and Discover shows Ultima V with an Install button, and asks for the
-     password that first time. Install once: later updates arrive in
+     password that first time. Install once: the game updates itself
+     after that, even in Game Mode, and updates also arrive in
      Discover with every other Flatpak's, with no prompt.
   4. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
      left, then Add a Non-Steam Game, tick Ultima V in the list, and click
@@ -79,7 +80,13 @@ release's page instead - to read what changed and download it yourself:
 macOS installs updates only into apps signed by an Apple developer, which
 this one is not yet ([#1](https://github.com/synthwave-pixel/ultima5/issues/1)). The Android app does the same,
 opening the release's page in your browser; Obtainium can update it for
-you instead. The Flatpak updates with every other Flatpak's.
+you instead. The Flatpak updates itself through Flatpak's own update
+service, so a Steam Deck kept in Game Mode stays up to date without a trip
+to Discover: the new version is installed in the background, the title
+screen says so, and Restart now plays it (under Game Mode, Quit now, and
+start the game again from your library). Where that service can't be had,
+it tells you of the release instead, and Discover updates it with every
+other Flatpak's ([how it works](flatpak-updates.md)).
 `--no-update-check` on the command line turns the check off; under
 Steam's Game Mode no page is offered, and a downloaded update is
 installed when the game quits.
@@ -103,7 +110,8 @@ installed when the game quits.
   never uses it: choose Don't Allow, and the sound plays on.
 - **Linux and SteamOS**: the Flatpak repository, installed as above, is
   the way on a Steam Deck and on any Linux with Flatpak: one click or one
-  line, and updates arrive with every other Flatpak's. Add the game to
+  line, and the game then updates itself, Game Mode included (Discover
+  updates it too, with every other Flatpak's). Add the game to
   Steam from the Non-Steam Game list, and in the shortcut's controller
   settings pick a Gamepad template. The first launch from that shortcut
   puts the game's artwork in Steam's library folder for it (never over

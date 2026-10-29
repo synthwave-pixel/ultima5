@@ -54,7 +54,8 @@ games.
      [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref).
      The browser saves a small file; open it from the browser's downloads
      and Discover shows Ultima V with an Install button, and asks for the
-     password that first time. Install once: later updates arrive in
+     password that first time. Install once: the game updates itself
+     after that, even in Game Mode, and updates also arrive in
      Discover with every other Flatpak's, with no prompt.
   4. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
      left, then Add a Non-Steam Game, tick Ultima V in the list, and click

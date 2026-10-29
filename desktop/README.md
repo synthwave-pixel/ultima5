@@ -53,6 +53,12 @@ before the run would put its text above them; since the patch is the run
 number, the heading must name the number the run will get, one more than
 the last run's, which `gh run list --workflow desktop.yml` shows.
 
+Updates are `updates.cjs`: electron-updater for the Windows installer
+and the AppImage, a notice of the release for macOS and the portable
+`.exe`, and for the Flatpak, Flatpak's update portal (`flatpakUpdates.cjs`;
+see [flatpak-updates.md](../docs/flatpak-updates.md)), so the game updates
+itself under Steam's Game Mode, where Discover never runs.
+
 One copy runs at a time (`app.requestSingleInstanceLock()` in
 `main.cjs`): a second launch brings the first window forward and quits,
 since two copies would share one save. Under Flatpak the lock holds across

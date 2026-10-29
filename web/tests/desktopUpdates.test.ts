@@ -29,9 +29,13 @@ describe('the desktop app’s updates', () => {
     expect(kind('win32', { PORTABLE_EXECUTABLE_DIR: 'D:\\\\Games' })).toBe('notice');
   });
 
-  it('are left alone in the Flatpak (flatpak updates it), unpackaged, and when told not to look', () => {
-    expect(kind('linux', { FLATPAK_ID: 'com.synthwavepixel.ultima5', APPIMAGE: '/x' })).toBe('none');
-    expect(kind('linux', { container: 'flatpak' })).toBe('none');
+  it('in the Flatpak, go through its update portal (flatpakUpdates.cjs)', () => {
+    expect(kind('linux', { FLATPAK_ID: 'com.synthwavepixel.ultima5', APPIMAGE: '/x' })).toBe('flatpak');
+    expect(kind('linux', { container: 'flatpak' })).toBe('flatpak');
+  });
+
+  it('are left alone unpackaged, and when told not to look', () => {
+    expect(kind('linux', { FLATPAK_ID: 'com.synthwavepixel.ultima5' }, false)).toBe('none');
     expect(kind('win32', {}, false)).toBe('none');
     expect(kind('darwin', {}, true, ['--no-update-check'])).toBe('none');
   });

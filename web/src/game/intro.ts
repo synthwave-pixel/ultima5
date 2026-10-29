@@ -750,32 +750,41 @@ export class Intro {
   /**
    * A newer version not yet told of (ui/updates.ts), in a box of its own over the title, once a version: what it is,
    * and the way to it - the restart into a build come down, or its release's page, to read what changed and download
-   * from. Later leaves it in the menu's Update line. Whether the box was shown (the title to be drawn again).
+   * from; or, where no page can be offered, only the way to it said. Later leaves it in the menu's Update line, which
+   * shows it `again` where there is nothing to take up. Whether the box was shown (the title to be drawn again).
    */
-  private async updateBox(): Promise<boolean> {
+  private async updateBox(again = false): Promise<boolean> {
     const g = this.g;
     const update = g.hooks.update;
     const offer = update?.offer();
-    if (!update || !offer || offer.told) return false;
-    update.told();
+    if (!update || !offer || (offer.told && !again)) return false;
+    if (!offer.told) update.told();
     // Keys pressed before it came (the opening skipped, the menu moved) are let go: none may answer it unseen.
     g.p.flushKeys();
     const { choose, wrap } = await import('./menu.ts');
     const restart = offer.kind === 'restart';
     const name = offer.version ? `Ultima V ${offer.version}` : 'A new version';
-    const text = restart
-      ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
-      : `${name} is out${offer.current ? `; this is ${offer.current}` : ''}. Its page says what is new. Your saved game carries over.`;
+    const out = `${name} is out${offer.current ? `; this is ${offer.current}` : ''}.`;
+    const text = !restart
+      ? offer.page === false
+        ? `${out} Update it in Desktop Mode, from Discover. Your saved game carries over.`
+        : `${out} Its page says what is new. Your saved game carries over.`
+      : !offer.installed
+        ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
+        : offer.quits
+          ? `${name} is installed. Quit, and start the game again to play it.`
+          : `${name} is installed. Restart to play it now, or it starts the next time you play.`;
     const lines = [...wrap(text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
-    const go = restart ? 'Restart now' : 'Open release page';
+    // Where there is nothing to take up, the box is only closed.
+    const go = restart ? (offer.quits ? 'Quit now' : 'Restart now') : offer.page === false ? null : 'Open release page';
     const i = await choose(
       g,
       restart ? 'Update ready' : 'Update available',
-      [...lines, { label: go }, { label: 'Later' }],
+      [...lines, ...(go ? [{ label: go }, { label: 'Later' }] : [{ label: 'OK' }])],
       lines.length,
       true,
     );
-    if (i === lines.length) update.apply();
+    if (go && i === lines.length) update.apply();
     return true;
   }
 
@@ -1754,7 +1763,11 @@ export class Intro {
           break;
         }
         case 0x21:
-          g.hooks.update?.apply();
+          // Nothing to take up (a release with no page to offer): its box again, saying the way to it.
+          if (g.hooks.update?.offer()?.page === false) {
+            await this.updateBox(true);
+            await this.title(false);
+          } else g.hooks.update?.apply();
           break;
         case 0x51:
           g.hooks.quit?.(); // the app goes; should it not, the title is still here

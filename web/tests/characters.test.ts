@@ -894,9 +894,9 @@ describe('a character’s settings, put to use', () => {
 /** A newer version at the title (ui/updates.ts): its box once a version, its menu line, and the menu scrolling. */
 describe('an update at the title', () => {
   /** A release out (the Android app's, the Mac's), a character kept and Quit there: nine lines for the box's eight. */
-  const offered = (told = false) => {
+  const offered = (told = false, more: Partial<UpdateOffer> = {}) => {
     const calls = { applied: 0, told: 0 };
-    let offer: UpdateOffer | null = { kind: 'release', version: '1.1.44', current: '1.1.43', told };
+    let offer: UpdateOffer | null = { kind: 'release', version: '1.1.44', current: '1.1.43', told, ...more };
     const setup = (g: Game): void => {
       g.hooks.update = {
         offer: () => offer,
@@ -961,6 +961,41 @@ describe('an update at the title', () => {
     const { p } = await atTitleWith(setup, K.Up, K.Up, Pad.A);
     expect(p.log).not.toContain('is out');
     expect(calls).toEqual({ applied: 1, told: 0 });
+  });
+
+  it('says a Flatpak update is installed, a restart playing it', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered(false, { kind: 'restart', installed: true });
+    const { p } = await atTitleWith(setup, Pad.A);
+    // (The log runs a box's wrapped lines together.)
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('Ultima V 1.1.44 is installed. Restart to');
+    expect(said).toContain('it now, or it starts the next time you play.');
+    expect(p.log).toContain('Restart now');
+    expect(calls).toEqual({ applied: 1, told: 1 });
+  });
+
+  it('under Game Mode, takes a Flatpak update up by quitting, to be started again from Steam', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered(false, { kind: 'restart', installed: true, quits: true });
+    const { p } = await atTitleWith(setup, Pad.A);
+    expect(p.log.replace(/\s+/g, ' ')).toContain('Ultima V 1.1.44 is installed. Quit, and start the game again to play it.');
+    expect(p.log).toContain('Quit now');
+    expect(calls).toEqual({ applied: 1, told: 1 });
+  });
+
+  it('with no page to offer, only says the way to it - its line showing the box again, nothing taken up', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { calls, setup } = offered(false, { page: false });
+    // OK; then up twice from Journey Onward to Update, chosen: the box again, OK.
+    const { p } = await atTitleWith(setup, Pad.A, K.Up, K.Up, Pad.A, Pad.A);
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said.split('Update it in Desktop Mode, from Discover.')).toHaveLength(3);
+    expect(p.log).not.toContain('Open release page');
+    expect(calls).toEqual({ applied: 0, told: 1 });
   });
 
   it('fits the menu unscrolled where there is room, the web’s update line saying no version', async () => {

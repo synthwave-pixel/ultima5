@@ -227,6 +227,9 @@ The workflows in `.github/workflows/`:
 - [fixing-1988.md](fixing-1988.md): how the 1988 game's bugs were found and
   fixed.
 - [text-overlays.md](text-overlays.md): the text layer's overlays.
+- [flatpak-updates.md](flatpak-updates.md): how the Flatpak updates itself
+  through Flatpak's update portal (Game Mode included), as a pattern for
+  other Electron apps shipped as Flatpaks.
 - [standard-originals.md](standard-originals.md): the Modern PC tiles,
   tile by tile.
 - [art-brief.md](art-brief.md) and [key-art-brief.md](key-art-brief.md):
