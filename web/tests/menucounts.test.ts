@@ -41,10 +41,11 @@ describe('the command menu, counting what it spends', () => {
     expect(line('Pick lock')?.label).toBe('Pick lock (x8)');
   });
 
-  it('keeps the counts with the letters, on 1988’s names', async () => {
+  it('keeps the counts with the letters, on 1988’s names - unbracketed where the letter leaves too little room', async () => {
     const line = await menu('letters', 3, 5, 8);
     expect(line('Jimmy')?.label).toBe('Jimmy (x8)');
-    expect(line('Ignite torch')?.label).toBe('Ignite torch (x3)');
+    // 16 letters beside the letter, low in the view (menu.ts playWidth, fitCommand).
+    expect(line('Ignite torch')?.label).toBe('Ignite torch x3');
   });
 
   it('greys a line with none, and says no count', async () => {

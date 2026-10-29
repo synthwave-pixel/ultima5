@@ -31,6 +31,8 @@ import { Colour } from '../ui/colours.ts';
 import { actorTileAt } from './actors.ts';
 import { poisonKills } from './settings.ts';
 import { logOnly, merchantKeeper, merchantPause, merchantSpeaking, withMerchantSpeech } from './merchantSpeech.ts';
+import { addAmmo, ammoFull, isAmmo } from './ammo.ts';
+import { shortArmNames } from './armNames.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -518,7 +520,8 @@ async function buyArm(v: Visit, item: number, result: number, forWhom = -1): Pro
     }
     if (k === 0x59) {
       g.say(0x7b70); // "Yes\n"
-      if (s.equipment[item] === 99) {
+      // (Arrows and quarrels: as many as the rules carry, 999 under the Modern rules - ammo.ts.)
+      if (isAmmo(item) ? ammoFull(g, item) : s.equipment[item] === 99) {
         g.say(0x7b76); // "\n\"Thou canst not carry any more!\"\n"
         sayOvl(v, 0x7b9a); // "says $.\n\n"
         if (!(await merchantPause(g))) await getChar(g);
@@ -531,7 +534,8 @@ async function buyArm(v: Visit, item: number, result: number, forWhom = -1): Pro
         s.gold -= v.price;
         shortChange(g);
         drawVitals(g);
-        if (item === 0x1b || item === 0x1d) s.equipment[item] = 99;
+        // A bundle of arrows or quarrels: 1988's filled the quiver to 99; under the Modern rules each adds 99, up to 999.
+        if (isAmmo(item)) addAmmo(g, item, 99);
         else s.equipment[item] = inc(s.equipment[item], 1, 99);
         // (Said by the merchant, with Play in their box - 1988 printed it without its quotation marks: quoted.)
         sayShop(v, merchantSpeaking(g) ? '\n"Sold!"\n' : g.t(0x7bb4)); // "\nSold!\n"
@@ -559,7 +563,7 @@ async function buyArm(v: Visit, item: number, result: number, forWhom = -1): Pro
 function showWorn(g: Game, item: number): void {
   const s = g.s;
   const t = g.text;
-  const short = g.data.table(0x1962, 0x38);
+  const short = shortArmNames(g);
   borderTitle(g, 'Readied:');
   t.select(1);
   for (let i = 0; i < 6; i++) {
@@ -657,7 +661,7 @@ async function buyArmsShown(v: Visit): Promise<number> {
 async function buyArmsList(v: Visit, wares: Uint8Array): Promise<number> {
   const { g } = v;
   const names = g.data.table(0x17f6, 0x30);
-  const short = g.data.table(0x1962, 0x38);
+  const short = shortArmNames(g);
   let result = 0;
   for (let done = false; !done; ) {
     g.say(0x7c44); // "\n\n"
@@ -705,7 +709,7 @@ async function buyArmsFor(v: Visit, wares: number[]): Promise<number> {
   const { g } = v;
   const s = g.s;
   const names = g.data.table(0x17f6, 0x30);
-  const short = g.data.table(0x1962, 0x38);
+  const short = shortArmNames(g);
   const priceOf = (item: number): number => haggle(g.data.words(0x3a82, 0x30)[item], s.members[v.buyer].int);
   let result = 0;
   let who = 0;
@@ -801,7 +805,7 @@ function showForSale(g: Game, top: { v: number }, sel: { v: number }): number {
   t.moveTo(1, 1);
   let row = 0;
   let at = top.v;
-  const names = g.data.table(0x1962, 0x38);
+  const names = shortArmNames(g);
   while (at !== -1) {
     if (sel.v === at) {
       g.printChar(0xfd);

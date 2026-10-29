@@ -194,6 +194,47 @@ describe('Quit on the title menu', () => {
   });
 });
 
+describe('Party order, in the Pause menu', () => {
+  /** The Pause menu's lines as shown, the bar taken to Party order and A pressed there; what the menu returned. */
+  const pick = async (g: ReturnType<typeof newGame>['g'], p: ReturnType<typeof newGame>['p'], midCommand = false) => {
+    const seen: { line: { enabled: boolean; dim: boolean } | null; notes: string } = { line: null, notes: '' };
+    p.next = () => {
+      const m = g.menuShown!;
+      const at = m.labels.indexOf('Party order');
+      if (m.at !== at) return K.Down;
+      seen.line = { enabled: m.enabled[at], dim: m.dim[at] };
+      seen.notes = p.rows.map((r) => r.join('')).join(' ');
+      // Greyed, A does nothing: B leaves.
+      return seen.line.enabled ? Pad.A : Pad.B;
+    };
+    const key = await pauseMenu(g, midCommand);
+    return { key, ...seen };
+  };
+
+  it('sits below Auto combat, and leaves the menu with New order’s key, the command asking which two to swap', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    g.options.input = 'controller';
+    expect(g.s.partySize).toBeGreaterThanOrEqual(3);
+    const { key, line } = await pick(g, p);
+    expect(line).toEqual({ enabled: true, dim: false });
+    expect(key).toBe(0x4e); // N: New order (commands.ts)
+  });
+
+  it('is greyed, saying why, inside a command and with no two companions to swap', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    g.options.input = 'controller';
+    let r = await pick(g, p, true);
+    expect(r.line?.enabled).toBe(false);
+    expect(r.key).toBe(0);
+    g.s.partySize = 2;
+    r = await pick(g, p);
+    expect(r.line?.enabled).toBe(false);
+    expect(r.notes.replace(/\s+/g, ' ')).toContain('Needs two companions to swap');
+  });
+});
+
 describe('the Pause menu, Gameplay and Settings', () => {
   it('put Audio, Gameplay and Settings in Pause - the music and sound in Audio, the rules in Gameplay, the look in Settings', async () => {
     const { g, p } = newGame();
@@ -205,7 +246,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
       return Pad.B;
     };
     await pauseMenu(g);
-    expect(paused.slice(0, 5)).toEqual(['Resume', 'Auto combat: Off', 'Audio', 'Gameplay', 'Settings']);
+    expect(paused.slice(0, 6)).toEqual(['Resume', 'Auto combat: Off', 'Party order', 'Audio', 'Gameplay', 'Settings']);
     expect(paused).not.toContain('Journal');
     expect(paused).not.toContain('Map');
     const { audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');

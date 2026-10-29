@@ -294,7 +294,7 @@ describes how the Modern look is drawn.
 
 ## Controls and menus
 
-<img src="screens/command-menu.jpg" alt="The command menu beside a townsman: Talk first, then Look, Cast, Use item, Ready, Stats, Mix reagents, Attack (Sht. Sword), Wait, Ignite torch (x3), View a gem (x1), New order, Journal and Map" width="640">
+<img src="screens/command-menu.jpg" alt="The command menu framed low in the view beside a guard, the party in sight above it: Talk first, then Cast (Heal), Look, Cast, Use item, Ready, Stats and Mix reagents, an arrow saying it scrolls on to the rest" width="640">
 
 - **Input**: Controller, how the game starts, reads the keyboard as a pad
   - W A S D or the arrows walk; Enter or Z is A; Space, Escape, X or B is
@@ -370,6 +370,11 @@ describes how the Modern look is drawn.
   karma to take, the menu names Steal: crops and a bite from a plate
   (Get), and Steal from chest for a chest in a town, castle, keep or
   dwelling (Open) - the same commands, the word alone telling the player.
+  It is framed low in the view, as a conversation's choices are, so the
+  party stays in sight above it, and scrolls eight lines at a time; in a
+  fight it moves to the top when the one whose turn it is stands low on
+  the field. The spells to cast, the items to use and Ready's list sit
+  the same way.
   Get is offered for a thing lying where the party stands - a shard
   Blinked onto, the carpet left there - and A at its "Which way, or
   here?" takes it up from the marked square. Typed commands are
@@ -497,7 +502,8 @@ describes how the Modern look is drawn.
 - **Pause**: Escape, either system button on a controller, or the touch
   pad's pause button holds the game - the music and everything sounding
   stop where they are, except a level being dialled, which is heard - and
-  offers Auto combat, Audio (the music and the sound effects), Gameplay, Settings,
+  offers Auto combat, Party order (1988's New order: swap two companions,
+  the Avatar always leading), Audio (the music and the sound effects), Gameplay, Settings,
   the help, the cheats, the tips, saving, and saving and leaving off. The
   journal and the map are in the command menu.
   With Auto Pause on, a window that loses focus while the game waits
@@ -726,6 +732,7 @@ set Input to Classic and type it.
 | **Hunger** | Never hurts, nothing said; the food is eaten all the same | Stops at half the party's hit points | Can kill |
 | **A kill's experience** | Shared among the living | Shared among the living | All the striker's |
 | **The last dagger or spear** | Kept back | Kept back | May be thrown away |
+| **Arrows and quarrels carried** | 999, a purchase adding 99 | 999, a purchase adding 99 | 99, a purchase filling the quiver; more brought from the other rules kept, not added to, until shot down to 99 |
 | **Added to armour before a blow's roll** | +10 while the party has food, +3 with none | +3 | +0, armour alone |
 | **A gargoyle's, daemon's or dragon's blow** | Half its attack to all of it | Half its attack to all of it | 1 to its attack |
 | **Any other creature's blow** | 1 to its attack | 1 to its attack | 1 to its attack |

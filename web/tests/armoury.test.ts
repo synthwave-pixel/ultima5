@@ -218,7 +218,8 @@ describe('the gear lists, by controller', () => {
     });
     expect(seen).toBe(2);
     expect(s.members[0].equips).toContain(sword);
-    expect(labels).toEqual(['Short Sword x1 (hand)']);
+    // (The list low in the view has 18 letters to a line: the short name, the place unbracketed - zstats.ts itemLabel.)
+    expect(labels).toEqual(['Sh. Sword x1 hand']);
     expect(p.log).not.toContain('Item: Done'); // the stats pane's list of old was not drawn
     // Sold from the same kind of menu: the pack's short sword offered, the offer taken.
     s.mapId = g.data.bytes(0x23ca, 16)[0];

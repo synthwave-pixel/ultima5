@@ -235,6 +235,8 @@ export class Game {
   snapMemory: number[] = new Array<number>(0x20).fill(-1);
   /** The day (time.ts gameDay) the old man last came to camp (combat.ts apparitionComes); -1, not yet. Saved. */
   oldManDay = -1;
+  /** The arrows and quarrels held above the save's 99, by item (ammo.ts: the Modern rules carry 999). Saved. */
+  ammoExtra: Record<number, number> = {};
   /** Bump to act's direction, taken by the command's direction prompt (0 for none; dropped when the command ends). */
   bumpDir = 0;
   /**

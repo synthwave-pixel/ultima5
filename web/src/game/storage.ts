@@ -70,6 +70,8 @@ export interface SaveData {
   companions?: Record<string, Appearance>;
   /** The day the old man last came to camp (Game.oldManDay; older saves have none: not yet). */
   oldManDay?: number;
+  /** The arrows and quarrels above the save's 99, by item (Game.ammoExtra; older saves have none: none). */
+  ammo?: Record<string, number>;
   /** The Modern karma's pools and what they have counted (modernKarma.ts; older saves have none: begun afresh). */
   path?: PathData;
 }
@@ -103,6 +105,7 @@ export function serialize(g: Game): SaveData {
     appearance: g.appearance,
     companions: Object.fromEntries(g.companionLooks),
     oldManDay: g.oldManDay,
+    ammo: g.ammoExtra,
     path: g.path.encode(),
   };
 }
@@ -149,6 +152,10 @@ export function restore(g: Game, d: SaveData, fresh = false): void {
     Array.isArray(d.tipsShown) ? d.tipsShown.filter((t): t is string => typeof t === 'string') : d.tipsNudged === false ? [] : ['nudge'],
   );
   g.oldManDay = typeof d.oldManDay === 'number' && Number.isFinite(d.oldManDay) ? d.oldManDay : -1;
+  // The ammunition above the byte's 99 (ammo.ts), each a whole number up to 900; anything else, none.
+  g.ammoExtra = {};
+  for (const [k, n] of Object.entries(typeof d.ammo === 'object' && d.ammo !== null ? d.ammo : {}))
+    if (Number.isInteger(n) && n > 0 && n <= 900) g.ammoExtra[Number(k)] = n;
   // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
   g.path = PathState.decode(d.path);
   g.appearance = validAppearance(d.appearance);

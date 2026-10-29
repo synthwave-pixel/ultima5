@@ -16,6 +16,8 @@ import { borderTitle, compactPanel, drawVitals, Win } from './frame.ts';
 import { Colour } from '../ui/colours.ts';
 import { attackOf, rangeOf } from './readyCard.ts';
 import { isShield, placesFor, THROWN } from './zstats.ts';
+import { ammoHeld } from './ammo.ts';
+import { shortArmNames } from './armNames.ts';
 
 /** The panel's width in letters. */
 const W = 15;
@@ -82,7 +84,7 @@ export function sortWares(g: Game, m: number, wares: number[], price: (item: num
 /** An armament's name as the card has room for it (`width`): its own, else its short one ("Chain Mail", "Plate"). */
 export function nameOf(g: Game, item: number, width = W): string {
   const long = g.data.table(0x17f6, 0x30)[item] ?? '';
-  return long.length <= width ? long : (g.data.table(0x1962, 0x38)[item]?.trim() ?? '');
+  return long.length <= width ? long : (shortArmNames(g)[item]?.trim() ?? '');
 }
 
 /** A number's line: its label, the ware's number, and the difference from what it would replace. */
@@ -131,7 +133,7 @@ export function wareCard(g: Game, m: number, item: number): { rows: Line[]; note
   const centred = (text: string, colour: number): Line => [{ text: text.padStart((W + text.length) >> 1), colour }];
   const ware = nameOf(g, item);
   if (AMMO.includes(item)) {
-    const have = s.equipment[item];
+    const have = ammoHeld(g, item);
     return { rows: [centred(ware, Colour.brightWhite), white(`${item === 0x1b ? 'Arrows' : 'Quarrels'} had ${have}`)], note: [] };
   }
   if (item === GLASS) {
@@ -143,7 +145,7 @@ export function wareCard(g: Game, m: number, item: number): { rows: Line[]; note
     return { rows, note: [] };
   }
   const gone = replaced(g, m, item);
-  const short = g.data.table(0x1962, 0x38);
+  const short = shortArmNames(g);
   // What is put away named as the ware is, in full where it fits ("Chain Mail vs Plate Mail", not "Chain"); a weapon
   // and a shield both put away (a two-handed ware) said short, the shield shortest, so both fit the line.
   const one = (i: number): string => (gone.length > 1 ? (isShield(i) ? 'Shld' : short[i].trim()) : nameOf(g, i));
@@ -253,7 +255,7 @@ export function drawBuyers(g: Game): void {
   const s = g.s;
   const t = g.text;
   const was = t.current;
-  const short = g.data.table(0x1962, 0x38);
+  const short = shortArmNames(g);
   drawVitals(g, false);
   borderTitle(g, 'Readied:');
   t.select(Win.stats);

@@ -46,7 +46,7 @@ describe('an armoury’s wares for one of the party', () => {
   it('weighs a two-handed axe against the sword and the shield both, and says the shield must go', () => {
     const g = shamino();
     const { rows, note } = wareCard(g, 1, AXE_2H);
-    expect(text(rows[0]).trim()).toBe('Sht. Sword+Shld');
+    expect(text(rows[0]).trim()).toBe('Sh. Sword+Shld');
     expect(rows.slice(3).map(text)).toEqual(['Atk  20 (+8)', 'Def   0 (-2)', 'Wt   15 (+8)']);
     expect(tint(rows[4])).toBe(Colour.brightRed);
     // No row left above the food and gold: the note goes under them.

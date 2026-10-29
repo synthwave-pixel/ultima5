@@ -17,6 +17,8 @@ import type { Item } from './menu.ts';
 import { K } from './io.ts';
 import { Ctl } from '../ui/text.ts';
 import { usableHere } from './targets.ts';
+import { armCounts } from './ammo.ts';
+import { shortArmNames } from './armNames.ts';
 
 export const CLASSES = 'AMBFDTPRS';
 const STATUSES = 'GPDSC';
@@ -32,23 +34,24 @@ export function wears(g: Game, m: number, item: number): boolean {
 }
 
 /** ZSTATS_056c: the previous index before `i` with any held (or, with `m`, worn by member m). */
-export function prevHeld(g: Game, i: number, counts: Uint8Array, m = 0xff): number {
+export function prevHeld(g: Game, i: number, counts: ArrayLike<number>, m = 0xff): number {
   while (--i >= 0) if (counts[i] !== 0 || (m !== 0xff && wears(g, m, i))) return i;
   return -1;
 }
 
 /** ZSTATS_05a4: the next index after `i` below `n`. */
-export function nextHeld(g: Game, i: number, n: number, counts: Uint8Array, m = 0xff): number {
+export function nextHeld(g: Game, i: number, n: number, counts: ArrayLike<number>, m = 0xff): number {
   while (++i < n) if (counts[i] !== 0 || (m !== 0xff && wears(g, m, i))) return i;
   return -1;
 }
 
 /** ZSTATS_05e2: one line of a list: the count (or "--"), a mark, and the name (with the rune prefixes some names use). */
-export function listLine(g: Game, i: number, counts: Uint8Array, names: string[], mark: number): void {
+export function listLine(g: Game, i: number, counts: ArrayLike<number>, names: string[], mark: number): void {
   const t = g.text;
   const n = counts[i];
   if (n !== 0xff) {
-    if (n !== 0) g.printNumber(n, 2, ' ');
+    // (Three figures where the Modern rules' arrows pass 99: ammo.ts.)
+    if (n !== 0) g.printNumber(n, n > 99 ? 3 : 2, ' ');
     else g.say(0x9778); // "--"
     if (mark < 0x20) t.font = 1;
     g.printChar(mark);
@@ -69,7 +72,7 @@ export function listLine(g: Game, i: number, counts: Uint8Array, names: string[]
     g.say(0x9782); // "\x1d + "
     t.font = 0;
     t.win.fg = fg;
-    g.print(POTION_EFFECTS[i - 8] ?? g.data.table(0x1962, 0x38)[40 + i] ?? '');
+    g.print(POTION_EFFECTS[i - 8] ?? shortArmNames(g)[40 + i] ?? '');
   } else if (name[0] === '(') {
     g.say(0x9788); // "Moonstone "
     t.font = 1;
@@ -171,7 +174,7 @@ function memberPage(g: Game, i: number): void {
 function armsPage(g: Game, i: number): void {
   const t = g.text;
   const m = g.s.members[i];
-  const names = g.data.table(0x1962, 0x38);
+  const names = shortArmNames(g);
   clearBorderChar(g);
   borderTitle(g, m.name);
   t.setWindow(1, 0x18, 1, 0x26, 9);
@@ -245,7 +248,7 @@ export function itemCounts(g: Game): Uint8Array {
 }
 
 /** ZSTATS_06e8: a scrolling list; returns the key that left it. */
-async function listPage(g: Game, title: string, n: number, counts: Uint8Array, names: string[]): Promise<number> {
+async function listPage(g: Game, title: string, n: number, counts: ArrayLike<number>, names: string[]): Promise<number> {
   const t = g.text;
   borderTitle(g, title);
   listBox(g, 8);
@@ -371,7 +374,7 @@ async function ztats(g: Game): Promise<number> {
     } else if (page === 0xf) {
       k = await listPage(g, g.t(0x97be), 0x26, items, g.data.table(0x1916, 0x26));
     } else {
-      k = await listPage(g, g.t(0x97c4), 0x30, s.equipment, g.data.table(0x1962, 0x38));
+      k = await listPage(g, g.t(0x97c4), 0x30, armCounts(g), shortArmNames(g));
     }
   }
   clearBorderChar(g);
@@ -641,11 +644,10 @@ export async function readyPurchase(g: Game, m: number, item: number): Promise<b
  */
 export async function pickItem(g: Game, first: number, m: number, mode: number): Promise<number> {
   const t = g.text;
-  const s = g.s;
   if (g.options.input === 'controller') return pickFromMenu(g, m, mode);
-  const counts = mode === 0x52 ? s.equipment : itemCounts(g);
+  const counts = mode === 0x52 ? armCounts(g) : itemCounts(g);
   const n = mode === 0x52 ? 0x30 : 0x26;
-  const armNames = g.data.table(0x1962, 0x38);
+  const armNames = shortArmNames(g);
   const itemNames = g.data.table(0x1916, 0x26);
   const marks = g.data.bytes(0x1ae8, 0x30);
   const before = readied(g, m, mode);
@@ -760,19 +762,24 @@ export async function pickItem(g: Game, first: number, m: number, mode: number):
  * a scroll and a potion by what they do, a moonstone by its phase, and
  * the file's abbreviations written out.
  */
-export function itemLabel(g: Game, i: number, mode: number, m: number, count: number): Item {
+export function itemLabel(g: Game, i: number, mode: number, m: number, count: number, width = 21): Item {
   if (mode === 0x52) {
     const long = g.data.table(0x17f6, 0x30)[i] ?? '';
-    const short = g.data.table(0x1962, 0x38)[i]?.trim() ?? '';
+    const short = shortArmNames(g)[i]?.trim() ?? '';
     const where = m === 0xff ? -1 : g.s.members[m].equips.indexOf(i);
-    const tail = `${count ? ` x${count}` : ''}${where < 0 ? '' : where === 2 || where === 3 ? ' (hand)' : ' (worn)'}`;
-    // The long name where the line fits the menu's width (21), else the short.
-    return { label: `${long.length + tail.length <= 21 ? long : short}${tail}` };
+    const many = count ? ` x${count}` : '';
+    const place = where < 0 ? '' : where === 2 || where === 3 ? 'hand' : 'worn';
+    // The long name where the line fits the menu's `width` (21 for the whole view's), else the short; where even that
+    // is too long (a narrow list's spare sword, in hand), its place without brackets, "Sh. Sword x1 hand", and at the
+    // last as a letter, "Chain Coif x12 (W)".
+    const forms = [`${long.trim()}${many}`, `${short}${many}`].map((n) => (place ? `${n} (${place})` : n));
+    if (place) forms.push(`${short}${many} ${place}`, `${short}${many} (${place[0].toUpperCase()})`);
+    return { label: forms.find((f) => f.length <= width) ?? forms[forms.length - 1] };
   }
   // How many, as every other thing held shows it.
   const many = count > 1 && count !== 0xff ? ` x${count}` : '';
-  // The long name where the line fits the menu's width (21) with its count, else the short (Ztats's), as Ready does.
-  const fit = (long: string, short: string): string => (long.length + many.length <= 21 ? long : short) + many;
+  // The long name where the line fits the menu's `width` with its count, else the short (Ztats's), as Ready does.
+  const fit = (long: string, short: string): string => (long.length + many.length <= width ? long : short) + many;
   if (i < 8) return { label: fit(`Scroll: ${scrollEffect(g, i)}`, `Scroll: ${scrollShort(g, i)}`) };
   // (plain: colour is kept for a member's state)
   if (i < 0x10) return { label: fit(`Potion: ${POTION_LONG[i - 8]}`, `Potion: ${POTION_EFFECTS[i - 8]}`) };
@@ -803,8 +810,11 @@ const LONG_ITEM_NAMES: Record<string, string> = {
  */
 async function pickFromMenu(g: Game, m: number, mode: number): Promise<number> {
   const s = g.s;
-  const { choose, restoreView } = await import('./menu.ts');
-  const counts = mode === 0x52 ? s.equipment : itemCounts(g);
+  const { choose, playRows, playWidth, restoreView } = await import('./menu.ts');
+  const width = playWidth(g, false);
+  // The counts as the lists show them, each pass afresh: readying one moves them (the ammunition's whole: ammo.ts).
+  const countsNow = (): ArrayLike<number> => (mode === 0x52 ? armCounts(g) : itemCounts(g));
+  let counts = countsNow();
   const n = mode === 0x52 ? 0x30 : 0x26;
   const before = readied(g, m, mode);
   let at = 0;
@@ -832,6 +842,7 @@ async function pickFromMenu(g: Game, m: number, mode: number): Promise<number> {
   }
   try {
     for (;;) {
+      counts = countsNow();
       held = [];
       for (let i = nextHeld(g, -1, n, counts, m); i !== -1; i = nextHeld(g, i, n, counts, m)) held.push(i);
       if (held.length === 0) break;
@@ -841,7 +852,7 @@ async function pickFromMenu(g: Game, m: number, mode: number): Promise<number> {
       at = held.includes(onItem) ? held.indexOf(onItem) : Math.min(at, held.length - 1);
       // Used, an item that would do nothing here is greyed (targets.ts): a scroll or a skull key is not spent for it.
       const items = held.map((i) => ({
-        ...itemLabel(g, i, mode, m, counts[i]),
+        ...itemLabel(g, i, mode, m, counts[i], width),
         enabled: mode === 0x52 || usableHere(g, i),
         // (where its card says why it is grey, the bar may rest on it)
         rest: useCard,
@@ -852,8 +863,8 @@ async function pickFromMenu(g: Game, m: number, mode: number): Promise<number> {
           0,
           items.findIndex((it) => it.enabled),
         );
-      // The whole view, as the spell list has it: a long pack scrolls less.
-      const pick = await choose(g, mode === 0x52 ? 'Ready' : 'Items', items, at);
+      // Low in the view, scrolling, as the command menu and the spells are (menu.ts playRows).
+      const pick = await choose(g, mode === 0x52 ? 'Ready' : 'Items', items, at, false, playRows(g));
       if (pick < 0) break;
       at = pick;
       picked = onItem = held[pick];

@@ -48,6 +48,8 @@ import { PgDn, PgUp, Home, End } from './zstats.ts';
 import { cue, deathCue } from './cues.ts';
 import { putAside } from './speech.ts';
 import { devMode } from '../devMode.ts';
+import { ammoHeld, spendOne } from './ammo.ts';
+import { shortArmNames } from './armNames.ts';
 
 /** Enemy flags (u5d macros.h ENEMY_FLAG_*). */
 export const EF = {
@@ -1322,8 +1324,8 @@ export async function missileAt(g: Game, i: number, x: number, y: number, hit: b
  */
 export function ammoLeft(g: Game, weapon: number): number | null {
   const s = g.s;
-  if (weapon === 0x1a || weapon === 0x24) return s.equipment[0x1b];
-  if (weapon === 0x1c) return s.equipment[0x1d];
+  if (weapon === 0x1a || weapon === 0x24) return ammoHeld(g, 0x1b);
+  if (weapon === 0x1c) return ammoHeld(g, 0x1d);
   if (THROWN.includes(weapon)) return s.equipment[weapon] + 1;
   return null;
 }
@@ -1357,14 +1359,14 @@ export function spendAmmo(g: Game, weapon: number, range: number): string | null
   switch (weapon) {
     case 0x1a:
     case 0x24:
-      if (s.equipment[0x1b] > 0) s.equipment[0x1b]--;
+      spendOne(g, 0x1b);
       if (s.equipment[0x1b] === 0) {
         const n = refill(0x1a, 0x24);
         if (n) return `Last arrow! ${n > 1 ? 'Bows' : 'Bow'} put away.`;
       }
       break;
     case 0x1c:
-      if (s.equipment[0x1d] > 0) s.equipment[0x1d]--;
+      spendOne(g, 0x1d);
       if (s.equipment[0x1d] === 0) {
         const n = refill(0x1c);
         if (n) return `Last quarrel! ${n > 1 ? 'Crossbows' : 'Crossbow'} put away.`;
@@ -1686,7 +1688,7 @@ export async function attackWith(g: Game, i: number, weapon: number): Promise<vo
     if (range > 0 && keepsLastThrown(g, weapon)) {
       // The last one is not thrown: it strikes at arm's length instead, and the player is told why.
       range = 0;
-      g.print(`Last ${(g.data.table(0x1962, 0x38)[weapon] ?? '').trim()} kept\n`);
+      g.print(`Last ${(shortArmNames(g)[weapon] ?? '').trim()} kept\n`);
     }
   }
   if (range === 0) {

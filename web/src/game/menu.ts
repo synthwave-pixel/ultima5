@@ -72,6 +72,7 @@ import { CENTRE, redrawBox, TALK_WIDTH, talkMenu } from './speech.ts';
 import { merchantSpeaking } from './merchantSpeech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
+import { shortArmNames } from './armNames.ts';
 
 /** The menus' text window: the map's area, a character in from its edge. */
 const WIN = 3;
@@ -316,7 +317,8 @@ function row(g: Game, y: number, item: Item | undefined, chosen: boolean, letter
   if (item?.colour !== undefined) w.fg = item.colour;
   if (item && (item.enabled === false || item.dim)) w.fg = 8;
   if (chosen) t.inverse = true;
-  put(g, 0, y, text.padEnd(width));
+  // Never past its width: a line too long for a narrow box is cut, not run over its frame.
+  put(g, 0, y, text.slice(0, width).padEnd(width));
   t.inverse = false;
   w.fg = fg;
 }
@@ -1136,7 +1138,7 @@ function readied(g: Game): { name: string; ranged: boolean } | null {
     }
   }
   if (who === 0xff || who >= s.partySize) return null;
-  const names = g.data.table(0x1962, 0x38);
+  const names = shortArmNames(g);
   const damage = g.data.bytes(0x15fc, 0x38);
   const reach = g.data.bytes(0x1664, 0x38);
   let best: { name: string; ranged: boolean } | null = null;
@@ -1318,10 +1320,10 @@ function everything(g: Game): Item[] {
     ),
     ...offered({ label: 'X-it', key: c('X') }, only((outdoors || where === 'town') && !onFoot)),
     ...offered({ label: 'Fire', key: c('F') }, fireOffer(g)),
-    ...offered({ label: 'New order', key: c('N') }, newOrderOffer(g)),
   ];
   // Only what the buttons and the Pause menu do not already do (the ultima3 port's): B passes, Start and Escape open
-  // the Pause menu, and saving, quitting and Auto combat are there. The journal and the map are here alone.
+  // the Pause menu, and saving, quitting, Auto combat and the party's order (New order) are there. The journal and the
+  // map are here alone.
   list.push({ label: 'Journal', key: 0x100 + 2 });
   if (!combat) list.push({ label: 'Map', key: 0x100 + 3 });
   return list;
@@ -1371,6 +1373,51 @@ export function plainName(g: Game, label: string): string {
   return plain[label] ?? label;
 }
 
+/**
+ * How many letters a line of one of those lists has (playRows): the box's width less the two columns its scroll marks
+ * take, and two more where the line has its letter (Classic input). Each list fits its lines to it.
+ */
+export function playWidth(g: Game, lettered: boolean): number {
+  return TALK_WIDTH - 2 - (lettered && g.options.input === 'letters' ? 2 : 0);
+}
+
+/** Shorter words for a command too long for its list (fitCommand), where its count and brackets are not enough. */
+const SHORTER: Record<string, string> = {
+  'Pick chest lock': 'Unlock chest',
+};
+
+/**
+ * A command's line fitted to `width` (playWidth): as it is where it fits; else its count without brackets ("Ignite
+ * torch x12"), then the verb's without them ("Cast Great light"), then shorter words; and at the last the thing alone,
+ * a weapon or a spell, its line's letter (or the bar's place) saying what is done with it.
+ */
+export function fitCommand(label: string, width: number): string {
+  const steps = [
+    (l: string) => l.replace(/ \(x(\d+)\)$/, ' x$1'),
+    (l: string) => l.replace(/^(\S+) \((.+)\)$/, '$1 $2'),
+    (l: string) => Object.entries(SHORTER).reduce((t, [a, b]) => (t.startsWith(a) ? b + t.slice(a.length) : t), l),
+    (l: string) => l.replace(/^(Attack|Cast) /, ''),
+  ];
+  let l = label;
+  for (const step of steps) {
+    if (l.length <= width) return l;
+    l = step(l);
+  }
+  return l;
+}
+
+/**
+ * Where the lists of play go (the port's) - the commands, the spells, the items to use and to ready: as a talk's menu
+ * does (TalkRows), framed low in the view and scrolling, the map going on round it - the party in sight above it. In
+ * a fight, where the one whose turn it is stands in the field's lower half, at its top instead, so as never to hide
+ * them.
+ */
+export function playRows(g: Game): TalkRows {
+  const s = g.s;
+  const turn = g.inCombat && s.combatTurn < 0x20 ? g.combat[s.combatTurn] : undefined;
+  return turn && turn.y >= 6 ? { first: 1, last: 8 } : { first: 14, last: 21 };
+}
+
 export async function commandMenu(g: Game): Promise<number> {
   // One list: what the moment calls for first, then the rest.
   const first = contextual(g);
@@ -1390,6 +1437,9 @@ export async function commandMenu(g: Game): Promise<number> {
     const n = it.key === undefined ? 0 : (held.get(it.key) ?? 0);
     if (n > 0) it.label += ` (x${n})`;
   }
+  // Each line fitted to the list's width, low in the view (playRows): its count, its brackets, its words shortened.
+  const width = playWidth(g, true);
+  for (const it of items) it.label = fitCommand(it.label, width);
   // With the bar on a spell to cast or on Mix, the party panel shows mana (magicPanel.ts), and hit points again after.
   const magic = (k: number | undefined): boolean =>
     k === c('C') || k === c('M') || k === 0x100 + 7 || (k !== undefined && k >= SHORTCUT && k < SHORTCUT + 8);
@@ -1422,7 +1472,7 @@ export async function commandMenu(g: Game): Promise<number> {
   };
   let i: number;
   try {
-    i = await choose(g, 'Commands', items);
+    i = await choose(g, 'Commands', items, 0, false, playRows(g));
   } finally {
     g.choiceWatch = watch;
     unCard();
@@ -1529,6 +1579,18 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
             : 'Not now.';
     return { rest: true, note: why };
   };
+  /** Party order greyed where it cannot be had, saying why, the bar resting on it: in a fight, inside a command, alone. */
+  const partyOrder = (): Partial<Item> => {
+    const why =
+      g.s.mapId === 0xff
+        ? 'Not in a fight.'
+        : midCommand
+          ? 'Not in the middle of a command: finish it, then pause.'
+          : newOrderOffer(g) === 'show'
+            ? null
+            : 'Needs two companions to swap: the Avatar always leads.';
+    return why ? { enabled: false, rest: true, note: why } : {};
+  };
   g.pause(true);
   try {
     let at = 0;
@@ -1544,6 +1606,16 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           act: () => {
             g.options.autoCombat = AUTO_COMBAT[(AUTO_COMBAT.indexOf(g.options.autoCombat) + 1) % AUTO_COMBAT.length];
             saveOptions(g.options);
+          },
+        },
+        {
+          // New order (cmds.ts), the port's Party order: set seldom, so here beside Auto combat rather than among the
+          // commands of play. Chosen, the menu closes and the command asks which two to swap, as it always has.
+          label: 'Party order',
+          ...partyOrder(),
+          act: async () => {
+            await restoreView(g);
+            return c('N');
           },
         },
         audioLine(g),

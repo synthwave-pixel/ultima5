@@ -14,6 +14,8 @@ import { Colour } from '../ui/colours.ts';
 import { hasAmmo, isShield, placesFor, THROWN, THROWN_KEPT, wears } from './zstats.ts';
 import { keepsLastThrow } from './settings.ts';
 import { handsOf, planSwitch, type SwitchPlan } from './switchWeapon.ts';
+import { ammoHeld } from './ammo.ts';
+import { shortArmNames } from './armNames.ts';
 
 /** The panel's width in letters. */
 const W = 15;
@@ -70,7 +72,7 @@ export function cardLines(g: Game, m: number, item: number): { top: string[]; fo
   const def = g.data.bytes(0x1634, 0x30);
   const weight = g.data.bytes(0x1aae, 0x30);
   const long = g.data.table(0x17f6, 0x30)[item] ?? '';
-  const name = long.length <= W ? long : (g.data.table(0x1962, 0x38)[item]?.trim() ?? '');
+  const name = long.length <= W ? long : (shortArmNames(g)[item]?.trim() ?? '');
   // Arrows and quarrels are not held at all: drawn by what shoots them.
   if (item === 0x1b || item === 0x1d)
     return { top: [name.padStart((W + name.length) >> 1)], foot: [item === 0x1b ? 'For bows' : 'For crossbows'] };
@@ -102,8 +104,8 @@ export function cardLines(g: Game, m: number, item: number): { top: string[]; fo
     for (let k = 0; k < 6; k++) if (e[k] !== 0xff && !out.includes(k)) carried += weight[e[k]];
     if (carried > s.members[m].str) foot.push('Too heavy');
   }
-  if (item === 0x1a || item === 0x24) foot.push(hasAmmo(g, item) ? `Arrows ${s.equipment[0x1b]}` : 'No arrows');
-  if (item === 0x1c) foot.push(hasAmmo(g, item) ? `Quarrels ${s.equipment[0x1d]}` : 'No quarrels');
+  if (item === 0x1a || item === 0x24) foot.push(hasAmmo(g, item) ? `Arrows ${ammoHeld(g, 0x1b)}` : 'No arrows');
+  if (item === 0x1c) foot.push(hasAmmo(g, item) ? `Quarrels ${ammoHeld(g, 0x1d)}` : 'No quarrels');
   if (THROWN.includes(item)) {
     foot.push('Thrown, used up');
     if (keepsLastThrow(g.options) && THROWN_KEPT.includes(item)) foot.push('Last one kept');
@@ -145,7 +147,6 @@ function drawCard(g: Game, { top, foot }: { top: string[]; foot: string[] }): vo
  * arrows") or whether it is melee or ranged, and the arrows or quarrels left; or why it would take up nothing.
  */
 export function switchCardLines(g: Game, m: number, plan: SwitchPlan | string): { top: string[]; foot: string[] } {
-  const s = g.s;
   if (typeof plan === 'string') return { top: ['Switch Weapon'.padStart((W + 13) >> 1)], foot: [plan] };
   const def = g.data.bytes(0x1634, 0x30);
   const weight = g.data.bytes(0x1aae, 0x30);
@@ -156,7 +157,7 @@ export function switchCardLines(g: Game, m: number, plan: SwitchPlan | string): 
   const more = (a: number, b: number): boolean => a > b;
   const top = plan.items.map((i) => {
     const name = (names[i] ?? '').trim();
-    const short = name.length <= W ? name : (g.data.table(0x1962, 0x38)[i]?.trim() ?? '');
+    const short = name.length <= W ? name : (shortArmNames(g)[i]?.trim() ?? '');
     return short.padStart((W + short.length) >> 1);
   });
   top.push(
@@ -185,8 +186,8 @@ export function switchCardLines(g: Game, m: number, plan: SwitchPlan | string): 
     ),
   );
   const foot = [plan.missing ?? (plan.to === 'ranged' ? 'Ranged' : 'Melee')];
-  if (plan.items.some((i) => i === 0x1a || i === 0x24)) foot.push(`Arrows ${s.equipment[0x1b]}`);
-  else if (plan.items.includes(0x1c)) foot.push(`Quarrels ${s.equipment[0x1d]}`);
+  if (plan.items.some((i) => i === 0x1a || i === 0x24)) foot.push(`Arrows ${ammoHeld(g, 0x1b)}`);
+  else if (plan.items.includes(0x1c)) foot.push(`Quarrels ${ammoHeld(g, 0x1d)}`);
   else if (plan.items.some((i) => THROWN.includes(i))) foot.push('Thrown, used up');
   return { top: top.slice(0, TOP.length), foot: foot.slice(0, FOOT.length) };
 }

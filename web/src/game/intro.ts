@@ -1165,6 +1165,7 @@ export class Intro {
     g.fog.clear(); // a new Avatar knows nothing of the land
     g.words.clear();
     g.oldManDay = -1; // the old man has yet to come to this Avatar's camp
+    g.ammoExtra = {}; // nor carries more than its 99 arrows (ammo.ts)
     const d = g.draw;
     d.pen = Colour.blue;
     d.fill(0x78, 0x78, 200, 0x7e);

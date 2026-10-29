@@ -20,6 +20,7 @@ import { callGuards, npcKilled, npcOfActor, removeNpc, setNpcKilled } from './to
 import { buildLightMap, setTileAt, setTownTile, tileAt } from './world.ts';
 import { roll30 } from './outdoors.ts';
 import { cue } from './cues.ts';
+import { addAmmo, isAmmo } from './ammo.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 
@@ -711,7 +712,7 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
     case 0xa:
     case 0xb:
     case 0xc:
-      if (amount === 0x1b || amount === 0x1d) s.equipment[amount] = inc(s.equipment[amount], 5, 99);
+      if (isAmmo(amount)) addAmmo(g, amount, 5);
       else s.equipment[amount] = Math.min(s.equipment[amount] + 1, 99);
       g.print(g.data.table(0x17f6, 0x30)[amount] ?? '');
       g.say(0x8d06); // "!\n"

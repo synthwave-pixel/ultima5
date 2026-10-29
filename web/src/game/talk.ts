@@ -29,6 +29,7 @@ import { heardLines } from './placeClues.ts';
 import { freedKey } from './items.ts';
 import * as modern from './modernKarma.ts';
 import * as speech from './speech.ts';
+import { addAmmo, isAmmo, spendOne } from './ammo.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -407,7 +408,8 @@ async function payGold(k: Talk): Promise<number> {
 function give(g: Game, item: number): void {
   const s = g.s;
   if (item < 0x40) {
-    s.equipment[item] = inc(s.equipment[item], 1, 99);
+    if (isAmmo(item)) addAmmo(g, item, 1);
+    else s.equipment[item] = inc(s.equipment[item], 1, 99);
     return;
   }
   switch (item) {
@@ -1174,7 +1176,9 @@ async function pickpocket(g: Game): Promise<void> {
   }
   for (let i = 0x2f; i >= 0; i--) {
     if (s.equipment[i] !== 0) {
-      s.equipment[i]--;
+      if (isAmmo(i))
+        spendOne(g, i); // from above the save's 99 first (ammo.ts)
+      else s.equipment[i]--;
       return;
     }
   }
