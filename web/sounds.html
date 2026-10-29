@@ -13,7 +13,8 @@
       how often it plays and where, through the game's own sound: as the
       Classical, Electronic and Ambient suites, or as Upgrade (2001)'s PC
       speaker. Above them, every tune in
-      every arrangement each soundtrack plays.
+      every arrangement each soundtrack plays, and the magic (settled) as a
+      fight has it.
       The game files are the installed copy.
     -->
     <style>
@@ -49,12 +50,22 @@
         font-size: 12px;
       }
       main,
-      #music {
+      #music,
+      #magic {
         padding: 8px 16px 32px;
       }
       #music {
         padding-bottom: 0;
       }
+      #magic {
+        padding-bottom: 0;
+      }
+      #magic .bar {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+      #magic .about,
       #music .about {
         color: #999;
         font-size: 12px;
@@ -152,6 +163,7 @@
       <div id="controls"></div>
     </header>
     <section id="music"></section>
+    <section id="magic"></section>
     <main id="effects">Loading the game files…</main>
     <script type="module" src="/src/dev/sounds.ts"></script>
   </body>

@@ -204,6 +204,8 @@ export class PcSound implements Sound {
   private readonly lastPlayed = new Map<string, Arrangement>();
   /** Where the arrangement is picked at random from (0 to 1): the tests set it. */
   random: () => number = Math.random;
+  /** Where a suite's sound picks among its variants (0 to 1): the sound test page sets it, to hear each. */
+  variant: () => number = Math.random;
   /**
    * Tunes decoded, by arrangement and name - only the last two (a decoded tune is tens of megabytes): fetched the first
    * time each plays (kept by the service worker on the web, in the bundle in the apps). Null where it could not be had,
@@ -314,7 +316,7 @@ export class PcSound implements Sound {
   private inSuite(key: string | null, hz: number | null, voice: () => Float32Array): Played | Float32Array | null {
     const suite = this.effects as Suite;
     if (key && this.bank.has(suite, key)) {
-      const slice = this.bank.slice(suite, key, Math.random);
+      const slice = this.bank.slice(suite, key, this.variant);
       if (!slice) return null;
       const rate = hz ? bankRate(hz, key) : hz === 0 ? Math.pow(2, ((Math.random() - 0.5) * 0.8) / 12) : 1;
       return { ...slice, rate };

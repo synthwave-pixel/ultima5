@@ -328,8 +328,9 @@ async function main(): Promise<void> {
   const magic = Object.entries(MAGIC).flatMap(([key, m]) =>
     Array.from({ length: m.variants }, (_, v): Checked => {
       const pcm = finish(m.make(seeded(4099 + v * 7919)), m.length);
-      levelSlice(pcm, LEVEL.other);
-      return { key, pcm: tame(pcm, strictest, 6, LEVEL.other), standout: false, nominal: m.length };
+      const level = m.level ?? LEVEL.other;
+      levelSlice(pcm, level);
+      return { key, pcm: tame(pcm, strictest, m.standout ? 10 : 6, level), standout: !!m.standout, nominal: m.length };
     }),
   );
   const forAll = [...[...fromOne.values()].flat(), ...kept, ...universal, ...magic];

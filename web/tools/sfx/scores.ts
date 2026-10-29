@@ -87,6 +87,9 @@ const score = (length: number, parts: (SfxNote | SfxNote[])[], standout = false)
   ...(standout ? { standout } : {}),
 });
 
+/** How long the victory fanfare is (seconds): the field's tune turns to the theme after it (combat.ts victoryTune). */
+export const VICTORY_LENGTH = 1.6;
+
 /** Rule Britannia's opening (chip3.ts BRITANNIA), in F. */
 const BRITANNIA = [60, 65, 65, 65, 67, 69, 70, 72];
 /** Blackthorn's theme (chip3.ts BLACKTHORN), an octave down. */
@@ -143,10 +146,22 @@ export const SCORES: Record<string, (variant: number) => Score> = {
   tickhigh: (v) => score(0.15, [[note(0, 72, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
   ticklow: (v) => score(0.15, [[note(0, 67, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
   // --- Combat ---
+  // The fight won: 1988's call - three quick notes and a higher one held - as a horn's fanfare in C, the strings and
+  // timpani coming in on the held note, a harp's chord rising under its end; each suite in its own instruments.
   victory1: () =>
     score(
-      0.9,
-      [run(0, [55, 59, 62, 67, 71], 0.1, P.horn, 95, 0.5), chord(0.4, [43, 50, 55], 0.5, P.strings, 85), [note(0.4, 43, 0.4, P.timp, 90)]],
+      VICTORY_LENGTH,
+      [
+        run(0, [67, 67, 67], 0.12, P.horn, 100, 0.12),
+        note(0.36, 72, 0.75, P.horn, 105),
+        run(0, [55, 55, 55], 0.12, P.strings, 80, 0.12),
+        note(0.36, 60, 0.75, P.strings, 90),
+        [0, 0.12, 0.24].map((at) => note(at, 43, 0.1, P.timp, 70)),
+        note(0.36, 36, 0.6, P.timp, 100),
+        chord(0.36, [48, 55, 64], VICTORY_LENGTH - 0.36, P.slow, 85),
+        spread(0.95, [60, 64, 67, 72], 0.06, VICTORY_LENGTH, P.harp, 80),
+        note(1.1, 67, VICTORY_LENGTH - 1.1, P.horn, 85),
+      ],
       true,
     ),
   // --- Magic ---
@@ -272,7 +287,7 @@ export function bankScore(family: (typeof BANKED)[number], midi: number): Score 
  */
 const SOURCES: [RegExp, Suite | 'standard'][] = [
   [/^(drip0|denyhi|denylo|cue:Upwards|cue:Downwards)$/, 'standard'],
-  [/^(victory1|cue:CombatStart|tickhigh|ticklow|air|blackthorn\d|cue:MonsterSpell|possess)$/, 'electronic'],
+  [/^(cue:CombatStart|tickhigh|ticklow|air|blackthorn\d|cue:MonsterSpell|possess)$/, 'electronic'],
   [/^(spiritin|raise|shrine1|shrine2|cue:Invocation|chant:\d+|gatein)$/, 'ambient'],
 ];
 

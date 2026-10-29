@@ -9,7 +9,11 @@
  * match the soundtracks (audio/sfxKeys.ts), or as Upgrade (2001)'s PC
  * speaker. Above them, the
  * music: every tune in every arrangement each soundtrack plays, so an
- * effect can be heard over the tune it will sit on.
+ * effect can be heard over the tune it will sit on. Between them, the
+ * magic as a fight has it - settled (tools/sfx/magic.ts: zips of breath
+ * echoing away over the 1988 spell's hum, the same in every suite): each
+ * circle's variants, the bolts cast then shot, and the victory's fanfare
+ * before the theme, over a tune the effects dip as the game's do.
  */
 
 import { gameFiles } from '../boot.ts';
@@ -17,7 +21,8 @@ import { GameData } from '../game/data.ts';
 import { identify, RULES, type Kind } from '../audio/effects.ts';
 import { cueKey, sfxKey, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { type Arrangement, arrangementsFor, SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
-import { TUNE_FILES } from '../game/music.ts';
+import { Tune, TUNE_FILES } from '../game/music.ts';
+import { BOLT_BEAT_MS, FANFARE_MS } from '../game/combat.ts';
 import { MUSIC, MusicPlayer } from '../ui/music.ts';
 import { SFX_MANIFEST as SFX } from '../ui/sfxBank.ts';
 import { musicGain, PcSound } from '../ui/sound.ts';
@@ -124,7 +129,7 @@ function suiteVoice(suite: Suite, key: ReturnType<typeof sfxKey>): string {
 }
 
 /** The music: a row a tune, a column a soundtrack, a button an arrangement it plays there; played on its own context. */
-function musicTable(host: HTMLElement): void {
+function musicTable(host: HTMLElement, onPlay: () => void): () => void {
   let ctx: AudioContext | null = null;
   const player = new MusicPlayer(() => ctx, musicGain(6));
   const decoded = new Map<string, Promise<AudioBuffer | null>>();
@@ -142,6 +147,7 @@ function musicTable(host: HTMLElement): void {
       decoded.set(entry.file, got);
       while (decoded.size > 2) decoded.delete(decoded.keys().next().value!);
     }
+    onPlay();
     on?.classList.remove('on');
     on = button;
     button.classList.add('on');
@@ -153,11 +159,12 @@ function musicTable(host: HTMLElement): void {
   h.textContent = 'Music';
   const stop = document.createElement('button');
   stop.textContent = 'Stop';
-  stop.addEventListener('click', () => {
+  const halt = (): void => {
     player.stop();
     on?.classList.remove('on');
     on = null;
-  });
+  };
+  stop.addEventListener('click', halt);
   const note = document.createElement('p');
   note.className = 'about';
   note.textContent = 'Every tune in every arrangement a soundtrack plays it in, at the default Music level: play an effect over it.';
@@ -183,13 +190,145 @@ function musicTable(host: HTMLElement): void {
     }
   }
   host.append(h, note, stop, table);
+  return halt;
+}
+
+/** The soundtrack each way of playing the effects goes with (the Sound setting's pairs). */
+const SOUNDTRACK_OF: Record<PlayAs, Soundtrack> = {
+  classical: 'classical',
+  electronic: 'electronic',
+  ambient: 'remastered',
+  original: 'original',
+};
+
+/** The bolts: a spell's sound as its aim is let go, and then, a beat into it in the suites, the shot (combat.ts rangedAttack). */
+const BOLTS: [string, number][] = [
+  ['Magic missile', 1],
+  ['Fire bolt', 3],
+  ['Death bolt', 7],
+];
+
+/**
+ * The magic as a fight has it, through the game's own PcSound - its music too, so an effect dips the tune as the
+ * game's do (ui/sound.ts ducks): each circle's spell, its variants one by one; the bolts, cast then shot; and the
+ * victory, its fanfare and then the theme (combat.ts victoryTune).
+ */
+function magicAudition(host: HTMLElement, sound: PcSound, setOf: () => PlayAs, onPlay: () => void): () => void {
+  const backings: [string, number][] = [
+    ['No tune', 0],
+    ['Engagement', Tune.Engagement],
+    ['Britannia', TUNE_FILES.indexOf('BRITLAND.XMI') + 1],
+    ['Theme', Tune.Theme],
+  ];
+  let backing: number = Tune.Engagement;
+  let turn = 0;
+  /** Ready to play: the audio begun, the effects as the page plays them, the tune under them. */
+  const ready = (tune = backing): number => {
+    onPlay();
+    sound.unlock();
+    sound.setEffects(setOf(), 8);
+    sound.setMusicVoice(SOUNDTRACK_OF[setOf()]);
+    sound.music(tune);
+    return ++turn;
+  };
+  const spellSound = (circle: number): Promise<void> => sound.noise(800, circle * 0x640 + 8000, 700);
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  const suite = (): boolean => isSuite(setOf());
+  /** A spell, as variant `v` of its circle's three (the suites'), or as it falls. */
+  const cast = async (circle: number, v?: number): Promise<void> => {
+    ready();
+    sound.variant = v === undefined ? Math.random : () => (v + 0.5) / 3;
+    try {
+      await spellSound(circle);
+    } finally {
+      sound.variant = Math.random;
+    }
+  };
+  const bolt = async (circle: number): Promise<void> => {
+    const mine = ready();
+    await spellSound(circle);
+    if (suite()) await sleep(BOLT_BEAT_MS);
+    if (mine === turn) await sound.sweep(0x514, 300, 5, 100);
+  };
+  const victory = async (): Promise<void> => {
+    // The fight's tune first, a moment to be heard, then won.
+    const mine = ready(Tune.Engagement);
+    await sleep(2500);
+    if (mine !== turn) return;
+    const inSuite = suite();
+    if (!inSuite) sound.music(Tune.Theme);
+    for (let i = 0; i < 3; i++) await sound.pulse(0x11f8, 1, 0x2a30, 300, 6);
+    await sound.pulse(0x17d4, 1, 0x5460, 300, 3);
+    if (!inSuite || mine !== turn) return;
+    await sleep(FANFARE_MS);
+    if (mine === turn) sound.music(Tune.Theme);
+  };
+
+  const h = document.createElement('h2');
+  h.textContent = 'Magic in a fight';
+  const note = document.createElement('p');
+  note.className = 'about';
+  note.textContent =
+    'The magic, settled: zips of breath rising and echoing away over the 1988 spell\u2019s hum, each circle a longer, lower sweep with more echoes, the same in every suite (tools/sfx/magic.ts). Heard as a fight has it, played as chosen above, over a tune that dips under an effect as the game\u2019s does (the first circle does not dip it). Each circle has three variants in the suites, a cast picking one; the bolts are cast, then shot; the victory plays the fight\u2019s tune, the fanfare, then the theme.';
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  const select = document.createElement('select');
+  for (const [label, tune] of backings) select.add(new Option(label === 'No tune' ? label : `Under: ${label}`, String(tune)));
+  select.value = String(backing);
+  select.addEventListener('change', () => {
+    backing = Number(select.value);
+    ready();
+  });
+  const stop = document.createElement('button');
+  stop.textContent = 'Stop';
+  const halt = (): void => {
+    ++turn;
+    sound.music(0);
+  };
+  stop.addEventListener('click', halt);
+  bar.append(select, stop);
+
+  const table = document.createElement('table');
+  const head = table.createTHead().insertRow();
+  for (const t of ['', 'Sound', 'Dips the music']) head.appendChild(Object.assign(document.createElement('th'), { textContent: t }));
+  const body = table.createTBody();
+  const row = (label: string, dips: string, buttons: [string, () => Promise<void>][]): void => {
+    const tr = body.insertRow();
+    const play = tr.insertCell();
+    play.className = 'play';
+    for (const [text, run] of buttons) {
+      const b = document.createElement('button');
+      b.textContent = text;
+      b.addEventListener('click', () => void run());
+      play.appendChild(b);
+    }
+    tr.insertCell().textContent = label;
+    tr.insertCell().className = 'voice';
+    tr.cells[2].textContent = dips;
+  };
+  const render = (): void => {
+    body.textContent = '';
+    const variants = suite();
+    for (let c = 1; c <= 8; c++)
+      row(`Spell, circle ${c}`, c === 1 ? 'no' : 'yes', [
+        ['▶', () => cast(c)],
+        ...(variants ? [0, 1, 2].map((v): [string, () => Promise<void>] => [`v${v + 1}`, () => cast(c, v)]) : []),
+      ]);
+    for (const [name, c] of BOLTS) row(`${name} (circle ${c}): cast, then shot`, c === 1 ? 'no' : 'the cast', [['▶', () => bolt(c)]]);
+    row('Victory: the fight\u2019s tune, the fanfare, then the theme', 'yes', [['▶', victory]]);
+  };
+  render();
+  host.append(h, note, bar, table);
+  return render;
 }
 
 async function start(): Promise<void> {
-  musicTable(document.getElementById('music')!);
+  // The table's tune and the magic's are one at a time: either starting stops the other.
+  let live: PcSound | null = null;
+  const stopTable = musicTable(document.getElementById('music')!, () => live?.music(0));
   const files = await gameFiles();
   const data = new GameData(files);
-  const sound = new PcSound(data.ovl);
+  const sound = (live = new PcSound(data.ovl));
   const main = document.getElementById('effects')!;
   main.textContent = '';
   const all = entries(data);
@@ -295,10 +434,12 @@ async function start(): Promise<void> {
       sound.unlock();
       sound.setEffects(v, 8);
       render();
+      audition();
     });
     return b;
   });
   setButtons[0].classList.add('on');
+  const audition = magicAudition(document.getElementById('magic')!, sound, () => set, stopTable);
   const often = document.createElement('select');
   for (const o of ['any', ...OFTEN_ORDER]) often.add(new Option(o === 'any' ? 'How often: any' : o, o));
   often.addEventListener('change', () => render());

@@ -89,7 +89,7 @@ export const ABOUT: Record<string, About> = {
   // Combat.
   attack: a(
     "The party's swing",
-    'A member swings a weapon (the Original also uses it for a monster’s swing).',
+    'A member swings a weapon (Upgrade also uses it for a monster’s swing).',
     'every blow',
     'combat.ts swing',
     'Combat',
@@ -117,7 +117,7 @@ export const ABOUT: Record<string, About> = {
   ),
   foefire: a(
     'A monster shoots',
-    'A monster fires an arrow, a bolt or a spell at the party (Standard: a spell has its own sound).',
+    'A monster fires an arrow, a bolt or a spell at the party (the suites: a spell has its own sound).',
     'every blow',
     'combat.ts monsterShoots',
     'Combat',
@@ -130,17 +130,23 @@ export const ABOUT: Record<string, About> = {
     'Combat',
   ),
   cannon: a('Cannon', "The party's ship firing its cannons.", 'now and then', 'cmds.ts fireCommand, broadside', 'Combat'),
-  victory1: a('Victory, first part', 'A fight won: the rising notes.', 'often', 'combat.ts victoryTune', 'Combat'),
+  victory1: a(
+    'Victory, first part',
+    'A fight won. Upgrade: the rising notes. The suites: a fanfare of their own, three quick notes and a held one (1.6 s), before the field turns to the theme.',
+    'often',
+    'combat.ts victoryTune',
+    'Combat',
+  ),
   victory2: a(
     'Victory, last note',
-    'The held note that ends the victory tune (Standard folds it into the fanfare).',
+    'The held note that ends the victory tune (the suites fold it into the fanfare).',
     'often',
     'combat.ts victoryTune',
     'Combat',
   ),
   vanish: a(
     'Vanish',
-    'Something disappears: a magic ring lost, a member absorbed by the Mirror of Truth, furniture undone by Negate Matter; and a graze, one leaving the field, one dragged under. Standard gives each its own.',
+    'Something disappears: a magic ring lost, a member absorbed by the Mirror of Truth, furniture undone by Negate Matter; and a graze, one leaving the field, one dragged under. The suites give each its own.',
     'often',
     'combat.ts, zstats.ts, magic.ts',
     'Combat',
@@ -171,17 +177,53 @@ export const ABOUT: Record<string, About> = {
   sceptuse: a('The Sceptre wielded', "Lord British's Sceptre used against the strange walls.", 'rare', 'magic.ts wieldSceptre', 'Magic'),
   spell1: a(
     'Spell, first circle',
-    'A first-circle spell cast. Original: each circle higher. Standard: a resonant synth sweep and a note blooming out of it at the first, each circle longer and richer to a dramatic phrase at the eighth; a little different every cast.',
+    'A first-circle spell cast, and a magic missile as it flies. Upgrade: each circle higher. The suites: zips of breath rising and echoing away over the 1988 hum, each circle a longer, lower sweep with more echoes, three variants of each; the first circle does not dip the music, the rest do.',
     'often',
     'magic.ts castEffect',
     'Magic',
   ),
-  spell2: a('Spell, second circle', 'The sparkle of a second-circle spell.', 'often', 'magic.ts castEffect', 'Magic'),
-  spell3: a('Spell, third circle', 'The sparkle of a third-circle spell.', 'often', 'magic.ts castEffect', 'Magic'),
-  spell4: a('Spell, fourth circle', 'The sparkle of a fourth-circle spell.', 'now and then', 'magic.ts castEffect', 'Magic'),
-  spell5: a('Spell, fifth circle', 'The sparkle of a fifth-circle spell.', 'now and then', 'magic.ts castEffect', 'Magic'),
-  spell6: a('Spell, sixth circle', 'The sparkle of a sixth-circle spell.', 'now and then', 'magic.ts castEffect', 'Magic'),
-  spell7: a('Spell, seventh circle', 'The sparkle of a seventh-circle spell.', 'rare', 'magic.ts castEffect', 'Magic'),
+  spell2: a(
+    'Spell, second circle',
+    'A second-circle spell cast: longer and richer than the circle below.',
+    'often',
+    'magic.ts castEffect',
+    'Magic',
+  ),
+  spell3: a(
+    'Spell, third circle',
+    'A third-circle spell cast (a fire bolt as it flies): longer and richer than the circle below.',
+    'often',
+    'magic.ts castEffect',
+    'Magic',
+  ),
+  spell4: a(
+    'Spell, fourth circle',
+    'A fourth-circle spell cast: longer and richer than the circle below.',
+    'now and then',
+    'magic.ts castEffect',
+    'Magic',
+  ),
+  spell5: a(
+    'Spell, fifth circle',
+    'A fifth-circle spell cast: longer and richer than the circle below.',
+    'now and then',
+    'magic.ts castEffect',
+    'Magic',
+  ),
+  spell6: a(
+    'Spell, sixth circle',
+    'A sixth-circle spell cast: longer and richer than the circle below.',
+    'now and then',
+    'magic.ts castEffect',
+    'Magic',
+  ),
+  spell7: a(
+    'Spell, seventh circle',
+    'A seventh-circle spell cast (a death bolt as it flies): longer and richer than the circle below.',
+    'rare',
+    'magic.ts castEffect',
+    'Magic',
+  ),
   spell8: a('Spell, eighth circle', 'The sparkle of an eighth-circle spell.', 'rare', 'magic.ts castEffect', 'Magic'),
 
   // Places and events.
@@ -275,7 +317,7 @@ export const FAMILY: Record<string, About> = {
   ),
   'cast circle': a(
     'Spell hum',
-    'The two long hums after a spell’s sparkle, by circle (Standard folds them into the spell).',
+    'The two long hums after a spell’s sparkle, by circle (the suites fold them into the spell).',
     'often',
     'magic.ts castEffect',
     'Magic',
@@ -315,7 +357,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   Graze: {
     ...a(
       'A blow glances off',
-      'A blow that lands but does no harm: "grazed!" (the Original sounds its vanishing).',
+      'A blow that lands but does no harm: "grazed!" (Upgrade sounds its vanishing).',
       'every blow',
       'combat.ts report',
       'Combat',
@@ -325,7 +367,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   Withdraw: {
     ...a(
       'One leaves the field',
-      'A monster fleeing, a member stepping off the field, the party leaving a won fight (the Original sounds its vanishing).',
+      'A monster fleeing, a member stepping off the field, the party leaving a won fight (Upgrade sounds its vanishing).',
       'often',
       'combat.ts monsterTurn, leaveArena, escape',
       'Combat',
@@ -335,7 +377,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   DraggedUnder: {
     ...a(
       'Dragged under',
-      'A member pulled under the water by a sea creature (the Original sounds its vanishing).',
+      'A member pulled under the water by a sea creature (Upgrade sounds its vanishing).',
       'rare',
       'combat.ts report',
       'Combat',
@@ -345,7 +387,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   Dissolve: {
     ...a(
       'Magic undone',
-      'A magic ring vanishing (as a fight begins, or when readied), or a thing unmade by Negate Matter after its spell (the Original sounds its vanishing).',
+      'A magic ring vanishing (as a fight begins, or when readied), or a thing unmade by Negate Matter after its spell (Upgrade sounds its vanishing).',
       'rare',
       'combat.ts prepareCombat, zstats.ts, magic.ts anYlem',
       'Combat',
@@ -355,7 +397,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   Absorbed: {
     ...a(
       'Absorbed by the Mirror',
-      'A member stepping before the Mirror of Truth and absorbed: the dissolve, slower (the Original sounds its vanishing).',
+      'A member stepping before the Mirror of Truth and absorbed: the dissolve, slower (Upgrade sounds its vanishing).',
       'rare',
       'combat.ts checkMirror',
       'Combat',
@@ -367,19 +409,13 @@ export const CUES: Record<string, About & { original?: string }> = {
   BigDeath: a('The party falls', 'The whole party dead.', 'rare', 'story.ts', 'Combat'),
   CombatStart: a('A fight begins', 'Entering a fight.', 'often', 'combat.ts prepareCombat', 'Combat'),
   Attack: {
-    ...a(
-      "A monster's blow",
-      'A monster swinging at a member (the Original uses the party’s swing).',
-      'every blow',
-      'combat.ts swing',
-      'Combat',
-    ),
+    ...a("A monster's blow", 'A monster swinging at a member (Upgrade uses the party’s swing).', 'every blow', 'combat.ts swing', 'Combat'),
     original: 'attack',
   },
   MonsterSpell: {
     ...a(
       "A monster's spell",
-      'A monster casting at the party (the Original uses its missile).',
+      'A monster casting at the party (Upgrade uses its missile).',
       'now and then',
       'combat.ts monsterShoots',
       'Combat',
@@ -391,7 +427,7 @@ export const CUES: Record<string, About & { original?: string }> = {
   Alarm: a('The guards called', 'The guards summoned in a town after a crime.', 'rare', 'town.ts callGuards', 'Places and events'),
   ForceField: a(
     'Force field',
-    'Walking into an electric field in a dungeon (Standard only; the Original has its shock).',
+    'Walking into an electric field in a dungeon (the suites only; Upgrade has its shock).',
     'rare',
     'dungeon.ts electricField',
     'Places and events',
@@ -399,19 +435,13 @@ export const CUES: Record<string, About & { original?: string }> = {
   Invocation: a('The Codex speaks', 'The Codex of Ultimate Wisdom answering.', 'once', 'shrine.ts', 'The story'),
   Yell: a(
     'A merchant yells',
-    'A merchant yelling the party out of the shop (the Dialog setting\u2019s Play; the Original is silent).',
+    'A merchant yelling the party out of the shop (the Dialog setting\u2019s Play; Upgrade is silent).',
     'rare',
     'merchantSpeech.ts',
     'Places and events',
   ),
   Back: {
-    ...a(
-      'Backing out',
-      'Backing out of a menu: a very soft tap (the Original its low shop note).',
-      'often',
-      'menu.ts menuSound',
-      'The menus',
-    ),
+    ...a('Backing out', 'Backing out of a menu: a very soft tap (Upgrade its low shop note).', 'often', 'menu.ts menuSound', 'The menus'),
     original: 'shop2',
   },
 };

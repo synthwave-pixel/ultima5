@@ -1583,7 +1583,7 @@ function missed(g: Game, i: number): void {
 }
 
 /** A spell's bolt, in the suites: how far into its spell's sound the shot flies (ms) - its swell come, before its last. */
-const BOLT_BEAT_MS = 350;
+export const BOLT_BEAT_MS = 350;
 
 /** COMSUBS_0a68: a ranged attack: aim, fly, hit (boomerangs come back). */
 async function rangedAttack(g: Game, i: number, weapon: number, missile: number): Promise<void> {
@@ -3058,13 +3058,24 @@ function finishLoop(g: Game, lost: boolean): boolean {
   return lost;
 }
 
+/**
+ * How long the suites' victory fanfare is let sound before the field's tune turns to the theme (ms): its 1.6 s
+ * (tools/sfx/scores.ts VICTORY_LENGTH), less the calls that began it, the theme fading in under its ring.
+ */
+export const FANFARE_MS = 1200;
+
 /** ULTIMA_4368. */
 async function victoryTune(g: Game): Promise<void> {
-  // With the Upgrade the field turns to the theme once it is won (MID.DRV 016d).
-  musicForMap(g);
+  // With the Upgrade the field turns to the theme once it is won (MID.DRV 016d) - in the suites once the fanfare has
+  // sounded, which the music changing under it hid; as 1988 had it, with it.
+  const suite = !g.soundOff && effectsOf(g.options.soundChoice) !== 'original';
+  if (!suite) musicForMap(g);
   if (g.soundOff) return;
   for (let i = 0; i < 3; i++) await g.sound.pulse(0x11f8, 1, 0x2a30, 300, 6);
   await g.sound.pulse(0x17d4, 1, 0x5460, 300, 3);
+  if (!suite) return;
+  await g.p.sleep(FANFARE_MS);
+  musicForMap(g);
 }
 
 // --- In and out ------------------------------------------------------------------------------------

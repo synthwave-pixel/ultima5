@@ -3,9 +3,9 @@ import { standard } from '../src/audio/chip.ts';
 import { u3Effect } from '../src/audio/chip3.ts';
 import { RULES } from '../src/audio/effects.ts';
 import { BANKED, NOTE_BANK } from '../src/audio/sfxKeys.ts';
-import { bankScore, SCORES, sourceOf, VARIANTS } from '../tools/sfx/scores.ts';
+import { bankScore, SCORES, sourceOf, VARIANTS, VICTORY_LENGTH } from '../tools/sfx/scores.ts';
 import { UNIVERSAL } from '../tools/sfx/universal.ts';
-import { MAGIC } from '../tools/sfx/magic.ts';
+import { MAGIC, magicSet } from '../tools/sfx/magic.ts';
 import { seeded } from '../tools/sfx/design.ts';
 import { bandsLoudest } from '../tools/sfx/check.ts';
 import { levelSlice } from '../tools/sfx/render.ts';
@@ -30,7 +30,7 @@ describe('the scores of the new suites', () => {
 
   it('keeps each effect about as long as it is now', () => {
     for (const key of Object.keys(SCORES)) {
-      if (key === 'spiritin') continue;
+      if (key === 'spiritin' || key === 'victory1') continue; // phrases let run longer (below)
       const was = now(key);
       if (was === null) continue;
       const ratio = SCORES[key](0).length / was;
@@ -43,6 +43,13 @@ describe('the scores of the new suites', () => {
     const s = SCORES.spiritin(0);
     expect(s.length).toBeGreaterThanOrEqual(3);
     expect(s.length).toBeLessThanOrEqual(3.6);
+    expect(s.standout).toBe(true);
+    for (const n of s.notes) expect(n.at + n.length).toBeLessThanOrEqual(s.length + 1e-9);
+  });
+
+  it('lets the victory fanfare run to its own length, a moment to stand out, the theme after it', () => {
+    const s = SCORES.victory1(0);
+    expect(s.length).toBe(VICTORY_LENGTH);
     expect(s.standout).toBe(true);
     for (const n of s.notes) expect(n.at + n.length).toBeLessThanOrEqual(s.length + 1e-9);
   });
@@ -68,7 +75,7 @@ describe('the scores of the new suites', () => {
   });
 
   it('takes the sounds the user chose from one set for all three, and keeps some as Standard', () => {
-    expect(sourceOf('victory1')).toBe('electronic');
+    expect(sourceOf('victory1')).toBeNull(); // the victory fanfare: each suite's own
     expect(sourceOf('cue:CombatStart')).toBe('electronic');
     expect(sourceOf('tickhigh')).toBe('electronic');
     expect(sourceOf('air')).toBe('electronic');
@@ -172,12 +179,21 @@ describe('the magic, as sound design', () => {
     for (let c = 1; c <= 8; c++) expect(MAGIC[`spell${c}`].variants).toBe(3);
   });
 
-  it('is dark: most of its sound low, little where the ear tires', () => {
+  it('is bright but not harsh: little where the ear tires (rare enough to be let shine)', () => {
     for (const k of keys) {
       const pcm = MAGIC[k].make(seeded(1));
       levelSlice(pcm, -24);
       const b = bandsLoudest(pcm);
-      expect(b.presence, k).toBeLessThan(-40);
+      expect(b.presence, k).toBeLessThan(-30);
+    }
+  });
+
+  it('keeps a dark way of every effect within the stricter line', () => {
+    const dark = magicSet(true);
+    for (const k of keys) {
+      const pcm = dark[k].make(seeded(1));
+      levelSlice(pcm, -24);
+      expect(bandsLoudest(pcm).presence, k).toBeLessThan(-40);
     }
   });
 });
