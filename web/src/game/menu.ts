@@ -73,6 +73,7 @@ import { merchantSpeaking } from './merchantSpeech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 import { shortArmNames } from './armNames.ts';
+import { desktopModeWay } from '../ui/updates.ts';
 
 /** The menus' text window: the map's area, a character in from its edge. */
 const WIN = 3;
@@ -1598,7 +1599,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
                 `${name} ${offer.installed ? 'is installed' : 'has downloaded'}. It starts the next time you play: Save and quit, and start the game again, to play it now.`,
               )
             : offer.page === false
-              ? say(`${name} is out. Update it in Desktop Mode, from Discover. Your saved game carries over.`)
+              ? say(`${name} is out. ${desktopModeWay(offer)}`)
               : () => update.apply(),
       },
     ];

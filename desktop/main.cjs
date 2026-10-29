@@ -25,6 +25,7 @@ const { readState, startsFullScreen, writeState } = require('./windowState.cjs')
 const {
   applyUpdate,
   checkForUpdates,
+  closeUpdates,
   currentNews,
   currentOffer,
   lookForNews,
@@ -214,6 +215,15 @@ app.whenReady().then(() => {
   };
   win.on('close', holdForUpdate);
   app.on('before-quit', holdForUpdate);
+  // The Flatpak's update monitor let go as the game goes (the portal's own tidying, said rather than left to it): a
+  // moment at most, and nothing more if it is not answered.
+  let closed = false;
+  app.on('will-quit', (event) => {
+    if (closed) return;
+    closed = true;
+    event.preventDefault();
+    void Promise.race([closeUpdates(), new Promise((r) => setTimeout(r, 500))]).then(() => app.quit());
+  });
   // Launched from a non-Steam shortcut, the first time: Steam's library artwork put in place (steamArt.cjs), a moment
   // after the window is up, apart from everything else. It never throws, and what it did is only logged.
   setTimeout(() => {

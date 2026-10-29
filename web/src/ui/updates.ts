@@ -26,6 +26,20 @@ export interface UpdateOffer {
   quits?: boolean;
   /** A release: false where no page can be offered (under Game Mode), the way to it only said. */
   page?: boolean;
+  /**
+   * The Flatpak's: why its own update failed, where the way is not Discover's - its once-only approval not to be asked
+   * under Game Mode ('approve': given in Desktop Mode, the game updates itself from then on), or turned down ('denied').
+   */
+  why?: 'approve' | 'denied';
+}
+
+/** The way to a release where no page is offered (under Game Mode): the approval to give, or Discover. */
+export function desktopModeWay(offer: UpdateOffer): string {
+  if (offer.why === 'approve')
+    return 'Start the game once in Desktop Mode and choose Update when asked: from then on it updates itself, here too. Your saved game carries over.';
+  if (offer.why === 'denied')
+    return 'Its updates were turned down. Allow them in Desktop Mode, as the install guide says, or update it from Discover. Your saved game carries over.';
+  return 'Update it in Desktop Mode, from Discover. Your saved game carries over.';
 }
 
 /** The first start of a newer version (the desktop app's: desktop/updates.cjs lookForNews): it, and the one before. */

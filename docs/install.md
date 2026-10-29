@@ -26,17 +26,21 @@ folder picker.
      [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref).
      The browser saves a small file; open it from the browser's downloads
      and Discover shows Ultima V with an Install button, and asks for the
-     password that first time. Install once: the game updates itself
-     after that, even in Game Mode, and updates also arrive in
-     Discover with every other Flatpak's, with no prompt.
-  4. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
+     password that first time. Updates also arrive in Discover with every
+     other Flatpak's, with no prompt.
+  4. Start Ultima V once, still in Desktop Mode (Discover's Launch
+     button, or the application menu). Flatpak asks "Update Ultima V?";
+     choose Update. That lets the game update itself from then on, Game
+     Mode included, where the question can't be asked. You can quit
+     straight away.
+  5. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
      left, then Add a Non-Steam Game, tick Ultima V in the list, and click
      Add Selected Programs.
-  5. Return to Game Mode with the icon on the desktop, or restart. The
+  6. Return to Game Mode with the icon on the desktop, or restart. The
      game is in your library under Non-Steam. If the controls do not
      respond, open the shortcut's controller settings and pick a Gamepad
      template.
-  6. The first time you play it from Steam, the game gives its library
+  7. The first time you play it from Steam, the game gives its library
      entry its own artwork (cover, banner and logo); Steam shows it the
      next time Steam starts. Artwork you have set yourself is never
      replaced; when an update brings new artwork, the pictures the game
@@ -86,9 +90,14 @@ to Discover: the new version is installed in the background, the title
 screen says so (in play, a line in the message log), and Restart now plays
 it (under Game Mode, Quit now, and start the game again from your library).
 Quitting while one is still coming down waits for it to finish, a minute at
-most, and the first start of a new version says what is new in it. Where that service can't be had,
-it tells you of the release instead, and Discover updates it with every
-other Flatpak's ([how it works](flatpak-updates.md)).
+most, and the first start of a new version says what is new in it. Flatpak
+asks once whether the game may update itself, and can ask only at the
+desktop, so start the game once in Desktop Mode after installing and
+choose Update. If you chose Deny, allow it again from Konsole with
+`flatpak permission-set flatpak updates com.synthwavepixel.ultima5 yes`.
+Where that service can't be had, it tells you of the release instead, and
+Discover updates it with every other Flatpak's
+([how it works](flatpak-updates.md)).
 `--no-update-check` on the command line turns the check off; under
 Steam's Game Mode no page is offered, and a downloaded update is
 installed when the game quits.

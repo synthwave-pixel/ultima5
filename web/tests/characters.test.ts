@@ -998,6 +998,16 @@ describe('an update at the title', () => {
     expect(calls).toEqual({ applied: 0, told: 1 });
   });
 
+  it('under Game Mode, where the Flatpak’s once-only approval could not be asked, says to give it in Desktop Mode', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    const { setup } = offered(false, { page: false, why: 'approve' });
+    const { p } = await atTitleWith(setup, Pad.A);
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('Start the game once in Desktop Mode and choose Update when asked: from then on it updates itself, here too.');
+    expect(said).not.toContain('from Discover');
+  });
+
   it('says, at the first start of a newer version, that it was updated - and its notes, on What’s new', async () => {
     make('Iolo', 7);
     chooseCharacter(null);

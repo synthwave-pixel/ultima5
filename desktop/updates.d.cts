@@ -15,6 +15,7 @@ export interface UpdateOffer {
   installed?: boolean;
   quits?: boolean;
   page?: boolean;
+  why?: 'approve' | 'denied';
 }
 /** Flatpak's update portal (flatpakUpdates.cjs), as checkForUpdates takes it. */
 export interface FlatpakPortal {
@@ -29,6 +30,8 @@ export function onOffer(listener: (offer: UpdateOffer | null) => void): void;
 export const RELEASES: string;
 /** A Flatpak update under way, settling when it ends; null when none is. */
 export function updating(): Promise<void> | null;
+/** The Flatpak's update monitor let go, the game quitting. */
+export function closeUpdates(): Promise<unknown>;
 /** The first start of a newer version: { version, from }, kept as the last run; null where it is not. */
 export function lookForNews(o: { app: unknown; file: string }): { version: string; from: string } | null;
 export function currentNews(): { version: string; from: string } | null;

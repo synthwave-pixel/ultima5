@@ -38,10 +38,50 @@ copy carries on, and the next start is the new version.
 |---|---|
 | Property `version` | The portal's version. Update monitors arrived in version 4 (flatpak 1.6). Check before using them. |
 | `CreateUpdateMonitor(a{sv} options) → o handle` | An `org.freedesktop.portal.Flatpak.UpdateMonitor` object for this app. |
-| Signal `UpdateAvailable(a{sv})` | The portal noticed a newer commit on the remote. It checks on its own from time to time. |
+| Signal `UpdateAvailable(a{sv})` | What the portal's own check found: `running-commit`, `local-commit` (deployed) and `remote-commit`. It checks half an hour after the monitor is made, then every half hour, and signals whenever these change. Its first check always signals, newer or not. |
 | `UpdateMonitor.Update(s parent_window, a{sv} options)` | Pull and deploy it. Pass `''` and `{}`. Returns at once; progress comes as signals. |
 | Signal `Progress(a{sv} info)` | `status` (uint): 0 running, 1 empty (nothing to do), 2 done, 3 error (`error`, `error_message`). Also `n_ops`, `op`, `progress`. |
 | `Spawn(ay cwd, aay argv, a{uh} fds, a{ss} env, u flags, a{sv} options)` | With flag 2 (`FLATPAK_SPAWN_FLAGS_LATEST_VERSION`), starts the newest deployed version in a sandbox of its own: the restart. |
+| `UpdateMonitor.Close()` | Lets the monitor go. Called as the app quits. |
+
+### The once-only approval
+
+The first `Update` an app asks for shows a dialog, "Update Ultima V?"
+("The application wants to update itself"), with Deny and Update. The
+portal asks through the desktop's Access portal
+(`org.freedesktop.impl.portal.Access`). The answer is kept in the
+permission store, table `flatpak`, id `updates`, and the dialog never
+comes again. `flatpak permission-show com.synthwavepixel.ultima5` shows
+it. This is all in `request_update_permissions_sync` in flatpak's
+`portal/flatpak-portal.c`, and it runs before the portal looks for
+anything to update.
+
+**Under Steam's Game Mode the dialog may not be shown.** Game Mode's
+portal backend (`xdg-desktop-portal-holo`) isn't KDE's. On a Steam Deck,
+the first update tried in Game Mode failed, and the game fell back to
+"update it in Desktop Mode". Started from the desktop, the same update
+asked, was allowed, and went through. Once allowed, later updates need
+no dialog, Game Mode included.
+
+So the app asks at the desktop, before it matters. On its first start
+outside Game Mode, until the approval is given, it calls `Update` even
+with nothing newer. The dialog shows; the portal then finds nothing to
+do (`Progress` status 1) and the app notes in `updates.json` that it's
+allowed. A player who installs from Discover and starts the game once
+before going back to Game Mode never meets the problem.
+
+If an update still fails in Game Mode for want of the approval, the game
+says so: "Start the game once in Desktop Mode and choose Update when
+asked: from then on it updates itself, here too."
+
+If the player chose Deny, the store says no, and the dialog never comes
+again. The game says updates were turned down. To allow them again, run
+this in Konsole:
+
+    flatpak permission-set flatpak updates com.synthwavepixel.ultima5 yes
+
+or reset it with `flatpak permission-reset com.synthwavepixel.ultima5` so
+the next update asks again.
 
 ### The flow (`flatpakUpdates.cjs`)
 
@@ -50,8 +90,17 @@ copy carries on, and the next start is the new version.
    happens in the background; nobody waits at the title for it.
 2. Connect to the portal, check its version, and create an update
    monitor.
-3. Call `Update` when `UpdateAvailable` arrives, or at once if GitHub
-   already has a newer release; the portal's own check may be minutes away.
+3. Call `Update` at once if GitHub already has a newer release (the
+   portal's own check is half an hour away), or, at the desktop, to ask
+   the approval (above). When `UpdateAvailable` arrives, compare its
+   commits:
+   - `remote-commit` differs from `local-commit`: call `Update`.
+   - The same, but `local-commit` differs from `running-commit`: an
+     update is installed already (Discover, while the game played). Say
+     so, without calling `Update`.
+   - All three the same: nothing to do. That's the first check's signal,
+     and calling `Update` for it would ask the approval for nothing.
+
    Only one update at a time; nothing more once installed.
 4. On `Progress`:
    - **2 (done):** tell the game. At the title, a box says "Ultima V
@@ -88,8 +137,20 @@ copy carries on, and the next start is the new version.
 If the portal can't be had (no session bus, a flatpak older than 1.6) or
 the update fails, the app tells the player about the release instead.
 Outside Game Mode that's the release's page, as the macOS build does.
-Under Game Mode it's only the way to update ("Update it in Desktop Mode,
-from Discover"), since a browser there would leave the game behind.
+Under Game Mode it's only the way to update, since a browser there would
+leave the game behind. That depends on why it failed
+(`flatpakUpdates.cjs` `reason`, from `Progress`'s D-Bus error name):
+
+| Failure | Error | What the game says |
+|---|---|---|
+| The approval couldn't be asked | `NotSupported` ("No portal support found"), `ServiceUnknown`, `NoReply`, "Failed to show access dialog" | Start the game once in Desktop Mode and choose Update. |
+| The approval was refused | `AccessDenied` ("Application update not allowed") | Updates were turned down: allow them as the install guide says, or use Discover. |
+| The release adds a permission | "new version requires new permissions" | Update it in Desktop Mode, from Discover. |
+| Anything else (network, disk) | other | Update it in Desktop Mode, from Discover. |
+
+The failure is also kept in `updates.json` (`lastError`: message, reason,
+version, time), since Game Mode has no console to read it from. A later
+successful update clears it.
 
 ## Gotchas
 
@@ -127,6 +188,10 @@ from Discover"), since a browser there would leave the game behind.
   portal in that window is expected, not an error.
 - **The variants.** dbus-next hands `a{sv}` values back as
   `{ signature, value }`; `plain()` in `flatpakUpdates.cjs` unwraps them.
+- **The approval is asked, and can fail, before anything downloads.**
+  `Update` returns at once whatever happens, and the dialog runs in the
+  portal's update thread, so a missing dialog shows only as a `Progress`
+  error. See "The once-only approval".
 
 ## Testing
 
@@ -134,16 +199,25 @@ The D-Bus side is injected, so the tests run anywhere:
 
 - `web/tests/flatpakUpdates.test.ts` drives the flow with a fake portal
   (an update at once, the repository behind, Game Mode's quit, no portal,
-  a failed update). It also checks the exact D-Bus calls against a fake
+  a failed update, the approval asked at the desktop, the commits
+  compared, each failure's reason). It also checks the exact D-Bus calls against a fake
   bus: the version check, `CreateUpdateMonitor`, `Update`, and `Spawn`'s
   arguments.
 - `web/tests/characters.test.ts` checks the title screen's wording for
   each offer.
 
 What the tests can't show is the real portal. Check that on a Steam Deck:
-install a release, publish a newer one, wait for the Pages deploy, and
-start the game in Game Mode. The box should say the update is installed;
-quit, and start the game again from the library.
+
+1. Install a release from Discover and start it once from the desktop.
+   "Update Ultima V?" should appear; choose Update.
+   `flatpak permission-show com.synthwavepixel.ultima5` should then list
+   `flatpak updates com.synthwavepixel.ultima5 yes`.
+2. Publish a newer release and wait for the Pages deploy.
+3. Start the game in Game Mode. The box should say the update is
+   installed; quit, and start the game again from the library.
+
+If it falls back instead, `~/.var/app/com.synthwavepixel.ultima5/config/Ultima V/updates.json`
+holds `lastError`.
 
 ## To use it elsewhere
 
@@ -157,6 +231,8 @@ quit, and start the game again from the library.
    `spawnLatest()` then quit, or just quit under gamescope
    (`GAMESCOPE_WAYLAND_DISPLAY` set).
 4. Keep a fallback notice for when `connect()` returns null or the update
-   fails.
+   fails, worded by `reason`'s answer. Pass `approve: true` on starts
+   outside gamescope until `allowed()` has been called, and keep that.
+   Call the monitor's `close()` as the app quits.
 5. Change `COMMAND` if your Flatpak's command isn't electron-builder's
    `electron-wrapper`.

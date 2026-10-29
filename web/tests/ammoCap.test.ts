@@ -40,7 +40,7 @@ describe('the party’s ammunition', () => {
     expect([g.s.equipment[ARROWS], g.ammoExtra[ARROWS]]).toEqual([99, 1]);
     spendOne(g, ARROWS);
     spendOne(g, ARROWS);
-    expect([g.s.equipment[ARROWS], g.ammoExtra[ARROWS]]).toEqual([98, 0]);
+    expect([g.s.equipment[ARROWS], g.ammoExtra[ARROWS] ?? 0]).toEqual([98, 0]);
   });
 
   it('under Classic fills to 99 as 1988 did, and keeps more brought from the Modern rules without adding to it', () => {
@@ -84,5 +84,18 @@ describe('the party’s ammunition', () => {
     expect(ammoHeld(h, QUARRELS)).toBe(99);
     restore(h, { ...saved, ammo: { [QUARRELS]: 5000 } }); // not a count this game keeps
     expect(ammoHeld(h, QUARRELS)).toBe(99);
+  });
+
+  it('saves the same again once shot back down to 99, keeping nothing above it', () => {
+    const g = game();
+    addAmmo(g, ARROWS, 100);
+    addAmmo(g, QUARRELS, 5);
+    spendOne(g, ARROWS);
+    spendOne(g, QUARRELS);
+    expect(g.ammoExtra).toEqual({});
+    const saved = serialize(g);
+    const h = game();
+    restore(h, saved);
+    expect(serialize(h).ammo).toEqual(saved.ammo);
   });
 });

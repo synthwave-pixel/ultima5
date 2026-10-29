@@ -9,7 +9,8 @@
 //   'flatpak' - the Flatpak: through Flatpak's update portal (flatpakUpdates.cjs), the newer release pulled from the
 //              site's repository and deployed, a restart playing it - so a Steam Deck in Game Mode is kept up to date
 //              without Discover, which runs only in Desktop Mode. Where the portal cannot be had or the update fails,
-//              a notice instead: under Game Mode with no page offered, only the way to update (Discover).
+//              a notice instead: under Game Mode with no page offered, only the way to update - the once-only approval
+//              given in Desktop Mode where that is what failed (flatpakUpdates.cjs reason), else Discover.
 //   'none'   - the app run unpackaged (development); or --no-update-check.
 // What there is is told to the page (preload.cjs u5native.updates; web/src/ui/updates.ts), which says so in the
 // game's own way - a line in the title menu, and once a version a box over the title - and asks for the restart or
@@ -89,6 +90,8 @@ let relaunch = null;
  */
 let pending = null;
 let settle = null;
+/** The Flatpak's update monitor, closed as the game quits (closeUpdates). */
+let monitor = null;
 const updating = () => pending;
 const listeners = new Set();
 
@@ -158,14 +161,18 @@ async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates
   }
 }
 
-/** A newer release told of: its page offered, or (`page` false) only the way to it said. */
-function notice(latest, current, file, page) {
+/**
+ * A newer release told of: its page offered, or (`page` false) only the way to it said - with `why` the Flatpak's
+ * update failed where the way is not Discover's (the approval to give in Desktop Mode, or to give again).
+ */
+function notice(latest, current, file, page, why) {
   publish({
     kind: 'release',
     version: latest,
     current,
     told: !shouldNotice(latest, current, noticed(file)),
     ...(page ? {} : { page }),
+    ...(!page && (why === 'approve' || why === 'denied') ? { why } : {}),
   });
 }
 
@@ -183,16 +190,21 @@ async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
     console.warn('update check:', e?.message ?? e);
   }
   const newer = !!latest && isNewer(latest, current);
-  const fallback = () => newer && notice(latest, current, file, !quiet);
+  const fallback = (why) => newer && notice(latest, current, file, !quiet, why);
   const portal = await flatpak.connect();
   if (!portal) return void fallback();
   relaunch = quiet ? null : portal.spawnLatest;
   try {
-    await flatpak.watch({
+    monitor = await flatpak.watch({
       portal,
       newer,
+      // At the desktop, until allowed: the once-only approval asked now, where its dialog can be shown, not left to
+      // the first release - which may come under Game Mode, where it cannot (flatpakUpdates.cjs).
+      approve: !quiet && kept(file).approved !== true,
+      allowed: () => kept(file).approved !== true && keep(file, { approved: true }),
       installed: () => {
         console.log(`update: ${newer ? latest : 'a newer version'} installed by the flatpak portal`);
+        keep(file, { lastError: null });
         publish({
           kind: 'restart',
           installed: true,
@@ -202,9 +214,11 @@ async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
           told: false,
         });
       },
-      failed: (why) => {
-        console.warn('flatpak update:', why);
-        fallback();
+      failed: (message, why) => {
+        console.warn(`flatpak update (${why}):`, message);
+        // Kept for the player to send (updates.json), the Game Mode console out of reach.
+        keep(file, { lastError: { message, why, version: latest, at: new Date().toISOString(), quiet } });
+        fallback(why);
       },
       busy: (b) => {
         if (b) pending = new Promise((r) => (settle = r));
@@ -218,6 +232,13 @@ async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
     console.warn('flatpak update:', e?.message ?? e);
     fallback();
   }
+}
+
+/** The Flatpak's update monitor let go, the game quitting (main.cjs). */
+function closeUpdates() {
+  const m = monitor;
+  monitor = null;
+  return m?.close?.() ?? Promise.resolve();
 }
 
 /**
@@ -306,6 +327,7 @@ async function releaseNotes({ net, version }) {
 
 module.exports = {
   updating,
+  closeUpdates,
   lookForNews,
   currentNews,
   newsSeen,

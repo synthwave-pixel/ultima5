@@ -26,6 +26,7 @@ import { TICK_MS } from './effects.ts';
 import { T } from './tiles.ts';
 import { animateActors } from './frame.ts';
 import { groundAmong, isGround } from './world.ts';
+import { desktopModeWay } from '../ui/updates.ts';
 
 /** The proportional text's layout (D_5146..D_5158): two column spans by height, the space's width, and the pen. */
 export interface Prose {
@@ -797,7 +798,7 @@ export class Intro {
     const out = `${name} is out${offer.current ? `; this is ${offer.current}` : ''}.`;
     const text = !restart
       ? offer.page === false
-        ? `${out} Update it in Desktop Mode, from Discover. Your saved game carries over.`
+        ? `${out} ${desktopModeWay(offer)}`
         : `${out} Its page says what is new. Your saved game carries over.`
       : !offer.installed
         ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`

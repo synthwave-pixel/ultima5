@@ -32,10 +32,11 @@ export function ammoHeld(g: Game, item: number): number {
   return g.s.equipment[item] + (g.ammoExtra[item] ?? 0);
 }
 
-/** The count set: up to 99 in the byte, the rest above it. */
+/** The count set: up to 99 in the byte, the rest above it - none kept there at 99 or under, as a save takes it up. */
 function setHeld(g: Game, item: number, n: number): void {
   g.s.equipment[item] = Math.min(BYTE, n);
-  g.ammoExtra[item] = Math.max(0, n - BYTE);
+  if (n > BYTE) g.ammoExtra[item] = n - BYTE;
+  else delete g.ammoExtra[item];
 }
 
 /**

@@ -54,17 +54,21 @@ games.
      [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref).
      The browser saves a small file; open it from the browser's downloads
      and Discover shows Ultima V with an Install button, and asks for the
-     password that first time. Install once: the game updates itself
-     after that, even in Game Mode, and updates also arrive in
-     Discover with every other Flatpak's, with no prompt.
-  4. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
+     password that first time. Updates also arrive in Discover with every
+     other Flatpak's, with no prompt.
+  4. Start Ultima V once, still in Desktop Mode (Discover's Launch
+     button, or the application menu). Flatpak asks "Update Ultima V?";
+     choose Update. That lets the game update itself from then on, Game
+     Mode included, where the question can't be asked. You can quit
+     straight away.
+  5. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
      left, then Add a Non-Steam Game, tick Ultima V in the list, and click
      Add Selected Programs.
-  5. Return to Game Mode with the icon on the desktop, or restart. The
+  6. Return to Game Mode with the icon on the desktop, or restart. The
      game is in your library under Non-Steam. If the controls do not
      respond, open the shortcut's controller settings and pick a Gamepad
      template.
-  6. The first time you play it from Steam, the game gives its library
+  7. The first time you play it from Steam, the game gives its library
      entry its own artwork (cover, banner and logo); Steam shows it the
      next time Steam starts. Artwork you have set yourself is never
      replaced.

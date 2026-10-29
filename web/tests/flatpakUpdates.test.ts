@@ -1,18 +1,30 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { connect, STATUS, watch, type PortalConnection, type UpdateMonitor } from '../../desktop/flatpakUpdates.cjs';
-import { applyUpdate, checkForUpdates, currentOffer, updating } from '../../desktop/updates.cjs';
+import {
+  connect,
+  reason,
+  STATUS,
+  watch,
+  type Available,
+  type PortalConnection,
+  type UpdateMonitor,
+} from '../../desktop/flatpakUpdates.cjs';
+import { applyUpdate, checkForUpdates, closeUpdates, currentOffer, updating } from '../../desktop/updates.cjs';
 
 /** A portal of our own: what was asked of it, and its signals to send. */
 function fakePortal() {
-  const asked = { updates: 0, spawned: 0 };
-  const send = { available: () => {}, progress: (_p: { status: number; error_message?: string }) => {} };
+  const asked = { updates: 0, spawned: 0, closed: 0 };
+  const send = {
+    available: (_info?: Available) => {},
+    progress: (_p: { status: number; error?: string; error_message?: string }) => {},
+  };
   const monitor: UpdateMonitor = {
     onAvailable: (fn) => void (send.available = fn),
     onProgress: (fn) => void (send.progress = fn),
     update: async () => void asked.updates++,
+    close: async () => void asked.closed++,
   };
   const portal: PortalConnection = { createMonitor: async () => monitor, spawnLatest: async () => void asked.spawned++ };
   return { asked, send, portal };
@@ -51,6 +63,10 @@ describe('the Flatpak’s updates', () => {
     return { electron, quits };
   };
   const settle = () => new Promise((r) => setTimeout(r, 0));
+  /** The once-only approval given already (updates.json), as at any start but the first at the desktop. */
+  const allow = () => writeFileSync(join(dir, 'updates.json'), JSON.stringify({ approved: true }));
+  /** What updates.json keeps. */
+  const kept = (): { lastError?: unknown } => JSON.parse(readFileSync(join(dir, 'updates.json'), 'utf8')) as { lastError?: unknown };
 
   it('asks for the newer release at once, waits for the repository, and offers the restart into it', async () => {
     const { asked, send, portal } = fakePortal();
@@ -86,6 +102,7 @@ describe('the Flatpak’s updates', () => {
 
   it('up to date (or offline), waits for the portal to see a newer one', async () => {
     const { asked, send, portal } = fakePortal();
+    allow();
     await look(null, portal);
     expect(asked.updates).toBe(0);
     send.available();
@@ -124,6 +141,116 @@ describe('the Flatpak’s updates', () => {
     send.progress({ status: STATUS.error, error_message: 'no space' });
     expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.15', current: '1.1.10', told: false });
   });
+
+  // UpdateAvailable's commits (flatpak-portal.c): the portal's first look says them whether anything is newer or not.
+  const C = (running: string, local: string, remote: string): Available => ({
+    'running-commit': running,
+    'local-commit': local,
+    'remote-commit': remote,
+  });
+
+  it('asks for nothing when the portal’s look finds nothing newer - the approval never asked for no update', async () => {
+    const { asked, send, portal } = fakePortal();
+    allow();
+    await look(null, portal);
+    const before = currentOffer();
+    send.available(C('a', 'a', 'a'));
+    expect(asked.updates).toBe(0);
+    expect(currentOffer()).toBe(before); // nothing said
+    // The remote's commit beyond the deployed one: asked for.
+    send.available(C('a', 'a', 'b'));
+    expect(asked.updates).toBe(1);
+  });
+
+  it('tells of an update deployed already (by Discover, while playing) without asking for it again', async () => {
+    const { asked, send, portal } = fakePortal();
+    allow();
+    await look(null, portal);
+    send.available(C('a', 'b', 'b'));
+    expect(asked.updates).toBe(0);
+    expect(currentOffer()).toEqual({ kind: 'restart', installed: true, quits: false, current: '1.1.10', told: false });
+  });
+
+  it('under Game Mode, where the once-only approval cannot be asked, says to give it in Desktop Mode, and keeps why', async () => {
+    const { send, portal } = fakePortal();
+    await look('1.1.17', portal, true);
+    send.progress({ status: STATUS.error, error: 'org.freedesktop.DBus.Error.NotSupported', error_message: 'No portal support found' });
+    expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.17', current: '1.1.10', told: false, page: false, why: 'approve' });
+    expect(kept().lastError).toMatchObject({ message: 'No portal support found', why: 'approve', version: '1.1.17', quiet: true });
+    // Then allowed and installed: the failure let go.
+    const again = fakePortal();
+    await look('1.1.17', again.portal, true);
+    again.send.progress({ status: STATUS.done });
+    expect(kept().lastError).toBeNull();
+  });
+
+  it('turned down, says how to allow it again; a release asking for more permissions, Discover', async () => {
+    const a = fakePortal();
+    await look('1.1.18', a.portal, true);
+    a.send.progress({
+      status: STATUS.error,
+      error: 'org.freedesktop.DBus.Error.AccessDenied',
+      error_message: 'Application update not allowed',
+    });
+    expect(currentOffer()).toMatchObject({ page: false, why: 'denied' });
+    const b = fakePortal();
+    await look('1.1.19', b.portal, true);
+    b.send.progress({
+      status: STATUS.error,
+      error: 'org.freedesktop.DBus.Error.Failed',
+      error_message: 'Self update not supported, new version requires new permissions',
+    });
+    expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.19', current: '1.1.10', told: false, page: false });
+  });
+
+  it('asks the once-only approval at the first start at the desktop, nothing newer needed, and then no more', async () => {
+    const first = fakePortal();
+    await look(null, first.portal);
+    expect(first.asked.updates).toBe(1); // the portal asks the player before it looks for anything
+    first.send.progress({ status: STATUS.empty }); // allowed; nothing to update
+    expect(kept()).toMatchObject({ approved: true });
+    const next = fakePortal();
+    await look(null, next.portal);
+    expect(next.asked.updates).toBe(0);
+    // Turned down there: kept, and nothing told of with nothing newer out.
+    rmSync(join(dir, 'updates.json'));
+    const denied = fakePortal();
+    await look(null, denied.portal);
+    denied.send.progress({
+      status: STATUS.error,
+      error: 'org.freedesktop.DBus.Error.AccessDenied',
+      error_message: 'Application update not allowed',
+    });
+    expect(kept()).toMatchObject({ lastError: { why: 'denied' } });
+    expect(kept()).not.toHaveProperty('approved');
+  });
+
+  it('never asks it under Game Mode, where the dialog may not be shown, unless there is an update', async () => {
+    const { asked, portal } = fakePortal();
+    await look(null, portal, true);
+    expect(asked.updates).toBe(0);
+  });
+
+  it('names why an update failed from the portal’s error', () => {
+    expect(reason('org.freedesktop.DBus.Error.NotSupported', 'No portal support found')).toBe('approve');
+    expect(reason('org.freedesktop.DBus.Error.Failed', 'Failed to show access dialog')).toBe('approve');
+    expect(reason('org.freedesktop.DBus.Error.ServiceUnknown')).toBe('approve');
+    expect(reason('org.freedesktop.DBus.Error.AccessDenied', 'Application update not allowed')).toBe('denied');
+    expect(reason('org.freedesktop.DBus.Error.Failed', 'Self update not supported, new version requires new permissions')).toBe(
+      'permissions',
+    );
+    expect(reason('org.freedesktop.DBus.Error.Failed', 'No space left on device')).toBe('other');
+    expect(reason()).toBe('other');
+  });
+
+  it('lets the monitor go as the game quits', async () => {
+    const { asked, portal } = fakePortal();
+    await look(null, portal);
+    await closeUpdates();
+    expect(asked.closed).toBe(1);
+    await closeUpdates(); // once only
+    expect(asked.closed).toBe(1);
+  });
 });
 
 /** The D-Bus side (flatpakUpdates.cjs connect), against a bus of our own. */
@@ -149,6 +276,7 @@ describe('Flatpak’s update portal, on the bus', () => {
                   : {
                       on: (name: string, fn: (info: unknown) => void) => void (signals[name] = fn),
                       Update: async (...a: unknown[]) => void calls.push(['Update', ...a]),
+                      Close: async () => void calls.push(['Close']),
                     },
           };
         },
@@ -172,12 +300,18 @@ describe('Flatpak’s update portal, on the bus', () => {
     monitor.onProgress((p) => seen.push(p));
     signals.Progress({ status: { signature: 'u', value: 2 }, n_ops: { signature: 'u', value: 1 } });
     expect(seen).toEqual([{ status: 2, n_ops: 1 }]);
+    const found: unknown[] = [];
+    monitor.onAvailable((info) => found.push(info));
+    signals.UpdateAvailable({ 'local-commit': { signature: 's', value: 'a' }, 'remote-commit': { signature: 's', value: 'b' } });
+    expect(found).toEqual([{ 'local-commit': 'a', 'remote-commit': 'b' }]);
     await monitor.update();
     await portal.spawnLatest();
+    await monitor.close?.();
     expect(calls).toEqual([
       ['CreateUpdateMonitor', {}],
       ['Update', '', {}],
       ['Spawn', Buffer.from('/\0'), [Buffer.from('electron-wrapper\0')], {}, {}, 2, {}],
+      ['Close'],
     ]);
   });
 });
