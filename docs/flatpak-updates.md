@@ -102,6 +102,18 @@ from Discover"), since a browser there would leave the game behind.
   a maintained, pure-JavaScript fork of `dbus-next`. It needs no native
   module, so it doesn't complicate electron-builder's cross-platform
   builds, and it's only `require`d when the portal is actually used.
+- **The app needs the network itself.** The portal pulls the update on
+  the host, outside the sandbox, but the app's own GitHub check and the
+  release notes are fetched from inside it. Without `--share=network` in
+  `finishArgs`, Chromium sees no network at all
+  (`net::ERR_INTERNET_DISCONNECTED`), and the update waits for the
+  portal's own periodic look. This port shipped without it at first.
+- **The portal won't take an update that adds a permission.** A new
+  version asking for more than the installed one has (as adding
+  `--share=network` did) has to come through Discover or `flatpak update`,
+  which show the permission and ask. Updates that keep the permissions
+  the same go through the portal as usual. So settle the permissions
+  before relying on self-updates.
 - **The command to spawn.** electron-builder's flatpak target runs the
   app as `electron-wrapper` (in `/app/bin`, which wraps `zypak-wrapper`
   around Electron), so that is the `argv` given to `Spawn`. Each `ay`
@@ -137,6 +149,7 @@ quit, and start the game again from the library.
 
 1. Copy `flatpakUpdates.cjs` and add `@particle/dbus-next` as a
    dependency (listed in electron-builder's `files` so it's packaged).
+   Make sure the Flatpak's `finishArgs` include `--share=network`.
 2. Detect the Flatpak (`FLATPAK_ID` set, or `container=flatpak`) and run
    `connect()`, then `watch({ portal, newer, installed, failed })` a few
    seconds after start.

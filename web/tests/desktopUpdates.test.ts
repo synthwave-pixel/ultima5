@@ -146,4 +146,13 @@ describe('the desktop app’s updates', () => {
     expect(await releaseNotes({ net: net(true), version: '1.1.168' })).toBe('Rules\n- 999 arrows');
     expect(await releaseNotes({ net: net(false), version: '1.1.168' })).toBeNull();
   });
+
+  it('has the network in the Flatpak: GitHub’s newest release, and a release’s notes, are looked for from inside it', () => {
+    // Without it Chromium sees no network at all (net::ERR_INTERNET_DISCONNECTED) and the update waits on the portal's
+    // own look. The portal will not take an update that adds a permission: this one came by Discover.
+    const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
+      build: { flatpak: { finishArgs: string[] } };
+    };
+    expect(pkg.build.flatpak.finishArgs).toContain('--share=network');
+  });
 });
