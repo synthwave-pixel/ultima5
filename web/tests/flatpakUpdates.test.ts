@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { connect, STATUS, watch, type PortalConnection, type UpdateMonitor } from '../../desktop/flatpakUpdates.cjs';
-import { applyUpdate, checkForUpdates, currentOffer } from '../../desktop/updates.cjs';
+import { applyUpdate, checkForUpdates, currentOffer, updating } from '../../desktop/updates.cjs';
 
 /** A portal of our own: what was asked of it, and its signals to send. */
 function fakePortal() {
@@ -100,6 +100,22 @@ describe('the Flatpak’s updates', () => {
     const { electron } = await look('1.1.14', null, true);
     expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.14', current: '1.1.10', told: false, page: false });
     expect(applyUpdate({ electron })).toBe(false); // nothing to open
+  });
+
+  it('says while an update is coming down, for a quit to wait for it (main.cjs), and when it ends', async () => {
+    const { send, portal } = fakePortal();
+    await look('1.1.16', portal);
+    const pending = updating();
+    expect(pending).not.toBeNull();
+    let ended = false;
+    void pending!.then(() => (ended = true));
+    send.progress({ status: STATUS.running });
+    await settle();
+    expect(ended).toBe(false);
+    send.progress({ status: STATUS.done });
+    await settle();
+    expect(ended).toBe(true);
+    expect(updating()).toBeNull();
   });
 
   it('when the update fails, tells of the release instead', async () => {

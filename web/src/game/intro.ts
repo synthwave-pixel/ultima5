@@ -741,7 +741,37 @@ export class Intro {
   /** Whether a newer version waits to be told of (updateBox). */
   private updateDue(): boolean {
     const offer = this.g.hooks.update?.offer();
-    return !!offer && !offer.told;
+    return (!!offer && !offer.told) || !!this.g.hooks.update?.news?.();
+  }
+
+  /**
+   * The first start of a newer version (the desktop app's), said once in a box of its own over the title: updated
+   * from what, and What's new - the release's notes, fetched from GitHub, as the game's own text pages. Whether the
+   * box was shown (the title to be drawn again).
+   */
+  private async newsBox(): Promise<boolean> {
+    const g = this.g;
+    const update = g.hooks.update;
+    const news = update?.news?.();
+    if (!update || !news) return false;
+    update.newsSeen?.();
+    g.p.flushKeys();
+    const { choose, showText, wrap } = await import('./menu.ts');
+    const lines = [
+      ...wrap(`Updated to Ultima V ${news.version}, from ${news.from}. Your saved game carries over.`).map((label) => ({
+        label,
+        enabled: false,
+      })),
+      { label: '', enabled: false },
+    ];
+    const i = await choose(g, 'Updated', [...lines, { label: "What's new" }, { label: 'OK' }], lines.length, true);
+    if (i !== lines.length) return true;
+    const notes = await update.notes?.(news.version);
+    const text = notes
+      ? notes.split('\n').flatMap((l) => (l.trim() === '' ? [''] : wrap(l)))
+      : wrap("The release's notes could not be fetched here. They are on the game's Releases page.");
+    await showText(g, `What's new in ${news.version}`, text);
+    return true;
   }
 
   /** The first of the title menu's lines shown, where there are more than its box holds (menu). */
@@ -1583,7 +1613,7 @@ export class Intro {
       let keys = this.menuKeys();
       while (key <= 0x20) {
         // An update may come down while the title waits: its box, once a version, and its line added then.
-        if (await this.updateBox()) {
+        if ((await this.newsBox()) || (await this.updateBox())) {
           await this.title(false);
           this.titleMenu(choice);
         }

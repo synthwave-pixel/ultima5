@@ -28,11 +28,23 @@ export interface UpdateOffer {
   page?: boolean;
 }
 
-/** The game's view of it (Game.hooks.update): the offer now, taking it up, and the player told of it. */
+/** The first start of a newer version (the desktop app's: desktop/updates.cjs lookForNews): it, and the one before. */
+export interface UpdateNews {
+  version: string;
+  from: string;
+}
+
+/**
+ * The game's view of it (Game.hooks.update): the offer now, taking it up, and the player told of it; and, the desktop
+ * app's, the first start of a newer version - the player told of it once - and a release's notes (null offline).
+ */
 export interface UpdateHook {
   offer: () => UpdateOffer | null;
   apply: () => void;
   told: () => void;
+  news?: () => UpdateNews | null;
+  newsSeen?: () => void;
+  notes?: (version: string) => Promise<string | null>;
 }
 
 export const RELEASES = 'https://github.com/synthwave-pixel/ultima5/releases/latest';
@@ -58,15 +70,23 @@ export interface DesktopUpdates {
   apply: () => Promise<unknown>;
   told: () => Promise<unknown>;
   onChange: (listener: (offer: UpdateOffer | null) => void) => void;
+  news?: () => Promise<UpdateNews | null>;
+  newsSeen?: () => Promise<unknown>;
+  notes?: (version: string) => Promise<string | null>;
 }
 
 /** The desktop app's offer, kept as its main process tells it. */
 export function desktopUpdates(bridge: DesktopUpdates): UpdateHook {
   let offer: UpdateOffer | null = null;
+  let news: UpdateNews | null = null;
   bridge.onChange((o) => (offer = o));
   void bridge
     .offer()
     .then((o) => (offer ??= o))
+    .catch(() => undefined);
+  void bridge
+    .news?.()
+    .then((n) => (news = n))
     .catch(() => undefined);
   return {
     offer: () => offer,
@@ -75,6 +95,12 @@ export function desktopUpdates(bridge: DesktopUpdates): UpdateHook {
       if (offer) offer = { ...offer, told: true };
       void bridge.told().catch(() => undefined);
     },
+    news: () => news,
+    newsSeen: () => {
+      news = null;
+      void bridge.newsSeen?.().catch(() => undefined);
+    },
+    notes: (version) => bridge.notes?.(version).catch(() => null) ?? Promise.resolve(null),
   };
 }
 

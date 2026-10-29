@@ -998,6 +998,34 @@ describe('an update at the title', () => {
     expect(calls).toEqual({ applied: 0, told: 1 });
   });
 
+  it('says, at the first start of a newer version, that it was updated - and its notes, on What’s new', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    let news: { version: string; from: string } | null = { version: '1.1.168', from: '1.1.166' };
+    const asked: string[] = [];
+    const { p } = await atTitleWith(
+      (g) => {
+        g.hooks.update = {
+          offer: () => null,
+          apply: () => undefined,
+          told: () => undefined,
+          news: () => news,
+          newsSeen: () => void (news = null),
+          notes: async (v) => (asked.push(v), 'Menus\n\n- The command menu sits low in the view.'),
+        };
+        g.hooks.quit = () => undefined;
+        endWhenDone(g);
+      },
+      Pad.A, // What's new
+      K.Escape, // its notes closed
+    );
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('Updated to Ultima V 1.1.168, from 1.1.166.');
+    expect(asked).toEqual(['1.1.168']);
+    expect(said).toContain('The command menu sits low');
+    expect(news).toBeNull(); // told once
+  });
+
   it('fits the menu unscrolled where there is room, the web’s update line saying no version', async () => {
     const { webUpdates } = await import('../src/ui/updates.ts');
     make('Iolo', 7);

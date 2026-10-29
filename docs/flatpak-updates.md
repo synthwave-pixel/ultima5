@@ -45,17 +45,22 @@ copy carries on, and the next start is the new version.
 
 ### The flow (`flatpakUpdates.cjs`)
 
-1. A few seconds after the window is up, look at GitHub's newest release
-   (the same check the other builds make).
+1. As soon as the app starts, look at GitHub's newest release (the same
+   check the other builds make). The game plays on while the rest
+   happens in the background; nobody waits at the title for it.
 2. Connect to the portal, check its version, and create an update
    monitor.
 3. Call `Update` when `UpdateAvailable` arrives, or at once if GitHub
    already has a newer release; the portal's own check may be minutes away.
    Only one update at a time; nothing more once installed.
 4. On `Progress`:
-   - **2 (done):** tell the game. Its title screen says "Ultima V 1.1.165
-     is installed. Restart to play it now", in the same box and menu line
-     the other builds use (`web/src/ui/updates.ts`, `intro.ts`).
+   - **2 (done):** tell the game. At the title, a box says "Ultima V
+     1.1.165 is installed. Restart to play it now", in the same box and
+     menu line the other builds use (`web/src/ui/updates.ts`, `intro.ts`).
+     In play, a line in the message log says it instead, before the next
+     turn, interrupting nothing (`input.ts`), and the Pause menu keeps an
+     Update line. A restart is never offered from play: it would lose the
+     game since the last save, so the line says to Save and quit.
    - **1 (empty):** do nothing yet. The release is out but the repository
      doesn't have it, because the Pages deploy runs a few minutes after
      the release job. The portal's `UpdateAvailable` comes once it does.
@@ -64,6 +69,19 @@ copy carries on, and the next start is the new version.
    quit. **Under Steam's Game Mode, only quit.** A process started outside
    Steam isn't shown in Game Mode, so the box says "Quit, and start the
    game again" and Steam's next launch runs the new version.
+6. **Quitting mid-download waits for it.** The portal gives up an update
+   when the app that asked for it goes away, so a short session could
+   otherwise never finish one. While an update is coming down, closing
+   the window (or the game's Quit) is held: the page shows "Finishing the
+   update…" (`preload.cjs`) and the app quits when the update ends, or
+   after a minute at most (`main.cjs` `holdForUpdate`). Only a quit the
+   app can see is held; Steam's Exit game, which kills the process, isn't.
+7. **The first start after an update says so.** The app keeps the version
+   it last ran (`updates.json`). When a newer one starts, by whatever route
+   the update came, the title shows "Updated to Ultima V 1.1.168, from
+   1.1.166" with a **What's new** button. That fetches the release's notes
+   from GitHub and shows them, Markdown stripped, as the game's own text
+   pages, which works under Game Mode where a browser wouldn't.
 
 ### The fallback
 

@@ -69,7 +69,7 @@ a Quit, for a full screen or Steam's Game Mode where the window has no
 close button, and only one copy runs at a time: launching it again brings
 the open one forward, so two copies never write over each other's save.
 
-**Updates.** A few seconds after it starts, the app looks for a newer
+**Updates.** As soon as it starts, the app looks for a newer
 release on the Releases page, and says so in the game itself: a box over
 the title screen, once for each version, and an Update line in the title
 menu (Update (1.1.44)) until it is taken. Installed with the Windows
@@ -83,8 +83,10 @@ opening the release's page in your browser; Obtainium can update it for
 you instead. The Flatpak updates itself through Flatpak's own update
 service, so a Steam Deck kept in Game Mode stays up to date without a trip
 to Discover: the new version is installed in the background, the title
-screen says so, and Restart now plays it (under Game Mode, Quit now, and
-start the game again from your library). Where that service can't be had,
+screen says so (in play, a line in the message log), and Restart now plays
+it (under Game Mode, Quit now, and start the game again from your library).
+Quitting while one is still coming down waits for it to finish, a minute at
+most, and the first start of a new version says what is new in it. Where that service can't be had,
 it tells you of the release instead, and Discover updates it with every
 other Flatpak's ([how it works](flatpak-updates.md)).
 `--no-update-check` on the command line turns the check off; under

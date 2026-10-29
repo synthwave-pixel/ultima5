@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('u5native', {
     onChange: (listener) => {
       ipcRenderer.on('update-offer-changed', (_event, offer) => listener(offer));
     },
+    /** The first start of a newer version ({ version, from }, or null), the player told of it, and a release's notes. */
+    news: () => ipcRenderer.invoke('update-news'),
+    newsSeen: () => ipcRenderer.invoke('update-news-seen'),
+    notes: (version) => ipcRenderer.invoke('update-notes', version),
   },
   fullScreen: {
     /** Whether the window is full screen; made so first if `on` is given. */
@@ -25,4 +29,23 @@ contextBridge.exposeInMainWorld('u5native', {
       ipcRenderer.on('full-screen-changed', (_event, on) => listener(on === true));
     },
   },
+});
+
+// Quitting while the Flatpak's update comes down (main.cjs holdForUpdate): said over the game until it is done.
+ipcRenderer.on('update-finishing', () => {
+  const note = document.createElement('div');
+  note.textContent = 'Finishing the update\u2026';
+  note.setAttribute('role', 'status');
+  Object.assign(note.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0, 0, 0, 0.75)',
+    color: '#fff',
+    font: '24px sans-serif',
+    zIndex: '2147483647',
+  });
+  document.body.appendChild(note);
 });

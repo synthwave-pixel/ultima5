@@ -22,7 +22,18 @@ const { homedir } = require('node:os');
 const { writeFileSync, existsSync } = require('node:fs');
 const { scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
-const { applyUpdate, checkForUpdates, currentOffer, onOffer, toldOfUpdate } = require('./updates.cjs');
+const {
+  applyUpdate,
+  checkForUpdates,
+  currentNews,
+  currentOffer,
+  lookForNews,
+  newsSeen,
+  onOffer,
+  releaseNotes,
+  toldOfUpdate,
+  updating,
+} = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 
@@ -44,6 +55,8 @@ if (inGamescope) {
 const APP_DIR = join(__dirname, 'app');
 const SCHEME = 'app';
 const HOST = 'ultima5';
+/** How long a quit waits for the Flatpak's update to finish coming down (holdForUpdate). */
+const UPDATE_HOLD_MS = 60_000;
 
 protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
@@ -152,13 +165,16 @@ app.whenReady().then(() => {
     return net.fetch(pathToFileURL(file).toString());
   });
   // Nothing in the game needs a permission prompt; deny them all rather than show a dialog.
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write'));
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) =>
+    callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write'),
+  );
   // The installer's Scan for game files... (preload.cjs): the copies scan.cjs finds, only the files the page names.
   // Only the game's own page (the app:// scheme) may ask; a frame from anywhere else is answered with no copies.
   ipcMain.handle('scan-game-files', (event, names) =>
     String(event.senderFrame?.url ?? '').startsWith('app://') && Array.isArray(names) && names.every((n) => typeof n === 'string')
       ? scanForGameFiles(names)
-      : []);
+      : [],
+  );
   // The touch pad's full-screen button (preload.cjs): whether the window is full screen, set first if `on` is given.
   // Only the game's own page may ask.
   ipcMain.handle('full-screen', (event, on) => {
@@ -174,10 +190,30 @@ app.whenReady().then(() => {
   ipcMain.handle('update-offer', (event) => (fromGame(event) ? currentOffer() : null));
   ipcMain.handle('update-apply', (event) => fromGame(event) && applyUpdate({ electron }));
   ipcMain.handle('update-told', (event) => void (fromGame(event) && toldOfUpdate({ file: updatesFile })));
+  // The first start of a newer version, for the title to say once, and that release's notes for its What's new.
+  lookForNews({ app, file: updatesFile });
+  ipcMain.handle('update-news', (event) => (fromGame(event) ? currentNews() : null));
+  ipcMain.handle('update-news-seen', (event) => void (fromGame(event) && newsSeen()));
+  ipcMain.handle('update-notes', (event, version) =>
+    fromGame(event) && typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version) ? releaseNotes({ net, version }) : null,
+  );
   const win = createWindow();
   onOffer((o) => {
     if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);
   });
+  // Quitting while the Flatpak's update is coming down (updates.cjs updating): the portal would give it up with the
+  // game, so the window stays, saying so (preload.cjs), until it is done - a minute at most - and then the game goes.
+  let leaving = false;
+  const holdForUpdate = (event) => {
+    const pending = updating();
+    if (leaving || !pending) return;
+    event.preventDefault();
+    leaving = true;
+    if (!win.isDestroyed()) win.webContents.send('update-finishing');
+    void Promise.race([pending, new Promise((r) => setTimeout(r, UPDATE_HOLD_MS))]).then(() => app.quit());
+  };
+  win.on('close', holdForUpdate);
+  app.on('before-quit', holdForUpdate);
   // Launched from a non-Steam shortcut, the first time: Steam's library artwork put in place (steamArt.cjs), a moment
   // after the window is up, apart from everything else. It never throws, and what it did is only logged.
   setTimeout(() => {
@@ -191,8 +227,9 @@ app.whenReady().then(() => {
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
   }, 3000);
-  // Newer releases looked for once the game is up (updates.cjs); no page offered under Game Mode. Never in a smoke test.
-  if (!process.env.ULTIMA5_SMOKE) setTimeout(() => void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile }), 5000);
+  // Newer releases looked for at once (updates.cjs), the game playing on while one comes down; no page offered under
+  // Game Mode. Never in a smoke test.
+  if (!process.env.ULTIMA5_SMOKE) void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile });
   // A smoke test (smoke.cjs): screenshot once the game is up, then quit. Looked for every half second, from six seconds
   // after the page loads, for up to thirty: a slow runner (Windows CI's, once) was not up at a single look at six.
   const shot = process.env.ULTIMA5_SMOKE;

@@ -1579,6 +1579,30 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
             : 'Not now.';
     return { rest: true, note: why };
   };
+  /**
+   * A newer version (ui/updates.ts), as the title's menu has it: its release's page opened from here; one installed or
+   * come down said only - a restart from play would lose the game since the last save, so the way is Save and quit.
+   */
+  const updateLine = (): Setting[] => {
+    const update = g.hooks.update;
+    const offer = update?.offer();
+    if (!update || !offer?.version) return [];
+    const name = `Ultima V ${offer.version}`;
+    const say = (text: string) => async (): Promise<void> => void (await showText(g, 'Update', wrap(text)));
+    return [
+      {
+        label: `Update (${offer.version})`,
+        act:
+          offer.kind === 'restart'
+            ? say(
+                `${name} ${offer.installed ? 'is installed' : 'has downloaded'}. It starts the next time you play: Save and quit, and start the game again, to play it now.`,
+              )
+            : offer.page === false
+              ? say(`${name} is out. Update it in Desktop Mode, from Discover. Your saved game carries over.`)
+              : () => update.apply(),
+      },
+    ];
+  };
   /** Party order greyed where it cannot be had, saying why, the bar resting on it: in a fight, inside a command, alone. */
   const partyOrder = (): Partial<Item> => {
     const why =
@@ -1645,6 +1669,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           label: 'Cheats',
           act: () => cheatsMenu(g),
         },
+        ...updateLine(),
         {
           // Pointers for a new player (tips.ts): where to go first, and how the game's parts work.
           label: 'Tips',

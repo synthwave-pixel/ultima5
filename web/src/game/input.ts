@@ -404,6 +404,20 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
   g.casting = false;
   // The Upgrade asks for the map's tune whenever the game waits for a command (its hook in ULTIMA_1b38).
   musicForMap(g);
+  // A newer version come down while playing (ui/updates.ts: the desktop app's, installed or to be on quitting): said in
+  // the log, once, before the turn - nothing to answer, the game going on. The title's box is not shown for it after.
+  const update = g.hooks.update;
+  const offer = update?.offer();
+  if (update && offer && !offer.told && offer.kind === 'restart' && offer.version && g.inPlay) {
+    update.told();
+    const { commandPrompt } = await import('./frame.ts');
+    g.print(
+      offer.installed
+        ? `Ultima V ${offer.version} is installed: it starts the next time you play.\n`
+        : `Ultima V ${offer.version} has downloaded: it is installed when you quit.\n`,
+    );
+    commandPrompt(g);
+  }
   // This character played in another window too: said here, before the turn (otherWindows.ts).
   if (g.otherWindow !== null) {
     const { warnOfOtherWindow } = await import('./otherWindows.ts');

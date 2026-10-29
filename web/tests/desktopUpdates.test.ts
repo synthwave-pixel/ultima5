@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -7,6 +7,11 @@ import {
   checkForUpdates,
   currentOffer,
   isNewer,
+  lookForNews,
+  newsSeen,
+  currentNews,
+  plainNotes,
+  releaseNotes,
   onOffer,
   RELEASES,
   shouldNotice,
@@ -103,5 +108,42 @@ describe('the desktop app’s updates', () => {
       Object.defineProperty(process, 'platform', { value: was.platform });
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('say, once, that this is the first start of a newer version - not on the first run, nor running unpackaged', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'u5-news-'));
+    const file = join(dir, 'updates.json');
+    try {
+      const app = (version: string, isPackaged = true) => ({ app: { isPackaged, getVersion: () => version }, file });
+      expect(lookForNews(app('1.1.166'))).toBeNull(); // the first run: nothing to compare with
+      expect(lookForNews(app('1.1.166'))).toBeNull(); // the same again
+      expect(lookForNews(app('1.1.168'))).toEqual({ version: '1.1.168', from: '1.1.166' });
+      expect(currentNews()).toEqual({ version: '1.1.168', from: '1.1.166' });
+      newsSeen();
+      expect(currentNews()).toBeNull();
+      expect(lookForNews(app('1.1.168'))).toBeNull(); // started again: said already
+      expect(lookForNews(app('1.1.170', false))).toBeNull(); // a development run
+      // Kept beside the release last told of, not over it.
+      writeFileSync(file, JSON.stringify({ noticed: '1.1.170', lastRun: '1.1.168' }));
+      lookForNews(app('1.1.170'));
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ noticed: '1.1.170', lastRun: '1.1.170' });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('give a release’s notes as plain lines, its Markdown and compare link let go; none offline', async () => {
+    expect(
+      plainNotes('### Menus\n\n- **The command menu** sits low ([why](https://x)).\n  - `Sh. Sword`\n\n\n**Full Changelog**: https://y'),
+    ).toBe('Menus\n\n- The command menu sits low (why).\n  - Sh. Sword');
+    const net = (ok: boolean) => ({
+      fetch: async (url: string) => {
+        if (!ok) throw new Error('offline');
+        expect(url).toMatch(/\/releases\/tags\/v1\.1\.168$/);
+        return { ok: true, json: async () => ({ body: '### Rules\n- **999** arrows' }) };
+      },
+    });
+    expect(await releaseNotes({ net: net(true), version: '1.1.168' })).toBe('Rules\n- 999 arrows');
+    expect(await releaseNotes({ net: net(false), version: '1.1.168' })).toBeNull();
   });
 });
