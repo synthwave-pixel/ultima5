@@ -171,6 +171,9 @@ export class Game {
   mapName = ' '.repeat(12);
   /** D_6a34: the ambient sound's eight-step beat. */
   ambientBeat = 0;
+  /** When the clock last sounded (ms, Platform.now), and whether the tock comes next. */
+  clockAt = -Infinity;
+  clockTock = false;
   /** D_6a08: the bard's banjo tune's note. */
   banjoNote = 0;
   /** D_217e..D_2186: up to two lighthouses in the map, and the beam's step. */

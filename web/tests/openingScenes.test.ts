@@ -85,3 +85,64 @@ describe('the title’s scenes', () => {
     expect(Math.abs(modern.tiles * 2 - pc.tiles)).toBeLessThanOrEqual(2);
   });
 });
+
+describe("the title's scenes' companions", () => {
+  /** How each drawing of a figure was dressed, in the scene banners' order, over a watch of the scenes. */
+  async function dressed(looks: Record<string, Appearance> | null) {
+    const { g, p } = newGame();
+    Object.assign(g.options, { tileSet: 'standard', tiles: 'modern-pc' });
+    if (looks) {
+      g.companionLooks = new Map(Object.entries(looks));
+      localSave.write(g);
+    }
+    let dress: { look: Appearance } | null = null;
+    const shamino: (Appearance | null)[] = [];
+    const iolo: (Appearance | null)[] = [];
+    const home: (Appearance | null)[] = [];
+    Object.assign(p.draw, { dressAs: (d: { look: Appearance } | null) => (dress = d) });
+    Object.assign(p.fx, {
+      tilePx: (t: number) => {
+        if (t >= 0x148 && t <= 0x14b) shamino.push(dress ? dress.look : null);
+        if (t >= 0x144 && t <= 0x147) iolo.push(dress ? dress.look : null);
+        if (t >= 0x150 && t <= 0x153) home.push(dress ? dress.look : null);
+      },
+    });
+    let n = 0;
+    Object.assign(p, { pollKey: () => (++n > 6000 ? 0x20 : 0) });
+    await (new Intro(g) as unknown as { view(): Promise<void> }).view();
+    return { shamino, iolo, home };
+  }
+  const mine: Appearance = { figure: 0, skin: 1, hair: 2, main: 3, trim: 4 };
+  const his: Appearance = { figure: 0, skin: 2, hair: 3, main: 5, trim: 6 };
+
+  it('draws Shamino the fighter and Iolo the bard, as the player made them at a mirror', async () => {
+    const { shamino, iolo, home } = await dressed({ Shamino: mine, Iolo: his });
+    expect(shamino.length).toBeGreaterThan(0);
+    for (const look of shamino) expect(look).toEqual(mine);
+    expect(iolo.length).toBeGreaterThan(0);
+    for (const look of iolo) expect(look).toEqual(his);
+    for (const look of home) expect(look).toBeNull();
+  });
+
+  it('gives them their own colours with no save', async () => {
+    const { shamino, iolo, home } = await dressed(null);
+    expect(shamino.length).toBeGreaterThan(0);
+    for (const look of shamino) expect(look).not.toBeNull();
+    expect(iolo.length).toBeGreaterThan(0);
+    for (const look of iolo) expect(look).not.toBeNull();
+    expect(home.length).toBeGreaterThan(0); // the first scene's shepherd is no one's
+    for (const look of home) expect(look).toBeNull();
+  });
+
+  it('keeps the script’s figures where the tiles dress no one', async () => {
+    const { p, g } = newGame();
+    Object.assign(g.options, { tileSet: 'standard', tiles: 'apple2' });
+    const drawn: number[] = [];
+    Object.assign(p.fx, { tilePx: (t: number) => drawn.push(t) });
+    let n = 0;
+    Object.assign(p, { pollKey: () => (++n > 6000 ? 0x20 : 0) });
+    await (new Intro(g) as unknown as { view(): Promise<void> }).view();
+    expect(drawn.some((t) => t >= 0x144 && t <= 0x147)).toBe(true);
+    expect(drawn.some((t) => t >= 0x148 && t <= 0x14b)).toBe(false);
+  });
+});

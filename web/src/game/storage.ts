@@ -15,7 +15,9 @@ import { Fog, type FogData } from './fog.ts';
 import { Vocabulary, type WordData } from './words.ts';
 import { Game, type Note } from './game.ts';
 import { Save, SAVE_SIZE } from './save.ts';
+import { preset } from './companions.ts';
 import { Win } from './frame.ts';
+import type { Dressing } from './io.ts';
 import { addressedAsLady, type Appearance, LADY, validAppearance } from './appearance.ts';
 import { placeTitle } from './journal.ts';
 import { SETTINGS_KEY } from './settings.ts';
@@ -197,6 +199,21 @@ export function savedAvatar(): { look: Appearance; lady: boolean } | null {
   const saved = localSave.read();
   if (!saved) return null;
   return { look: validAppearance(saved.appearance), lady: new Save(fromBase64(saved.save)).members[0].gender === LADY };
+}
+
+/**
+ * How companion `name` looks in the title's scenes, where no game is loaded: as the saved game has them, a mirror's
+ * colours kept; with no save, or none of that name in it, as they begin, of the roster's trade if it knows them.
+ */
+export function savedDressing(g: Game, name: string): Dressing {
+  const saved = localSave.read();
+  const members = saved ? new Save(fromBase64(saved.save)).members : g.s.members;
+  const member = members.find((m) => m.name === name);
+  const made = saved && typeof saved.companions === 'object' && saved.companions !== null ? saved.companions[name] : undefined;
+  return {
+    look: made ? validAppearance(made) : preset(name, member?.cls ?? 0),
+    lady: member?.gender === LADY,
+  };
 }
 
 /** A save kept: the key it is stored under, and the game. */

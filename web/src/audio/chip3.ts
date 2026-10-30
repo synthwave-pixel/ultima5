@@ -1247,14 +1247,26 @@ export function u3Effect(name: string, k = 1, circle = 1, r: () => number = () =
       });
       return peak(fit(sweepLow(mix(...parts, at(chord([48, 55], 1.69, 'tri', ad(0.3, 1.69, 0.005)), 0.4)), 2500, 400), 1.69, 0.3), -20);
     }
-    case 'IntroHit':
-      // The opening story's blow: the hit, longer and deeper, a soft minor chord rising under it for the drama.
+    case 'ShadowBolt':
+      // A Shadowlord's bolt fired, in the opening's scene: a dark charge tearing upward as it flies to its mark.
       return peak(
-        mix(thud(85, 0.07, 0.55), sweepLow(noise(0.3, 12000, perc(0.07, 0.3), 0x8181), 3000, 220), [
-          at(swell([45, 48, 52], 1.2, 'tri'), 0.45),
-          0.05,
-        ]),
-        -12,
+        mix(
+          tone(0.34, glide(70, 620, 0.34), 'p25', ad(0.03, 0.34, 0.02)),
+          noise(0.34, glide(900, 9000, 0.34), ad(0.05, 0.34, 0.02), 0x8282),
+          [tone(0.3, glide(240, 1500, 0.3), 'p12', ad(0.02, 0.3, 0.02)), 0.04],
+        ),
+        -11,
+      );
+    case 'IntroHit':
+      // The opening's bolt landing: a thunderous crack, the blow's weight, the air rolling after it, a dark chord under.
+      return peak(
+        mix(
+          crack(0x7171),
+          thud(55, 0.08, 0.9),
+          [echo(rumble(1.2, 0x7272), 0.24, 0.35, 2), 0.03],
+          [swell([33, 45, 48, 52], 1.5, 'tri'), 0.1],
+        ),
+        -9,
       );
     case 'Revive':
       // The endgame's healing: a sparkle rising into Rule Britannia's opening.

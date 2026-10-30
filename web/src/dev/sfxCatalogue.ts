@@ -276,7 +276,7 @@ export const ABOUT: Record<string, About> = {
     'shops.ts healingLight, menu.ts',
     'Places and events',
   ),
-  introhit: a('Introduction blow', 'In the opening story, the blow that strikes.', 'once', 'intro.ts', 'Places and events'),
+  introhit: a('Introduction blow', 'In the opening’s scene, the Shadowlord’s bolt landing.', 'once', 'intro.ts', 'Places and events'),
 
   // The story.
   sceptre: a(
@@ -338,6 +338,13 @@ export const FAMILY: Record<string, About> = {
 
 /** The port's own sounds, where the DOS game had none or one sound served two things (game/cues.ts). */
 export const CUES: Record<string, About & { original?: string }> = {
+  ShadowBolt: a(
+    'A Shadowlord’s bolt',
+    'In the opening’s scene, the bolt as it flies. 1988 had no sound for it.',
+    'once',
+    'intro.ts',
+    'Places and events',
+  ),
   DoorOpen: a('Door opened', 'Opening a door: a latch and a soft knock.', 'often', 'items.ts openCommand', 'Places and events'),
   DoorClose: a(
     'Door swings shut',

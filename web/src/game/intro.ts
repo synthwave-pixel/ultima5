@@ -16,15 +16,15 @@ import { Game } from './game.ts';
 import { menuSound, titleShown } from './menu.ts';
 import { asPad, upper } from './input.ts';
 import { addressedAsLady, customisable, DEFAULT_APPEARANCE } from './appearance.ts';
-import { K, Pad, type Place } from './io.ts';
+import { K, Pad, type Place, type Dressing } from './io.ts';
 import { introTune, playTune, Tune } from './music.ts';
 import { Save } from './save.ts';
-import { characters, currentCharacter, localSave, restore, roomForCharacter, savedAvatar } from './storage.ts';
+import { characters, currentCharacter, localSave, restore, roomForCharacter, savedAvatar, savedDressing } from './storage.ts';
 import { chooseCharacter, MAX_CHARACTERS, newCharacter } from './characters.ts';
 import { loadOptions, saveOptions } from './settings.ts';
 import { TICK_MS } from './effects.ts';
 import { T } from './tiles.ts';
-import { animateActors } from './frame.ts';
+import { animateActors, clockTick } from './frame.ts';
 import { groundAmong, isGround } from './world.ts';
 import { desktopModeWay } from '../ui/updates.ts';
 
@@ -76,11 +76,24 @@ export function titleBanner(g: Game, text: string): void {
   rightArrow(g);
 }
 
+/** A companion in the scenes: their colours, and the figure (its first frame, less the actors' 0x100) they are drawn as. */
+interface SceneCompanion {
+  dress: Dressing;
+  figure: number;
+}
+
 /**
  * A scene's squares from column `lo` to `hi`, as the attract mode draws them: `map` the scene with its people (a 0
  * square has someone standing, their tile at +0x80), `copy` the scene without them; a 0xfe square is left as it is.
  */
-export function drawScene(g: Game, map: Uint8Array, copy: Uint8Array, lo = 0, hi = 0x12): void {
+export function drawScene(
+  g: Game,
+  map: Uint8Array,
+  copy: Uint8Array,
+  lo = 0,
+  hi = 0x12,
+  companionOf?: (figure: number) => SceneCompanion | null,
+): void {
   const fx = g.p.fx;
   // The ground under a thing that stands, from the scene's squares round it (the scene without its people), as a
   // towne's view gives it (world.ts groundAmong): for the Standard look, which draws a tree or a chair on a clear
@@ -115,8 +128,13 @@ export function drawScene(g: Game, map: Uint8Array, copy: Uint8Array, lo = 0, hi
       const a = map[x + y * 32 + 0x80];
       // Someone standing: on the square's own tile, and that on the ground round it if it is a thing.
       const under = copy[y * 32 + x];
-      if (a !== 0x16)
-        fx.tilePx(0x100 + a, px, py, g.cycles.shown[under], isGround(under) ? undefined : groundAt(x, y, under), placeAt(x, y));
+      if (a !== 0x16) {
+        const companion = companionOf?.(a);
+        if (companion) g.draw.dressAs?.(companion.dress);
+        const figure = companion ? companion.figure + (a & 3) : a;
+        fx.tilePx(0x100 + figure, px, py, g.cycles.shown[under], isGround(under) ? undefined : groundAt(x, y, under), placeAt(x, y));
+        if (companion) g.draw.dressAs?.(null);
+      }
     }
   };
   for (let x = lo; x <= hi; x++) for (let y = 0; y < 4; y++) if (map[y * 32 + x] !== 0xfe) drawCell(x, y);
@@ -148,6 +166,13 @@ const TITLE_MENU_ROW = 112;
 /** The Avatar's walking figure (its first frame, less the actors' 0x100), and the shepherd's, at home in the first scene. */
 const AVATAR_FIGURE = 0x4c;
 const HOME_FIGURE = 0x50;
+/** Shamino's figure in the scenes' script (the bard's), in The Arrival struck by the Shadowlord's bolt and in The Welcoming. */
+const SHAMINO_FIGURE = 0x44;
+/** The Welcoming, whose figure in the first scene's dress (HOME_FIGURE) is Iolo. */
+const WELCOMING = 3;
+/** The figures they walk as in the game, their trades' (companions.ts figureOf): Shamino the fighter, Iolo the bard. */
+const SHAMINO_WALKS = 0x48;
+const IOLO_WALKS = 0x44;
 
 /** Names the port offers a player who would rather not think of one. They are the port's own. */
 const SUGGESTED = [
@@ -1333,6 +1358,14 @@ export class Intro {
     // the Modern; the scenes' own script keeps 1988's time. The water and the other moving tiles: in the Modern look at
     // the map's pace too, every other tick (screen.ts IDLE_MS), where 1988's scenes ran them each tick, twice as fast.
     let pass = 0;
+    // The companions the scenes show, Shamino and Iolo: their figures as in the game, their colours as the player's
+    // saved game has them (companions.ts). Where the tiles dress no one, the script's own figures.
+    const shamino = customisable(g) ? savedDressing(g, 'Shamino') : null;
+    const iolo = customisable(g) ? savedDressing(g, 'Iolo') : null;
+    const companionOf = (figure: number): SceneCompanion | null => {
+      if (shamino && (figure & 0xfc) === SHAMINO_FIGURE) return { dress: shamino, figure: SHAMINO_WALKS };
+      return iolo && scene.n === WELCOMING && (figure & 0xfc) === HOME_FIGURE ? { dress: iolo, figure: IOLO_WALKS } : null;
+    };
     /** FONT_02fc: `n` frames of the scene; true if a key was pressed. */
     const frames = async (n: number): Promise<boolean> => {
       do {
@@ -1350,7 +1383,7 @@ export class Intro {
           map[c] = 0;
           map[c + 0x80] = a.anim;
         }
-        drawScene(g, map, copy, scene.lo, scene.hi);
+        drawScene(g, map, copy, scene.lo, scene.hi, companionOf);
         if (scene.lo !== 0 && scene.grow !== 0) {
           scene.lo--;
           scene.hi++;
@@ -1361,8 +1394,7 @@ export class Intro {
         if (!g.soundOff && scene.sound === 2) void g.sound.noise(0x14, 0x3c, 10000);
         else if (!g.soundOff && scene.sound === 3) {
           scene.beat = (scene.beat + 1) & 7;
-          if (scene.beat === 0) void g.sound.tone(3000, 3);
-          else if (scene.beat === 4) void g.sound.tone(2000, 3);
+          clockTick(g, scene.beat);
         }
       } while (--n !== 0);
       return false;
@@ -1381,11 +1413,15 @@ export class Intro {
     /** ULTIMA_1068 in the attract mode: reveal a tile, a frame of the scene every eight pixels. */
     const revealTile = async (tile: number, x: number, y: number): Promise<boolean> => {
       const [px, py] = tileAtPx(x, y);
+      const companion = tile >= 0x100 ? companionOf(tile - 0x100) : null;
+      const shown = companion ? 0x100 + companion.figure + (tile & 3) : tile;
       for (let step = 0; step < 0x100; ) {
+        if (companion) d.dressAs?.(companion.dress);
         for (let k = 0; k < 4 && step < 0x100; k++) {
-          fx.revealPx(tile, px, py, step++);
-          fx.revealPx(tile, px, py, step++);
+          fx.revealPx(shown, px, py, step++);
+          fx.revealPx(shown, px, py, step++);
         }
+        if (companion) d.dressAs?.(null);
         if (step >= 0x100) return false;
         if (await frames(1)) return true;
       }
@@ -1480,6 +1516,8 @@ export class Intro {
             break;
           }
           case 0xb: {
+            // The bolt's firing as it flies (the port's: 1988 sounded only the blow it lands).
+            if (!g.soundOff) void g.sound.cue?.('ShadowBolt');
             for (let i = 0; i < 5; i++) {
               if (await frames(1)) return;
               const lx = i * 9;

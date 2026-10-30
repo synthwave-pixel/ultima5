@@ -808,6 +808,21 @@ export function invertMember(g: Game, i: number): void {
 
 // --- Ambient sound --------------------------------------------------------------
 
+/** How long a clock's tick and its tock lie apart (ms). */
+const CLOCK_BEAT_MS = 5000;
+
+/**
+ * A clock's next sound, if due: tick and tock in turn, five seconds apart by the page's clock, as the frames come at no
+ * steady pace; by `beat` (eight to the round) where no clock runs.
+ */
+export function clockTick(g: Game, beat: number): void {
+  const now = g.p.now?.();
+  if (now === undefined ? beat !== 0 && beat !== 4 : now - g.clockAt < CLOCK_BEAT_MS) return;
+  if (now !== undefined) g.clockAt = now;
+  if (!g.soundOff) void g.sound.tone(g.clockTock ? 2000 : 3000, 3);
+  g.clockTock = !g.clockTock;
+}
+
 /** ULTIMA_4102: the nearest clock ticks, waterfall rushes, fountain splashes or bard plays. */
 export function ambientSound(g: Game): void {
   const s = g.s;
@@ -833,8 +848,7 @@ export function ambientSound(g: Game): void {
   switch (kind) {
     case 1:
       if (s.d5884 !== 0 && (beat === 0 || beat === 4)) void snd?.pulse(0xc2c, 1, 2000, 20000, -10);
-      else if (beat === 0) void snd?.tone(3000, 3);
-      else if (beat === 4) void snd?.tone(2000, 3);
+      else clockTick(g, beat);
       break;
     case 2:
       snd?.nearby?.(nearest);

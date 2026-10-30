@@ -144,7 +144,7 @@ function apparition(): Score {
 /** Each effect's score, by its key (sfxKeys.ts); `variant` for the ones rendered several ways (VARIANTS). */
 export const SCORES: Record<string, (variant: number) => Score> = {
   // --- Every turn ---
-  // A clock's tick and tock: a woodblock's dry knock, gone before the next (one each 0.44 s, frame.ts ambientSound) - a
+  // A clock's tick and tock: a woodblock's dry knock, gone before the next (one each five seconds, frame.ts clockTick) - a
   // marimba's swell ran each into the next, a hum.
   tickhigh: (v) => score(0.15, [[note(0, 79, 0.04, P.woodblock, [60, 70, 65][v % 3])]]),
   ticklow: (v) => score(0.15, [[note(0, 74, 0.04, P.woodblock, [60, 70, 65][v % 3])]]),

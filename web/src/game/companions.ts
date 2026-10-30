@@ -48,7 +48,7 @@ export const PRESETS: Readonly<Record<string, Preset>> = {
 const MAGE = 'M'.charCodeAt(0);
 
 /** The companion's look as they begin: their preset's colours (hair for a mage), the people's skin. */
-function preset(name: string, cls: number): Appearance {
+export function preset(name: string, cls: number): Appearance {
   const p = PRESETS[name];
   const hue = (h: Hue): number => Math.max(0, HUES.indexOf(h));
   if (!p) return { figure: 0, skin: PEOPLE_SKIN, hair: 0, main: 0, trim: 0 };

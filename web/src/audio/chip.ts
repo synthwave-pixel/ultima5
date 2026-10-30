@@ -339,9 +339,9 @@ export function standard(effect: Effect | null, kind: Kind, args: number[], r: R
     case 'denylo':
       return glide(330 * detune, 311 * detune, 0.06, -22 + quiet, 0.25);
     case 'tickhigh':
-      return pluck(1760 * detune, 0.02, -27 + quiet, 0);
+      return pluck(1760 * detune, 0.02, -33 + quiet, 0);
     case 'ticklow':
-      return pluck(1320 * detune, 0.02, -27 + quiet, 0);
+      return pluck(1320 * detune, 0.02, -33 + quiet, 0);
     case 'attack':
       return hiss(0.09, -19 + quiet, 22000, 600 * detune, 2600 * detune, 0.05);
     case 'damage': {

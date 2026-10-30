@@ -59,7 +59,7 @@ const RATE = 44100;
 /** How long a sound may ring past its score's length, faded over that time (seconds). */
 const RING = 0.5;
 /** Each sound's level: its loudest 100 ms, dBFS. */
-const LEVEL = { standout: -20, repeated: -27, other: -24, tap: -34 };
+const LEVEL = { standout: -20, repeated: -27, other: -24, tap: -34, tick: -33 };
 /** Opus at 48 kbps, in Ogg, as the music is. */
 const CODEC = ['-c:a', 'libopus', '-b:a', '48k'];
 
@@ -181,7 +181,13 @@ function sounds(): { key: string; score: Score; level: number }[] {
   for (const [key, make] of Object.entries(SCORES))
     for (let v = 0; v < (VARIANTS[key] ?? 1); v++) {
       const score = make(v);
-      const level = score.standout ? LEVEL.standout : REPEATED.has(key) ? LEVEL.repeated : LEVEL.other;
+      const level = /^tick(high|low)$/.test(key)
+        ? LEVEL.tick
+        : score.standout
+          ? LEVEL.standout
+          : REPEATED.has(key)
+            ? LEVEL.repeated
+            : LEVEL.other;
       out.push({ key, score, level });
     }
   for (const family of BANKED)
