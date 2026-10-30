@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { autoKey } from '../src/game/autocombat.ts';
-import { enemy, snapTargets } from '../src/game/combat.ts';
+import { attackCommand, enemy, snapTargets } from '../src/game/combat.ts';
 import { contextual } from '../src/game/menu.ts';
 import { switchWeapon } from '../src/game/switchWeapon.ts';
 import { CF } from '../src/game/game.ts';
@@ -100,5 +100,56 @@ describe('a bow with no arrows', () => {
     s.equipment[ARROWS] = 5;
     expect(snapTargets(g, 0)).toEqual([6]);
     expect(contextual(g)[0].label).toMatch(/^Attack \(Bow/);
+  });
+
+  it('stands aside for a spiked helm, which strikes on: no "No arrows!" while another blow can be struck', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    const s = g.s;
+    Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff });
+    for (const c of g.combat) c.flags = 0;
+    Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1, dex: 10 });
+    Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+    Object.assign(g.combat[6], { who: 0x14, x: 3, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
+    Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 3, y: 5, z: 0 });
+    const e = s.members[0].equips;
+    [e[0], e[2], e[3]] = [0x03, BOW, 0xff]; // Spiked Helm; Bow
+    s.equipment[ARROWS] = 0;
+    g.commandPrompt = 'combat';
+    g.options.autoAim = g.autoAim = true;
+    expect(snapTargets(g, 0)).toEqual([6]);
+    expect(contextual(g)[0].label).not.toMatch(/no arrows/);
+    await attackCommand(g, 0, 2);
+    expect(p.log).toContain('Spiked Helm:');
+    expect(p.log).not.toContain('No arrows!');
+    expect(p.log).not.toContain('Bow');
+    expect(g.cancelled).toBe(false);
+  });
+
+  it('is switched from by auto combat in every fight, not only the first from that square', async () => {
+    const turn = async (): Promise<number> => {
+      const { g } = newGame();
+      journeyOnward(g);
+      const s = g.s;
+      Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff, partySize: 1 });
+      for (const c of g.combat) c.flags = 0;
+      Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1 });
+      Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+      Object.assign(g.combat[6], { who: 0x14, x: 8, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
+      Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 8, y: 5, z: 0 });
+      s.equipment.fill(0);
+      s.equipment[0x1e] = 1; // a long sword in the pack
+      s.members[0].str = 30;
+      s.members[0].equips.fill(0xff);
+      s.members[0].equips[2] = BOW;
+      g.options.autoCombat = 'all';
+      g.commandPrompt = 'combat';
+      const k = await autoKey(g);
+      if (k === 0x57) expect(switchWeapon(g, 0).said).toMatch(/Long Sword/);
+      expect(g.options.autoCombat).toBe('all');
+      return k;
+    };
+    expect(await turn()).toBe(0x57);
+    expect(await turn()).toBe(0x57); // the same square and hands, a fight later (autocombat.ts switchWanted)
   });
 });

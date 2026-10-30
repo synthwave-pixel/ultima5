@@ -38,7 +38,7 @@ import {
 } from './settings.ts';
 import { A, T } from './tiles.ts';
 import { groundAt, tileAt, setTileAt, buildLightMap } from './world.ts';
-import { unequip, unloaded, CLASSES, readyCommand, THROWN_KEPT } from './zstats.ts';
+import { hasAmmo, unequip, unloaded, CLASSES, readyCommand, THROWN_KEPT } from './zstats.ts';
 import { getCommand, jimmyCommand, openCommand, searchCommand } from './items.ts';
 import { pushCommand, yellCommand } from './cmds.ts';
 import { Colour } from '../ui/colours.ts';
@@ -1712,8 +1712,8 @@ export async function attackWith(g: Game, i: number, weapon: number): Promise<vo
   }
 }
 
-/** Whether what is worn or held there strikes: a weapon, a spiked helm or shield. */
-const strikes = (g: Game, item: number): boolean => item !== 0xff && g.data.bytes(0x15fc, 0x38)[item] !== 0;
+/** Whether what is worn or held there strikes: a weapon, a spiked helm or shield - not a bow with nothing to shoot. */
+const strikes = (g: Game, item: number): boolean => item !== 0xff && g.data.bytes(0x15fc, 0x38)[item] !== 0 && hasAmmo(g, item);
 
 /** What leaves the hand when it strikes past a neighbour: the dagger, the flaming oil, the spear, the throwing axe. */
 const THROWN = [0x10, 0x13, 0x15, 0x16];
@@ -3147,6 +3147,7 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
   g.autoProgress = Infinity;
   g.autoIdle = 0;
   g.autoHeld = false;
+  g.autoSwitchedAt = '';
   g.savedActorBytes.set(s.b.subarray(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100));
   let fight = true;
   if (flags === 0) {

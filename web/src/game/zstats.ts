@@ -608,12 +608,18 @@ export function hasAmmo(g: Game, item: number): boolean {
 
 /**
  * What member `m` has in hand that has nothing to shoot - "No arrows", "No quarrels" - or null: a bow or crossbow kept
- * there with none, as the Modern and Story rules keep it (unloadedRefused). Attack says so and strikes nothing
+ * there with none, as the Modern and Story rules keep it (unloadedRefused), and no other blow to strike. Attack says so and strikes nothing
  * (combat.ts attackEach), and no foe is marked for a snap attack (combat.ts snapTargets).
  */
 export function unloaded(g: Game, m: number): string | null {
-  const w = g.s.members[m].equips.find((e) => (e === 0x1a || e === 0x24 || e === 0x1c) && !hasAmmo(g, e));
-  return w === undefined ? null : w === 0x1c ? 'No quarrels' : 'No arrows';
+  const e = g.s.members[m].equips;
+  const empty = (i: number): boolean => (i === 0x1a || i === 0x24 || i === 0x1c) && !hasAmmo(g, i);
+  const w = e.find(empty);
+  if (w === undefined) return null;
+  // Another of the member's blows - a spiked helm's - is struck without it (combat.ts strikes).
+  const blows = g.data.bytes(0x15fc, 0x38);
+  if ([0, 2, 3].some((h) => e[h] !== 0xff && blows[e[h]] !== 0 && !empty(e[h]))) return null;
+  return w === 0x1c ? 'No quarrels' : 'No arrows';
 }
 
 /**

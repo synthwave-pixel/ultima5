@@ -359,7 +359,8 @@ describes how the Modern look is drawn.
   press on a gamepad or the touch pad puts the game in controller mode,
   and a held button does not repeat into a second turn.
 - **The command menu** lists what the surroundings call for first, names
-  the weapon in hand ("Attack (Bow)") and leads with it when it reaches,
+  the weapon in hand ("Attack (Bow)", or "Attack (no arrows)" for a bow
+  with nothing to shoot) and leads with it when it reaches,
   dims what the party has not the means for - no mixture to cast, no
   torch, no gem, no key - and leaves out what has no meaning where it
   stands. The spells the moment calls for are each a line of it, cast
@@ -840,7 +841,8 @@ other hurt in the game kills as it always did.
   a fallen gargoyle leaves where they lie on the way to a foe. A member
   Switches Weapon to their ranged arms when no foe is within reach or three
   squares - never of itself to the party's flasks of oil - and back to
-  melee with a foe beside them or the last arrow loosed; it strikes only
+  melee with a foe beside them or the last arrow loosed (with no melee
+  arms to take up, the fight is handed back); it strikes only
   where Attack would reach a foe, a shot or a throw along a clear line -
   and with the hand Attack asks first, where none reaches a creature (a
   spiked helm swung before the axe at a charmed friend), else it closes

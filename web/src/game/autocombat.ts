@@ -52,12 +52,9 @@ function creatureReach(g: Game, kind: number): number {
   return Math.max(1, g.data.bytes(0x159c, 0x30)[kind] ?? 1);
 }
 
-/** Where auto combat last took up other arms: not again from the same place and the same hands (switchWanted). */
-let lastSwitch = '';
-
 /**
  * Whether member combatant `me` should Switch Weapon now: from a ranged weapon with a foe beside them (where a
- * ranged attack is interrupted), or from no weapon at all (the last arrow loosed puts the bow away), to their melee
+ * ranged attack is interrupted), or from no weapon at all (a bow with nothing to shoot counts as none), to their melee
  * arms; from melee arms with no foe within their reach nor within 3 squares (a switch is a turn each way, a foe so
  * near closed with sooner), to their ranged - a dagger, spear or axe to throw reaching only as far as the arm here, so
  * that a bow is drawn before the stock is thrown away. Only where Switch Weapon would
@@ -77,8 +74,8 @@ function switchWanted(g: Game, me: (typeof g.combat)[number], foes: { x: number;
   // Not of itself to arms that are used up as they are thrown - the party's flasks of oil: the player's to spend.
   if (want === 'ranged' && plan.items.some((i) => THROWN.includes(i))) return false;
   const place = `${g.s.combatTurn},${me.x},${me.y},${hands.join('.')}`;
-  if (place === lastSwitch) return false;
-  lastSwitch = place;
+  if (place === g.autoSwitchedAt) return false;
+  g.autoSwitchedAt = place;
   return true;
 }
 

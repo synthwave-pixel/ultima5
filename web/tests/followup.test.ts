@@ -156,6 +156,7 @@ describe("a bump attack's later blows", () => {
           [5, 6, 3],
         ],
       );
+      g.s.equipment[0x1b] = 20; // arrows for the bow
       const past = foePast(g, me, 1, 0)!;
       expect(past).toMatchObject({ x: 8, y: 5 });
       expect(followUpFoe(g, me, BOW, past)).toBe(past);
