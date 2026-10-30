@@ -247,6 +247,32 @@ describe('the path through the Underworld', () => {
     }
   });
 
+  it('blinks over a range of mountains in Britannia too', async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    const s = g.s;
+    const land = readBritannia(g.data.files, g.data.ovl).tiles;
+    // A square of grass with mountains to its north and grass beyond them, well inside the loaded map.
+    let at = -1;
+    for (let i = 40 * 256 + 40; i < 216 * 256 && at < 0; i++) {
+      if (i % 256 < 40 || i % 256 > 216 || land[i] !== T.Grass || canEnter(g, 0x1c, land[i - 256])) continue;
+      if (land[i - 512] === T.Grass) at = i;
+    }
+    expect(at).toBeGreaterThanOrEqual(0);
+    stashWorldActors(g);
+    const [x, y] = [at % 256, at >> 8];
+    Object.assign(s, { mapId: 0, level: 0, x, y, activeMember: 0 });
+    const inPor = 0x11;
+    s.mixtures[inPor] = 1;
+    Object.assign(s.members[0], { level: 8, mp: 40 });
+    await play(g, p, 'C', ...g.data.table(0x1c30, 0x30)[inPor], K.Enter, K.Up);
+    expect(p.log).toMatch(/IN +POR/);
+    expect(s.x).toBe(x);
+    expect(s.y).toBeLessThan(y - 1);
+    expect(land[s.y * 256 + s.x]).toBe(T.Grass);
+    expect(s.level).toBe(0);
+  });
+
   it('blinks over a range of mountains in the Underworld', async () => {
     const { g, p } = newGame();
     journeyOnward(g);

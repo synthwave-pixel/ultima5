@@ -116,6 +116,10 @@ export const TIPS: Tip[] = [
       'Horses: stables in North Britanny, Trinsic and Paws.',
       'Ships: shipwrights in East Britanny and other towns... The ship waits at the dock.',
       'A sextant can tell where the party is at night...',
+      'Blink (In Por) leaps over mountains and other barriers, on the surface or below, to the farthest grass in its line.',
+      'Bards sing of a mysterious flying carpet, said to be hidden in a high place...',
+      'Some peaks can be climbed on foot, with the right gear. Ask around...',
+      'Sailors fear whirlpools. Few ask where they lead...',
     ],
   },
   {
