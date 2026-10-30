@@ -454,6 +454,7 @@ describe('bump to attack', () => {
           if (foes.length && foes.every((c) => d(c) > 1)) {
             const e = s.members[0].equips;
             [e[0], e[2], e[3]] = [0x03, 0x24, 0xff]; // Spiked Helm; Magic Bow
+            s.equipment[0x1b] = 20; // and arrows for it
             asked = true;
             g.options.input = 'controller';
             g.options.autoAim = false; // every blow aimed by hand, as auto combat's Attack is

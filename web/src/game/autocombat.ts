@@ -22,7 +22,7 @@ import { CF, Game } from './game.ts';
 import { K } from './io.ts';
 import { eased, saveOptions } from './settings.ts';
 import { armsKind, handsOf, planSwitch } from './switchWeapon.ts';
-import { THROWN } from './zstats.ts';
+import { THROWN, unloaded } from './zstats.ts';
 import { T } from './tiles.ts';
 import { tileAt } from './world.ts';
 
@@ -239,6 +239,12 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   const d = reach(f.x, f.y, me.x, me.y);
   // The arms in hand the wrong ones for the fight as it stands: Switch Weapon (switchWeapon.ts), its turn spent.
   if (member && switchWanted(g, me, foes)) return 0x57;
+  // A bow or crossbow with nothing to shoot and no melee arms to switch to (kept in hand with the Modern and Story
+  // rules): Attack would only say so, again and again - the player's to choose what this member does.
+  if (member && unloaded(g, me.who)) {
+    handBack(g);
+    return 0;
+  }
   // A member strikes where Attack would find a foe for one of their hands (combat.ts canStrike: a shot or a throw
   // only along a clear line) - else, as with a weapon reaching no foe, its aim backed out of again and again; a
   // creature on the party's side by its reach.

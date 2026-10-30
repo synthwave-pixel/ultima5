@@ -38,7 +38,7 @@ import {
 } from './settings.ts';
 import { A, T } from './tiles.ts';
 import { groundAt, tileAt, setTileAt, buildLightMap } from './world.ts';
-import { unequip, CLASSES, readyCommand, THROWN_KEPT } from './zstats.ts';
+import { unequip, unloaded, CLASSES, readyCommand, THROWN_KEPT } from './zstats.ts';
 import { getCommand, jimmyCommand, openCommand, searchCommand } from './items.ts';
 import { pushCommand, yellCommand } from './cmds.ts';
 import { Colour } from '../ui/colours.ts';
@@ -1338,10 +1338,11 @@ export function weaponLabel(g: Game, weapon: number): string {
 }
 
 /**
- * COMSUBS_097c: ammunition spent (arrows, bolts), thrown weapons given up. The last arrow put every bow away, the
- * magic bow with the plain (the port's: the original put away only the kind that shot it, and the other, left in
- * hand with none, shot on - the count wrapping to 255 arrows). What the last arrow or quarrel put away is said, after
- * the shot (the port's: 1988 put it away without a word): returned, to be.
+ * COMSUBS_097c: ammunition spent (arrows, bolts), thrown weapons given up. With the Classic rules the last arrow put
+ * every bow away, the magic bow with the plain (the port's: the original put away only the kind that shot it, and the
+ * other, left in hand with none, shot on - the count wrapping to 255 arrows); with the Modern and Story rules the bows
+ * stay in hand, to shoot again once more are bought (zstats.ts unloadedRefused). The last arrow or quarrel is said,
+ * after the shot, with what it put away (the port's: 1988 put it away without a word): returned, to be.
  */
 export function spendAmmo(g: Game, weapon: number, range: number): string | null {
   const s = g.s;
@@ -1361,6 +1362,7 @@ export function spendAmmo(g: Game, weapon: number, range: number): string | null
     case 0x24:
       spendOne(g, 0x1b);
       if (s.equipment[0x1b] === 0) {
+        if (easedRules(g)) return 'Last arrow!';
         const n = refill(0x1a, 0x24);
         if (n) return `Last arrow! ${n > 1 ? 'Bows' : 'Bow'} put away.`;
       }
@@ -1368,6 +1370,7 @@ export function spendAmmo(g: Game, weapon: number, range: number): string | null
     case 0x1c:
       spendOne(g, 0x1d);
       if (s.equipment[0x1d] === 0) {
+        if (easedRules(g)) return 'Last quarrel!';
         const n = refill(0x1c);
         if (n) return `Last quarrel! ${n > 1 ? 'Crossbows' : 'Crossbow'} put away.`;
       }
@@ -1609,18 +1612,20 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number)
     if (s.d588f !== 0 && effectsOf(g.options.soundChoice) !== 'original') await g.p.sleep(BOLT_BEAT_MS);
     await g.sound.sweep(0x514, 300, 5, 100);
   }
+  // The last flask thrown leaves the hand empty, and is said after the throw as the last arrow is (the port's).
+  let lastFlask = false;
   if (weapon === 0x13) {
     if (s.equipment[weapon] !== 0) s.equipment[weapon]--;
-    else unequip(g, g.combat[s.combatTurn].who, weapon);
+    else lastFlask = unequip(g, g.combat[s.combatTurn].who, weapon);
   }
   const a = s.actors[g.combat[i].actor];
   a.b7 = 0xff;
   const target = combatantAt(g, s.crossX, s.crossY);
   let victim: number;
-  let spent: string | null = null;
+  let spent: string | null = lastFlask ? 'Last flask!' : null;
   if (target > -1) {
     a.b7 = target;
-    spent = spendAmmo(g, weapon, d);
+    spent = spendAmmo(g, weapon, d) ?? spent;
     victim = await missileAt(g, i, s.crossX, s.crossY, hitRoll(g, target, i, -s.d588f, weapon), missile);
   } else {
     victim = await missileAt(g, i, s.crossX, s.crossY, true, missile);
@@ -1913,6 +1918,15 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
     return;
   }
   const m = s.members[g.combat[i].who];
+  // A bow or crossbow in hand with nothing to shoot: said, and the turn given back, to switch weapons or do something
+  // else (the port's).
+  const empty = unloaded(g, g.combat[i].who);
+  if (empty) {
+    if (g.text.win.x > 1) g.printChar('\n');
+    g.print(`${empty}!\n`);
+    g.cancelled = true;
+    return;
+  }
   // A hand's aim backed out of ends the command there (the port's). If no hand has struck yet, the turn is not spent
   // (playerTurn asks again); if one has, it is - backing out of the second blow is not a way to a free first one.
   // Snap attacks (the port's): a foe walked into takes every hand's blow where followUpFoe sends it from that foe, without
@@ -1977,11 +1991,11 @@ function nearestFirst(g: Game, i: number, js: number[]): number[] {
 /**
  * The foes member combatant `i`'s snap attack (X, Snap attacks on) could open on, as attackEach would: those the first
  * hand to reach one reaches - a shot only along a clear line - or with no weapon, those beside them; the nearest
- * first. None, for a creature.
+ * first. None, for a creature, or a member whose bow has nothing to shoot (unloaded).
  */
 export function snapTargets(g: Game, i: number): number[] {
   const c = g.combat[i];
-  if (!c || (c.flags & CF.Player) === 0 || onMonsterSide(g, i)) return [];
+  if (!c || (c.flags & CF.Player) === 0 || onMonsterSide(g, i) || unloaded(g, c.who)) return [];
   const foes: number[] = [];
   for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j)) foes.push(j);
   const hands = [0, 2, 3].map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));

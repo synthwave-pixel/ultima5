@@ -280,8 +280,8 @@ has the whole list; the highlights:
   now "How art thou addressed?", since that is all it ever decided.
 - **One setting for the rules**: Story, Modern or Classic. Modern (the
   default) lets poison and hunger wound rather than kill, shares
-  experience, keeps back your last dagger or spear, adds a little to
-  armour, lets the party step over the chests and loot a fight leaves,
+  experience, keeps back your last dagger, spear or throwing axe, adds a
+  little to armour, lets the party step over the chests and loot a fight leaves,
   and eases sleep, charm and what a fight can breed - a daemon that
   possesses one of the party is cast out again. Story eases it all
   further; Classic is 1988's game as the Apple II plays it. [The rules

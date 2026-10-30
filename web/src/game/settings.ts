@@ -101,7 +101,7 @@ export type InputMode = 'letters' | 'controller';
  * The game's rules, one setting (Gameplay, and Thine Adventure's question at a character's making):
  *
  * - Classic: 1988's game as the Apple II has it. Poison and hunger kill; a kill's experience is all its striker's;
- *   the last dagger or spear may be thrown away; armour alone soaks a blow; a sleeper wakes as in 1988 and a charm
+ *   the last dagger, spear or axe may be thrown away; armour alone soaks a blow; a sleeper wakes as in 1988 and a charm
  *   holds the fight through; dividing and gating in are unbounded, a summoner gating in 1 turn in 32 (the DOS game's
  *   1 in 8); a pass-out frees every possessed member; the mimic's armour 8 (the DOS game's 3).
  * - Modern: eased. Poison stops at 1 hit point and hunger at half the party's; experience shared; the last dagger or
@@ -162,8 +162,8 @@ export const starvation = (o: Pick<Options, 'rules'>): 'deadly' | 'damage' | 'ha
 export const balancedXp = (o: Pick<Options, 'rules'>): boolean => o.rules !== 'classic';
 
 /**
- * The last dagger or spear in the party's hands kept back, though it still strikes at arm's length (the eased rules);
- * with the Classic, thrown away as the original has it.
+ * The last dagger, spear or axe in the party's hands kept back, though it still strikes at arm's length (the eased
+ * rules); with the Classic, thrown away as the original has it.
  */
 export const keepsLastThrow = (o: Pick<Options, 'rules'>): boolean => o.rules !== 'classic';
 

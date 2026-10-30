@@ -63,11 +63,11 @@ describe('throwing the last one', () => {
     }
   });
 
-  it('lets everything else fly, spares or none', async () => {
+  it('keeps back the last throwing axe too, and lets everything else fly, spares or none', async () => {
     const { keepsLastThrown } = await import('../src/game/combat.ts');
     const { g } = armed(0x16);
     g.options.rules = 'modern';
-    expect(keepsLastThrown(g, 0x16)).toBe(false); // throwing axe
+    expect(keepsLastThrown(g, 0x16)).toBe(true); // throwing axe: the last one kept
     expect(keepsLastThrown(g, 0x13)).toBe(false); // flame oil
     expect(keepsLastThrown(g, 0x1a)).toBe(false); // bow
   });

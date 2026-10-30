@@ -32,7 +32,7 @@ const MOVE: number[] = [K.Up, K.Right, K.Down, K.Left];
 const DOOM = 0x28;
 const MIRROR = { l: 7, x: 5, y: 7 };
 
-const BOW = 0x24; // the Magic Bow: no arrows to spend
+const BOW = 0x24; // the Magic Bow
 const CROWN = 0x1c; // the worn regalia's slot (game.ts regalia)
 
 /** Steps played one after the other. */
@@ -446,6 +446,7 @@ describe('Doom, walked', () => {
     s.torches = 40;
     s.members[2].equips[2] = BOW; // Iolo's bow (the walkthrough's party carries one)
     s.members[2].equips[3] = 0xff;
+    s.equipment[0x1b] = 99; // and its arrows: a bow with none says so, and shoots nothing (combat.ts attackEach)
     // At Doom's mouth, its word yelled and the party in (typed: the path tests show it by the pad); then the walker.
     const trace: string[] = [];
     walker(g, p, trace);

@@ -18,6 +18,7 @@ import { K } from './io.ts';
 import { Ctl } from '../ui/text.ts';
 import { usableHere } from './targets.ts';
 import { armCounts } from './ammo.ts';
+import { eased } from './settings.ts';
 import { shortArmNames } from './armNames.ts';
 
 export const CLASSES = 'AMBFDTPRS';
@@ -434,7 +435,7 @@ async function equip(g: Game, m: number, item: number): Promise<boolean> {
     actor.tile = actor.anim = g.data.bytes(0x1ade, 9)[CLASSES.indexOf(String.fromCharCode(member.cls))];
     return false;
   }
-  if (((item === 0x1a || item === 0x24) && s.equipment[0x1b] === 0) || (item === 0x1c && s.equipment[0x1d] === 0)) {
+  if (unloadedRefused(g, item)) {
     refuse(g, 0x981c); // "Thou hast no ammunition for that weapon!"
     return false;
   }
@@ -553,7 +554,7 @@ export function wornWhere(g: Game, m: number, item: number): number[] {
  * Ready an armament out of the pack, putting back whatever is in its way first (the port's; the original
  * refused - "Both hands must be free" - until the player had taken each piece off himself, which on a
  * controller is a walk through the list for every one of them). Nothing is moved where the game itself says
- * no: armour in a fight, a weapon without its ammunition, more than the member can carry. False, and nothing
+ * no: armour in a fight, a weapon without its ammunition (Classic), more than the member can carry. False, and nothing
  * changed, in that case; `tell` prints the refusal as a list's row would, or as a shop's line does.
  */
 export async function readyFromPack(g: Game, m: number, item: number, tell: (at: number) => void): Promise<boolean> {
@@ -566,7 +567,7 @@ export async function readyFromPack(g: Game, m: number, item: number, tell: (at:
     tell(0x97e2); // "Thou canst not change armour in heated battle!"
     return false;
   }
-  if (((item === 0x1a || item === 0x24) && s.equipment[0x1b] === 0) || (item === 0x1c && s.equipment[0x1d] === 0)) {
+  if (unloadedRefused(g, item)) {
     tell(0x981c); // "Thou hast no ammunition for that weapon!"
     return false;
   }
@@ -596,8 +597,8 @@ export async function readyFromPack(g: Game, m: number, item: number, tell: (at:
 
 /** Thrown and gone: a dagger, a flask of oil, a spear, an axe - what has the reach is thrown at a foe out of it. */
 export const THROWN = [0x10, 0x13, 0x15, 0x16];
-/** Of those, the ones that strike as well as they fly, and that the eased rules keep back: dagger, spear. */
-export const THROWN_KEPT = [0x10, 0x15];
+/** Of those, the ones that strike as well as they fly, and that the eased rules keep back: dagger, spear, axe. */
+export const THROWN_KEPT = [0x10, 0x15, 0x16];
 /** A bow is no use without its arrows, a crossbow without its quarrels: ZSTATS_0c5c refuses them both. */
 export function hasAmmo(g: Game, item: number): boolean {
   if (item === 0x1a || item === 0x24) return g.s.equipment[0x1b] !== 0;
@@ -606,9 +607,26 @@ export function hasAmmo(g: Game, item: number): boolean {
 }
 
 /**
+ * What member `m` has in hand that has nothing to shoot - "No arrows", "No quarrels" - or null: a bow or crossbow kept
+ * there with none, as the Modern and Story rules keep it (unloadedRefused). Attack says so and strikes nothing
+ * (combat.ts attackEach), and no foe is marked for a snap attack (combat.ts snapTargets).
+ */
+export function unloaded(g: Game, m: number): string | null {
+  const w = g.s.members[m].equips.find((e) => (e === 0x1a || e === 0x24 || e === 0x1c) && !hasAmmo(g, e));
+  return w === undefined ? null : w === 0x1c ? 'No quarrels' : 'No arrows';
+}
+
+/**
+ * Whether a bow or crossbow is refused for want of its ammunition: with the Classic rules only, as 1988 refused it.
+ * The Modern and Story rules (the port's) ready it with none, and keep it in hand as the last is shot - it shoots
+ * again once more are bought, and Attack with none says so (combat.ts attackEach).
+ */
+export const unloadedRefused = (g: Game, item: number): boolean => !eased(g.options) && !hasAmmo(g, item);
+
+/**
  * Whether the game would let this member ready an armament from the pack now, or put away one they have on (as
- * readyFromPack and equip decide): not arrows or quarrels, nor a bow without them, nor armour on or off in a fight,
- * nor more than the member can carry once what is in its way is packed.
+ * readyFromPack and equip decide): not arrows or quarrels, nor a bow without them under the Classic rules, nor armour
+ * on or off in a fight, nor more than the member can carry once what is in its way is packed.
  */
 export function canReady(g: Game, m: number, item: number): boolean {
   const s = g.s;
@@ -616,7 +634,7 @@ export function canReady(g: Game, m: number, item: number): boolean {
   const inFight = s.mapId > 0x7f && s.battleWon === 0;
   if (item >= 9 && item <= 0xf && inFight) return false;
   if (wears(g, m, item)) return true;
-  if (item === 0x1b || item === 0x1d || !hasAmmo(g, item)) return false;
+  if (item === 0x1b || item === 0x1d || unloadedRefused(g, item)) return false;
   const out = placesFor(g, m, item).filter((k) => e[k] !== 0xff);
   if (inFight && out.some((k) => k <= 1)) return false;
   const weight = g.data.bytes(0x1aae, 0x30);

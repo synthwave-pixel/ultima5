@@ -731,8 +731,9 @@ set Input to Classic and type it.
 | **Poison** | Stops at 1 hit point | Stops at 1 hit point | Can kill |
 | **Hunger** | Never hurts, nothing said; the food is eaten all the same | Stops at half the party's hit points | Can kill |
 | **A kill's experience** | Shared among the living | Shared among the living | All the striker's |
-| **The last dagger or spear** | Kept back | Kept back | May be thrown away |
+| **The last dagger, spear or throwing axe** | Kept back | Kept back | May be thrown away |
 | **Arrows and quarrels carried** | 999, a purchase adding 99 | 999, a purchase adding 99 | 99, a purchase filling the quiver; more brought from the other rules kept, not added to, until shot down to 99 |
+| **A bow or crossbow with no arrows or quarrels** | Readied all the same, and kept in hand | Readied all the same, and kept in hand | Cannot be readied; the last shot puts it away |
 | **Added to armour before a blow's roll** | +10 while the party has food, +3 with none | +3 | +0, armour alone |
 | **A gargoyle's, daemon's or dragon's blow** | Half its attack to all of it | Half its attack to all of it | 1 to its attack |
 | **Any other creature's blow** | 1 to its attack | 1 to its attack | 1 to its attack |
@@ -775,17 +776,22 @@ other hurt in the game kills as it always did.
   bow, sling, then oil, as there is ammunition. Never the glass sword, the
   Chaos sword, or the jewelled sword and shield, which do nothing in a
   fight. With nothing to take up it says so, and no turn is spent.
-- **Thrown weapons**: the Classic rules leave a hurled dagger or spear
-  where it lands, as the original does; the Story and Modern keep back the
-  party's last one. Arrows, quarrels, oil and the throwing axe are spent
-  either way. At
+- **Thrown weapons**: the Classic rules leave a hurled dagger, spear or
+  throwing axe where it lands, as the original does; the Story and Modern
+  keep back the party's last one. Arrows, quarrels and oil are spent
+  either way, and the last flask of oil says so as it leaves the hand
+  empty. At
   a neighbour, across a corner too, a dagger, spear or throwing axe
   strikes from the hand: the same roll and the same blow, but nothing
   flies, and a miss strikes nobody beside the foe (1988 threw it there
   too). Flaming oil is thrown, to burn. A bow, crossbow or thrown weapon
   is named in the fight with what is left - "Bow x23:", "Spear x2:" (the
-  one in hand and the spares) - and the last arrow or quarrel says so as
-  it puts the bows or crossbows away.
+  one in hand and the spares) - and the last arrow or quarrel says so.
+  With the Modern and Story rules a bow or crossbow is readied with no
+  arrows or quarrels, and stays in hand when the last is shot: Attack
+  then says "No arrows!" and the turn is not spent, and it shoots again
+  once more are bought. With the Classic rules, as in 1988, it cannot be
+  readied without them, and the last puts every bow or crossbow away.
 
   <img src="screens/combat.jpg" alt="A fight in the open against orcs: Iolo fires, the log reading &quot;Crossbow x60:&quot; then &quot;Orc barely wounded!&quot;, and Mariah's turn, marked on the field and in the party panel" width="640">
 

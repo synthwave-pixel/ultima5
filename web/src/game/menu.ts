@@ -19,7 +19,7 @@ import { menuKey, PAUSED } from './input.ts';
 import { besideHarpsichord } from './harpsichord.ts';
 import { HARPSICHORD, K, Pad, SAVE_NOW } from './io.ts';
 import { somethingBeside } from './items.ts';
-import { itemCounts, nextHeld } from './zstats.ts';
+import { itemCounts, nextHeld, unloaded } from './zstats.ts';
 import { holdFullPanel } from './layout.ts';
 import { drawSwitchCard } from './readyCard.ts';
 import { journalTop, type JournalLine } from './journal.ts';
@@ -1153,10 +1153,13 @@ function readied(g: Game): { name: string; ranged: boolean } | null {
   return best;
 }
 
-/** The Attack entry, named for what is in hand. */
+/** The Attack entry, named for what is in hand - or, a bow with nothing to shoot in a fight, for what it lacks. */
 function attackItem(g: Game): Item {
+  const s = g.s;
+  const empty =
+    s.mapId > 0x7f && s.combatTurn < 0x20 && g.combat[s.combatTurn].flags & CF.Player ? unloaded(g, g.combat[s.combatTurn].who) : null;
   const arm = readied(g);
-  return { label: arm ? `Attack (${arm.name})` : 'Attack', key: c('A') };
+  return { label: empty ? `Attack (${empty.toLowerCase()})` : arm ? `Attack (${arm.name})` : 'Attack', key: c('A') };
 }
 
 /** What the surroundings call for, first. */

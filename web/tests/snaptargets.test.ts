@@ -27,6 +27,7 @@ describe('snap targets', () => {
     const m = g.s.members[g.combat[me].who];
     m.equips.fill(0xff);
     m.equips[2] = weapon;
+    g.s.equipment[0x1b] = 20; // arrows: a bow with none marks no foe (zstats.ts unloaded)
     const at = foes.map(([x, y, hp]) => {
       const j = placeCombatant(g, rat, 0, x, y, 0);
       g.combat[j].hp = hp;
