@@ -74,11 +74,15 @@ export function heardPlaces(g: Game, text: string): number {
 }
 
 /**
- * Whether the party knows a place's name (`key`, as Fog.named keeps it). Fog.knowsName, and for a game saved before
- * names were kept, a shrine whose quest the altar has ordained, or that is done: the party has knelt there.
+ * Whether the party knows a place's name (`key`, as Fog.named keeps it). Fog.knowsName; a dungeon whose Word of Power
+ * has been heard, as the journal knows it (journal.ts); and for a game saved before names were kept, a shrine whose
+ * quest the altar has ordained, or that is done: the party has knelt there.
  */
 export function knowsPlace(g: Game, key: string): boolean {
   if (g.fog.knowsName(key)) return true;
+  const place = /^place:(\d+)$/.exec(key)?.[1];
+  const d = place === undefined ? -1 : Number(place) - 0x21;
+  if (d >= 0 && d < 8 && g.words.knows(g.data.table(0x4502, 8)[d].trim())) return true;
   const shrine = /^shrine:(\d)$/.exec(key)?.[1];
   return shrine !== undefined && ((g.s.questActive | g.s.questDone) & (1 << Number(shrine))) !== 0;
 }

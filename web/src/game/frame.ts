@@ -339,6 +339,9 @@ export function drawMapName(g: Game): void {
 
 /** ULTIMA_4e50: a title centred on the stats window's top border, e.g. "Select:". */
 export function borderTitle(g: Game, title: string): void {
+  // No longer than the party box's top border holds between its arrows (24 to 38, clearBorderTitle): longer, it ran
+  // over the map's top border to its left, which nothing draws again till the game is started anew.
+  title = title.slice(0, BORDER_TITLE);
   const left = -(Math.trunc(title.length / 2) - 30);
   const right = title.length + left + 2;
   const d = g.draw;
@@ -357,6 +360,9 @@ export function borderTitle(g: Game, title: string): void {
   rightArrow(g);
   t.select(was);
 }
+
+/** The most a title on the party box's top border may be (borderTitle): its 15 cells, less the two arrows. */
+export const BORDER_TITLE = 13;
 
 /** ULTIMA_4e20: clear that title - to the regalia worn, in the Standard look, where the party box's top border names it. */
 export function clearBorderTitle(g: Game): void {

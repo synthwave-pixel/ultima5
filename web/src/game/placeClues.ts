@@ -126,9 +126,9 @@ function scriptOf(tlk: Uint8Array, talk: number): Uint8Array | null {
   return null;
 }
 
-/** Whether words said are a clue (CLUES, or a Shadowlord's name). */
+/** Whether words said are a clue (CLUES, or a Shadowlord's name) - not the realm's money, "gold crowns", for a crown. */
 export function isClue(g: Game, text: string): boolean {
-  const u = text.toUpperCase();
+  const u = text.toUpperCase().replace(/\bGOLD CROWNS?\b/g, '');
   return [...CLUES, ...lordNames(g)].some((c) => u.includes(c));
 }
 

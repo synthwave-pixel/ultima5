@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pulseShape } from '../src/audio/chip.ts';
+import { identify } from '../src/audio/effects.ts';
 import { BANK_TRANSPOSE, NOTE_BANK, sfxKey } from '../src/audio/sfxKeys.ts';
 import { newGame } from './helpers.ts';
 
@@ -11,6 +12,13 @@ describe("the new suites' effect keys", () => {
     expect(sfxKey({ name: 'victory2' }, 'pulse', [6100, 1, 21600, 300, 3])).toBe('silent');
     expect(sfxKey({ name: 'cast', note: 3 }, 'pulse', [1000, 1, 22000, 300, 3])).toBe('silent');
     expect(sfxKey({ name: 'gemshard', continued: true }, 'pulse', [0xa50, 1, 200, 2050, 0])).toBe('silent');
+  });
+
+  it("folds the old man's long tone after each member's flash into his blessing: no chip's tone in a suite", () => {
+    const flash = [5500, 1, 5000, 200, 13];
+    const tone = [5500, 1, 60000, 2500, 1];
+    expect(sfxKey(identify(g.data, 'pulse', flash), 'pulse', flash)).toEqual({ key: 'raise' });
+    expect(sfxKey(identify(g.data, 'pulse', tone), 'pulse', tone)).toBe('silent');
   });
 
   it('banks a harpsichord key at its own pitch, two octaves down', () => {

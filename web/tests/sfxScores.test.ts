@@ -77,7 +77,7 @@ describe('the scores of the new suites', () => {
   it('takes the sounds the user chose from one set for all three, and keeps some as Standard', () => {
     expect(sourceOf('victory1')).toBeNull(); // the victory fanfare: each suite's own
     expect(sourceOf('cue:CombatStart')).toBe('electronic');
-    expect(sourceOf('tickhigh')).toBe('electronic');
+    expect(sourceOf('tickhigh')).toBe('classical'); // a woodblock's knock: the marimba's swell ran tick into tock
     expect(sourceOf('air')).toBe('electronic');
     expect(sourceOf('blackthorn2')).toBe('electronic');
     expect(sourceOf('cue:MonsterSpell')).toBe('electronic');

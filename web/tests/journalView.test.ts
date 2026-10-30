@@ -5,6 +5,7 @@ import { journalTop, type JournalLine } from '../src/game/journal.ts';
 import { journalScreen } from '../src/game/menu.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { focusOf, marksFor } from '../src/ui/mapMarks.ts';
+import { markInk } from '../src/ui/mapView.ts';
 import { newGame } from './helpers.ts';
 
 /** A part of the journal's top whose line begins `name`, and the lines it opens. */
@@ -79,5 +80,22 @@ describe("the journal's View", () => {
     expect(marks.brit[shrine.at].key).toBe('shrine:0');
     expect(focusOf(marks, 'place:200')).toBeNull();
     expect(focusOf(marks, '')).toBeNull();
+  });
+
+  it('marks a dungeon on the map once its Word is heard, as the journal knows it, in the ink of a place not yet seen', () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    const brit = marksFor(g.data.ovl, g.s, readBritannia(g.data.files, g.data.ovl).tiles, false, g.fog);
+    const deceit = brit.find((m) => m.key === 'place:33')!;
+    expect(markInk(g, deceit, false, true)).toBeNull(); // no dungeon on the cloth map
+    expect(markInk(g, deceit, false, true, 'place:33')).toBe('seen'); // the journal's View
+    g.words.add(g.data.table(0x4502, 8)[0].trim().toLowerCase()); // Deceit's Word
+    expect(page(journalTop(g), 'Dungeons')[0].view).toBe('place:33');
+    expect(markInk(g, deceit, false, true)).toBe('paper'); // the map opened on its own shows it too
+    const under = marksFor(g.data.ovl, g.s, readUnderworld(g.data.files).tiles, true, g.fog);
+    const doom = under.find((m) => m.key === 'place:40')!;
+    expect(markInk(g, doom, true, false)).toBeNull();
+    g.fog.named.add('place:40'); // Doom, heard named
+    expect(markInk(g, doom, true, false)).toBe('paper');
   });
 });

@@ -14,7 +14,7 @@ import { Game, type Note } from './game.ts';
 import { Save } from './save.ts';
 import { DUNGEON_HINTS, EQUIPMENT, PASSWORDS, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
 import { scriptAnswers } from './words.ts';
-import { CLUES, clueHeard, lordNames, placeClues } from './placeClues.ts';
+import { clueHeard, isClue, lordNames, placeClues } from './placeClues.ts';
 
 const MAX_NOTES = 200;
 
@@ -53,8 +53,7 @@ export function noteConversation(g: Game, transcript: string, name = ''): void {
   if (name && new RegExp(`\\b${name.replace(/[^\w' ]/g, '')}\\b`).test(transcript)) who = name;
   for (const answer of answers) {
     const told = answer.filter((p) => !p.startsWith('You see '));
-    const clues = [...CLUES, ...lordNames(g)];
-    if (!told.some((p) => clues.some((c) => p.toUpperCase().includes(c)))) continue;
+    if (!told.some((p) => isClue(g, p))) continue;
     for (const p of told) {
       if (g.notes.some((n) => n.text === p)) continue;
       g.notes.push({ who, where, text: p, date: today(g) });

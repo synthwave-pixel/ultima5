@@ -464,6 +464,9 @@ export async function amount(
     onChange?: ((n: number) => void) | undefined;
   } = {},
 ): Promise<number> {
+  // What was said for the Dialog setting's box shown first, a page at a time, as choose has it: the dial drawn after,
+  // not under a page still to turn - whose key it would not get, and whose turning drew the map over it.
+  if (g.beforeRead) await g.beforeRead();
   const t = g.text;
   const was = t.current;
   let n = Math.max(low, Math.min(high, start));
@@ -1419,7 +1422,9 @@ export function fitCommand(label: string, width: number): string {
 export function playRows(g: Game): TalkRows {
   const s = g.s;
   const turn = g.inCombat && s.combatTurn < 0x20 ? g.combat[s.combatTurn] : undefined;
-  return turn && turn.y >= 6 ? { first: 1, last: 8 } : { first: 14, last: 21 };
+  // (At the top, its frame below the map's top border, as a townsman's box is (speech.ts placement): from row 1 it lay
+  // over the border, whose strip about the sky nothing draws again till the game is started anew.)
+  return turn && turn.y >= 6 ? { first: 2, last: 9 } : { first: 14, last: 21 };
 }
 
 export async function commandMenu(g: Game): Promise<number> {

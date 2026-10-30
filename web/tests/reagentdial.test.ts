@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { merchant } from '../src/game/shops.ts';
+import { waitsForKey } from '../src/game/speech.ts';
 import { newGame } from './helpers.ts';
 
 /**
@@ -71,5 +72,40 @@ describe('reagents by controller', () => {
     const broke = await buy(0, []);
     expect(broke.shown[0][0]).toBe('1');
     expect(broke.got).toBe(0);
+  });
+
+  it("comes up after the merchant's words, with the Dialog setting's Play: not under a page still to turn", async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    const s = g.s;
+    g.options.input = 'controller';
+    g.options.dialog = 'play';
+    s.mapId = 4; // Yew: Healers Herbs, whose words of its wares run to two pages of the box
+    s.hour = 13;
+    s.gold = 1504;
+    s.townAir = 0xff;
+    let state: 'ask' | 'chosen' | 'dialled' = 'ask';
+    let dials = 0;
+    let underPage = 0;
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title === 'How many?') {
+        dials++;
+        if (waitsForKey(g)) underPage++; // a key here turns the page, not the dial (and the page drew over the dial)
+        state = 'dialled';
+        return Pad.A;
+      }
+      if (!m) return Pad.A;
+      if (m.title === 'Choose') {
+        if (state !== 'ask') return Pad.B;
+        state = 'chosen';
+        return Pad.A;
+      }
+      return state === 'ask' ? Pad.A : Pad.B;
+    };
+    await merchant(g, 0x85);
+    expect(dials).toBeGreaterThan(0);
+    expect(underPage).toBe(0);
+    expect(s.gold).toBeLessThan(1504); // the lot dialled was bought
   });
 });

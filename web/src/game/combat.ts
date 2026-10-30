@@ -3060,7 +3060,8 @@ export async function combatLoop(g: Game): Promise<boolean> {
         s.battleWon = 1;
         // The Modern karma's Battle, at the victory, its words tinted (modernKarma.ts); a fight fled, at its end.
         modern.battleOutcome(g, 'won', g.fightOdds.foes, g.fightOdds.party);
-        await victoryTune(g);
+        // Sounded while the field goes on: its figures animate through the fanfare, not held still for it.
+        void victoryTune(g);
         g.p.flushKeys();
       }
     }

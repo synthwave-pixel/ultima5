@@ -39,6 +39,7 @@ export const RULES: [Kind, number[], string][] = [
   ['pulse', [5200, 1, 50000, 10000, 1], 'endmoon'],
   ['pulse', [2620, 1, 10000, 2500, 6], 'spiritin'],
   ['pulse', [5500, 1, 5000, 200, 13], 'raise'],
+  ['pulse', [5500, 1, 60000, 2500, 1], 'raise2'],
   ['pulse', [4110, 1, 22500, 5000, 1], 'shop0'],
   ['pulse', [4530, 1, 40000, 1, 1], 'shop1'],
   ['pulse', [2300, 1, 18000, 1, 2], 'shop2'],

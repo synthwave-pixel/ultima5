@@ -30,8 +30,11 @@ export const BANK_TRANSPOSE = 1 / 4;
 /** A call's sound in a suite: its key (and a bank note's pitch), silent where folded, or null for the shared voice. */
 export type SfxKey = { key: string; hz?: number } | 'silent' | null;
 
-/** Folded into another's sound: the victory tune's last note, a spell's hums, the apparition's notes (in its arrival). */
-const FOLDED = new Set(['victory2', 'cast', 'apparition']);
+/**
+ * Folded into another's sound: the victory tune's last note, the old man's blessing's long tone after its flash (in
+ * raise), a spell's hums, the apparition's notes (in its arrival).
+ */
+const FOLDED = new Set(['victory2', 'raise2', 'cast', 'apparition']);
 
 export const cueKey = (name: string): string => `cue:${name}`;
 export const noteKey = (family: string, midi: number): string => `${family}:${midi}`;

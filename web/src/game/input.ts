@@ -558,7 +558,7 @@ export async function selectDirection(g: Game, here = false): Promise<boolean> {
   if (k === 0) {
     // Which way is asked where Select: is, on the border, for a player who was not told the d-pad answers it.
     const hint = g.options.input === 'controller' && typed.length === 0;
-    if (hint) borderTitle(g, hereToo ? 'Which way, or here?' : 'Which way?');
+    if (hint) borderTitle(g, hereToo ? 'Way, or here?' : 'Which way?');
     await directing(g, async () => {
       do k = await getChar(g);
       while (k !== K.Space && k !== K.Escape && k !== K.Up && k !== K.Down && k !== K.Left && k !== K.Right && !(hereToo && k === K.Enter));

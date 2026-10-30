@@ -944,7 +944,9 @@ other hurt in the game kills as it always did.
   ink on paper from the player's own BRIT.DAT, the places the mapmaker knew
   marked in brown (as the cloth map in the box: its towns, castles, keeps,
   villages, lighthouses, shrines and moongates, but no hut or dungeon until
-  the party finds it), and the cloth map's names for the land - its seas,
+  the party finds it or hears it named - a dungeon by its Word of Power too,
+  as the journal counts it - drawn in the same brown, in the Underworld as
+  well, until the party sees it), and the cloth map's names for the land - its seas,
   bays, isles, forests and plains, as its runes read - each a cross where
   the runes are written; with what the party has seen for itself painted
   over it. It fills the screen, a quarter of the world across its shorter

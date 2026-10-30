@@ -168,6 +168,18 @@ function drawBox(px: Uint32Array, mark: Mark): void {
  * its square on this world, or null; drawn where `lit` (it blinks, showMap). The mark `reveal` (its key) is drawn as
  * seen: the place the journal opened the map on, known by name though not yet come to.
  */
+/**
+ * How a world's map shows mark `m`: in full ('seen') where the party has seen its square, or it is the place the
+ * journal's View opened the map on (`focus`); in the paper's ink ('paper') where the mapmaker knew of it (on a map
+ * with `paper`) or the party has heard it named - a dungeon by its Word too, as the journal knows it (the port's:
+ * placeNames.ts knowsPlace); else not at all (null).
+ */
+export function markInk(g: Game, m: Mark, underworld: boolean, paper: boolean, focus = ''): 'seen' | 'paper' | null {
+  if (g.fog.seen(underworld, m.x, m.y) || (focus !== '' && m.key === focus)) return 'seen';
+  if ((m.onPaper && paper) || (m.key !== undefined && knowsPlace(g, m.key))) return 'paper';
+  return null;
+}
+
 function worldPicture(
   g: Game,
   quads: RGB[][],
@@ -197,8 +209,9 @@ function worldPicture(
     }
   }
   const mark = (m: Mark): void => {
-    if (g.fog.seen(underworld, m.x, m.y) || (reveal && m.key === reveal)) drawMark(px, m, MARK_INK, MARK_EDGE);
-    else if (m.onPaper && paper) drawMark(px, m, INK, null);
+    const ink = markInk(g, m, underworld, paper !== null, reveal);
+    if (ink === 'seen') drawMark(px, m, MARK_INK, MARK_EDGE);
+    else if (ink === 'paper') drawMark(px, m, INK, null);
   };
   marks.forEach((m, i) => {
     if (i !== chosen) mark(m);
@@ -411,11 +424,10 @@ export function showMap(
   }
   /**
    * The marks the d-pad steps between on world `w`: every one the map shows - a place the party has seen, and on
-   * Britannia's paper every place the mapmaker knew, as the cloth map draws them - no hut, no dungeon (the port's;
-   * it went only to those seen).
+   * Britannia's paper every place the mapmaker knew, as the cloth map draws them - no hut, no dungeon - and every
+   * place heard named (the port's; it went only to those seen).
    */
-  const shown = (w: World): Mark[] =>
-    marks[w].filter((m) => g.fog.seen(w === 'under', m.x, m.y) || (w === 'brit' && m.onPaper) || (focus !== '' && m.key === focus));
+  const shown = (w: World): Mark[] => marks[w].filter((m) => markInk(g, m, w === 'under', w === 'brit', focus) !== null);
   /** The square each world's map is centred on: the place chosen, which it slides to. */
   const centre: Record<World, { x: number; y: number }> = { brit: { x: px, y: py }, under: { x: px, y: py } };
   for (const w of ['brit', 'under'] as World[]) {

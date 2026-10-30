@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { journalTop } from '../src/game/journal.ts';
-import { heardLines, placeClues } from '../src/game/placeClues.ts';
+import { heardLines, isClue, placeClues } from '../src/game/placeClues.ts';
 import { newGame } from './helpers.ts';
 
 type G = ReturnType<typeof newGame>['g'];
@@ -31,6 +31,15 @@ describe("the journal's places", () => {
     expect(here.some((c) => c.who === 'Annon' && /Word/.test(c.text))).toBe(true);
     // A question asks, and is not counted: only what is told.
     for (const c of [...all.values()].flat()) expect(c.text).not.toMatch(/\?$/);
+  });
+
+  it("takes the realm's money, \"gold crowns\", for no crown: Yew's ten clues, not Jerone's fine", () => {
+    const { g } = newGame();
+    expect(isClue(g, 'It is going to cost me 500 gold crowns!')).toBe(false);
+    expect(isClue(g, "Blackthorn himself has taken Lord British's crown!")).toBe(true);
+    const yew = placeClues(g).get(4) ?? [];
+    expect(yew).toHaveLength(10);
+    expect(yew.some((c) => /gold crowns/i.test(c.text))).toBe(false);
   });
 
   it('keeps a place a mystery till it is seen or named, then names it, then counts its clues once been in', () => {

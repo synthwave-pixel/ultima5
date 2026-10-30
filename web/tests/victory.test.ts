@@ -11,7 +11,7 @@ import { fly, Landed } from './pilot.ts';
  */
 describe('the victory', () => {
   /** What the sound is asked for from "VICTORY!" on, a fight with the giant rats won with Sound `choice`. */
-  const won = async (choice: 'classical' | 'upgrade'): Promise<string[]> => {
+  const won = async (choice: 'classical' | 'upgrade', fanfareHeld = false): Promise<string[]> => {
     const { g, p } = newGame(6);
     journeyOnward(g);
     g.options.soundChoice = choice;
@@ -31,13 +31,17 @@ describe('the victory', () => {
       after(`pulse ${a[0]}`);
       return pulse(...a);
     };
-    (p as { sleep: (ms: number) => Promise<void> }).sleep = async (ms) => after(`wait ${ms}`);
+    (p as { sleep: (ms: number) => Promise<void> }).sleep = (ms) => {
+      after(`wait ${ms}`);
+      // The fanfare's wait, never over: what the field does meanwhile.
+      return fanfareHeld && ms === 1200 ? new Promise<void>(() => {}) : Promise.resolve();
+    };
     p.sound.music = (tune: number) => after(`music ${tune}`);
     p.log = '';
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
     Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     g.autoKill = true;
-    fly(g, p, [() => (/VICTORY/.test(p.log) ? undefined : Pad.B)], 400);
+    fly(g, p, [() => (/VICTORY/.test(p.log) ? (after('key'), undefined) : Pad.B)], 400);
     try {
       await attackCombat(g, 1);
     } catch (e) {
@@ -53,5 +57,11 @@ describe('the victory', () => {
     const upgrade = await won('upgrade');
     expect(upgrade[0]).toBe(`music ${Tune.Theme}`);
     expect(upgrade).not.toContain('wait 1200');
+  });
+
+  it('holds nothing still while the fanfare sounds: the field reads its next key, its figures animating, at once', async () => {
+    const heard = await won('classical', true);
+    expect(heard).toContain('wait 1200');
+    expect(heard.indexOf('key')).toBeGreaterThan(heard.indexOf('wait 1200'));
   });
 });

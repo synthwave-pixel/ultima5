@@ -63,6 +63,7 @@ const P = {
   bassoon: 70,
   clarinet: 71,
   flute: 73,
+  woodblock: 115,
 } as const;
 
 const note = (at: number, n: number, length: number, program: number, velocity = 90): SfxNote => ({
@@ -143,8 +144,10 @@ function apparition(): Score {
 /** Each effect's score, by its key (sfxKeys.ts); `variant` for the ones rendered several ways (VARIANTS). */
 export const SCORES: Record<string, (variant: number) => Score> = {
   // --- Every turn ---
-  tickhigh: (v) => score(0.15, [[note(0, 72, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
-  ticklow: (v) => score(0.15, [[note(0, 67, 0.12, P.marimba, [60, 70, 65][v % 3])]]),
+  // A clock's tick and tock: a woodblock's dry knock, gone before the next (one each 0.44 s, frame.ts ambientSound) - a
+  // marimba's swell ran each into the next, a hum.
+  tickhigh: (v) => score(0.15, [[note(0, 79, 0.04, P.woodblock, [60, 70, 65][v % 3])]]),
+  ticklow: (v) => score(0.15, [[note(0, 74, 0.04, P.woodblock, [60, 70, 65][v % 3])]]),
   // --- Combat ---
   // The fight won: 1988's call - three quick notes and a higher one held - as a horn's fanfare in C, the strings and
   // timpani coming in on the held note, a harp's chord rising under its end; each suite in its own instruments.
@@ -287,7 +290,8 @@ export function bankScore(family: (typeof BANKED)[number], midi: number): Score 
  */
 const SOURCES: [RegExp, Suite | 'standard'][] = [
   [/^(drip0|denyhi|denylo|cue:Upwards|cue:Downwards)$/, 'standard'],
-  [/^(cue:CombatStart|tickhigh|ticklow|air|blackthorn\d|cue:MonsterSpell|possess)$/, 'electronic'],
+  [/^(cue:CombatStart|air|blackthorn\d|cue:MonsterSpell|possess)$/, 'electronic'],
+  [/^(tickhigh|ticklow)$/, 'classical'],
   [/^(spiritin|raise|shrine1|shrine2|cue:Invocation|chant:\d+|gatein)$/, 'ambient'],
 ];
 
