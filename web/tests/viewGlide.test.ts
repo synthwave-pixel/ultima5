@@ -75,6 +75,42 @@ describe('Smooth motion over the view (viewGlide.ts)', () => {
     expect(shown(vg, half, 7 * CELL + CELL / 2 + 8, 8 * CELL + 8)).toBe(EGA_RGBA[4]);
   });
 
+  it("hides a fight's marks while anything moves, none taken along by one walking beside them", () => {
+    const fb = new Framebuffer(tiles, fonts);
+    const vg = new ViewGlide(fb, () => 150);
+    const bare = { tile: GROUND, ground: undefined, place: undefined };
+    /** A field: member a1 walking at `a`, member a2 still at (5, 5), whose turn it is, boxed - over the squares round. */
+    const field = (a: [number, number]): ViewDrawn => {
+      for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) fb.tile(GROUND, TILE_X + x * 16, TILE_Y + y * 16);
+      fb.tile(WALKER, TILE_X + a[0] * 16, TILE_Y + a[1] * 16);
+      fb.tile(PARTY, TILE_X + 5 * 16, TILE_Y + 5 * 16);
+      vg.marks(0);
+      const [x1, y1, x2, y2] = [TILE_X + 78, TILE_Y + 78, TILE_X + 97, TILE_Y + 97];
+      for (const [l, t, r, b] of [
+        [x1, y1, x2, y1],
+        [x1, y2, x2, y2],
+        [x1, y1, x1, y2],
+        [x2, y1, x2, y2],
+      ])
+        fb.fill(l, t, r, b, 15);
+      const cells: ViewCell[] = [];
+      cells[a[1] * 11 + a[0]] = { mover: 'a1', bare };
+      cells[5 * 11 + 5] = { mover: 'a2', bare };
+      return { scene: 'fight', origin: null, wrap: 0, cells, covered: false };
+    };
+    // Diagonal to the one boxed, then beside them: into the square the box's left edge lies over.
+    vg.drawn(field([4, 4]), 0);
+    vg.moving(0);
+    vg.drawn(field([4, 5]), 0);
+    expect(vg.moving(1000)).toBe(true);
+    const half = 1000 + 85;
+    // No box: where its left edge lies, the walker gliding there, and no piece of it gone up with them.
+    expect(shown(vg, half, 78 * HI + 1, 5 * CELL + 20)).toBe(EGA_RGBA[4]);
+    expect(shown(vg, half, 78 * HI + 1, 5 * CELL - 20)).toBe(EGA_RGBA[4]);
+    // Nor its top edge, over the square the walker left: the ground.
+    expect(shown(vg, half, 5 * CELL + 8, 78 * HI + 1)).toBe(EGA_RGBA[2]);
+  });
+
   it('settles at once when anything else is drawn over the view, and takes no box-covered view', () => {
     const fb = new Framebuffer(tiles, fonts);
     const vg = new ViewGlide(fb, () => 150);

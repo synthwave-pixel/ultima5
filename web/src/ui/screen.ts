@@ -279,6 +279,9 @@ export class Screen implements Platform {
       tile: (tile, x, y, ground, place, tint, floor) =>
         fb.tile(tile, TILE_X + x * 16, TILE_Y + y * 16, undefined, ground, place, tint, floor),
       viewBegin: () => void (this.inView = true),
+      viewMarks: () => {
+        if (this.look === 'standard' && this.smoothMotion()) this.viewGlide.marks(fb.page);
+      },
       viewDrawn: (view) => {
         // Its squares drawn bare are the view's too (viewGlide.ts).
         if (view && this.look === 'standard' && this.smoothMotion()) this.viewGlide.drawn(view, fb.page);

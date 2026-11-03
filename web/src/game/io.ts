@@ -173,6 +173,8 @@ export interface Draw {
    */
   viewBegin?(): void;
   viewDrawn?(view: ViewDrawn | null): void;
+  /** Smooth motion: the view's squares are drawn, and a fight's marks follow, which are not shown while anything moves. */
+  viewMarks?(): void;
   /**
    * The party on foot at viewport cell (x, y), drawn as its members - `figures`, in marching order - where the tile
    * art does (the Standard look's grid of four), else as `tile`; on `terrain`, itself on `floor` where it has

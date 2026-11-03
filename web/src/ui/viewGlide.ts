@@ -30,7 +30,10 @@ export const BARE_PAGE = 2;
 /** How far beyond the view a square slid out of it is kept for the next glide to show, in squares. */
 const RING = 2;
 
-/** A view as drawn: what it said of its squares, its picture, and each walker's square bare of them. */
+/**
+ * A view as drawn: what it said of its squares, its picture - without a fight's marks, which are not shown while
+ * anything moves - and each walker's square bare of them.
+ */
 interface Shot {
   view: ViewDrawn;
   picture: Uint32Array;
@@ -46,6 +49,8 @@ export class ViewGlide {
   private glided: Shot | null = null;
   /** Squares slid out of view, by their place on the map ("x,y"): their picture, for the edge that slides away. */
   private ring = new Map<string, Uint32Array>();
+  /** The view being drawn as it was before a fight's marks (`marks`), for the view about to be drawn. */
+  private unmarked: Uint32Array | null = null;
 
   constructor(
     private readonly fb: Framebuffer,
@@ -53,12 +58,22 @@ export class ViewGlide {
     private readonly pace: () => number,
   ) {}
 
+  /**
+   * The view's squares drawn on page `page`, a fight's marks to come - the box round whoever's turn it is, the foe a
+   * snap attack would strike: kept without them, for they are not shown while anything moves. They come with the
+   * picture at rest. (The box lies over the squares round its member too: glided, it would go off in pieces with one
+   * walking beside them.)
+   */
+  marks(page: number): void {
+    this.unmarked = this.copy(page);
+  }
+
   /** A view drawn on the colour page `page`: kept, to glide to. */
   drawn(view: ViewDrawn, page: number): void {
+    const unmarked = this.unmarked;
+    this.unmarked = null;
     if (view.covered) return this.off();
-    const from = this.fb.hi[page];
-    const picture = new Uint32Array(SPAN * SPAN);
-    for (let r = 0; r < SPAN; r++) picture.set(from.subarray((TOP + r) * HI_WIDTH + LEFT, (TOP + r) * HI_WIDTH + LEFT + SPAN), r * SPAN);
+    const picture = unmarked ?? this.copy(page);
     const bare = new Map<number, Uint32Array>();
     const fb = this.fb;
     const was = fb.page;
@@ -69,6 +84,14 @@ export class ViewGlide {
       fb.page = was;
     }
     this.latest = { view, picture, bare };
+  }
+
+  /** The view's square of the colour page `page`. */
+  private copy(page: number): Uint32Array {
+    const from = this.fb.hi[page];
+    const picture = new Uint32Array(SPAN * SPAN);
+    for (let r = 0; r < SPAN; r++) picture.set(from.subarray((TOP + r) * HI_WIDTH + LEFT, (TOP + r) * HI_WIDTH + LEFT + SPAN), r * SPAN);
+    return picture;
   }
 
   /** Each walker's square of `view` drawn bare of them, on the bare page, and kept. */

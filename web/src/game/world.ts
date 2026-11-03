@@ -751,6 +751,7 @@ export function drawView(g: Game): void {
     }
   }
   drawReadings(g);
+  d.viewMarks?.();
   g.drawCombatMarks?.();
   d.viewDrawn?.({
     scene: `${s.mapId}:${s.level}`,
