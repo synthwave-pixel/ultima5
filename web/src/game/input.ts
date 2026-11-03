@@ -128,6 +128,26 @@ async function pauseHere(g: Game): Promise<void> {
   await pauseMenu(g, !g.commandPrompt);
 }
 
+/**
+ * A command asked for in a new scene breaks the keys held down (ui/holds.ts, the ultima3 port's), so a direction held
+ * across the map does not walk on into what comes next: a fight begun or ended, a map or a level entered or left, or a
+ * jump of more than a square (a moongate, a whirlpool) - measured the short way round a map that wraps.
+ */
+export function noteScene(g: Game): void {
+  const s = g.s;
+  const was = g.stood;
+  g.stood = { map: s.mapId, level: s.level, x: s.x, y: s.y };
+  if (!was) return;
+  const wrap = g.outdoors ? 0x100 : g.inDungeon ? 8 : 0;
+  const near = (d: number): boolean => {
+    if (wrap === 0) return Math.abs(d) <= 1;
+    const m = ((d % wrap) + wrap) % wrap;
+    return Math.min(m, wrap - m) <= 1;
+  };
+  const jumped = !g.inCombat && !(near(s.x - was.x) && near(s.y - was.y));
+  if (jumped || s.mapId !== was.map || s.level !== was.level) g.p.breakHolds?.();
+}
+
 /** Whether rawKey's last key was the player's own, not queued nor auto combat's (whose Escape leaves a won field). */
 let pressed = false;
 
@@ -397,6 +417,7 @@ export async function getCharYN(g: Game): Promise<number> {
 export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?: () => void): Promise<number> {
   const menu = await import('./menu.ts');
   const { musicForMap } = await import('./music.ts');
+  noteScene(g);
   g.commandPrompt = where;
   // Out of the dungeon's view, the log is all the log again (the Standard look's small map lay over it).
   if (where !== 'dungeon') liftDungeonMap(g);

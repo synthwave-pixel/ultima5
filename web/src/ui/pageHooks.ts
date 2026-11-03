@@ -7,6 +7,7 @@
  * shown. And the controllers: a gamepad, and the touch pad on a touch.
  */
 
+import { INPUT_PACES } from './holds.ts';
 import type { Game } from '../game/game.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
 import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
@@ -238,6 +239,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
   // when there is something to show (screen.ts lazyFrames), and a gamepad read only while one is connected.
   screen.restAfter = () => (g.options.batterySaver ? BATTERY_SAVER_REST_MS : null);
   screen.lazyFrames = () => g.options.batterySaver;
+  screen.smoothMotion = () => g.options.smoothMotion;
   // (Set once the gamepad is: Battery saver turned off, it is read at every refresh again.)
   let wakeInput = (): void => undefined;
   // With Auto Pause on, a window that loses focus, or a page hidden, while the game waits for a command opens the
@@ -262,6 +264,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
   });
   const apply = (o: Options): void => {
     wakeInput();
+    screen.holds.pace = INPUT_PACES[o.maxInput];
     scanlines.enabled = o.tileSet === 'standard' ? o.scanlines : o.pcScanlines;
     g.soundOff = o.effectsLevel === 0;
     sound.setEffects(effectsOf(o.soundChoice), o.effectsLevel);
@@ -304,10 +307,12 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
       send(code, held);
     },
     () => g.options.batterySaver,
+    screen.holds,
   );
   wakeInput = () => gamepad.wake();
   const touch = new TouchPad({
     send,
+    holds: screen.holds,
     onPress: () => from('touch'),
     onToggle: (shown) => remember(PAD_KEY, shown ? '1' : '0'),
     shown: recall(PAD_KEY) === '1',

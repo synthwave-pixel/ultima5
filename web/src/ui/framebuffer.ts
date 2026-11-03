@@ -228,7 +228,8 @@ function halfDark(v: number): number {
 }
 
 export class Framebuffer {
-  readonly pages = [new Uint8Array(WIDTH * HEIGHT), new Uint8Array(WIDTH * HEIGHT)];
+  /** The two pages of the game's, and a third for Smooth motion's squares drawn bare (viewGlide.ts BARE_PAGE). */
+  readonly pages = [new Uint8Array(WIDTH * HEIGHT), new Uint8Array(WIDTH * HEIGHT), new Uint8Array(WIDTH * HEIGHT)];
   /**
    * Standard's chrome: while the game is on screen, the EGA blue of the frame, its caps and the menus' borders is
    * shown as bevelled copper, and the white lines along it as a dark rim (the ultima3 Standard frame).
@@ -266,11 +267,11 @@ export class Framebuffer {
   /** The colour they are cut in (0xRRGGBB, colours.ts signInk): the dungeon's; 0 for the cut's own stone. */
   signInk = 0;
   private pulse: { saved: Uint32Array; shown: Uint32Array } | null = null;
-  readonly hi = [new Uint32Array(HI_WIDTH * HI_HEIGHT), new Uint32Array(HI_WIDTH * HI_HEIGHT)];
+  readonly hi = [new Uint32Array(HI_WIDTH * HI_HEIGHT), new Uint32Array(HI_WIDTH * HI_HEIGHT), new Uint32Array(HI_WIDTH * HI_HEIGHT)];
   /** Each page's story words, set over it by the screen (page 0's, as it shows it). */
-  words: Words[][] = [[], []];
+  words: Words[][] = [[], [], []];
   /** Each page's letters set by the screen (the Standard look), by their cell (cellKey). */
-  letters: Map<number, Letter>[] = [new Map<number, Letter>(), new Map<number, Letter>()];
+  letters: Map<number, Letter>[] = [new Map<number, Letter>(), new Map<number, Letter>(), new Map<number, Letter>()];
   /**
    * Whether (and how) a glyph of the game's is set as a letter by the screen: IBM.CH's letters and figures in the
    * lettering's face, RUNES.CH's rune letters in the runes'. Unset (the EGA look, or before the faces have loaded),

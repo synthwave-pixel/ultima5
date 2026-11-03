@@ -20,6 +20,7 @@
  * remembered between visits.
  */
 
+import type { Holds } from './holds.ts';
 import { K, Pad } from '../game/io.ts';
 import type { FullScreen } from './fullScreen.ts';
 
@@ -28,9 +29,6 @@ const DPAD_MM = 42;
 const BUTTON_MM = 14;
 const SMALL_MM = 10;
 const MARGIN_MM = 8;
-/** Holding a d-pad direction repeats it, as a held key does. */
-const REPEAT_FIRST_MS = 250;
-const REPEAT_MS = 120;
 
 const STROKE = 'rgba(255,255,255,0.75)';
 const RIM = 'rgba(0,0,0,0.5)';
@@ -41,6 +39,8 @@ const SVG = 'http://www.w3.org/2000/svg';
 export interface TouchPadOptions {
   /** Hand a press to the game (the DOS key or controller code); `held`, a held direction's repeat. */
   send: (code: number, held?: boolean) => void;
+  /** Where a held direction repeats, as a held key does (holds.ts: at the Max input pace, while the game waits). */
+  holds: Pick<Holds, 'hold' | 'letGo'>;
   /** Called on every press: the game switches to controller mode. */
   onPress: () => void;
   /** Called when the pad is shown or hidden, to remember it. */
@@ -52,7 +52,6 @@ export interface TouchPadOptions {
 
 export class TouchPad {
   private readonly root: HTMLDivElement;
-  private repeat: ReturnType<typeof setTimeout> | null = null;
   /** The element whose hold is repeating: only its own lifting ends it (a tap on A while walking does not). */
   private repeating: SVGElement | null = null;
   private _shown = false;
@@ -165,11 +164,8 @@ export class TouchPad {
       el.setAttribute('stroke-width', `${2 * PX}`);
       this.press(key);
       if (repeats) {
-        this.release();
         this.repeating = el;
-        this.repeat = setTimeout(() => {
-          this.repeat = setInterval(() => this.press(key, true), REPEAT_MS);
-        }, REPEAT_FIRST_MS);
+        this.options.holds.hold('touch', () => this.press(key, true));
       }
     };
     const up = () => {
@@ -189,11 +185,7 @@ export class TouchPad {
   }
 
   private release(): void {
-    if (this.repeat !== null) {
-      clearTimeout(this.repeat);
-      clearInterval(this.repeat);
-      this.repeat = null;
-    }
+    this.options.holds.letGo('touch');
     this.repeating = null;
   }
 

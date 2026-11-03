@@ -16,7 +16,7 @@ import { drawMoons, drawVitals, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
 import { getHours, selectDirection, selectMember } from './input.ts';
 import { restOutcome, restTimer } from './rest.ts';
-import { askWord } from './menu.ts';
+import { askWord, playRows, restoreView } from './menu.ts';
 import { musicForMap } from './music.ts';
 import { moveNpcs } from './npc.ts';
 import { stepParty } from './outdoors.ts';
@@ -573,7 +573,12 @@ export async function yellCommand(g: Game): Promise<number> {
   g.say(0x4529); // "what?\n:"
   // A word of power at a dungeon's mouth and a Shadowlord's name at his flame are the yells the land answers; the
   // rest is shouting.
-  const word = await askWord(g, 0x1e, 'Yell', [...g.data.table(0x4502, 8), ...g.data.table(0x444a, 3)]);
+  // Asked low in the view, as the lists of play are, the party in sight above it; the map put back whole once it is
+  // answered, so what the yell does - the earth shaking at a word of power - is seen, not the list (a dungeon's view
+  // is not drawn again by itself).
+  const words = [...g.data.table(0x4502, 8), ...g.data.table(0x444a, 3)];
+  const word = await askWord(g, 0x1e, 'Yell', words, false, false, false, '', playRows(g));
+  if (g.options.input === 'controller') await restoreView(g);
   if (word.length === 0) {
     g.say(0x4531); // "Nothing\n"
     g.cancelled = true; // nothing yelled (B, "Say nothing"): no turn spent

@@ -3,7 +3,8 @@
  *
  * A gamepad through the browser's Gamepad API, in the standard mapping:
  * the d-pad (or the left stick) as the arrow keys, repeating while held
- * as a held key does; A, B, X, Y, Start (Menu) and Select (View) as the
+ * as a held key does (holds.ts: at the Max input pace, only while the game waits for a key, and not once a new scene
+ * has broken the hold, until it is let go); A, B, X, Y, Start (Menu) and Select (View) as the
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
  * TURN_RIGHT), which only a dungeon heeds. A stick's axis counts only once it has been seen at rest, near its middle:
  * one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests at -1 -
@@ -13,9 +14,7 @@
  */
 
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
-
-const REPEAT_FIRST_MS = 300;
-const REPEAT_MS = 130;
+import { HOLD_FIRST_MS, INPUT_PACES, type Holds } from './holds.ts';
 const DEADZONE = 0.5;
 /** How near its middle an axis must come to be taken for at rest. */
 const REST = 0.25;
@@ -43,8 +42,15 @@ const DPAD: [number, number][] = [
 
 export class GamepadInput {
   private held = new Map<number, number>();
-  private nextRepeat = 0;
+  /** When the direction held went down, and when it last counted. */
+  private since = 0;
+  private last = 0;
   private direction = 0;
+  /** Whether a new scene has spent the direction, or the turn, held: neither repeats until let go. */
+  private spent = false;
+  private turnSpent = false;
+  /** The holds' `breaks` when last read: a new count spends what is held. */
+  private breaks = 0;
   private turn = 0;
   private nextTurn = 0;
   /** The axes seen at rest: only these are read. */
@@ -57,6 +63,8 @@ export class GamepadInput {
     private readonly send: (code: number, held?: boolean) => void,
     /** Whether the pad is read only while one is connected (Battery saver), not at every refresh. */
     private readonly lazy: () => boolean = () => false,
+    /** The keyboard's holds: their pace, whether the game waits for a key, and the holds broken. */
+    private readonly holds: Pick<Holds, 'pace' | 'breaks' | 'waiting'> = { pace: INPUT_PACES.medium, breaks: 0, waiting: () => true },
   ) {
     // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh.
     globalThis.addEventListener?.('gamepadconnected', () => this.wake());
@@ -84,6 +92,11 @@ export class GamepadInput {
     const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
     const pad = pads.find((p) => p && p.connected);
     if (!pad) return;
+    if (this.holds.breaks !== this.breaks) {
+      this.breaks = this.holds.breaks;
+      this.spent = this.turnSpent = true;
+    }
+    const waiting = this.holds.waiting();
     for (const [i, code] of BUTTONS) {
       const down = pad.buttons[i]?.pressed ?? false;
       if (down && !this.held.has(i)) {
@@ -105,23 +118,25 @@ export class GamepadInput {
     const turn = Math.abs(rx) > DEADZONE && Math.abs(rx) > Math.abs(axis(3)) ? (rx < 0 ? TURN_LEFT : TURN_RIGHT) : 0;
     if (turn !== this.turn) {
       this.turn = turn;
+      this.turnSpent = false;
       if (turn !== 0) {
         this.send(turn);
         this.nextTurn = now + TURN_FIRST_MS;
       }
-    } else if (turn !== 0 && now >= this.nextTurn) {
+    } else if (turn !== 0 && !this.turnSpent && waiting && now >= this.nextTurn) {
       this.send(turn, true);
       this.nextTurn = now + TURN_MS;
     }
     if (dir !== this.direction) {
       this.direction = dir;
+      this.spent = false;
       if (dir !== 0) {
         this.send(dir);
-        this.nextRepeat = now + REPEAT_FIRST_MS;
+        this.since = this.last = now;
       }
-    } else if (dir !== 0 && now >= this.nextRepeat) {
+    } else if (dir !== 0 && !this.spent && waiting && now - this.since >= HOLD_FIRST_MS && now - this.last >= this.holds.pace) {
       this.send(dir, true);
-      this.nextRepeat = now + REPEAT_MS;
+      this.last = now;
     }
   }
 }

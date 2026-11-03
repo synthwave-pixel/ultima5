@@ -848,12 +848,18 @@ other hurt in the game kills as it always did.
   spiked helm swung before the axe at a charmed friend), else it closes
   in. Fights it goes nowhere in for thirty turns are handed back: All is
   turned off, and Allies held for the rest of that fight alone.
-- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules and Snap attacks.
+- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules, Snap attacks and Max input
+  (how fast a held key, button or direction repeats - Very slow, Slow, Medium or Fast, the same on a keyboard, a
+  gamepad and the touch pad, and only while the game is waiting, so no steps pile up to walk on after the key is let
+  go; a fight beginning or ending, a place or level entered or left, or a moongate stops a held key until it is
+  pressed again).
 
   <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
 
 - **Settings** (Pause menu): the look and its tiles, the dialog (a
-  townsman's words in the view or in the log), Battery saver (off to
+  townsman's words in the view or in the log), Smooth motion (the Modern look's, on to begin with: the map
+  slides under the party and whoever walks glides to the next square - in towns, out of doors, in a fight and on
+  the dungeon's whole-level map - the game itself still moving a square at a time), Battery saver (off to
   begin with: on, the map stops moving a minute after the last press,
   until the next, and the screen is drawn and a gamepad read only when
   there is something to show or a pad to read - for a phone left with the

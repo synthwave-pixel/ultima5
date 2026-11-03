@@ -6,6 +6,7 @@
  * each play as they like; with no character, the machine's.
  */
 
+import { INPUT_PACE_NAMES, type InputPace } from '../ui/holds.ts';
 import type { Suite } from '../audio/sfxKeys.ts';
 import type { Soundtrack } from '../audio/soundtracks.ts';
 import { charKey, chosenCharacter } from './characters.ts';
@@ -79,6 +80,17 @@ export interface Options {
    * nothing pressed, until the next press (screen.ts waitKey). Off, it goes on as ever.
    */
   batterySaver: boolean;
+  /**
+   * Max input (the ultima3 port's): how soon a held key - a direction above all - repeats, the same on a keyboard, a
+   * gamepad and the touch pad (ui/holds.ts INPUT_PACES). Separate presses are never held back.
+   */
+  maxInput: InputPace;
+  /**
+   * Smooth motion (the ultima3 port's), in the Modern look: the map slides under the party, and whatever walks glides
+   * from its square to the next (ui/glide.ts). Drawing alone: the game moves square by square as ever. The PC (1988)
+   * look steps, as 1988 did.
+   */
+  smoothMotion: boolean;
   /**
    * Snap targets (the port's): in a fight, the foe a snap attack (X, Snap attacks on) would strike marked on the
    * active member's turn, small arrows round it (framebuffer aim); off, it is struck all the same, unmarked.
@@ -252,6 +264,8 @@ export const DEFAULTS: Options = {
   dialog: 'play',
   batterySaver: false,
   snapTargets: true,
+  maxInput: 'medium',
+  smoothMotion: true,
 };
 
 /** What settings kept by an earlier build may carry besides the Options they became. */
@@ -313,6 +327,8 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   if (saved.dialog !== undefined && !DIALOGS.includes(saved.dialog)) delete saved.dialog;
   if (saved.batterySaver !== undefined && typeof saved.batterySaver !== 'boolean') delete saved.batterySaver;
   if (saved.snapTargets !== undefined && typeof saved.snapTargets !== 'boolean') delete saved.snapTargets;
+  if (saved.maxInput !== undefined && !INPUT_PACE_NAMES.includes(saved.maxInput)) delete saved.maxInput;
+  if (saved.smoothMotion !== undefined && typeof saved.smoothMotion !== 'boolean') delete saved.smoothMotion;
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;

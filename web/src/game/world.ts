@@ -18,7 +18,7 @@
 
 import { type Bumped, Game, thingKey } from './game.ts';
 import { Colour } from '../ui/colours.ts';
-import type { Dressing, Figure, Place } from './io.ts';
+import type { Dressing, Figure, Place, ViewCell } from './io.ts';
 import { Status } from './save.ts';
 import { A, T } from './tiles.ts';
 import { CLASSES } from './zstats.ts';
@@ -671,6 +671,7 @@ const PARTY_GRID = false;
 export function drawView(g: Game): void {
   const d = g.draw;
   const s = g.s;
+  d.viewBegin?.();
   const style = partyOnFoot(g);
   const figures = style ? partyFigures(g) : [];
   // Where the party's leader stands (out of a fight: the view's middle square), so the mirror he stands before gives
@@ -679,6 +680,7 @@ export function drawView(g: Game): void {
   d.leader?.(lead ? { map: lead.map, x: lead.x, y: lead.y } : null);
   // The squares the followers stand on, in the view: each the next living member after the leader.
   const followers = new Map<number, Figure>();
+  const followerIds = new Map<number, string>();
   if (style === 'line')
     g.trail.forEach((at, i) => {
       const f = figures[i + 1];
@@ -689,7 +691,9 @@ export function drawView(g: Game): void {
       if (Math.abs(vx - 5) > 5 || Math.abs(vy - 5) > 5) return;
       const v = viewAt(g, vx, vy);
       if (v === 0 || v === 0xff) return; // someone stands there, or it is out of sight
-      if (!followers.has(vy * 16 + vx)) followers.set(vy * 16 + vx, f);
+      if (followers.has(vy * 16 + vx)) return;
+      followers.set(vy * 16 + vx, f);
+      followerIds.set(vy * 16 + vx, `f${i}`);
     });
   // The squares where a companion stands (companions.ts): their figure drawn in their colours.
   const companions = new Map<number, Dressing>();
@@ -707,6 +711,10 @@ export function drawView(g: Game): void {
     draw();
     d.dressAs?.(null);
   };
+  // Smooth motion (ui/glide.ts): what each square shows, for the screen to glide - who walks there, and the square
+  // as it is without them.
+  const cells: ViewCell[] = [];
+  const movers = d.viewDrawn ? moversInView(g) : null;
   for (let y = 0; y < 11; y++) {
     for (let x = 0; x < 11; x++) {
       if (covered(g, x, y)) continue; // a box over it, left as it is
@@ -719,6 +727,11 @@ export function drawView(g: Game): void {
         const party = style !== null && x === 5 && y === 5 && a === (s.partyTile & 0xff) && figures.length > 0;
         const under = g.groundMap[y * 16 + x];
         const floor = GROUNDS.has(under) ? undefined : g.cycles.shown[groundUnder(g, x, y, under)];
+        if (movers) {
+          const bare = { tile: ground, ground: floor, place };
+          if (x === 5 && y === 5 && s.mapId < 0x80) cells[y * 11 + x] = { party: true, bare };
+          else if (a !== 0x16 && movers.has(y * 16 + x)) cells[y * 11 + x] = { mover: movers.get(y * 16 + x), bare };
+        }
         if (party && style === 'grid' && d.party) d.party(0x100 + a, x, y, figures, ground, floor, place);
         else if (party && (style === 'line' || style === 'one'))
           drawn(figures[0].dress, () => d.tile(figures[0].tile, x, y, ground, place, figures[0].tint, floor));
@@ -730,6 +743,8 @@ export function drawView(g: Game): void {
         const ground = GROUNDS.has(v) ? undefined : g.cycles.shown[groundUnder(g, x, y, v)];
         const follower = followers.get(y * 16 + x);
         // A follower stands on the square's own thing (a stool, a barrel) on its floor, as the leader does.
+        if (follower && movers)
+          cells[y * 11 + x] = { follower: followerIds.get(y * 16 + x), bare: { tile: g.cycles.shown[v], ground, place } };
         if (follower) drawn(follower.dress, () => d.tile(follower.tile, x, y, g.cycles.shown[v], place, follower.tint, ground));
         else d.tile(g.cycles.shown[v], x, y, ground, place);
       }
@@ -737,6 +752,35 @@ export function drawView(g: Game): void {
   }
   drawReadings(g);
   g.drawCombatMarks?.();
+  d.viewDrawn?.({
+    scene: `${s.mapId}:${s.level}`,
+    origin: s.mapId < 0x80 ? { x: s.x - 5, y: s.y - 5 } : null,
+    wrap: s.mapId === 0 ? 0x100 : 0,
+    cells,
+    covered: g.covers.size > 0,
+  });
+}
+
+/**
+ * Who stands on each square of the view that walks (Smooth motion): an actor's slot, `a` and its number, by the
+ * square (y * 16 + x) - not the party's own, which the view follows. Each the actor drawn there (overlayActors).
+ */
+function moversInView(g: Game): Map<number, string> {
+  const s = g.s;
+  const out = new Map<number, string>();
+  s.actors.forEach((a, i) => {
+    if (a.tile === 0 || a.anim === 0 || (i === 0 && s.mapId < 0x80)) return;
+    let [vx, vy] = [a.x, a.y];
+    if (s.mapId < 0x80) {
+      vx = (vx - (s.x - 5)) & 0xff;
+      vy = (vy - (s.y - 5)) & 0xff;
+      if (a.z !== s.level) return;
+    }
+    if (vx > 10 || vy > 10 || viewAt(g, vx, vy) !== 0) return;
+    const shown = actorAt(g, vx, vy);
+    if (shown === (a.anim & 0xff) || shown === ((a.anim - 8) & 0xff)) out.set(vy * 16 + vx, `a${i}`);
+  });
+  return out;
 }
 
 /**

@@ -110,6 +110,31 @@ export interface Place {
 }
 
 /** The graphics driver's operations the game uses (u5d grap_drv.c), in DOS pixels. */
+/**
+ * A square of the view as Smooth motion glides it (world.ts drawView, ui/glide.ts): who walks there - an actor's slot
+ * (`mover`), a follower of the party's line (`follower`), or the party itself, which the view follows - and how the
+ * square is drawn without them (`bare`: a tile as Draw.tile takes it, or drawn as `draw` draws it there).
+ */
+export interface ViewCell {
+  mover?: string | undefined;
+  follower?: string | undefined;
+  party?: boolean;
+  bare?: { tile: number; ground: number | undefined; place: Place | undefined } | { draw: () => void };
+}
+
+/** The view just drawn, for Smooth motion: its squares (11 by 11, by y * 11 + x) and where it stands. */
+export interface ViewDrawn {
+  /** Which map and level: a new one starts every glide afresh. */
+  scene: string;
+  /** The view's top left on the map; null in a fight, whose field does not move. */
+  origin: { x: number; y: number } | null;
+  /** The map's size where it wraps round (Britannia, the Underworld), else 0. */
+  wrap: number;
+  cells: ViewCell[];
+  /** Whether a box lies over the view (Game.covers): what it covers is not drawn, nor glided. */
+  covered: boolean;
+}
+
 export interface Draw {
   /**
    * The Avatar's appearance (appearance.ts), for the tile art that draws it (the Modern PC tiles); `lady`, whether the
@@ -142,6 +167,12 @@ export interface Draw {
    * `tint` (0xRRGGBB) draws the figure all in that colour (a member's state).
    */
   tile(tile: number, x: number, y: number, ground?: number, place?: Place, tint?: number, floor?: number): void;
+  /**
+   * Smooth motion: the view begins to be drawn (world.ts drawView, the dungeon's whole-level map), and has been, with
+   * what each square shows - or null, a view that does not glide (the dungeon's first-person view).
+   */
+  viewBegin?(): void;
+  viewDrawn?(view: ViewDrawn | null): void;
   /**
    * The party on foot at viewport cell (x, y), drawn as its members - `figures`, in marching order - where the tile
    * art does (the Standard look's grid of four), else as `tile`; on `terrain`, itself on `floor` where it has
@@ -421,6 +452,11 @@ export interface Platform {
   waitKey(idle: () => void | Promise<void>): Promise<number>;
   /** Drop waiting keys (ULTIMA_1b16_ClearKbdBuffer). */
   flushKeys(): void;
+  /**
+   * A new scene (input.ts noteScene): every key held down stops repeating until let go and pressed again, and the
+   * keys waiting are dropped (ui/holds.ts). Absent where nothing is held (the tests' platform).
+   */
+  breakHolds?(): void;
   /** Wait, keeping the page alive. */
   sleep(ms: number): Promise<void>;
   /** The page's clock, in milliseconds (performance.now); absent where nothing runs in time (the tests' platform). */

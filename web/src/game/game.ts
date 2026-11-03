@@ -173,6 +173,8 @@ export class Game {
   ambientBeat = 0;
   /** When the clock last sounded (ms, Platform.now), and whether the tock comes next. */
   clockAt = -Infinity;
+  /** Where the party stood at the last command asked for, and on what map and level (input.ts noteScene). */
+  stood: { map: number; level: number; x: number; y: number } | null = null;
   clockTock = false;
   /** D_6a08: the bard's banjo tune's note. */
   banjoNote = 0;

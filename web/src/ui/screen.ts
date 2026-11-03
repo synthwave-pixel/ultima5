@@ -6,6 +6,8 @@
  * keyboard, in the DOS game's key codes.
  */
 
+import { ViewGlide } from './viewGlide.ts';
+import { Holds } from './holds.ts';
 import { signInk, tinted } from './colours.ts';
 import type { Font } from '../data/font.ts';
 import type { Appearance } from '../game/appearance.ts';
@@ -47,6 +49,32 @@ export const TICK_MS = 1000 / 18.2;
 const WD_MS = 1000 / 12;
 /** How often the map animates while waiting: every other tick, about what a 1988 PC managed. */
 const IDLE_MS = TICK_MS * 2;
+/**
+ * What draws over the view, besides the view itself (Draw): settles a glide on its way (viewGlide.ts). The lines and
+ * fills only where they meet the view, whose last EGA pixel is VIEW_RIGHT, across and down.
+ */
+const OVER_VIEW = [
+  'plot',
+  'tile',
+  'party',
+  'icon',
+  'marker',
+  'aim',
+  'warn',
+  'burst',
+  'pulse',
+  'unpulse',
+  'revealStep',
+  'moongate',
+  'scroll',
+  'savePage',
+  'restorePage',
+];
+const VIEW_RIGHT = 8 + 11 * 16 - 1;
+/** The effects that draw nothing: they settle no glide. */
+const QUIET_EFFECTS = new Set(['page', 'pageNow', 'keepScreen', 'emit', 'dungeonTint', 'readInk', 'readSign']);
+/** An object's methods, wrapped by name (Screen.settling). */
+type Calls = Record<string, unknown>;
 
 /** The story pages' faces (public/fonts, SIL Open Font License): IM Fell English, and UnifrakturMaguntia's initials. */
 const BODY_FACE = 'U5 Story';
@@ -151,6 +179,21 @@ export class Screen implements Platform {
   onKey: (() => void) | null = null;
   /** Whether a held key's auto-repeat is dropped: a key standing in for a controller's button, which never repeats. */
   dropRepeat: ((k: number) => boolean) | null = null;
+  /**
+   * Keys held down, repeating at Max input's pace while the game waits (holds.ts): the keyboard's, and the touch
+   * pad's (pageHooks.ts). A new scene breaks them, and drops the keys queued.
+   */
+  readonly holds = new Holds(
+    () => this.waiter !== null,
+    () => this.flushKeys(),
+  );
+  /** Whether the view glides from square to square (Smooth motion, in the Modern look): set from the options. */
+  smoothMotion: () => boolean = () => false;
+  private readonly viewGlide: ViewGlide;
+  /** While the game draws its view (world.ts drawView): what is drawn is the view's, no reason to settle the glide. */
+  private inView = false;
+  /** Whether the last frame shown was glided: the next, at rest, shows the colour page as it is. */
+  private glidedLast = false;
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -194,6 +237,7 @@ export class Screen implements Platform {
         .map((w) => [w.left, w.top, w.right, w.bottom]);
     const target: TextTarget = {
       glyph: (font, code, column, row, fg, bg, underline, again) => {
+        if (column >= 1 && column <= 22 && row >= 1 && row <= 22) this.overView(); // within the view, not its frame
         fb.glyph(font, code, column, row, fg, bg, again);
         if (underline) fb.line(column * 8, row * 8 + 7, column * 8 + 7, row * 8 + 7, fg);
       },
@@ -234,6 +278,13 @@ export class Screen implements Platform {
       invert: (x1, y1, x2, y2) => fb.xorFill(x1, y1, x2, y2, 15),
       tile: (tile, x, y, ground, place, tint, floor) =>
         fb.tile(tile, TILE_X + x * 16, TILE_Y + y * 16, undefined, ground, place, tint, floor),
+      viewBegin: () => void (this.inView = true),
+      viewDrawn: (view) => {
+        // Its squares drawn bare are the view's too (viewGlide.ts).
+        if (view && this.look === 'standard' && this.smoothMotion()) this.viewGlide.drawn(view, fb.page);
+        else this.viewGlide.off();
+        this.inView = false;
+      },
       avatar: (look, lady = false, base) => {
         this.avatarLook = look;
         this.avatarLady = lady;
@@ -317,7 +368,23 @@ export class Screen implements Platform {
       savePage: () => fb.transfer(0, 1, 0, 0, WIDTH - 1, HEIGHT - 1),
       restorePage: () => fb.transfer(1, 0, 0, 0, WIDTH - 1, HEIGHT - 1),
     };
+    this.viewGlide = new ViewGlide(fb, () => this.holds.pace);
+    // Anything else drawn over the view settles a glide on its way (viewGlide.ts): the picture shown as it is.
+    this.settling(this.draw as unknown as Calls, OVER_VIEW);
+    for (const name of ['fill', 'line', 'invert'] as const) {
+      const f = this.draw[name].bind(this.draw);
+      this.draw[name] = (x1, y1, x2, y2) => {
+        if (Math.min(x1, x2) <= VIEW_RIGHT && Math.min(y1, y2) <= VIEW_RIGHT && Math.max(x1, x2) >= TILE_X && Math.max(y1, y2) >= TILE_Y)
+          this.overView();
+        f(x1, y1, x2, y2);
+      };
+    }
     this.fx = this.makeEffects();
+    const effects = this.fx as unknown as Calls;
+    this.settling(
+      effects,
+      Object.keys(effects).filter((name) => !QUIET_EFFECTS.has(name)),
+    );
     this.loadStoryFonts();
     this.loadLetterFonts();
     window.addEventListener('keydown', (e) => {
@@ -327,9 +394,15 @@ export class Screen implements Platform {
       const k = dosKey(e);
       if (k === 0) return;
       e.preventDefault();
-      if (e.repeat && this.dropRepeat?.(k)) return;
-      this.push(k, true, e.repeat);
+      // The system's own repeats count for nothing: a held key repeats at the game's pace instead (holds.ts), by
+      // the key and not what it types, so a Shift let go first does not leave it held.
+      if (e.repeat) return;
+      this.push(k, true);
+      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true));
     });
+    window.addEventListener('keyup', (e) => this.holds.letGo(`key:${e.code}`));
+    // Out of the window, its key-ups go elsewhere.
+    window.addEventListener('blur', () => this.holds.letGoAll());
     // A frame each refresh of the display, as a page that animates has it - or, where frames are lazy (Battery saver,
     // lazyFrames), one only when there is something to show: the picture changed (the framebuffer says so as it is
     // marked, onDirty), or the runes or the harpsichord's keyboard moving. At rest, none.
@@ -355,14 +428,42 @@ export class Screen implements Platform {
       }
       // The harpsichord's keyboard drawn again while a key is down or a number fades (drawHarp).
       if (this.harp && harpMoving(this.harp, performance.now())) this.fb.dirty = true;
-      if (this.fb.dirty) {
+      // Smooth motion: while anything in the view is on its way, the view glided over the picture (viewGlide.ts);
+      // once all have come, the picture as it is.
+      const gliding = this.viewGlide.moving(now);
+      if (this.glidedLast && !gliding) this.fb.dirty = true;
+      this.glidedLast = gliding;
+      if (this.fb.dirty || gliding) {
         this.fb.present(this.image);
+        if (gliding) this.viewGlide.paint(now, new Uint32Array(this.image.data.buffer));
         this.show();
       }
-      const moving = this.fb.runes.active || (this.harp !== null && this.harp !== undefined && harpMoving(this.harp, performance.now()));
+      const moving =
+        gliding || this.fb.runes.active || (this.harp !== null && this.harp !== undefined && harpMoving(this.harp, performance.now()));
       if (!this.lazyFrames() || moving || this.fb.dirty) want();
     };
     want();
+  }
+
+  /** `names` of `calls` settle a glide on its way first (overView): what they draw may lie over the view. */
+  private settling(calls: Calls, names: readonly string[]): void {
+    for (const name of names) {
+      const f = calls[name];
+      if (typeof f !== 'function') continue;
+      const call = f as (...args: unknown[]) => unknown;
+      calls[name] = (...args: unknown[]): unknown => {
+        this.overView();
+        return call.apply(calls, args);
+      };
+    }
+  }
+
+  /**
+   * Something drawn over the view, not the view itself: a glide on its way settles (viewGlide.ts). Not what is drawn on
+   * the page not shown (the dungeon's first-person view, drawn there and copied small beside its map).
+   */
+  private overView(): void {
+    if (!this.inView && this.fb.page === 0) this.viewGlide.settle();
   }
 
   /** Whether frames are asked for only when there is something to show (Battery saver: pageHooks.ts), not at every refresh. */
@@ -1351,6 +1452,10 @@ export class Screen implements Platform {
 
   pollKey(): number {
     return this.keys.shift() ?? 0;
+  }
+
+  breakHolds(): void {
+    this.holds.breakAll();
   }
 
   flushKeys(): void {

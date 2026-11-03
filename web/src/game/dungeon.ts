@@ -474,6 +474,9 @@ function printWalkDir(g: Game): void {
  */
 function showView(g: Game, whole: boolean): void {
   const fx = g.p.fx;
+  // Under the Standard look's whole-level map, the view shown is the map's to glide (Smooth motion): drawn over at
+  // once by drawDungeonMap, which always follows.
+  if (g.options.tileSet === 'standard' && g.options.dungeonView === 'full') g.draw.viewBegin?.();
   const [from, to] = whole ? [0x10, 0xaf] : [0x28, 0x96];
   if (g.options.tileSet === 'standard' && fx.transferScaled) {
     // The square's columns that come from the middle alone: those whose every pixel is drawn from it.

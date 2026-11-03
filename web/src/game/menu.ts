@@ -8,6 +8,7 @@
  * letter picker that lets a controller type names and words.
  */
 
+import { INPUT_PACE_LABELS, INPUT_PACE_NAMES } from '../ui/holds.ts';
 import { cue } from './cues.ts';
 import { saysWord, talkingHorseBeside } from './cmds.ts';
 import { actorTileAt } from './actors.ts';
@@ -650,6 +651,7 @@ export async function askWord(
   known = false,
   twoColumns = false,
   start = '',
+  rows?: TalkRows,
 ): Promise<string> {
   const { getString } = await import('./input.ts');
   if (g.options.input !== 'controller') return getString(g, max);
@@ -668,7 +670,8 @@ export async function askWord(
   // (In two columns, boxed low in the view, where the scene above should stay in sight: a shrine's altar.)
   // The bar on `start` where it is offered (the word just chanted, chanted again).
   const from = Math.max(0, words.indexOf(start.toUpperCase()));
-  const at = twoColumns ? await chooseTwoColumns(g, title, items, from) : await choose(g, title, items, from);
+  // (Or low in the view as the lists of play are, where `rows` says: the Yell.)
+  const at = twoColumns ? await chooseTwoColumns(g, title, items, from) : await choose(g, title, items, from, false, rows);
   const said = at < 0 || at >= words.length ? '' : words[at];
   // (A merchant's choice, with the Dialog setting's Play, echoed as the menu labelled it: "British", not "british".)
   g.print(merchantSpeaking(g) && said ? items[at].label : said);
@@ -1932,6 +1935,16 @@ export function settingLines(g: Game, title = false): Setting[] {
       note: 'Dark bands over the picture, as an old monitor had. Each UX keeps its own.',
       act: () => void (pc ? (o.pcScanlines = !o.pcScanlines) : (o.scanlines = !o.scanlines)),
     },
+    // The Modern look's alone: the PC (1988) look steps from square to square, as 1988 did.
+    ...(pc
+      ? []
+      : [
+          {
+            label: `Smooth motion: ${onOff(o.smoothMotion)}`,
+            note: 'The map slides under the party, and whoever walks glides to the next square.',
+            act: () => void (o.smoothMotion = !o.smoothMotion),
+          },
+        ]),
     {
       // The map at rest after a quiet minute, till a press (screen.ts waitKey): for a phone left with the game open.
       label: `Battery saver: ${onOff(o.batterySaver)}`,
@@ -2016,6 +2029,11 @@ export function gameplayLines(g: Game): Setting[] {
       note: 'X (keyboard Q or C), or walking into a foe, strikes it, no crosshair.',
       act: () => void (o.autoAim = !o.autoAim),
     },
+    {
+      label: `Max input: ${INPUT_PACE_LABELS[o.maxInput]}`,
+      note: 'How fast a held key, button or direction repeats.',
+      act: () => void (o.maxInput = INPUT_PACE_NAMES[(INPUT_PACE_NAMES.indexOf(o.maxInput) + 1) % INPUT_PACE_NAMES.length]),
+    },
   ];
 }
 
@@ -2084,7 +2102,7 @@ function audioLine(g: Game): Setting {
 function gameplayLine(g: Game): Setting {
   return {
     label: 'Gameplay',
-    note: 'How the game plays: input, auto pause, the rules, snap attacks.',
+    note: 'How the game plays: input, auto pause, the rules, snap attacks, max input.',
     act: () => gameplayMenu(g).then(() => undefined),
   };
 }

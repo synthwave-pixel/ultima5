@@ -117,6 +117,43 @@ describe('a command backed out of spends no turn, on a controller', () => {
     expect(p.log).toMatch(/Nothing/);
   });
 
+  it('Yell in a dungeon: the words low in the view, and the view itself put back once answered', async () => {
+    const { g, p } = newGame();
+    g.options.input = 'controller';
+    g.inPlay = true;
+    g.s.mapId = 0x21;
+    let box: number[] | undefined;
+    p.next = () => {
+      box ??= g.covers.get('menu');
+      return Pad.A; // "Say nothing": no word of power heard yet
+    };
+    await processCommand(g, 0x59);
+    expect(box).toBeDefined();
+    expect(box?.[1]).toBeGreaterThanOrEqual(14 * 8 - 4); // low in the view, as the lists of play are
+    expect(g.covers.has('menu')).toBe(false); // the view drawn again, nothing left over it
+  });
+
+  it('Yell with every word known: all eleven and Say nothing, eight rows low in the view, the map put back', async () => {
+    const { g, p } = newGame();
+    g.options.input = 'controller';
+    g.inPlay = true;
+    g.s.mapId = 0;
+    const all = [...g.data.table(0x4502, 8), ...g.data.table(0x444a, 3)];
+    for (const w of all) g.words.add(w);
+    let shown: string[] = [];
+    let box: number[] | undefined;
+    p.next = () => {
+      shown = g.menuShown?.labels ?? shown;
+      box ??= g.covers.get('menu');
+      return Pad.B; // Say nothing
+    };
+    await processCommand(g, 0x59);
+    expect(shown.map((l) => l.toUpperCase())).toEqual([...all, 'SAY NOTHING']);
+    expect(box?.[1]).toBe(14 * 8 - 4); // rows 14 to 21: eight shown, the rest scrolled to
+    expect(box?.[3]).toBe(22 * 8 + 3);
+    expect(g.covers.has('menu')).toBe(false);
+  });
+
   it('Hole up, no hours dialled (B at the dial)', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';

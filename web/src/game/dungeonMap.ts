@@ -23,6 +23,7 @@ import { creatureSeen, feltCells, inTheDark } from './fog.ts';
 import { creatureFrame, partyFigures } from './world.ts';
 import { compactPanel, Win } from './frame.ts';
 import type { Game } from './game.ts';
+import type { ViewCell } from './io.ts';
 import { A, T } from './tiles.ts';
 
 /** The map's square on the screen, in EGA pixels a side from (8, 8): the Standard look's dungeon view, grown to it. */
@@ -422,8 +423,10 @@ export function unrolled(g: Game): Map<number, [number, number]> | null {
  * at all. Where they loop round the level, it goes on as it begins past its edges, as a gem's view of it has it
  * (dungeon.ts dungeonView), every cell wherever it comes round.
  */
-function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): void {
+function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): ViewCell[] {
   const s = g.s;
+  // Smooth motion: each square as drawn, to be drawn again bare of the party or the creature (ui/viewGlide.ts).
+  const squares = new Map<number, () => void>();
   const r = ACROSS >> 1;
   const places = unrolled(g);
   const cellAt = (x: number, y: number): number => s.dungeon[s.level * 0x40 + at8(x, y)];
@@ -448,15 +451,32 @@ function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): void {
       if (open(x + 1, y)) links |= 2;
       if (open(x, y + 1)) links |= 4;
       if (open(x - 1, y)) links |= 8;
-      cell(g, kindOf(cellAt(x, y)), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, cellAt(x, y));
+      const square = (): void => cell(g, kindOf(cellAt(x, y)), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, cellAt(x, y));
+      square();
+      squares.set((j + r) * ACROSS + i + r, square);
     }
+  const cells: ViewCell[] = [];
+  /** Square (i, j) from the party as it is with no one on it: black where nothing of it is shown. */
+  const bare = (i: number, j: number): NonNullable<ViewCell['bare']> => ({
+    draw: () => {
+      const [px, py] = [x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE];
+      g.draw.pen = Colour.black;
+      g.draw.fill(px, py, px + WHOLE - 1, py + WHOLE - 1);
+      squares.get((j + r) * ACROSS + i + r)?.();
+    },
+  });
   // The creature, where the party sees it (fog.ts creatureSeen): where its cell lies from the party.
   const a = s.actors[1];
   if (creatureSeen(g)) {
     const [i, j] = places?.get(at8(a.x, a.y)) ?? [((a.x - s.x + 4) & 7) - 4, ((a.y - s.y + 4) & 7) - 4];
-    if (Math.abs(i) <= r && Math.abs(j) <= r) creature(g, x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE);
+    if (Math.abs(i) <= r && Math.abs(j) <= r) {
+      creature(g, x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE);
+      if (i !== 0 || j !== 0) cells[(j + r) * ACROSS + i + r] = { mover: 'a1', bare: bare(i, j) };
+    }
   }
   party(g, x0 + r * WHOLE, y0 + r * WHOLE, WHOLE);
+  cells[r * ACROSS + r] = { party: true, bare: bare(0, 0) };
+  return cells;
 }
 
 /**
@@ -522,9 +542,32 @@ export function drawDungeonMap(g: Game): void {
     feltCells(g, seen);
   }
   if (!seen || !standard) liftDungeonMap(g);
-  if (!seen) return;
+  if (!seen) return g.draw.viewDrawn?.(null);
   const d = g.draw;
   const full = standard ? g.options.dungeonView === 'full' : mode === 'full';
+  // Smooth motion glides the Standard look's whole-level map, the level sliding under the party (ui/viewGlide.ts); the
+  // small map and the first-person view step, as ever.
+  if (!(standard && full)) {
+    drawMap(g, seen, standard, full);
+    d.viewDrawn?.(null);
+    return;
+  }
+  d.viewBegin?.();
+  const cells = drawMap(g, seen, standard, full);
+  d.viewDrawn?.({
+    scene: `${s.mapId}:${s.level}`,
+    origin: { x: s.x - (ACROSS >> 1), y: s.y - (ACROSS >> 1) },
+    wrap: CELLS,
+    cells,
+    covered: false,
+  });
+}
+
+/** drawDungeonMap's drawing: the whole-level map's squares, as the Standard look draws them, for Smooth motion. */
+function drawMap(g: Game, seen: Uint8Array, standard: boolean, full: boolean): ViewCell[] {
+  const s = g.s;
+  const d = g.draw;
+  let cells: ViewCell[] = [];
   if (full) {
     // The Standard look: the party in the middle of the map's square and the level round it (aroundParty), eleven cells
     // of sixteen pixels a side filling it as the view grown to it does (dungeon.ts showView). The EGA look: the level as
@@ -532,7 +575,7 @@ export function drawDungeonMap(g: Game): void {
     if (standard) {
       d.pen = Colour.black;
       d.fill(8, 8, 8 + SQUARE - 1, 8 + SQUARE - 1);
-      aroundParty(g, seen, 8, 8);
+      cells = aroundParty(g, seen, 8, 8);
     } else {
       d.pen = Colour.black;
       d.fill(VIEW.x1, VIEW.y1, VIEW.x2, VIEW.y2);
@@ -541,10 +584,10 @@ export function drawDungeonMap(g: Game): void {
   }
   if (!standard) {
     if (!full) grid(g, seen, EGA_CORNER.x, EGA_CORNER.y, EGA_CORNER.n, CELLS, 4, 4);
-    return;
+    return cells;
   }
   // Beside the view, over the log's top rows: not while the party panel is at its full height over them (layout.ts).
-  if (!compactPanel(g)) return;
+  if (!compactPanel(g)) return cells;
   if (!g.mapOverLog) {
     g.text.cover(Win.messages, LOG_COVER.c1, LOG_COVER.r1, LOG_COVER.c2, LOG_COVER.r2);
     g.mapOverLog = true;
@@ -553,7 +596,7 @@ export function drawDungeonMap(g: Game): void {
   d.fill(LOG_COVER.c1 * 8, LOG_COVER.r1 * 8, LOG_COVER.c2 * 8 + 7, LOG_COVER.r2 * 8 + 7);
   if (!full) {
     grid(g, seen, SLOT.x + SMALL_AT, SLOT.y + SMALL_AT, SMALL_CELL, AROUND, s.x & 7, s.y & 7);
-    return;
+    return cells;
   }
   // The first-person view, small: its whole picture fitted to the square, a frame against it.
   const [x, y, x2, y2] = SMALL_VIEW;
@@ -564,4 +607,5 @@ export function drawDungeonMap(g: Game): void {
   d.line(x - 1, y + h, x + w, y + h);
   d.line(x - 1, y - 1, x - 1, y + h);
   d.line(x + w, y - 1, x + w, y + h);
+  return cells;
 }
