@@ -397,11 +397,12 @@ export class Screen implements Platform {
       const k = dosKey(e);
       if (k === 0) return;
       e.preventDefault();
-      // The system's own repeats count for nothing: a held key repeats at the game's pace instead (holds.ts), by
-      // the key and not what it types, so a Shift let go first does not leave it held.
-      if (e.repeat) return;
+      // The system's own repeats are not pressed: they only say the key is still down. A held key repeats at the
+      // game's pace instead (holds.ts), by the key and not what it types, so a Shift let go first does not leave it
+      // held.
+      if (e.repeat) return this.holds.seen(`key:${e.code}`);
       this.push(k, true);
-      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true));
+      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true), true);
     });
     window.addEventListener('keyup', (e) => this.holds.letGo(`key:${e.code}`));
     // Out of the window, its key-ups go elsewhere.

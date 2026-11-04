@@ -7,6 +7,11 @@
  * ended, a town, dungeon or level entered or left, a moongate: input.ts noteScene) breaks every hold: a key still
  * down there does nothing more until it is let go and pressed again, so a run across the map does not walk on into
  * the fight.
+ *
+ * A keyboard's key is not taken for held on its key-down alone: some key-ups never come (an Android web view loses
+ * them for a controller's buttons, which the system sends as keys), and a key held until a key-up that never comes
+ * would repeat for ever - a menu opened and shut, a choice made unasked. So a key repeats only once the system's own
+ * repeats say it is still down, and stops when they stop, as it did when the system's repeats were the repeats.
  */
 
 /** Max input's paces: the least time between two repeats of a held key, ms. Separate presses are never held back. */
@@ -19,11 +24,17 @@ export const INPUT_PACE_LABELS: Record<InputPace, string> = { verySlow: 'V slow'
 export const HOLD_FIRST_MS = 250;
 /** How soon a held key looks again when the game was busy at its repeat: it repeats once the game waits. */
 const HOLD_RECHECK_MS = 16;
+/** How long after the system's last repeat of a key it is still taken for held (the slowest a system repeats). */
+export const HOLD_STALE_MS = 500;
+/** How long a key held waits for the system's first repeat before it is taken for let go (the slowest first delay). */
+const HOLD_UNSEEN_MS = 1200;
 
 interface Hold {
   /** When it last counted: its press, or its last repeat. */
   last: number;
   timer: ReturnType<typeof setTimeout> | null;
+  /** A keyboard's key (`hold`'s `seen`): when the system last repeated it, null until it has; else undefined. */
+  seen?: number | null;
 }
 
 export class Holds {
@@ -44,21 +55,35 @@ export class Holds {
   /**
    * A key just pressed, held down by `id` (a keyboard's key, the touch pad): `repeat` it, the first time after
    * HOLD_FIRST_MS and then every `pace`, each only when the game is waiting for a key, until `letGo` or `breakAll`.
+   * `seen`: a keyboard's key, which repeats only while the system's own repeats (`seen`) say it is still down.
    */
-  hold(id: string, repeat: () => void): void {
+  hold(id: string, repeat: () => void, seen = false): void {
     this.letGo(id);
-    const hold: Hold = { last: this.now(), timer: null };
+    const pressed = this.now();
+    const hold: Hold = { last: pressed, timer: null, ...(seen ? { seen: null } : {}) };
     this.held.set(id, hold);
     const look = (ms: number): void => void (hold.timer = setTimeout(tick, ms));
     const tick = (): void => {
       const due = hold.last + this.pace - this.now();
       if (due > 0) return look(due);
+      if (hold.seen === null) {
+        // Not yet repeated by the system: wait for it, or take the key for let go.
+        if (this.now() - pressed >= HOLD_UNSEEN_MS) return this.letGo(id);
+        return look(HOLD_RECHECK_MS);
+      }
+      if (hold.seen !== undefined && this.now() - hold.seen > HOLD_STALE_MS) return this.letGo(id);
       if (!this.waiting()) return look(HOLD_RECHECK_MS);
       hold.last = this.now();
       repeat();
       look(this.pace);
     };
     look(HOLD_FIRST_MS);
+  }
+
+  /** The system repeated the key `id` held: it is still down. */
+  seen(id: string): void {
+    const hold = this.held.get(id);
+    if (hold && hold.seen !== undefined) hold.seen = this.now();
   }
 
   /** What `id` held is let go: it repeats no more. */

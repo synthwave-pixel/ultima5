@@ -72,6 +72,23 @@ describe('a held key', () => {
     await vi.advanceTimersByTimeAsync(HOLD_FIRST_MS);
     expect(repeats).toHaveLength(2);
   });
+  it('repeats a key only while the system says it is still down: a key-up lost does not leave it repeating', async () => {
+    const { holds, repeats } = setup();
+    holds.hold('key:Enter', () => repeats.push(Date.now()), true);
+    // No repeat of the system's own has come, and no key-up (an Android web view loses some): nothing repeats.
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(repeats).toHaveLength(0);
+    // Held, with the system's repeats coming: it repeats at the game's pace, until those stop.
+    holds.hold('key:ArrowRight', () => repeats.push(Date.now()), true);
+    for (let t = 0; t < 1000; t += 33) {
+      if (t >= 300) holds.seen('key:ArrowRight');
+      await vi.advanceTimersByTimeAsync(33);
+    }
+    const held = repeats.length;
+    expect(held).toBeGreaterThanOrEqual(4);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(repeats.length).toBeLessThanOrEqual(held + 4);
+  });
 });
 
 /** A gamepad's held direction (gamepad.ts): the keyboard's pace, only while the game waits, spent by a new scene. */
