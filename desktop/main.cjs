@@ -126,10 +126,13 @@ function steamLaunch() {
   return { game: 'none', where: '', folder: null, account: false, dir: null };
 }
 
-/** Whether Steam is running: steam_osx on a Mac, steam on Linux. */
+/**
+ * Whether Steam is running: steam_osx on a Mac, steam on Linux. Only pgrep's "none found" (status 1) says it is not:
+ * a pgrep that could not be run or failed says nothing, and Steam's files are not edited on nothing.
+ */
 function steamRunning() {
   const name = { darwin: 'steam_osx', linux: 'steam' }[process.platform];
-  return name !== undefined && spawnSync('pgrep', ['-x', name]).status === 0;
+  return name !== undefined && spawnSync('pgrep', ['-x', name]).status !== 1;
 }
 
 /** Asks Steam on a Mac to quit, then waits up to 40 s for it to go. It goes even when osascript says "User canceled". */
