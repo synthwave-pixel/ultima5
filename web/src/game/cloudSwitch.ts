@@ -15,7 +15,8 @@ import { cardOf } from './characterMenu.ts';
 import type { CloudSaves, Game } from './game.ts';
 import { isSteamKey } from './keyStore.ts';
 import { choose, wrap, type Item } from './menu.ts';
-import { avatarName } from './storage.ts';
+import { avatarName, SAVES_KEY } from './storage.ts';
+import { CHARACTERS_KEY } from './characters.ts';
 
 type Keys = Record<string, string>;
 
@@ -28,6 +29,20 @@ function sameSaves(a: Keys, b: Keys): boolean {
         .sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)),
     );
   return saves(a) === saves(b);
+}
+
+/** Whether `key` lists other keys: the list of characters, or an index of earlier saves (a character's, or the old one). */
+const lists = (key: string): boolean => key === CHARACTERS_KEY || key === SAVES_KEY || /^ultima5\.char\.[^.]+\.saves$/.test(key);
+
+/**
+ * The writes in an order a failure part way can lose nothing by: first the keys the receiving side (`to`) has not yet
+ * (a clash's new earlier slot, where its own version goes), then those it has, written over, then the lists that name
+ * other keys, last, so that none names a save not yet written. Stopped at any write, the receiving side still holds
+ * every save it had, in a place it reads.
+ */
+function inSafeOrder(writes: Keys, to: Keys): [string, string][] {
+  const rank = ([key]: [string, string]): number => (lists(key) ? 2 : key in to ? 1 : 0);
+  return Object.entries(writes).sort((a, b) => rank(a) - rank(b));
 }
 
 /**
@@ -90,13 +105,14 @@ export async function switchCloud(g: Game, cloud: CloudSaves, on: boolean): Prom
   }
   const side = on ? 'steam' : 'own';
   let failed: string | null = null;
-  for (const [key, value] of Object.entries(writes)) {
+  for (const [key, value] of inSafeOrder(writes, now.to)) {
     const written = cloud.write(side, key, value);
     if (written !== true) {
       failed = written;
       break;
     }
   }
+  // Saves let go only once everything is written.
   for (const key of failed === null ? removes : []) {
     if (!cloud.remove(side, key)) {
       failed = 'not removed';

@@ -36,7 +36,8 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
   const calls: string[] = [];
   const own = new Map<string, string>();
   const steam = new Map<string, string>();
-  const state = { steamReadable: true, refuse: null as string | null, used: null as boolean | null };
+  // `refuse`: every write refused, with that code; `failAt`: only the write of that number (from 1), with ENOSPC.
+  const state = { steamReadable: true, refuse: null as string | null, failAt: 0, writes: 0, used: null as boolean | null };
   const recorded: [boolean, string | undefined][] = [];
   const side = (s: 'own' | 'steam') => (s === 'own' ? own : steam);
   const hook: SteamHook = {
@@ -56,6 +57,7 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
       steam: () => (state.steamReadable ? Object.fromEntries(steam) : null),
       write: (s, k, v) => {
         if (state.refuse !== null) return state.refuse;
+        if (++state.writes === state.failAt) return 'ENOSPC';
         side(s).set(k, v);
         return true;
       },
@@ -117,16 +119,19 @@ function save(g: Game, name: string, level: number, written: number): SaveData {
   return { ...serialize(g), written };
 }
 
-/** Character `id`'s keys: `saves` newest first, the first their last save, the rest their earlier ones. */
-function character(id: string, saves: SaveData[]): Keys {
+/**
+ * Character `id`'s keys: `saves` newest first, the first their last save, the rest their earlier ones, numbered down
+ * from `top`.
+ */
+function character(id: string, saves: SaveData[], top = saves.length - 2): Keys {
   const { last, index } = saveKeys(id)!;
   const out: Keys = { [last]: JSON.stringify(saves[0]) };
   const keys = saves.slice(1).map((d, i) => {
-    const key = `${last}.${saves.length - 2 - i}`;
+    const key = `${last}.${top - i}`;
     out[key] = JSON.stringify(d);
     return key;
   });
-  out[index] = JSON.stringify({ next: saves.length - 1, keys });
+  out[index] = JSON.stringify({ next: top + 1, keys });
   out[CHARACTERS_KEY] = listText([id]);
   return out;
 }
@@ -429,6 +434,36 @@ describe('Steam Cloud saves in the menu', () => {
     expect(said).toContain(sq('could not be copied (ENOSPC)'));
     expect(said).toContain(sq('Steam Cloud saves stays off.'));
     expect(choosable(menus.at(-1)!)).toContain('Cloud saves: Off');
+  });
+
+  it("keeps the receiving side's own version of a clash readable where a write fails part way", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const theirs = f.steam.get(saveKeys('a')!.last)!;
+    f.state.failAt = 2;
+    await drive(g, p, ['Cloud saves: Off', 'Iolo, level 3']);
+    expect(f.recorded).toEqual([[true, 'ENOSPC']]);
+    // At its old place as the last save, or already in its new earlier slot.
+    expect([...f.steam.values()]).toContain(theirs);
+  });
+
+  it('lets go of no save where a write failed', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    // Steam's last save is among this computer's (played on here since): this computer's copied over, and the
+    // earlier save only Steam's index named would be let go - but a write fails first.
+    const s1 = save(g, 'Iolo', 1, 1000);
+    const s2 = save(g, 'Iolo', 2, 2000);
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 3000), s2], 0));
+    fill(f.steam, character('a', [s2, s1], 5));
+    const earlier = `${saveKeys('a')!.last}.5`;
+    f.state.failAt = 1;
+    await drive(g, p, ['Cloud saves: Off']);
+    expect(f.recorded).toEqual([[true, 'ENOSPC']]);
+    expect(f.steam.get(earlier)).toBe(JSON.stringify(s1));
   });
 
   it("copies nothing where Steam's folder can't be read", async () => {
