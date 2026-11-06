@@ -24,6 +24,8 @@ export interface UpdateOffer {
   /** A restart: the update installed already (the Flatpak's), not on quitting; and taking it up only quits. */
   installed?: boolean;
   quits?: boolean;
+  /** A restart: a Steam launch's, a build come down that installs as the game quits and is never restarted into. */
+  onQuit?: boolean;
   /** A release: false where no page can be offered (under Game Mode), the way to it only said. */
   page?: boolean;
   /**

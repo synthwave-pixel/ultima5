@@ -15,7 +15,7 @@
 // (steamArt.cjs). Launched by Steam itself, the saves are files in the game's folder (steamSaves.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
 // (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs).
 const electron = require('electron');
-const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = electron;
+const { app, BrowserWindow, dialog, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
@@ -39,6 +39,7 @@ const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
+const { clashMessage, noteMode } = require('./instanceMode.cjs');
 
 // The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it - and
 // before anything asks for the data folder, which Electron makes as it is asked (portable.cjs).
@@ -182,7 +183,15 @@ function createWindow() {
 // game on the same save, where whichever copy saved last would silently overwrite the other. Under Flatpak the lock
 // works across launches because the wrapper points TMPDIR, where Chromium keeps the lock's socket, at a directory the
 // instances share.
-const primary = app.requestSingleInstanceLock();
+//
+// A copy of the other kind (through Steam, or not) is told so instead, and never signals the first: the two play
+// different saves. That is decided from instance.json (instanceMode.cjs), written by the first copy once it has the
+// lock, before this one asks for the lock - asking is what signals the first copy.
+const steamMode = isSteamLaunch(process.env);
+const modeFile = join(app.getPath('userData'), 'instance.json');
+const clash = clashMessage(modeFile, steamMode);
+const primary = clash === null && app.requestSingleInstanceLock();
+if (primary) noteMode(modeFile, steamMode);
 if (!primary) app.quit();
 app.on('second-instance', () => {
   const win = BrowserWindow.getAllWindows()[0];
@@ -193,6 +202,7 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  if (clash !== null) dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
   if (!primary) return; // quitting: see above
   // app://ultima5/<path> -> app/<path>, confined to that folder.
   protocol.handle(SCHEME, (request) => {
@@ -263,7 +273,7 @@ app.whenReady().then(() => {
   const fromGame = (event) => String(event.senderFrame?.url ?? '').startsWith('app://');
   const updatesFile = join(app.getPath('userData'), 'updates.json');
   ipcMain.handle('update-offer', (event) => (fromGame(event) ? currentOffer() : null));
-  ipcMain.handle('update-apply', (event) => fromGame(event) && applyUpdate({ electron }));
+  ipcMain.handle('update-apply', (event) => fromGame(event) && applyUpdate({ electron, steam: steamMode }));
   ipcMain.handle('update-told', (event) => void (fromGame(event) && toldOfUpdate({ file: updatesFile })));
   // The first start of a newer version, for the title to say once, and that release's notes for its What's new.
   lookForNews({ app, file: updatesFile });
@@ -313,7 +323,7 @@ app.whenReady().then(() => {
   }, 3000);
   // Newer releases looked for at once (updates.cjs), the game playing on while one comes down; no page offered under
   // Game Mode. Never in a smoke test.
-  if (!process.env.ULTIMA5_SMOKE) void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile });
+  if (!process.env.ULTIMA5_SMOKE) void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile, steam: steamMode });
   // A smoke test (smoke.cjs): screenshot once the game is up, then quit. Looked for every half second, from six seconds
   // after the page loads, for up to thirty: a slow runner (Windows CI's, once) was not up at a single look at six.
   const shot = process.env.ULTIMA5_SMOKE;

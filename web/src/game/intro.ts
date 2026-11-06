@@ -834,14 +834,24 @@ export class Intro {
       ? offer.page === false
         ? `${out} ${desktopModeWay(offer)}`
         : `${out} Its page says what is new. Your saved game carries over.`
-      : !offer.installed
-        ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
-        : offer.quits
-          ? `${name} is installed. Quit, and start the game again to play it.`
-          : `${name} is installed. Restart to play it now, or it starts the next time you play.`;
+      : offer.onQuit
+        ? `${name} has downloaded. It installs when the game quits.`
+        : !offer.installed
+          ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
+          : offer.quits
+            ? `${name} is installed. Quit, and start the game again to play it.`
+            : `${name} is installed. Restart to play it now, or it starts the next time you play.`;
     const lines = [...wrap(text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
     // Where there is nothing to take up, the box is only closed.
-    const go = restart ? (offer.quits ? 'Quit now' : 'Restart now') : offer.page === false ? null : 'Open release page';
+    const go = restart
+      ? offer.onQuit
+        ? null
+        : offer.quits
+          ? 'Quit now'
+          : 'Restart now'
+      : offer.page === false
+        ? null
+        : 'Open release page';
     const i = await choose(
       g,
       restart ? 'Update ready' : 'Update available',

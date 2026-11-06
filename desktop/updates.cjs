@@ -15,7 +15,9 @@
 // What there is is told to the page (preload.cjs u5native.updates; web/src/ui/updates.ts), which says so in the
 // game's own way - a line in the title menu, and once a version a box over the title - and asks for the restart or
 // the page from here. Under Steam's Game Mode no page is offered (a browser there leaves the game behind); a build
-// downloaded is still installed when the game quits. A failure to look (offline, GitHub down) is only logged.
+// downloaded is still installed when the game quits. Launched by Steam, a copy never restarts itself (Steam would see
+// the game end and the new one start outside its overlay and saves): what comes down is installed as the game quits,
+// and the Flatpak's installed update is started by the player, from Steam again. A failure to look (offline, GitHub down) is only logged.
 const { readFileSync, writeFileSync } = require('node:fs');
 const flatpakUpdates = require('./flatpakUpdates.cjs');
 
@@ -120,9 +122,10 @@ async function latestRelease(net) {
 /**
  * Look for an update, as this copy allows (updateKind). `electron` is the main process's (app, net); `quiet` true
  * under Game Mode, where no page is offered. `file`, where the version last told of is kept (updates.json).
- * `flatpak`, the portal's (flatpakUpdates.cjs; the tests give their own).
+ * `flatpak`, the portal's (flatpakUpdates.cjs; the tests give their own). `steam` true in a Steam launch (steam.cjs
+ * isSteamLaunch): no restart is offered or made.
  */
-async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates }) {
+async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates, steam = false }) {
   const { app, net } = electron;
   const kind = updateKind({
     packaged: app.isPackaged,
@@ -131,7 +134,7 @@ async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates
     argv: process.argv,
   });
   if (kind === 'none') return;
-  if (kind === 'flatpak') return flatpakUpdate({ app, net, quiet, file, flatpak });
+  if (kind === 'flatpak') return flatpakUpdate({ app, net, quiet, steam, file, flatpak });
   if (kind === 'auto') {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = true;
@@ -143,6 +146,8 @@ async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates
       console.log(`update: ${info.version} downloaded, installed on quitting`);
       publish({
         kind: 'restart',
+        // In a Steam launch, installed as the game quits and no more: the offer says so (web/src/game/intro.ts).
+        ...(steam ? { onQuit: true } : {}),
         version: String(info.version),
         current: app.getVersion(),
         told: false,
@@ -183,7 +188,7 @@ function notice(latest, current, file, page, why) {
  * a newer release - and the game told when it is installed; where the portal cannot be had or the update fails, the
  * release told of instead (under Game Mode, without its page).
  */
-async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
+async function flatpakUpdate({ app, net, quiet, steam, file, flatpak }) {
   const current = app.getVersion();
   let latest = null;
   try {
@@ -195,7 +200,7 @@ async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
   const fallback = (why) => newer && notice(latest, current, file, !quiet, why);
   const portal = await flatpak.connect();
   if (!portal) return void fallback();
-  relaunch = quiet ? null : portal.spawnLatest;
+  relaunch = quiet || steam ? null : portal.spawnLatest;
   try {
     monitor = await flatpak.watch({
       portal,
@@ -210,7 +215,7 @@ async function flatpakUpdate({ app, net, quiet, file, flatpak }) {
         publish({
           kind: 'restart',
           installed: true,
-          quits: quiet,
+          quits: quiet || steam,
           ...(newer ? { version: latest } : {}),
           current,
           told: false,
@@ -247,19 +252,27 @@ function closeUpdates() {
  * Take up the offer: the restart into the build come down (the Flatpak's: its newest version started, and this one
  * quits - or, under Game Mode, only the quit), or the release's page in the player's browser.
  */
-function applyUpdate({ electron }) {
+function applyUpdate({ electron, steam = false }) {
   if (!offer) return false;
+  // In a Steam launch a downloaded build installs as the game quits, never by a restart.
+  if (steam && offer.kind === 'restart' && !offer.installed) return false;
   if (offer.kind === 'restart' && offer.installed) {
     const quit = () => electron.app.quit();
-    if (relaunch)
+    if (relaunch && !steam)
       void relaunch().then(quit, (e) => {
         console.warn('update: the new version would not start:', e?.message ?? e);
         quit();
       });
     else quit();
   } else if (offer.kind === 'restart') require('electron-updater').autoUpdater.quitAndInstall();
-  else if (offer.page !== false) void electron.shell.openExternal(RELEASES);
-  else return false;
+  else return openRelease(electron, offer);
+  return true;
+}
+
+/** The release's page opened in the player's browser, where one is offered. */
+function openRelease(electron, from) {
+  if (from.page === false) return false;
+  void electron.shell.openExternal(RELEASES);
   return true;
 }
 

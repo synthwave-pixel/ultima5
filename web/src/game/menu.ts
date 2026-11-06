@@ -1607,7 +1607,9 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
         act:
           offer.kind === 'restart'
             ? say(
-                `${name} ${offer.installed ? 'is installed' : 'has downloaded'}. It starts the next time you play: Save and quit, and start the game again, to play it now.`,
+                offer.onQuit
+                  ? `${name} has downloaded. It installs when the game quits.`
+                  : `${name} ${offer.installed ? 'is installed' : 'has downloaded'}. It starts the next time you play: Save and quit, and start the game again, to play it now.`,
               )
             : offer.page === false
               ? say(`${name} is out. ${desktopModeWay(offer)}`)
