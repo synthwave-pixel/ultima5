@@ -313,7 +313,10 @@ describe('bump to act, for things', () => {
     for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) setTileAt(g, 10 + dx, 10 + dy, 0x44);
     setTileAt(g, 10, 9, T.Barrel);
     g.options.input = 'controller';
-    const rat = (near: boolean): void => void Object.assign(s.actors[5], { tile: near ? 0x90 : 0, anim: 0x90, x: 13, y: 10, z: 0 });
+    // A creature that is nobody's: in a slot none of the towne's people holds (one of theirs who talks is no foe).
+    const { npcOfActor } = await import('../src/game/town.ts');
+    const slot = s.actors.findIndex((_, i) => i > 0 && npcOfActor(g, i) < 0);
+    const rat = (near: boolean): void => void Object.assign(s.actors[slot], { tile: near ? 0x90 : 0, anim: 0x90, x: 13, y: 10, z: 0 });
     const walk = async (): Promise<string> => {
       g.viewDirty = 1;
       updateFrame(g);
@@ -335,6 +338,25 @@ describe('bump to act, for things', () => {
     expect(said).toMatch(/Cannotpushwithfoesnear!/);
     expect(tileAt(g, 10, 9)).toBe(T.Barrel); // where it was
     expect([s.x, s.y]).toEqual([10, 10]);
+  });
+
+  it('does not count one of the place’s own people as a foe for their look: Grendel, the alchemist turned rat', async () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 16, level: 0, x: 15, y: 30, hour: 12 }); // Grendel's Hut
+    await enterTown(g, true);
+    const s = g.s;
+    const grendel = s.npcs[1];
+    expect(s.actors[grendel.actor].tile).toBe(0x90); // a giant rat to look at
+    Object.assign(s, { x: grendel.x + 2, y: grendel.y });
+    expect(foesAbout(g, 'town')).toBe(false); // he talks: the hut is searched as any other
+    // Turned hostile (an air of Falsehood: town.ts turnHostile), he is a foe after all.
+    for (let k = 0; k < 3; k++) s.schedules[1].setType(k, 6);
+    expect(foesAbout(g, 'town')).toBe(true);
+    // And a place's rat with nothing to say (no conversation) is a foe, as ever.
+    for (let k = 0; k < 3; k++) s.schedules[1].setType(k, 2);
+    grendel.fa = 0;
+    expect(foesAbout(g, 'town')).toBe(true);
   });
 
   it('counts as foes about in a fight only those still standing on the monsters’ side', () => {
