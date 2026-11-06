@@ -44,6 +44,7 @@ const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
 const { readOptions, writeOptions } = require('./steamOptions.cjs');
+const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
 
@@ -181,6 +182,43 @@ const launchLineHere = () =>
     flatpak: asFlatpak,
     portable: !!process.env.PORTABLE_EXECUTABLE_DIR,
   });
+
+/**
+ * What names this copy in its launch line, as lineState looks for it: the Flatpak's id, the AppImage's file or the
+ * installed exe.
+ */
+const launchLineName = () => (asFlatpak ? steamSetup.FLATPAK_ID : appImage || process.execPath);
+
+/**
+ * Whether the launch line Steam saved for Ultima V is this copy's, read back from localconfig.vdf (launchCheck.cjs) and
+ * only ever read. Off a Steam launch Steam does not say which account is playing, so it is the one signed in most
+ * recently (steam.cjs accountId); a launch uses its own. `lineOnAt` is when the option was turned on: until Steam has
+ * written the file since then, an absent line is "not seen yet". Null where there is no line to check or no Steam.
+ */
+function steamLineState(options) {
+  const expected = launchLineHere();
+  if (!expected) return null;
+  const root = steamFind().root ?? steamRootsHere().find((r) => existsSync(r));
+  if (!root) return null;
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  const account = accountId(root, process.env, read);
+  const file = account === null ? null : join(root, 'userdata', account, 'config', 'localconfig.vdf');
+  let written = null;
+  try {
+    if (file !== null) written = fs.statSync(file).mtimeMs;
+  } catch {}
+  const recentlyTurnedOn = options.lineOnAt !== 0 && (written === null || written < options.lineOnAt);
+  return {
+    state: lineState(file === null ? null : read(file), expected, launchLineName(), recentlyTurnedOn),
+    bothLinux: process.platform === 'linux' && options.playLine && options.compatTool,
+  };
+}
 
 /** A Mac's Steam folder, the app, and what setup keeps in the app's data (steamSetup.cjs). */
 const macWhere = () => ({
@@ -490,6 +528,8 @@ app.whenReady().then(() => {
     if (!fromGame(event)) return null;
     return launchLineHere();
   });
+  // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam line in Settings.
+  ipcMain.handle('steam-line-state', (event) => (fromGame(event) ? steamLineState(readOptions(optionsFile)) : null));
   const win = createWindow();
   onOffer((o) => {
     if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);
