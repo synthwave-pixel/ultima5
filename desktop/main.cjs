@@ -41,9 +41,10 @@ const {
 } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
-const { accountId, findGame, isSteamLaunch, saveDir, steamRoots } = require('./steam.cjs');
+const { accountId, findGame, isSteamLaunch, libraryPaths, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
 const { readOptions, writeOptions } = require('./steamOptions.cjs');
+const { report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
@@ -255,6 +256,72 @@ function steamStatus() {
   }
   if (SYSTEM === 'linux') return { system: SYSTEM, state: steamSetup.hasCompatTool(fs, roots) ? 'ready' : 'not-set-up', line };
   return { system: SYSTEM, state: 'not-set-up', line };
+}
+
+// Whether this start had to put Ultima V's cache entry back (null: not looked at yet, or not a Mac), for the report.
+let macReapplied = null;
+
+/**
+ * What the tester report is made from (steamReport.cjs): only what is found by reading. Where the engine took its game
+ * files from is the page's to know, so the report says whether Steam's copy was found. The characters in Steam's
+ * folder are the ids on its list (ultima5.characters), counted with the saves' contents left unsaid.
+ */
+function reportFacts(options, launch) {
+  const f = steamFind();
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  const root = f.root ?? steamRootsHere().find((r) => existsSync(r)) ?? null;
+  const libraries = root === null ? [] : libraryPaths(root, read);
+  const hasDataOvl = f.folder === null ? null : fs.readdirSync(f.folder).some((n) => n.toUpperCase() === 'DATA.OVL');
+  const account = launch?.accountId ?? null;
+  const cloud = account === null ? null : options.cloud[account] === true;
+  let cloudCharacters = null;
+  if (cloud && launch.dir) {
+    try {
+      const ids = JSON.parse(loadAll(launch.dir)['ultima5.characters'] ?? '').ids;
+      cloudCharacters = Array.isArray(ids) ? ids.length : 0;
+    } catch {
+      cloudCharacters = 0;
+    }
+  }
+  const build = asFlatpak
+    ? 'Flatpak'
+    : appImage
+      ? 'AppImage'
+      : process.env.PORTABLE_EXECUTABLE_DIR
+        ? 'portable'
+        : app.isPackaged
+          ? 'installed'
+          : 'development';
+  const env = {};
+  for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID', 'SteamUser', 'FLATPAK_ID']) env[name] = process.env[name];
+  const line = steamLineState(options);
+  return {
+    version: app.getVersion(),
+    system: SYSTEM,
+    arch: process.arch,
+    build,
+    home: homedir(),
+    bySteam: isSteamLaunch(process.env),
+    env,
+    steamRoot: root,
+    libraries,
+    game: f.game === 'ok' ? 'ok' : f.game === 'missing' ? 'missing' : 'none',
+    where: f.where,
+    hasDataOvl,
+    options,
+    cloud,
+    accountKnown: account !== null,
+    lineState: line?.state ?? null,
+    macPatched: SYSTEM === 'mac' && root !== null ? steamSetup.macPatched(macWhere()) : null,
+    macReapplied: SYSTEM === 'mac' ? macReapplied : null,
+    cloudCharacters,
+  };
 }
 
 /** Sets Steam up on this system, and says how it went. */
@@ -530,6 +597,8 @@ app.whenReady().then(() => {
   });
   // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam line in Settings.
   ipcMain.handle('steam-line-state', (event) => (fromGame(event) ? steamLineState(readOptions(optionsFile)) : null));
+  // The tester report for Copy report (steamReport.cjs): plain text, no save or file contents.
+  ipcMain.handle('steam-report', (event) => (fromGame(event) ? steamReport(reportFacts(readOptions(optionsFile), launch)) : null));
   const win = createWindow();
   onOffer((o) => {
     if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);
@@ -572,7 +641,9 @@ app.whenReady().then(() => {
     // Steam to close, which the Steam line shows).
     try {
       if (SYSTEM === 'mac') {
+        const before = steamSetup.macPatched(macWhere());
         const state = steamSetup.macReapply(macWhere());
+        macReapplied = before === false && state === 'ready';
         if (state !== 'not-set-up' && state !== 'ready') console.log('steam setup:', state);
       }
     } catch (e) {

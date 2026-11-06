@@ -30,6 +30,8 @@ export function macSetup(
   where: MacWhere & AppPlace & { quitSteam(): Promise<void> },
 ): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
 export function macReapply(where: MacWhere & AppPlace): 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
+/** Whether Ultima V's cache entry has our launch now; null where there is no entry. Only reads. */
+export function macPatched(where: Pick<MacWhere, 'fs' | 'steamRoot'>): boolean | null;
 export function macStatus(where: MacWhere & AppPlace): {
   state: 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
   steamRunning: boolean;

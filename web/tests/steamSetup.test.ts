@@ -7,7 +7,16 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appEntry, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
 import { parseVdf } from '../../desktop/steam.cjs';
-import { installCompatTool, launchLine, macReapply, macStatus, macRestore, macSetup, removeCompatTool } from '../../desktop/steamSetup.cjs';
+import {
+  installCompatTool,
+  launchLine,
+  macPatched,
+  macReapply,
+  macStatus,
+  macRestore,
+  macSetup,
+  removeCompatTool,
+} from '../../desktop/steamSetup.cjs';
 
 const MAP = 0;
 const STR = 1;
@@ -486,11 +495,14 @@ describe("the Mac's cache entry", () => {
     const m = mac();
     expect(macStatus({ ...m, steamRunning: () => true })).toEqual({ state: 'not-set-up', steamRunning: true });
     expect(macStatus({ ...m, steamRunning: () => false })).toEqual({ state: 'not-set-up', steamRunning: false });
+    expect(macPatched(m)).toBe(false);
     expect(await macSetup({ ...m, ...closed })).toBe('done');
+    expect(macPatched(m)).toBe(true);
     expect(macStatus({ ...m, steamRunning: () => true })).toEqual({ state: 'ready', steamRunning: true });
     const other = mac();
     fs.writeFileSync(other.cacheFile, cache([{ appid: OTHER, kv: otherKv() }]));
     expect(macStatus({ ...other, steamRunning: () => false })).toEqual({ state: 'not-owned', steamRunning: false });
+    expect(macPatched(other)).toBeNull();
   });
 
   it('does nothing at startup for a Mac that never set it up', () => {

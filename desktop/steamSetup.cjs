@@ -353,6 +353,16 @@ function macStatus(where) {
   return { state, steamRunning: where.steamRunning() };
 }
 
+/** Whether Ultima V's cache entry has our launch now: true or false, null where there is no entry or it will not read. Only reads. */
+function macPatched({ fs, steamRoot }) {
+  try {
+    const found = ultimaEntry(fs, steamRoot);
+    return found ? !found.patch.changed : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Takes a Mac's setup away: with Steam closed, the kept entry back in the cache (unless Steam has since sent a newer
  * one, which is left as it is), then the launcher. The manifest, if we wrote it, goes only while nothing has been
@@ -396,5 +406,6 @@ module.exports = {
   macSetup,
   macReapply,
   macStatus,
+  macPatched,
   macRestore,
 };
