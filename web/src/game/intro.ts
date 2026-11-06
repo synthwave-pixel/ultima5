@@ -661,11 +661,22 @@ export class Intro {
       [0xb, 0x315e],
       [10, 0x316f],
     ];
-    // The port's own lines under the game's five: its settings, managing the saves (characterMenu.ts), a newer
-    // version (ui/updates.ts), and Quit in the apps.
+    // The port's own lines under the game's five: its settings, managing the saves (characterMenu.ts), Steam (beta) in
+    // the desktop app (steamMenu.ts), a newer version (ui/updates.ts), and Quit in the apps.
     const version = this.g.hooks.update?.offer()?.version;
     for (const k of this.menuKeys().slice(MENU.length)) {
-      const label = k === 'S' ? 'Settings' : k === 'M' ? 'Manage Saves' : k === 'Q' ? 'Quit' : version ? `Update (${version})` : 'Update';
+      const label =
+        k === 'S'
+          ? 'Settings'
+          : k === 'M'
+            ? 'Manage Saves'
+            : k === 'T'
+              ? 'Steam (beta)'
+              : k === 'Q'
+                ? 'Quit'
+                : version
+                  ? `Update (${version})`
+                  : 'Update';
       items.push([(0x28 - label.length - 2) >> 1, label]);
     }
     // The box holds eight lines: more, and they scroll with the bar, an arrow at the box's edge where there are more
@@ -757,11 +768,12 @@ export class Intro {
 
   /**
    * The title's lines' keys: the game's five, then the port's - Settings, Manage Saves (always: Import is how a new
-   * machine's first game may come), a waiting update, Quit in the apps. More than the box's eight scroll.
+   * machine's first game may come), Steam (beta) in the desktop app, a waiting update, Quit in the apps. More than the
+   * box's eight scroll.
    */
   private menuKeys(): string {
     const after = (this.g.hooks.update?.offer() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
-    return MENU + 'SM' + after;
+    return MENU + 'SM' + (this.g.hooks.steam ? 'T' : '') + after;
   }
 
   /** Whether a newer version waits to be told of (updateBox). */
@@ -1846,6 +1858,17 @@ export class Intro {
           g.draw.pen = 0;
           g.draw.fill(0, 0, 319, 199);
           await settingsMenu(g, true);
+          t.select(0);
+          g.printChar(0xff);
+          await this.title(false);
+          break;
+        }
+        case 0x54: {
+          // Steam (beta), the desktop app's (steamMenu.ts): on a cleared screen, as Settings is; the title drawn again after.
+          const { steamMenu } = await import('./steamMenu.ts');
+          g.draw.pen = 0;
+          g.draw.fill(0, 0, 319, 199);
+          await steamMenu(g);
           t.select(0);
           g.printChar(0xff);
           await this.title(false);

@@ -26,19 +26,19 @@ contextBridge.exposeInMainWorld('u5native', {
     // Steam's libraries and Ultima V in them, found whether or not Steam launched the app (main.cjs steamFind).
     find: () => ipcRenderer.sendSync('steam-find'),
     gameFiles: (names) => ipcRenderer.invoke('steam-game-files', names),
-    // The Steam line in Settings (main.cjs): where this system stands, setting up, removing, and the launch line to copy.
+    // The Steam (beta) menu (main.cjs steamStatus): what was found of Steam, and the launch line to copy.
     status: () => ipcRenderer.invoke('steam-status'),
-    setup: () => ipcRenderer.invoke('steam-setup'),
-    remove: () => ipcRenderer.invoke('steam-remove'),
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
     // Whether Steam's saved launch line is this copy's: { state: 'correct' | 'missing' | 'not-seen' | 'stale' | 'twice', bothLinux }, or null (main.cjs steamLineState).
     lineState: () => ipcRenderer.invoke('steam-line-state'),
     // The plain-text report for testers to paste into an issue (main.cjs reportFacts, steamReport.cjs). The page gives
     // what only it knows: { filesFrom, required } (web/src/install/sources.ts reportArgs).
     report: (page) => ipcRenderer.invoke('steam-report', page),
-    // The Steam options kept on this machine (main.cjs), with this launch's Steam account id or null; and a switch.
+    // The Steam options kept on this machine (main.cjs), with this launch's Steam account id or null; and a switch,
+    // which does what the option does and says how it went: { on, message, line? }, or null where refused. Cloud
+    // saves' copy is the page's: `failed` says why it failed, the option left as it was.
     options: () => ipcRenderer.sendSync('steam-options'),
-    setOption: (name, on) => ipcRenderer.invoke('steam-set-option', name, on),
+    setOption: (name, on, failed) => ipcRenderer.invoke('steam-option', name, on, failed),
     // A Steam launch's saves, as files (main.cjs, web/src/game/keyStore.ts). Synchronous, so that a save the disk
     // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them. `set` says true, or
     // why the write was refused (the system's code, 'ENOSPC' for a full disk), or false.

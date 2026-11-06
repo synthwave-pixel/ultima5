@@ -1,168 +1,521 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { CHARACTERS_KEY, listText } from '../src/game/characters.ts';
+import type { Game, SteamChoices, SteamHook, SteamStatus } from '../src/game/game.ts';
+import { Intro } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
+import { cloudSaves, kept, useStore } from '../src/game/keyStore.ts';
 import { settingLines } from '../src/game/menu.ts';
-import type { SteamHook, SteamStatus } from '../src/game/game.ts';
-import { newGame } from './helpers.ts';
+import { APPIMAGE_PAGE, ISSUES, steamMenu } from '../src/game/steamMenu.ts';
+import { saveKeys, serialize, type SaveData } from '../src/game/storage.ts';
+import { newGame, type FakePlatform } from './helpers.ts';
 
-/** The Steam line in Settings: shown only where the desktop app gives the game a Steam hook, and what it asks and says. */
-describe('the Steam line in Settings', () => {
-  const hook = (status: SteamStatus | Error, calls: string[] = []): SteamHook => ({
-    status: async () => {
-      calls.push('status');
-      if (status instanceof Error) throw status;
-      return status;
+/**
+ * The title's Steam (beta) menu (steamMenu.ts, cloudSwitch.ts): what was found of Steam, the options for this system,
+ * each off until turned on through the desktop app, Cloud saves' copy with its clashes asked one by one, and the
+ * tester's two buttons.
+ */
+
+type Keys = Record<string, string>;
+
+/** A Steam hook for the menu, every call noted, its options switched as asked; the saves on each side in maps. */
+function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> = {}) {
+  const st: SteamStatus = {
+    system: 'linux',
+    flatpak: false,
+    steam: '~/.steam/steam',
+    game: 'ok',
+    where: '~/.steam/steam/steamapps/common/Ultima V',
+    account: true,
+    launch: false,
+    line: '"~/ultima5-sp-x86_64.AppImage" %command%',
+    ...status,
+  };
+  const o: SteamChoices = { playLine: false, compatTool: false, macPlay: false, cloud: false, ...choices };
+  const calls: string[] = [];
+  const own = new Map<string, string>();
+  const steam = new Map<string, string>();
+  const state = { steamReadable: true, refuse: null as string | null, used: null as boolean | null };
+  const recorded: [boolean, string | undefined][] = [];
+  const side = (s: 'own' | 'steam') => (s === 'own' ? own : steam);
+  const hook: SteamHook = {
+    status: async () => st,
+    options: () => ({ ...o }),
+    setOption: async (name, on) => {
+      calls.push(`${name} ${on ? 'on' : 'off'}`);
+      o[name] = on;
+      return { on, message: `Now ${name} is ${on ? 'on' : 'off'}.`, ...(name === 'playLine' && on && st.line ? { line: st.line } : {}) };
     },
-    setup: async () => (calls.push('setup'), 'Set up done.'),
-    remove: async () => (calls.push('remove'), 'Removed it.'),
-    copyLine: async () => (calls.push('copy'), true),
-  });
+    lineState: async () => (calls.push('lineState'), { state: 'missing', bothLinux: false }),
+    copyLine: async () => (calls.push('copyLine'), true),
+    copyReport: async () => (calls.push('copyReport'), true),
+    open: (url) => void calls.push(`open ${url}`),
+    cloud: {
+      own: () => Object.fromEntries(own),
+      steam: () => (state.steamReadable ? Object.fromEntries(steam) : null),
+      write: (s, k, v) => {
+        if (state.refuse !== null) return state.refuse;
+        side(s).set(k, v);
+        return true;
+      },
+      remove: (s, k) => side(s).delete(k) || true,
+      record: async (on, failed) => {
+        recorded.push([on, failed]);
+        if (failed === undefined) o.cloud = on;
+        return { on: o.cloud, message: '' };
+      },
+      use: (on) => void (state.used = on),
+    },
+  };
+  return { hook, calls, own, steam, state, recorded, options: o };
+}
 
-  /** Opens the Steam line and chooses the lines named, in turn (then Back); everything the screen showed between is kept. */
-  const useSteam = async (status: SteamStatus | Error, choices: string[], calls: string[] = []) => {
-    const { g, p } = newGame();
-    g.options.input = 'controller';
-    g.hooks.steam = hook(status, calls);
-    const line = settingLines(g).find((l) => l.label === 'Steam')!;
-    const todo = [...choices];
-    const menus: string[][] = [];
-    const texts: string[] = [];
-    p.next = () => {
-      const m = g.menuShown;
-      if (!m) {
-        texts.push(p.log);
-        return Pad.A;
-      }
-      menus.push([...m.labels]);
-      texts.push(m.labels.join(' '));
-      const want = todo.length === 0 ? 'Back' : todo[0];
-      if (m.labels[m.at] !== want && !m.labels[m.at].startsWith(want)) return K.Down;
-      if (todo.length > 0) todo.shift();
-      return Pad.A;
+/** Everything a box showed: its title, its lines and which could be chosen. */
+interface Shown {
+  title: string;
+  labels: string[];
+  enabled: boolean[];
+}
+
+/**
+ * The Steam (beta) menu opened, and each box answered in turn: the lines named in `script` chosen in order (a line's
+ * start will do; a function is run as it is reached), then out by Back (or OK, No, Cancel). A box of text is closed.
+ */
+async function drive(g: Game, p: FakePlatform, script: (string | (() => void))[] = []) {
+  g.options.input = 'controller';
+  const todo = [...script];
+  const shown: Shown[] = [];
+  let steps = 0;
+  p.next = () => {
+    if (++steps > 3000) throw new Error('lost in the menus');
+    const m = g.menuShown;
+    if (!m) return Pad.A;
+    const now = { title: m.title, labels: [...m.labels], enabled: [...m.enabled] };
+    if (JSON.stringify(shown.at(-1)) !== JSON.stringify(now)) shown.push(now);
+    while (typeof todo[0] === 'function') (todo.shift() as () => void)();
+    const want = (todo[0] as string | undefined) ?? ['Back', 'OK', 'No', 'Cancel'].find((l) => m.labels.includes(l))!;
+    if (!m.labels[m.at].startsWith(want)) return K.Down;
+    if (todo.length > 0) todo.shift();
+    return Pad.A;
+  };
+  await steamMenu(g);
+  // (What was printed, the spaces left out: a line the width of the box runs into the next with none between.)
+  return { shown, said: sq(p.log), menus: shown.filter((s) => s.title === 'Steam (beta)') };
+}
+
+/** Text with its spaces left out, to find in what was printed. */
+const sq = (text: string): string => text.replace(/\s+/g, '');
+
+/** The menu's choosable lines, as last shown. */
+const choosable = (s: Shown): string[] => s.labels.filter((_, i) => s.enabled[i]);
+
+/** A save of `name` at `level`, written at `written`. */
+function save(g: Game, name: string, level: number, written: number): SaveData {
+  g.s.members[0].name = name;
+  g.s.members[0].level = level;
+  return { ...serialize(g), written };
+}
+
+/** Character `id`'s keys: `saves` newest first, the first their last save, the rest their earlier ones. */
+function character(id: string, saves: SaveData[]): Keys {
+  const { last, index } = saveKeys(id)!;
+  const out: Keys = { [last]: JSON.stringify(saves[0]) };
+  const keys = saves.slice(1).map((d, i) => {
+    const key = `${last}.${saves.length - 2 - i}`;
+    out[key] = JSON.stringify(d);
+    return key;
+  });
+  out[index] = JSON.stringify({ next: saves.length - 1, keys });
+  out[CHARACTERS_KEY] = listText([id]);
+  return out;
+}
+
+const fill = (m: Map<string, string>, keys: Keys): void => Object.entries(keys).forEach(([k, v]) => m.set(k, v));
+
+describe('Steam (beta) on the title', () => {
+  const storage = (): void => {
+    const m = new Map<string, string>();
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => void m.set(k, v),
+      removeItem: (k: string) => void m.delete(k),
+      key: (i: number) => [...m.keys()][i] ?? null,
+      get length() {
+        return m.size;
+      },
+      clear: () => m.clear(),
     };
-    await line.act!();
-    // The screen's words as one line, a wrapped sentence joined.
-    return { menus, texts: [texts.join(' ').replace(/\s+/g, ' ')], calls };
   };
 
-  it('is listed only where the page has a Steam hook', () => {
+  it('is a line of the title only where the page has a Steam hook', async () => {
+    storage();
+    const without = newGame();
+    expect((new Intro(without.g) as unknown as { menuKeys(): string }).menuKeys()).not.toContain('T');
+    const { g, p } = newGame();
+    g.hooks.steam = fake().hook;
+    expect((new Intro(g) as unknown as { menuKeys(): string }).menuKeys()).toBe('JCUARSMT');
+    // No game saved: the bar on Create New Character; up past Journey Onward (grey) to the last line, Steam (beta).
+    p.keys.push(K.Escape, K.Escape, K.Escape, K.Up, Pad.A);
+    await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
+    expect(p.rows.map((r) => r.join('')).join('\n')).toContain('Steam (beta)');
+    expect(g.menuShown?.title).toBe('Steam (beta)');
+  });
+
+  it('is no longer a line of Settings', () => {
     const { g } = newGame();
-    expect(settingLines(g).map((l) => l.label)).not.toContain('Steam');
-    g.hooks.steam = hook({ system: 'linux', state: 'ready', line: null });
-    expect(settingLines(g).map((l) => l.label)).toContain('Steam');
+    g.hooks.steam = fake().hook;
+    for (const title of [false, true])
+      expect(
+        settingLines(g, title)
+          .map((l) => l.label)
+          .filter((l) => /steam/i.test(l)),
+      ).toEqual([]);
+  });
+});
+
+describe('the Steam (beta) menu', () => {
+  it('opens with what was found: Steam, Ultima V and the account', async () => {
+    const { g, p } = newGame();
+    g.hooks.steam = fake().hook;
+    const { said } = await drive(g, p);
+    expect(said).toContain(sq('Steam: ~/.steam/steam'));
+    expect(said).toContain(sq('Ultima V: installed in ~/.steam/steam/steamapps/common/Ultima V'));
+    expect(said).toContain(sq('Steam account: known'));
   });
 
-  it('copies the launch line on Windows, and says where to paste it', async () => {
-    const calls: string[] = [];
-    const { texts } = await useSteam(
-      { system: 'windows', state: 'not-set-up', line: '"C:\\Ultima V.exe" %command%' },
-      ['Copy launch line'],
-      calls,
-    );
-    expect(calls).toContain('copy');
-    expect(texts.join('\n')).toContain('Copied. In Steam: Ultima V');
-    expect(texts.join('\n')).toContain('Launch Options, and paste.');
+  it('says where Steam or the game is missing, and greys the options that need Steam', async () => {
+    const { g, p } = newGame();
+    g.hooks.steam = fake({ steam: null, game: 'none', where: '', account: false }).hook;
+    const { said, menus } = await drive(g, p);
+    expect(said).toContain(sq('Steam: not found'));
+    expect(choosable(menus[0])).toEqual(['Back', 'Copy report', 'Report an issue']);
+    const other = newGame();
+    other.g.hooks.steam = fake({ game: 'none', where: '', account: false }).hook;
+    const rest = await drive(other.g, other.p);
+    expect(rest.said).toContain(sq('Ultima V: not installed in Steam'));
+    expect(rest.said).toContain(sq('Steam account: not known'));
   });
 
-  it('asks a Mac with Steam running to quit it before setting up, and does nothing on No', async () => {
-    const steam: SteamStatus = { system: 'mac', state: 'steam-running', line: null };
-    const no = await useSteam(steam, ['Set up', 'No']);
-    expect(no.texts.join('\n')).toContain('Steam must be closed for this.');
-    expect(no.calls).not.toContain('setup');
-    const yes = await useSteam(steam, ['Set up', 'Yes']);
-    expect(yes.calls).toContain('setup');
-    expect(yes.texts.join('\n')).toContain('Set up done.');
+  it('offers the options of each system, every one off until turned on', async () => {
+    const lines = async (system: SteamStatus['system']) => {
+      const { g, p } = newGame();
+      g.hooks.steam = fake({ system, line: system === 'mac' ? null : 'x %command%' }).hook;
+      return choosable((await drive(g, p)).menus[0]);
+    };
+    expect(await lines('windows')).toEqual(['Back', 'Play from Steam: Off', 'Copy report', 'Report an issue']);
+    expect(await lines('linux')).toEqual(['Back', 'Launch line: Off', 'Compat. tool: Off', 'Copy report', 'Report an issue']);
+    expect(await lines('mac')).toEqual(['Back', 'Play from Steam: Off', 'Copy report', 'Report an issue']);
   });
 
-  it('asks a Mac with Steam running to quit it before the first setup, and before removing, doing nothing on No', async () => {
-    const running: SteamStatus = { system: 'mac', state: 'not-set-up', line: null, steamRunning: true };
-    const no = await useSteam(running, ['Set up', 'No']);
-    expect(no.texts.join('\n')).toContain('Steam must be closed for this. Quit Steam now?');
-    expect(no.calls).not.toContain('setup');
-    const set = await useSteam(running, ['Set up', 'Yes']);
-    expect(set.calls).toContain('setup');
-    const ready: SteamStatus = { system: 'mac', state: 'ready', line: null, steamRunning: true };
-    const keep = await useSteam(ready, ['Remove Steam setup', 'No']);
-    expect(keep.texts.join('\n')).toContain('Steam must be closed for this. Quit Steam now?');
-    expect(keep.calls).not.toContain('remove');
-    const gone = await useSteam(ready, ['Remove Steam setup', 'Yes']);
-    expect(gone.calls).toContain('remove');
+  it('names each option in full, in a note that fits at the foot', async () => {
+    const notes = async (system: SteamStatus['system'], more: Partial<SteamStatus> = {}) => {
+      const { g, p } = newGame();
+      g.hooks.steam = fake({ system, ...more }).hook;
+      // The bar taken down every line to the last, each line's note drawn as it is reached.
+      return (await drive(g, p, ['Report an issue'])).said;
+    };
+    const linux = await notes('linux');
+    expect(linux).toContain(sq('Play from Steam: launch line. Steam starts this by a line you paste.'));
+    expect(linux).toContain(sq('Play from Steam: compatibility tool, chosen in Steam.'));
+    expect(await notes('linux', { launch: true })).toContain(sq('Steam Cloud saves: saves made in Steam launches stay with Steam.'));
+    expect(await notes('windows')).toContain(sq("Play from Steam: Steam's Play starts this engine, by a line you paste."));
+    expect(await notes('mac')).toContain(sq("Play from Steam (changes Steam's settings): Play starts this engine."));
+    expect(await notes('windows', { line: null })).toContain(sq("The portable Ultima V can't be started by Steam. Use the installed one."));
+    expect(await notes('linux', { steam: null })).toContain(sq("Steam isn't here. Install Steam and start it once, then come back."));
   });
 
-  it('sets up a Mac with Steam closed without asking', async () => {
-    const { calls, menus } = await useSteam({ system: 'mac', state: 'not-set-up', line: null }, ['Set up']);
-    expect(calls).toContain('setup');
-    expect(menus.flat()).not.toContain('Yes');
+  it('turns the launch line on through the hook, shows it with Copy, and draws the menu again with it on', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'windows', line: '"C:\\Ultima V\\Ultima V.exe" %command%' });
+    g.hooks.steam = f.hook;
+    const { said, menus, shown } = await drive(g, p, ['Play from Steam: Off', 'Copy launch line']);
+    expect(f.calls).toContain('playLine on');
+    expect(f.calls).toContain('copyLine');
+    expect(shown.some((s) => s.labels.join(' ').includes('Ultima V.exe" %command%'))).toBe(true);
+    expect(said).toContain(sq('Now playLine is on.'));
+    expect(choosable(menus.at(-1)!)).toContain('Play from Steam: On');
+    // With the line on, what Steam has saved of it is read back.
+    expect(f.calls).toContain('lineState');
+    expect(said).toContain(sq('Steam has no launch line for Ultima V'));
   });
 
-  it('shows the Mac note, and removes the setup', async () => {
-    const { menus, calls, texts } = await useSteam({ system: 'mac', state: 'ready', line: null }, ['Remove Steam setup']);
-    expect(menus[0].join(' ')).toContain('Invalid platform');
-    expect(calls).toContain('remove');
-    expect(texts.join('\n')).toContain('Removed it.');
+  it('turns the compatibility tool on and off again', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'linux' });
+    g.hooks.steam = f.hook;
+    const { menus } = await drive(g, p, ['Compat. tool: Off', 'Compat. tool: On']);
+    expect(f.calls).toEqual(['compatTool on', 'compatTool off']);
+    expect(choosable(menus.at(-1)!)).toContain('Compat. tool: Off');
   });
 
-  it('does not offer the launch line on a Mac, nor Set up on Windows', async () => {
-    const mac = await useSteam({ system: 'mac', state: 'ready', line: null }, []);
-    expect(mac.menus[0]).not.toContain('Copy launch line');
-    const win = await useSteam({ system: 'windows', state: 'not-set-up', line: 'x' }, []);
-    expect(win.menus[0]).not.toContain('Set up');
+  it("warns a Mac before changing Steam's settings, and does nothing on No", async () => {
+    const no = newGame();
+    const f = fake({ system: 'mac', line: null });
+    no.g.hooks.steam = f.hook;
+    const asked = await drive(no.g, no.p, ['Play from Steam: Off', 'No']);
+    expect(asked.said).toContain(sq("This closes Steam and changes Steam's own settings for Ultima V"));
+    expect(asked.said).toContain(sq('Turning this off puts'));
+    expect(f.calls).toEqual([]);
+    const yes = newGame();
+    yes.g.hooks.steam = f.hook;
+    await drive(yes.g, yes.p, ['Play from Steam: Off', 'Yes']);
+    expect(f.calls).toEqual(['macPlay on']);
   });
 
-  it('shows a short failure line, and still opens, when the status cannot be had', async () => {
-    const { menus } = await useSteam(new Error('boom'), []);
-    expect(menus[0].join(' ')).toContain("Steam's state could not be read");
+  it('asks a Mac with Steam running to quit it before turning Play off', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'mac', line: null, steamRunning: true }, { macPlay: true });
+    g.hooks.steam = f.hook;
+    const { said } = await drive(g, p, ['Play from Steam: On', 'No']);
+    expect(said).toContain(sq('Steam must be closed for this. Quit Steam now?'));
+    expect(f.calls).toEqual([]);
   });
 
-  it('speaks only in letters the game can draw (0x20-0x7e), in every state of every system', async () => {
-    const systems = ['linux', 'windows', 'mac'] as const;
-    const states = ['ready', 'not-set-up', 'steam-running', 'no-steam', 'not-owned'] as const;
-    for (const system of systems) {
-      for (const state of states) {
-        const { g, p } = newGame();
-        g.options.input = 'controller';
-        g.hooks.steam = hook({ system, state, line: 'x' });
-        const todo = ['Set up', 'Copy launch line', 'Remove Steam setup', 'Yes'];
-        const seen: string[] = [];
-        p.next = () => {
-          const m = g.menuShown;
-          if (!m) {
-            seen.push(p.log);
-            return Pad.A;
-          }
-          seen.push(...m.labels);
-          const i = m.labels.findIndex((l) => todo.includes(l));
-          if (i < 0) return Pad.B;
-          if (m.at !== i) return K.Down;
-          todo.splice(todo.indexOf(m.labels[i]), 1);
-          return Pad.A;
-        };
-        await settingLines(g).find((l) => l.label === 'Steam')!.act!();
-        expect(seen.join('').match(/[^\x20-\x7e\n]/g) ?? []).toEqual([]);
-      }
+  it('says in a Steam launch that Play from Steam works, the line not read back', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'windows', launch: true, line: 'x %command%' }, { playLine: true });
+    g.hooks.steam = f.hook;
+    const { said } = await drive(g, p);
+    expect(said).toContain(sq('Steam started this game, so Play from Steam works.'));
+    expect(f.calls).not.toContain('lineState');
+  });
+
+  it('copies the report, and opens the issues page', async () => {
+    const { g, p } = newGame();
+    const f = fake();
+    g.hooks.steam = f.hook;
+    const { said } = await drive(g, p, ['Copy report', 'Report an issue']);
+    expect(f.calls).toEqual(['copyReport', `open ${ISSUES}`]);
+    expect(ISSUES).toBe('https://github.com/synthwave-pixel/ultima5/issues');
+    expect(said).toContain(sq('Copied.'));
+  });
+
+  it("says on the Flatpak that the AppImage works better, and opens the AppImage's page", async () => {
+    const { g, p } = newGame();
+    const f = fake({ flatpak: true });
+    g.hooks.steam = f.hook;
+    const { said } = await drive(g, p, ['Get the AppImage']);
+    expect(said).toContain(sq('The AppImage works better with Steam.'));
+    expect(f.calls).toEqual([`open ${APPIMAGE_PAGE}`]);
+    const plain = newGame();
+    plain.g.hooks.steam = fake().hook;
+    expect((await drive(plain.g, plain.p)).said).not.toContain(sq('AppImage works better'));
+  });
+});
+
+describe('Steam Cloud saves in the menu', () => {
+  afterEach(() => useStore());
+
+  it('is grey outside a Steam launch, and says why', async () => {
+    const { g, p } = newGame();
+    g.hooks.steam = fake().hook;
+    const { menus, said } = await drive(g, p, ['Cloud saves: Off']);
+    const m = menus[0];
+    expect(m.enabled[m.labels.indexOf('Cloud saves: Off')]).toBe(false);
+    expect(said).toContain(sq('Start Ultima V from Steam to change this.'));
+  });
+
+  it('is grey in a Steam launch that has no game folder or no account', async () => {
+    for (const [more, why] of [
+      [{ game: 'missing' }, "Ultima V's folder in Steam isn't there"],
+      [{ account: false }, "Steam didn't say which account is playing"],
+    ] as const) {
+      const { g, p } = newGame();
+      g.hooks.steam = fake({ launch: true, ...more }).hook;
+      const { menus, said } = await drive(g, p, ['Cloud saves: Off']);
+      expect(choosable(menus[0])).not.toContain('Cloud saves: Off');
+      expect(said).toContain(sq(why));
     }
   });
 
-  it('says a setup or removal that rejects as "That didn\'t work"', async () => {
+  it('is grey on a Mac until Play from Steam is on there', async () => {
     const { g, p } = newGame();
-    g.options.input = 'controller';
-    g.hooks.steam = { ...hook({ system: 'linux', state: 'ready', line: null }), setup: () => Promise.reject(new Error('disk full')) };
-    let sent = false;
-    p.next = () => {
-      const m = g.menuShown;
-      if (!m) return Pad.A;
-      if (sent) return Pad.B;
-      if (m.labels[m.at] === 'Set up') return ((sent = true), Pad.A);
-      return K.Down;
-    };
-    await settingLines(g).find((l) => l.label === 'Steam')!.act!();
-    expect(p.log.replace(/\s+/g, ' ')).toContain("That didn't work: disk full");
+    g.hooks.steam = fake({ system: 'mac', line: null, launch: true }).hook;
+    const { menus, said } = await drive(g, p, ['Cloud saves: Off']);
+    const m = menus[0];
+    expect(m.enabled[m.labels.indexOf('Cloud saves: Off')]).toBe(false);
+    expect(said).toContain(sq('Turn Play from Steam on first'));
+    const on = newGame();
+    on.g.hooks.steam = fake({ system: 'mac', line: null, launch: true }, { macPlay: true }).hook;
+    expect(choosable((await drive(on.g, on.p)).menus[0])).toContain('Cloud saves: Off');
   });
 
-  it("keeps the desktop app's Steam messages to the same letters", () => {
-    const main = readFileSync(fileURLToPath(new URL('../../desktop/main.cjs', import.meta.url)), 'utf8');
-    const strings = main.split('\n').filter((l) => !/^\s*(\/\/|\/?\*)/.test(l));
-    expect(strings.filter((l) => /[^\t -~]/.test(l))).toEqual([]);
+  it("copies this computer's saves into Steam's folder, then keeps the game's saves there", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000)]));
+    const before = new Map(f.own);
+    const { menus } = await drive(g, p, ['Cloud saves: Off']);
+    expect(f.steam.get(saveKeys('a')!.last)).toBe(f.own.get(saveKeys('a')!.last));
+    expect(f.own).toEqual(before); // the side copied from, untouched
+    expect(f.recorded).toEqual([[true, undefined]]);
+    expect(f.state.used).toBe(true);
+    expect(choosable(menus.at(-1)!)).toContain('Cloud saves: On');
+  });
+
+  it("copies Steam's saves back when turned off, and the game's saves stay here from then on", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloud: true });
+    g.hooks.steam = f.hook;
+    fill(f.steam, character('a', [save(g, 'Iolo', 3, 2000)]));
+    const before = new Map(f.steam);
+    await drive(g, p, ['Cloud saves: On']);
+    expect(f.own.get(saveKeys('a')!.last)).toBe(f.steam.get(saveKeys('a')!.last));
+    expect(f.steam).toEqual(before);
+    expect(f.recorded).toEqual([[false, undefined]]);
+    expect(f.state.used).toBe(false);
+  });
+
+  /** Iolo played on both sides apart: level 3 here, level 5 with Steam, from the same first save. */
+  const clashing = (g: Game, f: ReturnType<typeof fake>): void => {
+    const first = save(g, 'Iolo', 1, 1000);
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000), first]));
+    fill(f.steam, character('a', [save(g, 'Iolo', 5, 3000), first]));
+  };
+
+  it('shows a clash with both versions, and Cancel copies nothing and leaves the option off', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const own = new Map(f.own);
+    const steam = new Map(f.steam);
+    const { shown, menus } = await drive(g, p, ['Cloud saves: Off', 'Cancel']);
+    const dialog = shown.find((s) => s.title === 'Keep which?')!;
+    expect(dialog.labels).toContain('Iolo, level 3');
+    expect(dialog.labels).toContain('Iolo, level 5');
+    expect(dialog.labels.join(' ')).toContain('On this computer');
+    expect(dialog.labels.join(' ')).toContain('In Steam');
+    expect(f.own).toEqual(own);
+    expect(f.steam).toEqual(steam);
+    expect(f.recorded).toEqual([]);
+    expect(f.state.used).toBeNull();
+    expect(choosable(menus.at(-1)!)).toContain('Cloud saves: Off');
+  });
+
+  it('keeps the version chosen as the latest save on the receiving side', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const mine = f.own.get(saveKeys('a')!.last);
+    await drive(g, p, ['Cloud saves: Off', 'Iolo, level 3']);
+    expect(f.steam.get(saveKeys('a')!.last)).toBe(mine);
+    expect(f.recorded).toEqual([[true, undefined]]);
+  });
+
+  it('copies nothing where a side changed while the player chose', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const { said } = await drive(g, p, ['Cloud saves: Off', () => f.steam.set(`${saveKeys('a')!.last}.9`, '{}'), 'Iolo, level 3']);
+    expect(said).toContain(sq('The saves changed while you chose, so nothing was copied.'));
+    expect(f.steam.get(saveKeys('a')!.last)).not.toBe(f.own.get(saveKeys('a')!.last));
+    expect(f.recorded).toEqual([]);
+  });
+
+  it('leaves the option off where a write fails, keeping why, and says so', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000)]));
+    f.state.refuse = 'ENOSPC';
+    const { said, menus } = await drive(g, p, ['Cloud saves: Off']);
+    expect(f.recorded).toEqual([[true, 'ENOSPC']]);
+    expect(f.state.used).toBeNull();
+    expect(said).toContain(sq('could not be copied (ENOSPC)'));
+    expect(said).toContain(sq('Steam Cloud saves stays off.'));
+    expect(choosable(menus.at(-1)!)).toContain('Cloud saves: Off');
+  });
+
+  it("copies nothing where Steam's folder can't be read", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true });
+    g.hooks.steam = f.hook;
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000)]));
+    f.state.steamReadable = false;
+    const { said } = await drive(g, p, ['Cloud saves: Off']);
+    expect(said).toContain(sq("Steam's saves can't be reached"));
+    expect(f.recorded).toEqual([[true, 'unreadable']]);
+  });
+});
+
+describe('the two sides of Cloud saves, through the app', () => {
+  afterEach(() => useStore());
+
+  it("writes this computer's side to local storage, Steam's through the app, and keeps the game's saves where told", async () => {
+    const local = new Map<string, string>([['ultima5.characters', 'here']]);
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => local.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        if (k === 'full') throw new DOMException('full', 'QuotaExceededError');
+        local.set(k, v);
+      },
+      removeItem: (k: string) => void local.delete(k),
+      key: (i: number) => [...local.keys()][i] ?? null,
+      get length() {
+        return local.size;
+      },
+      clear: () => local.clear(),
+    };
+    const folder = new Map<string, string>([['ultima5.characters', 'steam']]);
+    const asked: [boolean, string | undefined][] = [];
+    const sides = cloudSaves({
+      saves: {
+        all: () => Object.fromEntries(folder),
+        set: (k, v) => (k === 'bad' ? 'EACCES' : (folder.set(k, v), true)),
+        remove: (k) => folder.delete(k),
+      },
+      setOption: async (_name, on, failed) => (asked.push([on, failed]), { on, message: '' }),
+    });
+    expect(sides.own()).toEqual({ 'ultima5.characters': 'here' });
+    expect(sides.steam()).toEqual({ 'ultima5.characters': 'steam' });
+    expect(sides.write('own', 'x', '1')).toBe(true);
+    expect(sides.write('own', 'full', '1')).toBe('QuotaExceededError');
+    expect(sides.write('steam', 'y', '2')).toBe(true);
+    expect(sides.write('steam', 'bad', '2')).toBe('EACCES');
+    expect(folder.get('y')).toBe('2');
+    await sides.record(true);
+    expect(asked).toEqual([[true, undefined]]);
+    sides.use(true);
+    expect(kept().getItem('ultima5.characters')).toBe('steam');
+    sides.use(false);
+    expect(kept().getItem('ultima5.characters')).toBe('here');
+  });
+});
+
+describe('the Steam (beta) menu in the game font', () => {
+  it('shows only letters the game can draw (0x20-0x7e), on every system and in every state', async () => {
+    for (const system of ['linux', 'windows', 'mac'] as const)
+      for (const status of [{}, { steam: null, game: 'none' as const }, { launch: true }, { flatpak: true }])
+        for (const on of [false, true]) {
+          const { g, p } = newGame();
+          const f = fake({ system, ...status }, { playLine: on, compatTool: on, macPlay: on, cloud: on });
+          g.hooks.steam = f.hook;
+          const { shown } = await drive(g, p);
+          expect(
+            shown
+              .flatMap((s) => [s.title, ...s.labels])
+              .join('')
+              .match(/[^\x20-\x7e]/g) ?? [],
+          ).toEqual([]);
+        }
+  });
+
+  it('keeps its own words, and the desktop app’s, to the same letters', () => {
+    const outside = (path: string): string[] => {
+      const text = readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
+      return text.split('\n').filter((l) => !/^\s*(\/\/|\/?\*)/.test(l) && /[^\t -~]/.test(l));
+    };
+    for (const path of [
+      '../src/game/steamMenu.ts',
+      '../src/game/cloudSwitch.ts',
+      '../../desktop/main.cjs',
+      '../../desktop/steamOptions.cjs',
+    ])
+      expect(outside(path)).toEqual([]);
   });
 });

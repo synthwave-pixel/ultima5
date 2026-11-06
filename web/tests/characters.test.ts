@@ -1058,7 +1058,7 @@ describe('an update at the title', () => {
 });
 
 describe("saves Steam's folder refuses", () => {
-  afterEach(() => useStore(undefined as unknown as Storage));
+  afterEach(() => useStore());
 
   it('are reported as not kept, not retried for ever, when nothing can be let go either', () => {
     const files = new Map<string, string>();

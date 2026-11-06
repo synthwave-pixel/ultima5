@@ -1,6 +1,6 @@
 // Setting Steam up to play its Ultima V with this engine, and taking that away again, on each system. The player
-// starts it from the Steam line in Settings (main.cjs answers the page). On Windows there is only the launch line to
-// paste, since Steam's files are never edited there. On Linux a compatibility tool (as Boxtron does for DOS games) is a
+// turns it on and off in the title's Steam (beta) menu (steamOptions.cjs switchOption, main.cjs). On Windows there is
+// only the launch line to paste, since Steam's files are never edited there. On Linux a compatibility tool (as Boxtron does for DOS games) is a
 // folder of our own in Steam's compatibilitytools.d, which Steam offers in Ultima V's Properties after a restart. On a
 // Mac, Steam has no macOS launch for the game, so its entry in Steam's app cache is given one (appinfo.cjs) that runs a
 // small launcher .app in the game's folder; that edit, and the manifest that makes Steam download the game, are only

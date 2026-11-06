@@ -13,9 +13,9 @@
 // one thing it may ask of the disk (preload.cjs, scan.cjs). Launched from a
 // non-Steam shortcut, the app puts Steam's library artwork in place, once
 // (steamArt.cjs). Launched by Steam itself, the saves are files in the game's folder (steamSaves.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
-// (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs). The Steam line in
-// Settings sets Steam up to play its Ultima V with this engine, or takes that away (steamSetup.cjs); on a Mac that was
-// set up, each start puts the edit back if Steam has undone it.
+// (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs). The title's Steam (beta)
+// menu turns options on and off that set Steam up to play its Ultima V with this engine, or take that away
+// (steamOptions.cjs, steamSetup.cjs); on a Mac with its option on, each start puts the edit back if Steam has undone it.
 const electron = require('electron');
 const { app, BrowserWindow, dialog, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
@@ -43,8 +43,8 @@ const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, libraryPaths, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
-const { readOptions, writeOptions } = require('./steamOptions.cjs');
-const { report: steamReport } = require('./steamReport.cjs');
+const { readOptions, switchOption, writeOptions } = require('./steamOptions.cjs');
+const { mask, report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
@@ -171,7 +171,7 @@ function quitSteam() {
   });
 }
 
-// This build, for the Steam line: the Flatpak, the AppImage (its name has no version, so updates overwrite it and the line
+// This build, for the launch line: the Flatpak, the AppImage (its name has no version, so updates overwrite it and the line
 // holds), the portable .exe.
 const asFlatpak = process.env.FLATPAK_ID === steamSetup.FLATPAK_ID;
 const appImage = process.env.APPIMAGE || null;
@@ -234,28 +234,35 @@ const macWhere = () => ({
 });
 
 const SYSTEM = { darwin: 'mac', win32: 'windows' }[process.platform] ?? 'linux';
-const STEAM_STILL_RUNNING = "Steam didn't quit. Quit it yourself, then try again.";
 
 /**
- * Where this system stands with Steam, for the Steam line. On a Mac that was set up, asking also puts the edit back if
- * Steam has undone it and is closed; and a Mac says whether Steam is running, which setting up or removing would quit. Windows never edits Steam's files, so whether the line was pasted is not known.
+ * What the Steam (beta) menu opens with: this system and build, Steam's folder (the player's home written ~, as the
+ * report writes it) or null, Ultima V in its libraries, whether a Steam account is known (a launch's own, else the one
+ * signed in most recently), whether Steam launched this run, the launch line this copy would use, and on a Mac whether
+ * Steam is running, which turning the option off would quit. Only reads.
  */
-function steamStatus() {
-  const line = launchLineHere();
-  const roots = steamRootsHere().filter((r) => existsSync(r));
-  if (roots.length === 0) return { system: SYSTEM, state: 'no-steam', line };
-  if (SYSTEM === 'mac') {
-    // The Settings line must always open: a cache that cannot be read or written is logged, and shown as not set up.
+function steamStatus(launch) {
+  const f = steamFind();
+  const root = f.root ?? steamRootsHere().find((r) => existsSync(r)) ?? null;
+  const read = (path) => {
     try {
-      const { state, steamRunning: running } = steamSetup.macStatus(macWhere());
-      return { system: SYSTEM, state, line, steamRunning: running };
-    } catch (e) {
-      console.warn('steam status:', e);
-      return { system: SYSTEM, state: 'not-set-up', line, steamRunning: steamRunning() };
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
     }
-  }
-  if (SYSTEM === 'linux') return { system: SYSTEM, state: steamSetup.hasCompatTool(fs, roots) ? 'ready' : 'not-set-up', line };
-  return { system: SYSTEM, state: 'not-set-up', line };
+  };
+  const home = homedir();
+  return {
+    system: SYSTEM,
+    flatpak: asFlatpak,
+    steam: root === null ? null : mask(root, home),
+    game: f.game,
+    where: mask(f.where, home),
+    account: (launch ? launch.accountId : root === null ? null : accountId(root, process.env, read)) !== null,
+    launch: launch !== null,
+    line: launchLineHere(),
+    ...(SYSTEM === 'mac' ? { steamRunning: root !== null && steamRunning() } : {}),
+  };
 }
 
 // Whether this start had to put Ultima V's cache entry back (null: not looked at yet, or not a Mac), for the report.
@@ -325,53 +332,14 @@ function reportFacts(options, launch, page) {
   };
 }
 
-/** Sets Steam up on this system, and says how it went. */
-async function setUpSteam() {
-  if (SYSTEM === 'windows') {
-    return launchLineHere() === null
-      ? 'The portable Ultima V has no fixed place for Steam to start it from. Play from Steam with the installed Ultima V.'
-      : 'Nothing to install on Windows. Copy the launch line, then in Steam: Ultima V > Properties > Launch Options, ' +
-          'and paste.';
-  }
-  if (SYSTEM === 'mac') {
-    const result = await steamSetup.macSetup(macWhere());
-    if (result === 'steam-running') return STEAM_STILL_RUNNING;
-    if (result === 'not-owned') return "Steam doesn't list Ultima V on this Mac. Check this Steam account has it, then try again.";
-    if (result === 'app-not-in-place') {
-      return app.isPackaged
-        ? 'Move Ultima V to Applications and open it from there, then set up Steam again.'
-        : "A development run isn't set up as Steam's Ultima V. Use a built copy in Applications.";
-    }
-    return 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.';
-  }
-  if (!asFlatpak && !appImage) return "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
-  const written = steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImage });
-  if (written.length === 0) return "Steam isn't here. Install Steam and start it once, then try again.";
-  const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
-  return (
-    'Done. Restart Steam, then in Ultima V > Properties > Compatibility, choose Ultima V SP. Steam downloads ' +
-    'the game, and Play starts this engine.' +
-    (flathub ? ` Steam from Flathub needs this run once too: ${steamSetup.OVERRIDE}` : '')
-  );
-}
-
-/** Takes Steam's setup away on this system, and says how it went. */
-async function removeSteamSetup() {
-  if (SYSTEM === 'windows') {
-    return 'In Steam: Ultima V > Properties > Launch Options, and clear the line. Nothing else was changed.';
-  }
-  if (SYSTEM === 'mac') {
-    const result = await steamSetup.macRestore(macWhere());
-    if (result === 'steam-running') return STEAM_STILL_RUNNING;
-    if (result === 'kept-unusable') {
-      return "The copy of Steam's own settings for Ultima V kept at setup is damaged, so they were left as they are.";
-    }
-    return 'Removed. Ultima V in Steam is as Steam had it.';
-  }
-  steamSetup.removeCompatTool(fs, steamRootsHere());
-  fs.rmSync(stableLink, { force: true });
-  return 'Removed. Restart Steam, and choose another compatibility tool for Ultima V, or none.';
-}
+/** What turning each option on or off does here (steamOptions.cjs switchOption): Steam's own folders, as steamSetup.cjs keeps them. */
+const optionEffects = {
+  line: launchLineHere,
+  installTool: () => (asFlatpak || appImage ? steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImage }) : null),
+  removeTool: () => steamSetup.removeCompatTool(fs, steamRootsHere()),
+  macSetup: () => steamSetup.macSetup(macWhere()),
+  macRestore: () => steamSetup.macRestore(macWhere()),
+};
 
 /** Where the window was last as a window, and whether it was last full screen (windowState.cjs). */
 const stateFile = () => join(app.getPath('userData'), 'window.json');
@@ -544,25 +512,36 @@ app.whenReady().then(() => {
     event.returnValue = dir !== null && typeof key === 'string' && removeKey(dir, key);
   });
   // The Steam options (preload.cjs u5native.steam.options / setOption), kept per machine. The page is told them with
-  // this launch's account (null off Steam or with none known), as Cloud saves is per account. Here a switch only records
-  // its value; Cloud saves can be switched only in a Steam launch that knows its account.
+  // this launch's account (null off Steam or with none known), as Cloud saves is per account. A switch does what the
+  // option does here and keeps how it went (steamOptions.cjs switchOption); Cloud saves' copy is the page's, only
+  // recorded here, and only in a Steam launch that knows its account. One switch at a time: a second waits.
   const optionsFile = join(app.getPath('userData'), 'steam-options.json');
   ipcMain.on('steam-options', (event) => {
     event.returnValue = String(event.senderFrame?.url ?? '').startsWith('app://')
       ? { ...readOptions(optionsFile), account: launch?.accountId ?? null }
       : { ...readOptions(null), account: null };
   });
-  ipcMain.handle('steam-set-option', (event, name, on) => {
-    if (!String(event.senderFrame?.url ?? '').startsWith('app://') || typeof on !== 'boolean') return false;
-    const o = readOptions(optionsFile);
-    if (name === 'cloud') {
-      if (!launch?.accountId) return false;
-      if (on) o.cloud[launch.accountId] = true;
-      else delete o.cloud[launch.accountId];
-    } else if (name === 'playLine' || name === 'compatTool' || name === 'macPlay') o[name] = on;
-    else return false;
-    writeOptions(optionsFile, o);
-    return true;
+  let switching = Promise.resolve();
+  ipcMain.handle('steam-option', (event, name, on, failed) => {
+    if (!String(event.senderFrame?.url ?? '').startsWith('app://')) return null;
+    const run = async () => {
+      const r = await switchOption({
+        options: readOptions(optionsFile),
+        name,
+        on,
+        system: SYSTEM,
+        account: launch?.accountId ?? null,
+        now: Date.now(),
+        failed: typeof failed === 'string' ? failed : undefined,
+        effects: optionEffects,
+      });
+      if (r === null) return null;
+      writeOptions(optionsFile, r.options);
+      return { on: r.on, message: r.message, ...(r.line ? { line: r.line } : {}) };
+    };
+    const turned = switching.then(run);
+    switching = turned.catch(() => undefined);
+    return turned;
   });
   // The touch pad's full-screen button (preload.cjs): whether the window is full screen, set first if `on` is given.
   // Only the game's own page may ask.
@@ -586,17 +565,11 @@ app.whenReady().then(() => {
   ipcMain.handle('update-notes', (event, version) =>
     fromGame(event) && typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version) ? releaseNotes({ net, version }) : null,
   );
-  // The Steam line in Settings (steamSetup.cjs): where this system stands, setting up, removing, and the launch line to
-  // copy. Only the game's own page may ask. Setting up or removing gives the message to show, whatever went wrong.
-  const failed = (e) => `That didn't work: ${e instanceof Error ? e.message : String(e)}`;
-  ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus() : null));
-  ipcMain.handle('steam-setup', (event) => (fromGame(event) ? setUpSteam().catch(failed) : null));
-  ipcMain.handle('steam-remove', (event) => (fromGame(event) ? removeSteamSetup().catch(failed) : null));
-  ipcMain.handle('steam-launch-line', (event) => {
-    if (!fromGame(event)) return null;
-    return launchLineHere();
-  });
-  // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam line in Settings.
+  // The Steam (beta) menu (web/src/game/steamMenu.ts): what was found, and the launch line to copy. Only the game's own
+  // page may ask.
+  ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus(launch) : null));
+  ipcMain.handle('steam-launch-line', (event) => (fromGame(event) ? launchLineHere() : null));
+  // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam (beta) menu.
   ipcMain.handle('steam-line-state', (event) => (fromGame(event) ? steamLineState(readOptions(optionsFile)) : null));
   // The tester report for Copy report (steamReport.cjs): plain text, no save or file contents.
   ipcMain.handle('steam-report', (event, page) => {
@@ -645,10 +618,10 @@ app.whenReady().then(() => {
     })
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
-    // Steam set up from here: a Mac's cache entry given our launch again if Steam has replaced it (or said to wait for
-    // Steam to close, which the Steam line shows).
+    // Play from Steam on, on a Mac: its cache entry given our launch again if Steam has replaced it (or left for a start
+    // with Steam closed).
     try {
-      if (SYSTEM === 'mac') {
+      if (SYSTEM === 'mac' && readOptions(optionsFile).macPlay) {
         const before = steamSetup.macPatched(macWhere());
         const state = steamSetup.macReapply(macWhere());
         macReapplied = before === false && state === 'ready';

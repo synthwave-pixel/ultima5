@@ -10,7 +10,7 @@
 import type { Game } from './game.ts';
 import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
 import { Save } from './save.ts';
-import { avatarName, characters, deleteCharacter, fromBase64, savedWhen, savedWhere, type Character } from './storage.ts';
+import { avatarName, characters, deleteCharacter, fromBase64, savedWhen, savedWhere, type Character, type SaveData } from './storage.ts';
 
 /** How many lines of the list each character takes. */
 const LINES = 3;
@@ -18,16 +18,19 @@ const LINES = 3;
 /** A character's name, or what stands for none. */
 const nameOf = (c: Character): string => avatarName(c.data) || 'The nameless';
 
-/** A character's lines: their name and level, to be chosen; where they are and when they saved, in grey. */
-function linesOf(g: Game, c: Character): Item[] {
-  const level = new Save(fromBase64(c.data.save)).members[0].level;
-  const where = savedWhere(g, c.data);
+/** A save as a character's card: their name and level, to be chosen; where they are and when they saved, in grey. */
+export function cardOf(g: Game, data: SaveData): Item[] {
+  const level = new Save(fromBase64(data.save)).members[0].level;
+  const where = savedWhere(g, data);
   return [
-    { label: `${nameOf(c)}, level ${level}` },
+    { label: `${avatarName(data) || 'The nameless'}, level ${level}` },
     { label: where.charAt(0).toUpperCase() + where.slice(1), enabled: false },
-    { label: savedWhen(c.data.written), enabled: false },
+    { label: savedWhen(data.written), enabled: false },
   ];
 }
+
+/** A character's lines: their last save's card. */
+const linesOf = (g: Game, c: Character): Item[] => cardOf(g, c.data);
 
 /** A box drawn after the first has the title put back under it first (`redraw`), so none shows round a smaller one. */
 function boxes(redraw: () => Promise<void>): () => Promise<void> {

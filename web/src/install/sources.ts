@@ -8,7 +8,7 @@
 
 import { REQUIRED } from './gameFiles.ts';
 import type { FoundCopy } from './scan.ts';
-import type { SteamStatus } from '../game/game.ts';
+import type { LineCheck, SteamStatus, SteamSwitched } from '../game/game.ts';
 
 /** The site's gamedata/: its index.json, then each file named in it. None where there is no index (or its page). */
 export async function webCopy(fetcher: typeof fetch, base: string): Promise<FoundCopy[]> {
@@ -93,14 +93,16 @@ export interface SteamNative {
   find(): SteamFind;
   gameFiles(names: string[]): Promise<FoundCopy | null>;
   saves: { all(): Record<string, string> | null; set(key: string, value: string): true | string | false; remove(key: string): boolean };
-  /** The Steam line in Settings (game.ts SteamHook): the launch line is null where this copy has none. */
+  /** The Steam (beta) menu's (game.ts SteamHook): what was found, and the launch line, null where this copy has none. */
   status(): Promise<SteamStatus>;
-  setup(): Promise<string>;
-  remove(): Promise<string>;
   launchLine(): Promise<string | null>;
+  lineState(): Promise<LineCheck | null>;
   options(): SteamOptionsHere;
-  /** Records an option's value (Cloud saves: for this launch's account only); false where it was refused. */
-  setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean): Promise<boolean>;
+  /**
+   * Turns an option on or off with what it does here, and keeps how it went; null where refused. Cloud saves (for
+   * this launch's account only) is only recorded, its copy being the page's: `failed` says why it failed.
+   */
+  setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
   /** The tester report (desktop/steamReport.cjs), given what only the page knows; null where refused. */
   report(page: ReportArgs): Promise<string | null>;
 }

@@ -120,26 +120,85 @@ export interface GameHooks {
   note?: () => { text: string; seen: () => void } | null;
   /** Leave the game, where it runs as an app that can (ui/platform.ts appQuit); a browser tab has none. */
   quit?: (() => void) | undefined;
-  /** The Steam line in Settings (the desktop app's; web and Android have none): see SteamHook. */
+  /** The title's Steam (beta) menu (the desktop app's; web and Android have none): see SteamHook. */
   steam?: SteamHook;
 }
 
-/** Where this system stands with Steam (desktop/main.cjs steamStatus). `line` is the launch line to paste, where there is one. */
+/** What the Steam (beta) menu opens with (desktop/main.cjs steamStatus). Only found by reading. */
 export interface SteamStatus {
   system: 'linux' | 'windows' | 'mac';
-  state: 'ready' | 'not-set-up' | 'steam-running' | 'no-steam' | 'not-owned';
+  /** The Flatpak build, which works less well with Steam than the AppImage. */
+  flatpak: boolean;
+  /** Steam's folder, the player's home written ~; null where no Steam was found. */
+  steam: string | null;
+  /** Ultima V in Steam's libraries: installed in `where`, listed in `where` with its folder gone, or none. */
+  game: 'ok' | 'missing' | 'none';
+  where: string;
+  /** Whether a Steam account is known: this launch's, else the one signed in last. */
+  account: boolean;
+  /** Whether Steam launched this run. */
+  launch: boolean;
+  /** The launch line this copy would use; null where it has none (the portable .exe, a Mac). */
   line: string | null;
-  /** A Mac's: whether Steam is running, which setting up or removing would quit. */
+  /** A Mac's: whether Steam is running, which setting up or taking away would quit. */
   steamRunning?: boolean;
 }
 
-/** What the Steam line in Settings asks of the desktop app. setup and remove give the message to show, whatever went wrong. */
+/** The options that set Steam's Play up, by system: a launch line (Windows, Linux), the compatibility tool, a Mac's. */
+export type PlayOption = 'playLine' | 'compatTool' | 'macPlay';
+
+/** The options as they stand on this machine, Cloud saves for this launch's Steam account (off with none known). */
+export interface SteamChoices {
+  playLine: boolean;
+  compatTool: boolean;
+  macPlay: boolean;
+  cloud: boolean;
+}
+
+/** An option switched (desktop/steamOptions.cjs switchOption): whether it is on now, what to say, a launch line to show. */
+export interface SteamSwitched {
+  on: boolean;
+  message: string;
+  line?: string;
+}
+
+/** Whether Steam's saved launch line is this copy's (desktop/launchCheck.cjs), and whether both Linux options are on. */
+export interface LineCheck {
+  state: 'correct' | 'missing' | 'not-seen' | 'stale' | 'twice';
+  bothLinux: boolean;
+}
+
+/**
+ * The two sides of Steam Cloud saves' copy (cloudSwitch.ts): this computer's own saves and Steam's folder, each as
+ * keys and values; a write on one side (true, or why not), a removal (false where it could not be made); the switch
+ * recorded once the copy has all gone through, or its failure with the option left as it was; and the running game's
+ * saves kept from then on where the option now says.
+ */
+export interface CloudSaves {
+  own(): Record<string, string>;
+  /** Steam's folder, or null where it can't be read. */
+  steam(): Record<string, string> | null;
+  write(side: 'own' | 'steam', key: string, value: string): true | string;
+  remove(side: 'own' | 'steam', key: string): boolean;
+  record(on: boolean, failed?: string): Promise<SteamSwitched | null>;
+  use(on: boolean): void;
+}
+
+/** What the Steam (beta) menu asks of the desktop app (steamMenu.ts). */
 export interface SteamHook {
   status(): Promise<SteamStatus>;
-  setup(): Promise<string>;
-  remove(): Promise<string>;
+  options(): SteamChoices;
+  /** Turns an option on or off, with what it does here; null where it was refused. */
+  setOption(name: PlayOption, on: boolean): Promise<SteamSwitched | null>;
+  /** Steam's saved launch line read back, or null where there is none to read. */
+  lineState(): Promise<LineCheck | null>;
   /** Puts the launch line on the clipboard; false where this copy has none. */
   copyLine(): Promise<boolean>;
+  /** Puts the tester report on the clipboard; false where it could not be made. */
+  copyReport(): Promise<boolean>;
+  /** Opens a page in the player's browser. */
+  open(url: string): void;
+  cloud: CloudSaves;
 }
 
 /** What bump to act remembers of a thing (Game.bumped). */

@@ -7,6 +7,8 @@
  * either way.
  */
 
+import type { CloudSaves, SteamSwitched } from './game.ts';
+
 let chosen: Storage | undefined;
 
 /** The store in use: the one chosen with useStore, else local storage (looked up each time, as it may be swapped). */
@@ -14,8 +16,8 @@ export function kept(): Storage {
   return chosen ?? globalThis.localStorage;
 }
 
-/** Keep from now on in this store. */
-export function useStore(s: Storage): void {
+/** Keep from now on in this store; none, local storage. */
+export function useStore(s?: Storage): void {
   chosen = s;
 }
 
@@ -82,6 +84,59 @@ export function steamStore(initial: Record<string, string>, bridge: SteamBridge)
       for (const k of [...held.keys()]) if (bridge.remove(k)) held.delete(k);
       // Only local storage's own keys: a Steam key the files would not let go keeps any local key of its name too.
       for (const k of keys()) if (!isSteamKey(k)) local().removeItem(k);
+    },
+  };
+}
+
+/** What Steam Cloud saves' copy reaches through the desktop app (install/sources.ts SteamNative). */
+export interface CloudBridge {
+  saves: { all(): Record<string, string> | null } & SteamBridge;
+  setOption(name: 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
+}
+
+/**
+ * The two sides of Steam Cloud saves' copy (game.ts CloudSaves): this computer's own saves - local storage itself,
+ * whichever store the game keeps in now - and Steam's folder, through the app. Once the switch is recorded, the game
+ * keeps from then on in Steam's folder (on) or local storage (off), as the next launch would choose (boot.ts chooseStore).
+ */
+export function cloudSaves(native: CloudBridge): CloudSaves {
+  const local = (): Storage => globalThis.localStorage;
+  return {
+    own() {
+      const out: Record<string, string> = {};
+      for (let i = 0; i < local().length; i++) {
+        const k = local().key(i);
+        const v = k === null ? null : local().getItem(k);
+        if (k !== null && v !== null) out[k] = v;
+      }
+      return out;
+    },
+    steam: () => native.saves.all(),
+    write(side, key, value) {
+      if (side === 'steam') {
+        const written = native.saves.set(key, value);
+        return written === true ? true : written || 'refused';
+      }
+      try {
+        local().setItem(key, value);
+        return true;
+      } catch (e) {
+        return (e instanceof Error && e.name) || 'refused';
+      }
+    },
+    remove(side, key) {
+      if (side === 'steam') return native.saves.remove(key);
+      try {
+        local().removeItem(key);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    record: (on, failed) => native.setOption('cloud', on, failed),
+    use(on) {
+      const all = on ? native.saves.all() : null;
+      useStore(all ? steamStore(all, native.saves) : undefined);
     },
   };
 }

@@ -65,7 +65,7 @@ describe('which keys are saves', () => {
 describe('the store in use', () => {
   const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   afterEach(() => {
-    useStore(undefined as unknown as Storage);
+    useStore();
     restore(had);
   });
 
@@ -174,7 +174,7 @@ describe("settings in Steam's store", () => {
   const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   afterEach(() => {
     chooseCharacter(null);
-    useStore(undefined as unknown as Storage);
+    useStore();
     restore(had);
   });
 

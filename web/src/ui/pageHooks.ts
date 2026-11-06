@@ -12,7 +12,8 @@ import type { Game } from '../game/game.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
 import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
 import { clearInstalled } from '../install/store.ts';
-import { steamNative } from '../install/sources.ts';
+import { reportArgs, steamNative } from '../install/sources.ts';
+import { cloudSaves } from '../game/keyStore.ts';
 import { GamepadInput } from './gamepad.ts';
 import type { CapacitorLike } from './platform.ts';
 import { mapKey, showMap } from './mapView.ts';
@@ -349,19 +350,32 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
       screen.flushKeys();
       return text;
     },
-    // The desktop app alone has a Steam to set up: web and Android show no Steam line.
+    // The desktop app alone has a Steam to set up: web and Android show no Steam (beta) menu.
     ...(steam
       ? {
           steam: {
             status: () => steam.status(),
-            setup: () => steam.setup(),
-            remove: () => steam.remove(),
+            options() {
+              const { playLine, compatTool, macPlay, cloud, account } = steam.options();
+              return { playLine, compatTool, macPlay, cloud: account !== null && cloud[account] === true };
+            },
+            setOption: (name, on) => steam.setOption(name, on),
+            lineState: () => steam.lineState(),
             async copyLine() {
               const line = await steam.launchLine();
               if (line === null) return false;
               await copy(line);
               return true;
             },
+            async copyReport() {
+              const report = await steam.report(reportArgs());
+              if (report === null) return false;
+              await copy(report);
+              return true;
+            },
+            // The system's browser, as the installer opens GOG's page (desktop/main.cjs setWindowOpenHandler).
+            open: (url) => void window.open(url, '_blank'),
+            cloud: cloudSaves(steam),
           },
         }
       : {}),
