@@ -161,6 +161,7 @@ const macWhere = () => ({
   fs,
   steamRoot: steamRoots({ platform: 'darwin', home: homedir(), env: process.env })[0],
   appExe: process.execPath,
+  packaged: app.isPackaged,
   keptOriginal: join(app.getPath('userData'), 'steam-appinfo-3067520.bin'),
   noteFile: join(app.getPath('userData'), 'steam-setup.json'),
   steamRunning,
@@ -178,7 +179,15 @@ function steamStatus() {
   const line = launchLineHere();
   const roots = steamRootsHere().filter((r) => existsSync(r));
   if (roots.length === 0) return { system: SYSTEM, state: 'no-steam', line };
-  if (SYSTEM === 'mac') return { system: SYSTEM, state: steamSetup.macReapply(macWhere()), line };
+  if (SYSTEM === 'mac') {
+    // The Settings line must always open: a cache that cannot be read or written is logged, and shown as not set up.
+    try {
+      return { system: SYSTEM, state: steamSetup.macReapply(macWhere()), line };
+    } catch (e) {
+      console.warn('steam status:', e);
+      return { system: SYSTEM, state: 'not-set-up', line };
+    }
+  }
   if (SYSTEM === 'linux') return { system: SYSTEM, state: steamSetup.hasCompatTool(fs, roots) ? 'ready' : 'not-set-up', line };
   return { system: SYSTEM, state: 'not-set-up', line };
 }
@@ -195,6 +204,11 @@ async function setUpSteam() {
     const result = await steamSetup.macSetup(macWhere());
     if (result === 'steam-running') return STEAM_STILL_RUNNING;
     if (result === 'not-owned') return "Steam doesn't list Ultima V on this Mac. Check this Steam account has it, then try again.";
+    if (result === 'app-not-in-place') {
+      return app.isPackaged
+        ? 'Move Ultima V to Applications and open it from there, then set up Steam again.'
+        : "A development run isn't set up as Steam's Ultima V. Use a built copy in Applications.";
+    }
     return 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.';
   }
   if (!asFlatpak && !appImage) return "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
@@ -216,7 +230,11 @@ async function removeSteamSetup() {
   }
   if (SYSTEM === 'mac') {
     const result = await steamSetup.macRestore(macWhere());
-    return result === 'steam-running' ? STEAM_STILL_RUNNING : 'Removed. Ultima V in Steam is as Steam had it.';
+    if (result === 'steam-running') return STEAM_STILL_RUNNING;
+    if (result === 'kept-unusable') {
+      return "The copy of Steam's own settings for Ultima V kept at setup is damaged, so they were left as they are.";
+    }
+    return 'Removed. Ultima V in Steam is as Steam had it.';
   }
   steamSetup.removeCompatTool(fs, steamRootsHere());
   fs.rmSync(stableLink, { force: true });

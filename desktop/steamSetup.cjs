@@ -230,30 +230,49 @@ const cacheFile = (steamRoot) => join(steamRoot, 'appcache', 'appinfo.vdf');
 
 /**
  * Ultima V's entry in the cache, and that entry with our launch added, or null when the account has not got the game
- * (or Steam has not cached it) or the entry is not one macPatch knows how to edit.
+ * (or Steam has not cached anything yet) or the entry is not one macPatch knows how to edit. A cache that cannot be
+ * read or makes no sense is an error, said as it is.
  */
 function ultimaEntry(fs, steamRoot) {
+  let bytes;
   try {
-    const info = readAppinfo(fs.readFileSync(cacheFile(steamRoot)));
-    const entry = appEntry(info, Number(APP_ID));
-    if (!entry) return null;
+    bytes = fs.readFileSync(cacheFile(steamRoot));
+  } catch (e) {
+    if (e && e.code === 'ENOENT') return null;
+    throw e;
+  }
+  const info = readAppinfo(bytes);
+  const entry = appEntry(info, Number(APP_ID));
+  if (!entry) return null;
+  try {
     return { info, entry, patch: macPatch(entry.kv, LAUNCHER) };
   } catch {
     return null;
   }
 }
 
-/** Puts the launcher in the game's folder, made if the library is there and the download has not been yet. */
+/**
+ * Whether Steam's Play may be aimed at this copy of the app: a built app (not a development run), and not one macOS
+ * is running from a hidden copy of the download (App Translocation, until the app is moved out of Downloads).
+ */
+const appInPlace = (packaged, appExe) => packaged && !appExe.includes('/AppTranslocation/');
+
+/**
+ * Puts the launcher in the game's folder, made if the library is there and the download has not been yet. Gives where
+ * it went and whether the game's folder was made for it, or null when the library is on a disk that is not there.
+ */
 function placeLauncher(fs, steamRoot, appExe) {
   const exists = (p) => fs.existsSync(p);
   const found = findGame([steamRoot], (p) => readOr(fs, p, null), exists);
   if (!found) return null;
   const library = 'folder' in found ? found.library : found.missing;
-  if (!exists(join(library, 'steamapps'))) return null; // a library on a disk that is not there: placed next time
-  const app = join(library, 'steamapps', 'common', INSTALLDIR, LAUNCHER);
+  if (!exists(join(library, 'steamapps'))) return null; // placed next time
+  const folder = join(library, 'steamapps', 'common', INSTALLDIR);
+  const madeFolder = !exists(folder);
+  const app = join(folder, LAUNCHER);
   writeIfChanged(fs, join(app, 'Contents', 'Info.plist'), infoPlist);
   writeIfChanged(fs, join(app, 'Contents', 'MacOS', LAUNCHER_EXE), launcherScript(appExe), 0o755);
-  return app;
+  return { app, madeFolder };
 }
 
 /**
@@ -287,10 +306,12 @@ async function steamClosed(steamRunning, quitSteam) {
 
 /**
  * Sets a Mac up: with Steam closed, the manifest that makes Steam download the game (unless a library has it), the
- * launcher in the game's folder, and our launch in the cache.
+ * launcher in the game's folder, and our launch in the cache. A copy Play should not be aimed at (appInPlace) writes
+ * nothing.
  */
-async function macSetup({ fs, steamRoot, appExe, keptOriginal, noteFile, steamRunning, quitSteam }) {
-  if (!ultimaEntry(fs, steamRoot)?.patch) return 'not-owned';
+async function macSetup({ fs, steamRoot, appExe, packaged, keptOriginal, noteFile, steamRunning, quitSteam }) {
+  if (!appInPlace(packaged, appExe)) return 'app-not-in-place';
+  if (!ultimaEntry(fs, steamRoot)) return 'not-owned';
   if (!(await steamClosed(steamRunning, quitSteam))) return 'steam-running';
   // Steam may have written its cache as it quit, so it is read again.
   const found = ultimaEntry(fs, steamRoot);
@@ -302,23 +323,32 @@ async function macSetup({ fs, steamRoot, appExe, keptOriginal, noteFile, steamRu
     writeIfChanged(fs, manifest, manifestAcf);
     note.manifest = manifest;
   }
-  note.launcher = placeLauncher(fs, steamRoot, appExe) ?? note.launcher ?? null;
+  const placed = placeLauncher(fs, steamRoot, appExe);
+  if (placed) {
+    note.launcher = placed.app;
+    note.madeFolder = note.madeFolder || placed.madeFolder;
+  }
+  note.launcher ??= null;
   writeIfChanged(fs, noteFile, `${JSON.stringify(note, null, 2)}\n`);
   patchCache(fs, steamRoot, keptOriginal, found);
   return 'done';
 }
 
 /**
- * At each start, for a Mac that was set up: the launcher put back or pointed at where the app is now, and, if Steam
- * has replaced Ultima V's entry, our launch added to the new one when Steam is closed.
+ * At each start, for a Mac that was set up: the launcher put back or pointed at where the app is now (only from a copy
+ * Play may be aimed at, so a development run or a copy still in Downloads never takes Play over), and, if Steam has
+ * replaced Ultima V's entry, our launch added to the new one when Steam is closed.
  */
-function macReapply({ fs, steamRoot, appExe, keptOriginal, noteFile, steamRunning }) {
+function macReapply({ fs, steamRoot, appExe, packaged, keptOriginal, noteFile, steamRunning }) {
   const note = readNote(fs, noteFile);
   if (!note) return 'not-set-up';
   const found = ultimaEntry(fs, steamRoot);
   if (!found) return 'not-owned';
-  const launcher = placeLauncher(fs, steamRoot, appExe);
-  if (launcher && launcher !== note.launcher) writeIfChanged(fs, noteFile, `${JSON.stringify({ ...note, launcher }, null, 2)}\n`);
+  const placed = appInPlace(packaged, appExe) ? placeLauncher(fs, steamRoot, appExe) : null;
+  if (placed && placed.app !== note.launcher) {
+    const madeFolder = note.madeFolder || placed.madeFolder;
+    writeIfChanged(fs, noteFile, `${JSON.stringify({ ...note, launcher: placed.app, madeFolder }, null, 2)}\n`);
+  }
   if (!found.patch.changed) return 'ready';
   if (steamRunning()) return 'steam-running';
   patchCache(fs, steamRoot, keptOriginal, found);
@@ -327,7 +357,9 @@ function macReapply({ fs, steamRoot, appExe, keptOriginal, noteFile, steamRunnin
 
 /**
  * Takes a Mac's setup away: with Steam closed, the kept entry back in the cache (unless Steam has since sent a newer
- * one, which is left as it is), then the launcher and the manifest if we wrote it.
+ * one, which is left as it is), then the launcher. The manifest, if we wrote it, goes only while nothing has been
+ * downloaded (the game's folder holds no more than the launcher), as Steam would otherwise forget the installed game;
+ * the folder goes too if we made it and it is left empty. A kept entry that does not hold Ultima V is left, and said.
  */
 async function macRestore({ fs, steamRoot, keptOriginal, noteFile, steamRunning, quitSteam }) {
   const note = readNote(fs, noteFile);
@@ -338,16 +370,20 @@ async function macRestore({ fs, steamRoot, keptOriginal, noteFile, steamRunning,
     const found = ultimaEntry(fs, steamRoot);
     if (found && !found.patch.changed) {
       const original = appEntry(readAppinfo(fs.readFileSync(keptOriginal)), Number(APP_ID));
-      if (original) {
-        const file = cacheFile(steamRoot);
-        fs.writeFileSync(`${file}.ultima5`, writeAppinfo(found.info, Number(APP_ID), original.header, original.kv));
-        fs.renameSync(`${file}.ultima5`, file);
-      }
+      if (!original) return 'kept-unusable';
+      const file = cacheFile(steamRoot);
+      fs.writeFileSync(`${file}.ultima5`, writeAppinfo(found.info, Number(APP_ID), original.header, original.kv));
+      fs.renameSync(`${file}.ultima5`, file);
     }
     fs.rmSync(keptOriginal, { force: true });
   }
-  if (note?.launcher) fs.rmSync(note.launcher, { recursive: true, force: true });
-  if (note?.manifest) fs.rmSync(note.manifest, { force: true });
+  const empty = (folder) => !fs.existsSync(folder) || fs.readdirSync(folder).length === 0;
+  if (note?.launcher) {
+    fs.rmSync(note.launcher, { recursive: true, force: true });
+    const folder = dirname(note.launcher);
+    if (note.madeFolder && fs.existsSync(folder) && empty(folder)) fs.rmdirSync(folder);
+  }
+  if (note?.manifest && empty(join(dirname(note.manifest), 'common', INSTALLDIR))) fs.rmSync(note.manifest, { force: true });
   fs.rmSync(noteFile, { force: true });
   return 'done';
 }

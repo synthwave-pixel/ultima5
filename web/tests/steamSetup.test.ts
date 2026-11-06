@@ -263,6 +263,7 @@ describe("the Mac's cache entry", () => {
       fs,
       steamRoot,
       appExe,
+      packaged: true,
       keptOriginal: join(data, 'steam-appinfo-3067520.bin'),
       noteFile: join(data, 'steam-setup.json'),
     };
@@ -371,15 +372,80 @@ describe("the Mac's cache entry", () => {
     expect(fs.existsSync(m.manifest)).toBe(false);
   });
 
-  it('removal brings the entry back byte for byte, and takes away the launcher and our manifest', async () => {
+  it('removal brings the entry back byte for byte, and takes away the launcher, its folder and our manifest', async () => {
     const m = mac();
     const before = fs.readFileSync(m.cacheFile);
     expect(await macSetup({ ...m, ...closed })).toBe('done');
     expect(await macRestore({ ...m, ...closed })).toBe('done');
     expect(sameEntries(fs.readFileSync(m.cacheFile), before)).toBe(true);
     expect(fs.existsSync(m.launcher)).toBe(false);
+    expect(fs.existsSync(join(m.launcher, '..'))).toBe(false);
     expect(fs.existsSync(m.manifest)).toBe(false);
     expect(fs.existsSync(m.keptOriginal)).toBe(false);
+  });
+
+  it('keeps our manifest and the game once Steam has downloaded it, taking only the launcher', async () => {
+    const m = mac();
+    expect(await macSetup({ ...m, ...closed })).toBe('done');
+    const game = join(m.launcher, '..');
+    fs.mkdirSync(join(game, 'DOSBOX'));
+    fs.writeFileSync(join(game, 'DOSBOX', 'Ultima V.exe'), 'MZ');
+    expect(await macRestore({ ...m, ...closed })).toBe('done');
+    expect(fs.existsSync(m.launcher)).toBe(false);
+    expect(fs.existsSync(join(game, 'DOSBOX', 'Ultima V.exe'))).toBe(true);
+    expect(fs.existsSync(m.manifest)).toBe(true);
+  });
+
+  it('leaves the kept entry and our edit when the kept file has no Ultima V, and says so', async () => {
+    const m = mac();
+    expect(await macSetup({ ...m, ...closed })).toBe('done');
+    const patched = fs.readFileSync(m.cacheFile);
+    fs.writeFileSync(m.keptOriginal, cache([{ appid: OTHER, kv: otherKv() }]));
+    expect(await macRestore({ ...m, ...closed })).toBe('kept-unusable');
+    expect(fs.existsSync(m.keptOriginal)).toBe(true);
+    expect(fs.readFileSync(m.cacheFile).equals(patched)).toBe(true);
+  });
+
+  it('says what is wrong with a cache it cannot read, rather than calling the game not owned', async () => {
+    const m = mac();
+    fs.writeFileSync(m.cacheFile, 'not a cache');
+    await expect(macSetup({ ...m, ...closed })).rejects.toThrow(/not an appinfo file/);
+  });
+
+  it('never aims Play at a development run or a copy macOS runs from Downloads', async () => {
+    for (const where of [
+      { packaged: false },
+      { appExe: '/private/var/folders/x/AppTranslocation/AB12/d/Ultima V.app/Contents/MacOS/Ultima V' },
+    ]) {
+      const m = mac();
+      const before = fs.readFileSync(m.cacheFile);
+      expect(await macSetup({ ...m, ...closed, ...where })).toBe('app-not-in-place');
+      expect(fs.readFileSync(m.cacheFile).equals(before)).toBe(true);
+      expect(fs.existsSync(m.manifest)).toBe(false);
+      expect(fs.existsSync(m.launcher)).toBe(false);
+    }
+  });
+
+  it('re-applies the cache edit from such a copy, but keeps the launcher on the installed app', async () => {
+    const m = mac();
+    expect(await macSetup({ ...m, ...closed })).toBe('done');
+    const script = join(m.launcher, 'Contents', 'MacOS', 'Ultima V Engine');
+    const aimed = fs.readFileSync(script, 'utf8');
+    fs.writeFileSync(
+      m.cacheFile,
+      cache([
+        { appid: ULTIMA, kv: ultimaKv(), change: 2 },
+        { appid: OTHER, kv: otherKv() },
+      ]),
+    );
+    expect(
+      macReapply({ ...m, packaged: false, appExe: '/Users/dev/ultima5/node_modules/electron/Electron', steamRunning: () => false }),
+    ).toBe('ready');
+    expect(isMacPatched(ultimaIn(m.cacheFile).kv, LAUNCHER)).toBe(true);
+    expect(fs.readFileSync(script, 'utf8')).toBe(aimed);
+    fs.rmSync(m.launcher, { recursive: true });
+    macReapply({ ...m, appExe: '/private/var/folders/x/AppTranslocation/AB12/d/Ultima V', steamRunning: () => false });
+    expect(fs.existsSync(m.launcher)).toBe(false);
   });
 
   it('re-applies to the newer entry Steam put in its place, and keeps that one to restore', async () => {

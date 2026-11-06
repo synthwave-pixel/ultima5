@@ -23,8 +23,13 @@ export function relinkAppImage(fs: Fs, link: string, current: string): void;
 export function installCompatTool(fs: Fs, roots: string[], launcher: { flatpak: boolean; appImageLink: string }): string[];
 export function hasCompatTool(fs: Fs, roots: string[]): boolean;
 export function removeCompatTool(fs: Fs, roots: string[]): void;
+/** The app's executable, and whether it is a built app (Electron's app.isPackaged): Play is aimed only at such a copy. */
+interface AppPlace {
+  appExe: string;
+  packaged: boolean;
+}
 export function macSetup(
-  where: MacWhere & { appExe: string; quitSteam(): Promise<void> },
-): Promise<'done' | 'steam-running' | 'not-owned'>;
-export function macReapply(where: MacWhere & { appExe: string }): 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
-export function macRestore(where: MacWhere & { quitSteam(): Promise<void> }): Promise<'done' | 'steam-running'>;
+  where: MacWhere & AppPlace & { quitSteam(): Promise<void> },
+): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
+export function macReapply(where: MacWhere & AppPlace): 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
+export function macRestore(where: MacWhere & { quitSteam(): Promise<void> }): Promise<'done' | 'steam-running' | 'kept-unusable'>;
