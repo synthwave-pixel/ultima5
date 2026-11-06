@@ -184,16 +184,18 @@ function createWindow() {
 // works across launches because the wrapper points TMPDIR, where Chromium keeps the lock's socket, at a directory the
 // instances share.
 //
-// A copy of the other kind (through Steam, or not) is told so instead, and never signals the first: the two play
-// different saves. That is decided from instance.json (instanceMode.cjs), written by the first copy once it has the
-// lock, before this one asks for the lock - asking is what signals the first copy.
+// A copy of the other kind (through Steam, or not) plays different saves, so it is told so and quits instead. Every
+// copy gives its mode with the lock request; the one the lock refuses reads the running copy's mode from instance.json
+// (instanceMode.cjs), which the first copy wrote once it had the lock, and the first copy ignores a request of the
+// other mode (the two starting at once).
 const steamMode = isSteamLaunch(process.env);
 const modeFile = join(app.getPath('userData'), 'instance.json');
-const clash = clashMessage(modeFile, steamMode);
-const primary = clash === null && app.requestSingleInstanceLock();
+const primary = app.requestSingleInstanceLock({ steam: steamMode });
+const clash = primary ? null : clashMessage(modeFile, steamMode);
 if (primary) noteMode(modeFile, steamMode);
-if (!primary) app.quit();
-app.on('second-instance', () => {
+else app.quit();
+app.on('second-instance', (_event, _argv, _cwd, data) => {
+  if (data?.steam !== steamMode) return;
   const win = BrowserWindow.getAllWindows()[0];
   if (!win) return;
   if (win.isMinimized()) win.restore();
@@ -202,8 +204,11 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
-  if (clash !== null) dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
-  if (!primary) return; // quitting: see above
+  if (!primary) {
+    // Quitting: see above. The refused copy of the other mode says why first.
+    if (clash !== null) dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
+    return;
+  }
   // app://ultima5/<path> -> app/<path>, confined to that folder.
   protocol.handle(SCHEME, (request) => {
     const url = new URL(request.url);

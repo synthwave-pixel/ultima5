@@ -16,41 +16,39 @@ describe('the running copy’s mode', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   };
-  const other = (file: string, steam: boolean) => writeFileSync(file, JSON.stringify({ steam, pid: process.pid + 1 }));
-  const alive = () => true;
+  const note = (file: string, steam: boolean) => writeFileSync(file, JSON.stringify({ steam }));
 
   it('is no clash for the same mode, and each message for the other', () =>
     withDir((file) => {
-      other(file, false);
-      expect(clashMessage(file, false, alive)).toBeNull();
-      expect(clashMessage(file, true, alive)).toBe(OUTSIDE);
-      other(file, true);
-      expect(clashMessage(file, true, alive)).toBeNull();
-      expect(clashMessage(file, false, alive)).toBe(THROUGH);
+      note(file, false);
+      expect(clashMessage(file, false)).toBeNull();
+      expect(clashMessage(file, true)).toBe(OUTSIDE);
+      note(file, true);
+      expect(clashMessage(file, true)).toBeNull();
+      expect(clashMessage(file, false)).toBe(THROUGH);
     }));
 
   it('is no clash with nothing noted, or a note that cannot be read', () =>
     withDir((file) => {
-      expect(clashMessage(file, true, alive)).toBeNull();
+      expect(clashMessage(file, true)).toBeNull();
       writeFileSync(file, '{not json');
-      expect(clashMessage(file, true, alive)).toBeNull();
+      expect(clashMessage(file, true)).toBeNull();
       writeFileSync(file, JSON.stringify({ steam: 'yes' }));
-      expect(clashMessage(file, true, alive)).toBeNull();
+      expect(clashMessage(file, true)).toBeNull();
     }));
 
-  it('is no clash when the copy noted is gone, as after a crash', () =>
-    withDir((file) => {
-      other(file, false);
-      expect(clashMessage(file, true, () => false)).toBeNull();
-    }));
-
-  it('is written as JSON that is read back, with this process’s id', () =>
+  it('is written as JSON that is read back', () =>
     withDir((file) => {
       noteMode(file, true);
-      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ steam: true, pid: process.pid });
-      // Its own note is never a clash with itself; a note of the other mode from a live process is.
-      expect(clashMessage(file, false)).toBeNull();
-      writeFileSync(file, JSON.stringify({ steam: true, pid: process.ppid }));
-      expect(clashMessage(file, false)).toBe(THROUGH); // the parent process is running
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ steam: true });
+      expect(clashMessage(file, false)).toBe(THROUGH);
+      expect(clashMessage(file, true)).toBeNull();
+    }));
+
+  it('is written even where its folder is not made yet', () =>
+    withDir((file) => {
+      const deep = join(file, '..', 'not', 'yet', 'instance.json');
+      expect(() => noteMode(deep, false)).not.toThrow();
+      expect(clashMessage(deep, true)).toBe(OUTSIDE);
     }));
 });

@@ -17,7 +17,8 @@
 // the page from here. Under Steam's Game Mode no page is offered (a browser there leaves the game behind); a build
 // downloaded is still installed when the game quits. Launched by Steam, a copy never restarts itself (Steam would see
 // the game end and the new one start outside its overlay and saves): what comes down is installed as the game quits,
-// and the Flatpak's installed update is started by the player, from Steam again. A failure to look (offline, GitHub down) is only logged.
+// and the Flatpak's installed update is started by the player, from Steam again. A failure to look (offline, GitHub
+// down) is only logged.
 const { readFileSync, writeFileSync } = require('node:fs');
 const flatpakUpdates = require('./flatpakUpdates.cjs');
 
