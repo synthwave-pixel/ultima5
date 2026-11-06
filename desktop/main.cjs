@@ -491,7 +491,15 @@ app.whenReady().then(() => {
   }, 3000);
   // Newer releases looked for at once (updates.cjs), the game playing on while one comes down; no page offered under
   // Game Mode. Never in a smoke test.
-  if (!process.env.ULTIMA5_SMOKE) void checkForUpdates({ electron, quiet: inGamescope, file: updatesFile, steam: steamMode });
+  if (!process.env.ULTIMA5_SMOKE) {
+    void checkForUpdates({
+      electron,
+      quiet: inGamescope,
+      file: updatesFile,
+      steam: steamMode,
+      appImageLink: appImage ? stableLink : null,
+    });
+  }
   // A smoke test (smoke.cjs): screenshot once the game is up, then quit. Looked for every half second, from six seconds
   // after the page loads, for up to thirty: a slow runner (Windows CI's, once) was not up at a single look at six.
   const shot = process.env.ULTIMA5_SMOKE;

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -165,6 +165,42 @@ describe('the desktop app’s updates', () => {
     } finally {
       if (real) require.cache[path] = real;
       else delete require.cache[path];
+      Object.defineProperty(process, 'platform', { value: was.platform });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('point the AppImage’s stable link at the new file an update installs, and make none where there was none', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'u5-updates-'));
+    const was = { platform: process.platform };
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    const env = { ...process.env };
+    process.env.APPIMAGE = join(dir, 'Ultima-V-1.1.10.AppImage');
+    const path = createRequire(join(process.cwd(), '../desktop/updates.cjs')).resolve('electron-updater');
+    const real = require.cache[path];
+    const handlers = new Map<string, (dest: string) => void>();
+    const autoUpdater = {
+      on: (name: string, fn: (dest: string) => void) => void handlers.set(name, fn),
+      checkForUpdates: async () => null,
+    };
+    require.cache[path] = { id: path, filename: path, loaded: true, exports: { autoUpdater } } as never;
+    try {
+      const electron = { app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir }, net: {} };
+      const link = join(dir, 'share', 'Ultima-V.AppImage');
+      mkdirSync(join(dir, 'share'));
+      symlinkSync(process.env.APPIMAGE, link); // the old file is gone already: the link dangles
+      await checkForUpdates({ electron, quiet: false, file: join(dir, 'updates.json'), appImageLink: link });
+      handlers.get('appimage-filename-updated')?.(join(dir, 'Ultima-V-1.1.12.AppImage'));
+      expect(readlinkSync(link)).toBe(join(dir, 'Ultima-V-1.1.12.AppImage'));
+
+      rmSync(link);
+      handlers.get('appimage-filename-updated')?.(join(dir, 'Ultima-V-1.1.13.AppImage'));
+      expect(existsSync(link)).toBe(false);
+      expect(() => lstatSync(link)).toThrow();
+    } finally {
+      if (real) require.cache[path] = real;
+      else delete require.cache[path];
+      process.env = env;
       Object.defineProperty(process, 'platform', { value: was.platform });
       rmSync(dir, { recursive: true, force: true });
     }
