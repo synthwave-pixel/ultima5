@@ -67,7 +67,7 @@ If you own Ultima V on Steam, the desktop app can be what Steam's Play
 starts, in place of the 1988 DOS game. This is a beta: it lives in the
 title screen's **Steam (beta)** entry (desktop builds only; the web and
 Android have none), and every option in it is **off until you turn it on**.
-With all of them off the app writes nothing to Steam's folders and keeps
+With all of them off the app writes nothing for Ultima V in Steam's folders and keeps
 its saves in its own store. Turning an option off undoes it.
 
 The menu opens with what the app found: Steam's folder, whether Ultima V is
@@ -83,7 +83,7 @@ The options differ by system:
 | Windows | Play from Steam | Shows the launch line to copy | Tells you to clear the line in Steam |
 | Linux | Play from Steam: Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
 | Linux | Play from Steam: Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
-| macOS | Play from Steam | Warns, offers to quit Steam, then edits Steam's settings | With Steam closed, puts Steam's settings back |
+| macOS | Play from Steam | Warns that it closes Steam and asks you to confirm, then edits Steam's settings | Asks to quit Steam if it is running, then puts Steam's settings back |
 | All | Cloud saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
 
 - **Windows**: Steam's files are never edited, and Steam must have
@@ -112,10 +112,12 @@ The options differ by system:
   it warns that it closes Steam and changes Steam's own settings for Ultima
   V, that Steam may undo the change when EA updates the game (the app puts
   it back), and that turning the option off puts Steam's settings back as
-  they were; nothing happens unless you confirm. Because it edits Steam's
-  files, Steam must be closed: if Steam is running the app asks to quit it,
-  for turning the option on and off alike. Steam then downloads the game if
-  it has not yet, and Play starts this engine. If Play ever says "Invalid
+  they were; nothing happens unless you confirm, and confirming lets it
+  close Steam. Turning it off edits Steam's files too, so if Steam is
+  running the app asks to quit it first. In a game Steam started it can't
+  be turned off (quitting Steam would end the game): quit, and turn it off
+  from outside Steam. Steam then downloads the game if it has not yet, and
+  Play starts this engine. If Play ever says "Invalid
   platform", Steam has refreshed Ultima V's settings: open the app once
   with Steam closed (or let it quit Steam) and it puts them back. EA seldom
   updates Ultima V, so this is rarely needed.
@@ -137,7 +139,8 @@ Copy launch line. In a game Steam started, the line is known to work.
 
 **Cloud saves.** The option can be switched only from a game Steam started
 (Steam's folder is known only then), with Ultima V's folder present and
-the Steam account known; on a Mac only with Play from Steam on. Turning it
+the Steam account known; on a Mac it is turned on only with Play from
+Steam on, but can always be turned off. Turning it
 on copies this computer's saves into Steam's folder
 (`ultima5-sp/<your Steam account id>/` inside the game's folder, each save a
 subfolder holding one `SAVED.GAM`), and saves made in a Steam launch then stay
@@ -146,7 +149,13 @@ back. If a character was played here and in Steam apart, the app shows both
 versions and asks which to keep; Cancel leaves everything as it was, and
 if any copy fails the option stays as it was. The option is kept per Steam
 account; the other options are kept per machine. Export and Import carry a
-game between launches with the option off.
+game between Steam and other launches while the option is on. If a game
+Steam started can't tell which account is playing while Cloud saves is on
+for one, or Steam's folder can't be read or written, the app uses this
+computer's saves for that launch and says so (the menu shows Cloud saves
+as Unknown where the account isn't known). Turning a Play option off while
+Cloud saves is on asks first: saves made from Steam stay with Steam until
+Cloud saves is turned off from a game Steam started.
 
 Testers: the menu ends with **Copy report**, a plain-text report of what was
 found (system, build, Steam, the game, the launch line, the options) to
