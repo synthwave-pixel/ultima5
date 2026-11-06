@@ -23,37 +23,18 @@ const shellQuote = (s) => `'${s.replace(/'/g, "'\\''")}'`;
 
 /**
  * What the player pastes into Ultima V's Launch Options: the installed Windows exe, the Flatpak or the AppImage's
- * stable link, each quoted as one argument, then %command%, which Steam replaces with its own launch (and the engine
+ * own file, each quoted as one argument, then %command%, which Steam replaces with its own launch (and the engine
  * ignores). None on a Mac, where the cache entry is the launch, or for the portable .exe, which is wherever the player
  * put it. Steam on Linux runs the line through a shell, so a path there is double-quoted with $ ` " \ escaped; a
  * Windows path cannot hold a ", so it is only quoted.
  */
-function launchLine({ platform, exe, appImageLink, flatpak, portable }) {
+function launchLine({ platform, exe, appImage, flatpak, portable }) {
   if (platform === 'win32') return portable || !exe ? null : `"${exe}" %command%`;
   if (platform === 'linux') {
     if (flatpak) return `flatpak run ${FLATPAK_ID} %command%`;
-    if (appImageLink) return `"${appImageLink.replace(/[\\"$`]/g, '\\$&')}" %command%`;
+    if (appImage) return `"${appImage.replace(/[\\"$`]/g, '\\$&')}" %command%`;
   }
   return null;
-}
-
-/** Where the AppImage's stable link is kept: its file is named for the version, and each update replaces it. */
-function appImageLink(home) {
-  return join(home, '.local', 'share', 'ultima5', 'Ultima-V.AppImage');
-}
-
-/** Points the stable link at the AppImage now running, made if need be. */
-function relinkAppImage(fs, link, current) {
-  let target = null;
-  try {
-    target = fs.readlinkSync(link);
-  } catch {
-    // no link yet, or not a link
-  }
-  if (target === current) return;
-  fs.mkdirSync(dirname(link), { recursive: true });
-  fs.rmSync(link, { force: true });
-  fs.symlinkSync(current, link);
 }
 
 const compatToolVdf = `"compatibilitytools"
@@ -85,8 +66,8 @@ const toolManifestVdf = `"manifest"
  * the host is only reached through flatpak-spawn, which Steam needs leave for; without it, the launcher says what to
  * run. flatpak-spawn starts the engine with the host's environment, so Steam's own is passed on.
  */
-function launchScript({ flatpak, appImageLink }) {
-  const target = flatpak ? `flatpak run ${FLATPAK_ID}` : shellQuote(appImageLink);
+function launchScript({ flatpak, appImage }) {
+  const target = flatpak ? `flatpak run ${FLATPAK_ID}` : shellQuote(appImage);
   return `#!/bin/sh
 # ${TOOL_NAME}: written by the Ultima V app so that Steam's Ultima V plays with its engine.
 # Steam names the game in SteamAppId, SteamGameId or STEAM_COMPAT_APP_ID, as its version has it.
@@ -136,7 +117,7 @@ const toolDir = (root) => join(root, 'compatibilitytools.d', TOOL);
 
 /** Writes the compatibility tool under each Steam folder that is there, and gives the folders written. */
 function installCompatTool(fs, roots, launcher) {
-  if (!launcher.flatpak && !launcher.appImageLink) throw new Error('nothing for the compatibility tool to start');
+  if (!launcher.flatpak && !launcher.appImage) throw new Error('nothing for the compatibility tool to start');
   const written = [];
   for (const root of existingRoots(fs, roots)) {
     const dir = toolDir(root);
@@ -407,8 +388,6 @@ module.exports = {
   FLATPAK_ID,
   OVERRIDE,
   launchLine,
-  appImageLink,
-  relinkAppImage,
   installCompatTool,
   hasCompatTool,
   removeCompatTool,

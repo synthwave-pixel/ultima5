@@ -120,7 +120,7 @@
       }
     },
     "appImage": {
-      "artifactName": "Ultima-V-${version}-${arch}.${ext}"
+      "artifactName": "ultima5-sp-${arch}.${ext}"
     },
     "flatpak": {
       "files": [

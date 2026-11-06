@@ -146,15 +146,15 @@ function quitSteam() {
   });
 }
 
-// This build, for the Steam line: the Flatpak, the AppImage (whose stable link Steam is pointed at), the portable .exe.
+// This build, for the Steam line: the Flatpak, the AppImage (its name has no version, so updates overwrite it and the line
+// holds), the portable .exe.
 const asFlatpak = process.env.FLATPAK_ID === steamSetup.FLATPAK_ID;
 const appImage = process.env.APPIMAGE || null;
-const stableLink = steamSetup.appImageLink(homedir());
 const launchLineHere = () =>
   steamSetup.launchLine({
     platform: process.platform,
     exe: process.execPath,
-    appImageLink: appImage ? stableLink : null,
+    appImage,
     flatpak: asFlatpak,
     portable: !!process.env.PORTABLE_EXECUTABLE_DIR,
   });
@@ -216,8 +216,7 @@ async function setUpSteam() {
     return 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.';
   }
   if (!asFlatpak && !appImage) return "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
-  if (appImage) steamSetup.relinkAppImage(fs, stableLink, appImage);
-  const written = steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImageLink: stableLink });
+  const written = steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImage });
   if (written.length === 0) return "Steam isn't here. Install Steam and start it once, then try again.";
   const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
   return (
@@ -438,8 +437,6 @@ app.whenReady().then(() => {
   ipcMain.handle('steam-remove', (event) => (fromGame(event) ? removeSteamSetup().catch(failed) : null));
   ipcMain.handle('steam-launch-line', (event) => {
     if (!fromGame(event)) return null;
-    // The line names the AppImage's stable link, so the link is made for it.
-    if (appImage) steamSetup.relinkAppImage(fs, stableLink, appImage);
     return launchLineHere();
   });
   const win = createWindow();
@@ -480,11 +477,9 @@ app.whenReady().then(() => {
     })
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
-    // Steam set up from here: the AppImage's stable link pointed at this file (only once setup or the launch line has
-    // made it), and a Mac's cache entry given our launch again if Steam has replaced it (or said to wait for Steam to
-    // close, which the Steam line shows).
+    // Steam set up from here: a Mac's cache entry given our launch again if Steam has replaced it (or said to wait for
+    // Steam to close, which the Steam line shows).
     try {
-      if (appImage && fs.lstatSync(stableLink, { throwIfNoEntry: false })) steamSetup.relinkAppImage(fs, stableLink, appImage);
       if (SYSTEM === 'mac') {
         const state = steamSetup.macReapply(macWhere());
         if (state !== 'not-set-up' && state !== 'ready') console.log('steam setup:', state);
@@ -501,7 +496,6 @@ app.whenReady().then(() => {
       quiet: inGamescope,
       file: updatesFile,
       steam: steamMode,
-      appImageLink: appImage ? stableLink : null,
     });
   }
   // A smoke test (smoke.cjs): screenshot once the game is up, then quit. Looked for every half second, from six seconds

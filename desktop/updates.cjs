@@ -22,7 +22,6 @@
 const fs = require('node:fs');
 const { readFileSync, writeFileSync } = fs;
 const flatpakUpdates = require('./flatpakUpdates.cjs');
-const { relinkAppImage } = require('./steamSetup.cjs');
 
 const OWNER = 'synthwave-pixel';
 const REPO = 'ultima5';
@@ -126,10 +125,9 @@ async function latestRelease(net) {
  * Look for an update, as this copy allows (updateKind). `electron` is the main process's (app, net); `quiet` true
  * under Game Mode, where no page is offered. `file`, where the version last told of is kept (updates.json).
  * `flatpak`, the portal's (flatpakUpdates.cjs; the tests give their own). `steam` true in a Steam launch (steam.cjs
- * isSteamLaunch): no restart is offered or made. `appImageLink`, the AppImage's stable link that Steam starts
- * (steamSetup.cjs appImageLink), pointed again at the new file an update installs, where the link is there.
+ * isSteamLaunch): no restart is offered or made.
  */
-async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates, steam = false, appImageLink = null }) {
+async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates, steam = false }) {
   const { app, net } = electron;
   const kind = updateKind({
     packaged: app.isPackaged,
@@ -146,20 +144,6 @@ async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates
     // Pre-releases are for testers, who install them by hand: nothing updates to one.
     autoUpdater.allowPrerelease = false;
     autoUpdater.on('error', (e) => console.warn('update:', e?.message ?? e));
-    // The AppImage's update is a file of a new name, the old one deleted: the stable link Steam starts follows it.
-    autoUpdater.on('appimage-filename-updated', (dest) => {
-      if (!appImageLink) return;
-      try {
-        fs.lstatSync(appImageLink);
-      } catch {
-        return; // Steam was never set up here: no link is made
-      }
-      try {
-        relinkAppImage(fs, appImageLink, dest);
-      } catch (e) {
-        console.warn('update: the AppImage link:', e?.message ?? e);
-      }
-    });
     autoUpdater.on('update-downloaded', (info) => {
       console.log(`update: ${info.version} downloaded, installed on quitting`);
       publish({

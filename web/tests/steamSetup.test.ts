@@ -7,17 +7,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appEntry, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
 import { parseVdf } from '../../desktop/steam.cjs';
-import {
-  appImageLink,
-  installCompatTool,
-  launchLine,
-  macReapply,
-  macStatus,
-  macRestore,
-  macSetup,
-  relinkAppImage,
-  removeCompatTool,
-} from '../../desktop/steamSetup.cjs';
+import { installCompatTool, launchLine, macReapply, macStatus, macRestore, macSetup, removeCompatTool } from '../../desktop/steamSetup.cjs';
 
 const MAP = 0;
 const STR = 1;
@@ -122,51 +112,48 @@ function fakeProgram(path: string): string {
 describe('the launch line', () => {
   it('quotes the installed Windows exe as one argument before %command%', () => {
     const exe = "C:\\Program Files\\Ultima V (test)\\it's\\Ultima V.exe";
-    const line = launchLine({ platform: 'win32', exe, appImageLink: null, flatpak: false, portable: false });
+    const line = launchLine({ platform: 'win32', exe, appImage: null, flatpak: false, portable: false });
     expect(line).toBe(`"${exe}" %command%`);
     expect(shellWords(line!.replace(' %command%', ''))).toEqual([exe]);
   });
 
   it('runs the Flatpak by its id', () => {
-    expect(launchLine({ platform: 'linux', exe: '/app/ultima5', appImageLink: null, flatpak: true, portable: false })).toBe(
+    expect(launchLine({ platform: 'linux', exe: '/app/ultima5', appImage: null, flatpak: true, portable: false })).toBe(
       'flatpak run com.synthwavepixel.ultima5 %command%',
     );
   });
 
-  it("points at the AppImage's stable link, quoted as one argument", () => {
-    for (const link of [appImageLink(`/home/${ODD}`), '/home/a "b" $HOME `c`\\d/Ultima-V.AppImage']) {
-      const line = launchLine({ platform: 'linux', exe: '/tmp/.mount/ultima5', appImageLink: link, flatpak: false, portable: false });
+  it("points at the AppImage's own file, quoted as one argument", () => {
+    for (const file of [`/home/${ODD}/Apps/ultima5-sp-x86_64.AppImage`, '/home/a "b" $HOME `c`\\d/ultima5-sp-x86_64.AppImage']) {
+      const line = launchLine({ platform: 'linux', exe: '/tmp/.mount/ultima5', appImage: file, flatpak: false, portable: false });
       expect(line).toMatch(/^".*" %command%$/);
-      expect(shellWords(line!.replace(' %command%', ''))).toEqual([link]);
+      expect(shellWords(line!.replace(' %command%', ''))).toEqual([file]);
     }
-    expect(appImageLink(`/home/${ODD}`)).toBe(`/home/${ODD}/.local/share/ultima5/Ultima-V.AppImage`);
+    expect(
+      launchLine({
+        platform: 'linux',
+        exe: '/x/electron',
+        appImage: '/home/a/Apps/ultima5-sp-x86_64.AppImage',
+        flatpak: false,
+        portable: false,
+      }),
+    ).toBe('"/home/a/Apps/ultima5-sp-x86_64.AppImage" %command%');
+  });
+
+  it('is none for a Linux build that is neither the Flatpak nor the AppImage', () => {
+    expect(launchLine({ platform: 'linux', exe: '/x/electron', appImage: null, flatpak: false, portable: false })).toBeNull();
   });
 
   it('is not given on a Mac or for the portable Windows build', () => {
     expect(
-      launchLine({ platform: 'darwin', exe: '/Applications/Ultima V.app', appImageLink: null, flatpak: false, portable: false }),
+      launchLine({ platform: 'darwin', exe: '/Applications/Ultima V.app', appImage: null, flatpak: false, portable: false }),
     ).toBeNull();
-    expect(
-      launchLine({ platform: 'win32', exe: 'D:\\Games\\Ultima V.exe', appImageLink: null, flatpak: false, portable: true }),
-    ).toBeNull();
-  });
-});
-
-describe("the AppImage's stable link", () => {
-  it('is made, and re-pointed at the current file', () => {
-    const home = temp();
-    const link = appImageLink(home);
-    const first = fakeProgram(join(home, 'Ultima-V-1.0.0.AppImage'));
-    const second = fakeProgram(join(home, 'Ultima-V-1.1.0.AppImage'));
-    relinkAppImage(fs, link, first);
-    expect(fs.readlinkSync(link)).toBe(first);
-    relinkAppImage(fs, link, second);
-    expect(fs.readlinkSync(link)).toBe(second);
+    expect(launchLine({ platform: 'win32', exe: 'D:\\Games\\Ultima V.exe', appImage: null, flatpak: false, portable: true })).toBeNull();
   });
 });
 
 describe('the Linux compatibility tool', () => {
-  const setUp = (launcher: { flatpak: boolean; appImageLink: string }) => {
+  const setUp = (launcher: { flatpak: boolean; appImage: string | null }) => {
     const home = temp();
     const native = join(home, '.local', 'share', 'Steam');
     const viaLink = join(home, '.steam', 'root');
@@ -181,7 +168,7 @@ describe('the Linux compatibility tool', () => {
     spawnSync('/bin/sh', [script, verb, 'Z:\\DOSBOX\\Ultima V.exe'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin', ...env } });
 
   it('is written once under each Steam that is there, and parses as Steam reads it', () => {
-    const { viaLink, written } = setUp({ flatpak: true, appImageLink: '' });
+    const { viaLink, written } = setUp({ flatpak: true, appImage: null });
     const tool = join(viaLink, 'compatibilitytools.d', 'ultima5_engine');
     expect(written).toEqual([tool]);
     const compat = parseVdf(fs.readFileSync(join(tool, 'compatibilitytool.vdf'), 'utf8'));
@@ -198,16 +185,16 @@ describe('the Linux compatibility tool', () => {
   });
 
   it('refuses any game but Ultima V, saying so', () => {
-    const { written } = setUp({ flatpak: true, appImageLink: '' });
+    const { written } = setUp({ flatpak: true, appImage: null });
     const r = run(join(written[0], 'launch.sh'), 'waitforexitandrun', { SteamAppId: '22320' });
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain('only plays Ultima V');
   });
 
-  it('runs the AppImage by its link for run and waitforexitandrun, without Steam arguments, and does nothing else', () => {
+  it('runs the AppImage file itself for run and waitforexitandrun, without Steam arguments, and does nothing else', () => {
     const home = temp();
-    const link = fakeProgram(appImageLink(home));
-    const { written } = setUp({ flatpak: false, appImageLink: link });
+    const link = fakeProgram(join(home, 'Apps', 'ultima5-sp-x86_64.AppImage'));
+    const { written } = setUp({ flatpak: false, appImage: link });
     const script = join(written[0], 'launch.sh');
     for (const verb of ['run', 'waitforexitandrun']) {
       const r = run(script, verb, { SteamAppId: '3067520' });
@@ -221,8 +208,8 @@ describe('the Linux compatibility tool', () => {
 
   it('takes the app id from whichever of its names Steam gives', () => {
     const home = temp();
-    const link = fakeProgram(appImageLink(home));
-    const { written } = setUp({ flatpak: false, appImageLink: link });
+    const link = fakeProgram(join(home, 'Apps', 'ultima5-sp-x86_64.AppImage'));
+    const { written } = setUp({ flatpak: false, appImage: link });
     const script = join(written[0], 'launch.sh');
     for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID']) {
       expect(run(script, 'run', { [name]: '3067520' }).status, name).toBe(0);
@@ -231,7 +218,7 @@ describe('the Linux compatibility tool', () => {
   });
 
   it("inside Flatpak Steam, goes through flatpak-spawn, or says what to run when it can't", () => {
-    const { written, home } = setUp({ flatpak: true, appImageLink: '' });
+    const { written, home } = setUp({ flatpak: true, appImage: null });
     const bin = join(home, 'bin');
     fs.mkdirSync(bin);
     const env = { SteamAppId: '3067520', FLATPAK_ID: 'com.valvesoftware.Steam', PATH: `${bin}:/usr/bin:/bin` };
@@ -248,7 +235,7 @@ describe('the Linux compatibility tool', () => {
   });
 
   it('is removed from every Steam', () => {
-    const { native, absent } = setUp({ flatpak: true, appImageLink: '' });
+    const { native, absent } = setUp({ flatpak: true, appImage: null });
     removeCompatTool(fs, [native, absent]);
     expect(fs.existsSync(join(native, 'compatibilitytools.d', 'ultima5_engine'))).toBe(false);
   });

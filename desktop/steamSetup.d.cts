@@ -14,13 +14,11 @@ export const OVERRIDE: string;
 export function launchLine(build: {
   platform: string;
   exe: string;
-  appImageLink: string | null;
+  appImage: string | null;
   flatpak: boolean;
   portable: boolean;
 }): string | null;
-export function appImageLink(home: string): string;
-export function relinkAppImage(fs: Fs, link: string, current: string): void;
-export function installCompatTool(fs: Fs, roots: string[], launcher: { flatpak: boolean; appImageLink: string }): string[];
+export function installCompatTool(fs: Fs, roots: string[], launcher: { flatpak: boolean; appImage: string | null }): string[];
 export function hasCompatTool(fs: Fs, roots: string[]): boolean;
 export function removeCompatTool(fs: Fs, roots: string[]): void;
 /** The app's executable, and whether it is a built app (Electron's app.isPackaged): Play is aimed only at such a copy. */

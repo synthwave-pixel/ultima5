@@ -29,7 +29,6 @@ export function checkForUpdates(o: {
   file: string;
   flatpak?: FlatpakPortal;
   steam?: boolean;
-  appImageLink?: string | null;
 }): Promise<void>;
 export function applyUpdate(o: { electron: unknown; steam?: boolean }): boolean;
 export function toldOfUpdate(o: { file: string }): void;
