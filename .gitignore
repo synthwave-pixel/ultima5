@@ -27,3 +27,4 @@ web/art/standard/pictures.png
 
 # Local tooling settings (an editor's or an agent's)
 .claude/
+.worktrees/
