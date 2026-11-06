@@ -136,6 +136,8 @@ async function checkForUpdates({ electron, quiet, file, flatpak = flatpakUpdates
     const { autoUpdater } = require('electron-updater');
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
+    // Pre-releases are for testers, who install them by hand: nothing updates to one.
+    autoUpdater.allowPrerelease = false;
     autoUpdater.on('error', (e) => console.warn('update:', e?.message ?? e));
     autoUpdater.on('update-downloaded', (info) => {
       console.log(`update: ${info.version} downloaded, installed on quitting`);

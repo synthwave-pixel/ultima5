@@ -1,4 +1,5 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -105,6 +106,27 @@ describe('the desktop app’s updates', () => {
       await look();
       expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.13', current: '1.1.10', told: false });
     } finally {
+      Object.defineProperty(process, 'platform', { value: was.platform });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never offers a pre-release: electron-updater is told so', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'u5-updates-'));
+    const was = { platform: process.platform };
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    // electron-updater is loaded with require inside updates.cjs, so its cache entry is what gets stubbed.
+    const path = createRequire(join(process.cwd(), '../desktop/updates.cjs')).resolve('electron-updater');
+    const real = require.cache[path];
+    const autoUpdater = { allowPrerelease: true, on: () => {}, checkForUpdates: async () => null };
+    require.cache[path] = { id: path, filename: path, loaded: true, exports: { autoUpdater } } as never;
+    try {
+      const electron = { app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir }, net: {} };
+      await checkForUpdates({ electron, quiet: false, file: join(dir, 'updates.json') });
+      expect(autoUpdater.allowPrerelease).toBe(false);
+    } finally {
+      if (real) require.cache[path] = real;
+      else delete require.cache[path];
       Object.defineProperty(process, 'platform', { value: was.platform });
       rmSync(dir, { recursive: true, force: true });
     }

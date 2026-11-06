@@ -17,7 +17,10 @@
 # such section, so a release says so in a warning and goes out with the
 # generated notes alone. Desktop builds are unsigned: see "Desktop app,
 # and the Steam Deck" in docs/install.md for what that means on each
-# platform. The APK is signed with the committed sideload key unless the
+# platform. A run started by hand with "prerelease" on publishes the release
+# as a GitHub pre-release, for testers: the updater and the update notice
+# look only at the latest full release, so nothing updates to it, and the
+# site is not deployed. The APK is signed with the committed sideload key unless the
 # ANDROID_KEYSTORE_* secrets provide a release key. Linux gets a Flatpak
 # bundle as well as an AppImage; the Linux job installs (and caches) the
 # runtimes it needs.
@@ -30,6 +33,10 @@ on:
         description: Publish a GitHub Release (off keeps the builds as artifacts only)
         type: boolean
         default: true
+      prerelease:
+        description: Publish as a pre-release, for testers - nothing updates to it, the site is not deployed
+        type: boolean
+        default: false
       android_only:
         description: Build only the Android app (no desktop builds, so no release)
         type: boolean
@@ -187,12 +194,15 @@ jobs:
           node desktop/release-notes.cjs "$VERSION" > notes.md
           notes=()
           if [ -s notes.md ]; then notes=(--notes-file notes.md); else echo "::warning::README.md has no changelog section for v$VERSION"; fi
+          if [ "$PRERELEASE" = true ]; then notes+=(--prerelease); fi
           gh release create "v$VERSION" files/* --title "v$VERSION" --generate-notes "${notes[@]}" --target "$GITHUB_SHA"
         env:
+          PRERELEASE: ${{ inputs.prerelease }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.v.outputs.version }}
       # The site follows the releases: deployed now from the commit just released, which also brings its Flatpak
-      # repository up to the newest release.
-      - run: gh workflow run pages.yml --ref main -f source="$GITHUB_SHA"
+      # repository up to the newest release. Not for a pre-release.
+      - if: ${{ !inputs.prerelease }}
+        run: gh workflow run pages.yml --ref main -f source="$GITHUB_SHA"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -79,8 +79,9 @@ jobs:
       # The Flatpak repository: the newest release's bundle, imported into a fresh OSTree repository and signed. A
       # pruned repository holds one commit anyway, so nothing needs keeping between deploys. flatpak and ostree come from
       # the cache kept per runner image, else the mirror, its stale package lists (a superseded version 404s) refreshed
-      # first (.github/actions/apt-install). Until there is a release, and the signing key is set, the site goes
-      # without it.
+      # first (.github/actions/apt-install). `gh release view` with no tag is the latest full release, which skips
+      # pre-releases, so a tester's build never reaches the repository.
+      # Until there is a release, and the signing key is set, the site goes without it.
       - id: flatpak
         run: |
           if [ -n "$FLATPAK_GPG_KEY" ] && gh release view --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
