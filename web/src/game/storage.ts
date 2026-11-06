@@ -224,7 +224,7 @@ export interface Kept {
 }
 
 /** The saves before the last, by key, newest first; `next` numbers the next one kept. */
-interface Index {
+export interface Index {
   next: number;
   keys: string[];
 }
@@ -248,7 +248,7 @@ export function unpackSave(kept: string): string {
 }
 
 /** A save as kept, taken up, or null where there is none or it will not do (damaged, cut short). */
-function parsed(text: string | null): SaveData | null {
+export function parsed(text: string | null): SaveData | null {
   if (!text) return null;
   try {
     return parseSave(unpackSave(text));
@@ -262,17 +262,26 @@ const lastKey = (id: string): string => charKey(id, 'save');
 /** Character `id`'s index of their earlier saves. */
 const indexKey = (id: string): string => charKey(id, 'saves');
 
-/** Where character `id`'s saves are kept (the current character's with none named): for the tests to look at. */
+/** Where character `id`'s saves are kept (the current character's with none named): for the tests, and the copy to Steam. */
 export function saveKeys(id = currentCharacter()): { last: string; index: string } | null {
   return id === null ? null : { last: lastKey(id), index: indexKey(id) };
 }
 
-/** An index of earlier saves, read from `key`: only keys under `prefix` (a save's own) are taken, `most` of them. */
-function readIndexAt(key: string, prefix: string, most = EARLIER): Index {
+/** An index of earlier saves as kept (`text`): only keys under `prefix` (a save's own) are taken, `most` of them. */
+export function parseIndex(text: string | null, prefix: string, most = EARLIER): Index {
   try {
-    const d = JSON.parse(kept().getItem(key) ?? '') as Partial<Index>;
+    const d = JSON.parse(text ?? '') as Partial<Index>;
     const keys = Array.isArray(d.keys) ? d.keys.filter((k): k is string => typeof k === 'string' && k.startsWith(`${prefix}.`)) : [];
     return { next: typeof d.next === 'number' && d.next > 0 ? d.next : 1, keys: keys.slice(0, most) };
+  } catch {
+    return { next: 1, keys: [] };
+  }
+}
+
+/** An index of earlier saves, read from `key` (parseIndex). */
+function readIndexAt(key: string, prefix: string, most = EARLIER): Index {
+  try {
+    return parseIndex(kept().getItem(key), prefix, most);
   } catch {
     return { next: 1, keys: [] };
   }

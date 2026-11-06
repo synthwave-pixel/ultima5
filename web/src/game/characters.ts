@@ -27,15 +27,27 @@ let chosen: string | null = null;
 /** Characters made this session: theirs to save under though the list could not be written (storage full). */
 const made = new Set<string>();
 
-/** The ids on the list, in the order made; none where it is missing or will not read. */
-function listed(): string[] {
+/** The ids on a list as kept (`text`), in the order made; none where it is missing or will not read. */
+export function listedIn(text: string | null): string[] {
   try {
-    const d = JSON.parse(kept()?.getItem(CHARACTERS_KEY) ?? '') as { ids?: unknown };
+    const d = JSON.parse(text ?? '') as { ids?: unknown };
     return Array.isArray(d.ids) ? d.ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
   } catch {
     return [];
   }
 }
+
+/** The ids on the list (listedIn). */
+function listed(): string[] {
+  try {
+    return listedIn(kept()?.getItem(CHARACTERS_KEY) ?? null);
+  } catch {
+    return [];
+  }
+}
+
+/** A list of characters as it is kept. */
+export const listText = (ids: string[]): string => JSON.stringify({ version: 1, ids });
 
 /** The ids of every last save kept, found by looking through the storage itself (where it can be looked through). */
 function found(): string[] {
@@ -75,7 +87,7 @@ export function haveCharacterList(): boolean {
 /** The list written; false where it could not be. */
 export function writeCharacterIds(ids: string[]): boolean {
   try {
-    kept()?.setItem(CHARACTERS_KEY, JSON.stringify({ version: 1, ids }));
+    kept()?.setItem(CHARACTERS_KEY, listText(ids));
     return true;
   } catch {
     return false;
