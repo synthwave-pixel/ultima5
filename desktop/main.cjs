@@ -13,13 +13,17 @@
 // one thing it may ask of the disk (preload.cjs, scan.cjs). Launched from a
 // non-Steam shortcut, the app puts Steam's library artwork in place, once
 // (steamArt.cjs). Launched by Steam itself, the saves are files in the game's folder (steamSaves.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
-// (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs).
+// (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs). The Steam line in
+// Settings sets Steam up to play its Ultima V with this engine, or takes that away (steamSetup.cjs); on a Mac that was
+// set up, each start puts the edit back if Steam has undone it.
 const electron = require('electron');
 const { app, BrowserWindow, dialog, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
-const { writeFileSync, existsSync, readFileSync } = require('node:fs');
+const fs = require('node:fs');
+const { writeFileSync, existsSync, readFileSync } = fs;
+const { execFile, spawnSync } = require('node:child_process');
 const { readCopy, scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const {
@@ -40,6 +44,7 @@ const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
+const steamSetup = require('./steamSetup.cjs');
 
 // The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it - and
 // before anything asks for the data folder, which Electron makes as it is asked (portable.cjs).
@@ -67,6 +72,25 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 /**
+ * Windows' Steam folder, from the registry (HKCU\Software\Valve\Steam SteamPath), asked once; null elsewhere or when
+ * it is not set. Steam writes it with forward slashes, which steamRoots takes as a Windows path only with backslashes.
+ */
+let registryPath;
+function registrySteamPath() {
+  if (registryPath !== undefined) return registryPath;
+  registryPath = null;
+  if (process.platform !== 'win32') return registryPath;
+  const r = spawnSync('reg', ['query', 'HKCU\\Software\\Valve\\Steam', '/v', 'SteamPath'], { encoding: 'utf8', windowsHide: true });
+  const m = /SteamPath\s+REG_\w+\s+(.+)/.exec(r.stdout ?? '');
+  if (m) registryPath = m[1].trim().replace(/\//g, '\\');
+  return registryPath;
+}
+
+/** Where Steam may be on this system (steam.cjs), the registry's place first on Windows. */
+const steamRootsHere = () =>
+  steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: registrySteamPath() });
+
+/**
  * What a Steam launch found, looked for once at the start (the page asks for it again and again): null when Steam did
  * not launch the game, else `game` - 'ok' (its folder is there), 'missing' (Steam lists it in a library whose folder is
  * not there) or 'none' (no library holds it) - and `where`: the folder, or the library it was expected in. `dir` is
@@ -82,8 +106,7 @@ function steamLaunch() {
       return null;
     }
   };
-  // The registry's Steam path would come in here for Windows (a later step); the usual places are tried without it.
-  const roots = steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: undefined });
+  const roots = steamRootsHere();
   let missing = null;
   for (const root of roots) {
     const found = findGame([root], read, existsSync);
@@ -101,6 +124,103 @@ function steamLaunch() {
   }
   if (missing !== null) return { game: 'missing', where: missing, folder: null, account: false, dir: null };
   return { game: 'none', where: '', folder: null, account: false, dir: null };
+}
+
+/** Whether Steam is running: steam_osx on a Mac, steam on Linux. */
+function steamRunning() {
+  const name = { darwin: 'steam_osx', linux: 'steam' }[process.platform];
+  return name !== undefined && spawnSync('pgrep', ['-x', name]).status === 0;
+}
+
+/** Asks Steam on a Mac to quit, then waits up to 40 s for it to go. It goes even when osascript says "User canceled". */
+function quitSteam() {
+  return new Promise((resolve) => {
+    execFile('osascript', ['-e', 'quit app "Steam"'], () => {
+      const until = Date.now() + 40_000;
+      const look = () => (!steamRunning() || Date.now() > until ? resolve() : setTimeout(look, 500));
+      look();
+    });
+  });
+}
+
+// This build, for the Steam line: the Flatpak, the AppImage (whose stable link Steam is pointed at), the portable .exe.
+const asFlatpak = process.env.FLATPAK_ID === steamSetup.FLATPAK_ID;
+const appImage = process.env.APPIMAGE || null;
+const stableLink = steamSetup.appImageLink(homedir());
+const launchLineHere = () =>
+  steamSetup.launchLine({
+    platform: process.platform,
+    exe: process.execPath,
+    appImageLink: appImage ? stableLink : null,
+    flatpak: asFlatpak,
+    portable: !!process.env.PORTABLE_EXECUTABLE_DIR,
+  });
+
+/** A Mac's Steam folder, the app, and what setup keeps in the app's data (steamSetup.cjs). */
+const macWhere = () => ({
+  fs,
+  steamRoot: steamRoots({ platform: 'darwin', home: homedir(), env: process.env })[0],
+  appExe: process.execPath,
+  keptOriginal: join(app.getPath('userData'), 'steam-appinfo-3067520.bin'),
+  noteFile: join(app.getPath('userData'), 'steam-setup.json'),
+  steamRunning,
+  quitSteam,
+});
+
+const SYSTEM = { darwin: 'mac', win32: 'windows' }[process.platform] ?? 'linux';
+const STEAM_STILL_RUNNING = "Steam didn't quit. Quit it yourself, then try again.";
+
+/**
+ * Where this system stands with Steam, for the Steam line. On a Mac that was set up, asking also puts the edit back if
+ * Steam has undone it and is closed. Windows never edits Steam's files, so whether the line was pasted is not known.
+ */
+function steamStatus() {
+  const line = launchLineHere();
+  const roots = steamRootsHere().filter((r) => existsSync(r));
+  if (roots.length === 0) return { system: SYSTEM, state: 'no-steam', line };
+  if (SYSTEM === 'mac') return { system: SYSTEM, state: steamSetup.macReapply(macWhere()), line };
+  if (SYSTEM === 'linux') return { system: SYSTEM, state: steamSetup.hasCompatTool(fs, roots) ? 'ready' : 'not-set-up', line };
+  return { system: SYSTEM, state: 'not-set-up', line };
+}
+
+/** Sets Steam up on this system, and says how it went. */
+async function setUpSteam() {
+  if (SYSTEM === 'windows') {
+    return launchLineHere() === null
+      ? 'The portable Ultima V has no fixed place for Steam to start it from. Play from Steam with the installed Ultima V.'
+      : 'Nothing to install on Windows. Copy the launch line, then in Steam: Ultima V → ⚙ → Properties → Launch Options, ' +
+          'and paste.';
+  }
+  if (SYSTEM === 'mac') {
+    const result = await steamSetup.macSetup(macWhere());
+    if (result === 'steam-running') return STEAM_STILL_RUNNING;
+    if (result === 'not-owned') return "Steam doesn't list Ultima V on this Mac. Check this Steam account has it, then try again.";
+    return 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.';
+  }
+  if (!asFlatpak && !appImage) return "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
+  if (appImage) steamSetup.relinkAppImage(fs, stableLink, appImage);
+  const written = steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImageLink: stableLink });
+  if (written.length === 0) return "Steam isn't here. Install Steam and start it once, then try again.";
+  const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
+  return (
+    'Done. Restart Steam, then in Ultima V → ⚙ → Properties → Compatibility, choose Ultima V (new engine). Steam downloads ' +
+    'the game, and Play starts this engine.' +
+    (flathub ? ` Steam from Flathub needs this run once too: ${steamSetup.OVERRIDE}` : '')
+  );
+}
+
+/** Takes Steam's setup away on this system, and says how it went. */
+async function removeSteamSetup() {
+  if (SYSTEM === 'windows') {
+    return 'In Steam: Ultima V → ⚙ → Properties → Launch Options, and clear the line. Nothing else was changed.';
+  }
+  if (SYSTEM === 'mac') {
+    const result = await steamSetup.macRestore(macWhere());
+    return result === 'steam-running' ? STEAM_STILL_RUNNING : 'Removed. Ultima V in Steam is as Steam had it.';
+  }
+  steamSetup.removeCompatTool(fs, steamRootsHere());
+  fs.rmSync(stableLink, { force: true });
+  return 'Removed. Restart Steam, and choose another compatibility tool for Ultima V, or none.';
 }
 
 /** Where the window was last as a window, and whether it was last full screen (windowState.cjs). */
@@ -287,6 +407,18 @@ app.whenReady().then(() => {
   ipcMain.handle('update-notes', (event, version) =>
     fromGame(event) && typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version) ? releaseNotes({ net, version }) : null,
   );
+  // The Steam line in Settings (steamSetup.cjs): where this system stands, setting up, removing, and the launch line to
+  // copy. Only the game's own page may ask. Setting up or removing gives the message to show, whatever went wrong.
+  const failed = (e) => `That didn't work: ${e instanceof Error ? e.message : String(e)}`;
+  ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus() : null));
+  ipcMain.handle('steam-setup', (event) => (fromGame(event) ? setUpSteam().catch(failed) : null));
+  ipcMain.handle('steam-remove', (event) => (fromGame(event) ? removeSteamSetup().catch(failed) : null));
+  ipcMain.handle('steam-launch-line', (event) => {
+    if (!fromGame(event)) return null;
+    // The line names the AppImage's stable link, so the link is made for it.
+    if (appImage) steamSetup.relinkAppImage(fs, stableLink, appImage);
+    return launchLineHere();
+  });
   const win = createWindow();
   onOffer((o) => {
     if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);
@@ -325,6 +457,18 @@ app.whenReady().then(() => {
     })
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
+    // Steam set up from here: the AppImage's stable link pointed at this file (only once setup or the launch line has
+    // made it), and a Mac's cache entry given our launch again if Steam has replaced it (or said to wait for Steam to
+    // close, which the Steam line shows).
+    try {
+      if (appImage && fs.lstatSync(stableLink, { throwIfNoEntry: false })) steamSetup.relinkAppImage(fs, stableLink, appImage);
+      if (SYSTEM === 'mac') {
+        const state = steamSetup.macReapply(macWhere());
+        if (state !== 'not-set-up' && state !== 'ready') console.log('steam setup:', state);
+      }
+    } catch (e) {
+      console.warn('steam setup not re-applied:', e);
+    }
   }, 3000);
   // Newer releases looked for at once (updates.cjs), the game playing on while one comes down; no page offered under
   // Game Mode. Never in a smoke test.
