@@ -59,6 +59,47 @@ folder picker.
   see Android handhelds below.
 - **Linux without Flatpak**: the `AppImage` on the Releases page.
 
+## Steam's Ultima V
+
+If you own Ultima V on Steam, the desktop app can be what Play starts, in
+place of the 1988 DOS game. In the app, Settings → Steam says where your
+system stands and sets it up; Remove Steam setup undoes it. The Mac route
+was tried on a real Mac. The Windows and Linux routes are being tried by
+players through pre-releases (the Releases page marks them), so expect
+rough edges there, and say what you find.
+
+- **Windows**: Steam's files are never edited. Choose Copy launch line,
+  then in Steam open Ultima V → ⚙ → Properties → Launch Options and
+  paste. This needs the installed app: the portable `.exe` has no fixed
+  place for Steam to point at, so it has no line.
+- **Linux and SteamOS**: Set up installs a compatibility tool, Ultima V
+  (new engine). Restart Steam, then in Ultima V → ⚙ → Properties →
+  Compatibility, choose it. The launch line is the fallback: paste it as
+  on Windows. Steam installed as a Flatpak cannot run the game's Flatpak
+  until it is allowed to, with one line in a terminal, after which Steam
+  needs a restart:
+
+      flatpak override --user --talk-name=org.freedesktop.Flatpak com.valvesoftware.Steam
+
+- **macOS**: Steam has no Mac launch for Ultima V, so Set up gives it one.
+  That edits Steam's files, which Steam must be closed for: the app asks
+  to quit Steam, and then Play in Steam starts this engine. If Play ever
+  says "Invalid platform", Steam has refreshed Ultima V's settings: open
+  the app once with Steam closed (or let it quit Steam) and it puts them
+  back. EA rarely updates the game, so this is seldom needed.
+
+Steam must have installed Ultima V (the game is played from its folder,
+wherever its library is, an SD card or a second drive too). Saves made in
+a Steam launch live in `Ultima V Engine/<your Steam account id>/` inside
+the game's folder, and Steam Cloud syncs them. They are kept apart from
+the saves of any other launch of the app: neither sees the other's, and
+Export and Import carry a game from one to the other. Only one copy runs
+at a time across both, so starting one while the other is open says which
+is open and quits. In a Steam launch an update downloads in the
+background and installs when the game quits, never restarting itself under
+Steam. Remove Steam setup takes away what Set up made (on Windows, it
+tells you to clear the Launch Options line).
+
 ## Desktop app, and the Steam Deck
 
 The same game is packaged as a desktop app with Electron, for players who

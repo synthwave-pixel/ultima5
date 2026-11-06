@@ -1118,6 +1118,12 @@ at once - each saving over the other's game - is warned of in both at
 the next command prompt, once for each other window; windows playing
 different characters are nothing to each other.
 
+**Steam's Ultima V.** The desktop app can be what Steam's Play starts for
+a copy of Ultima V bought there (Settings → Steam; see
+[Steam's Ultima V](install.md#steams-ultima-v)). Its saves are kept
+with Steam, in the game's folder per account and synced by Steam Cloud,
+apart from any other launch's; Export and Import carry a game across.
+
 Saving is checked: each save is read back before the game says "(saved)"
 or "Done.", and where it cannot be kept (the storage full or shut, as in
 a private window) the log says "Not saved!" and the saves before it are

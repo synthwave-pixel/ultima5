@@ -31,6 +31,15 @@ looks beside the app, at home and where GOG and the Linux launchers install
 games (folders named like `u5`, `Ultima 5` or `Ultima V™.app`, a few levels
 down), and `preload.cjs` is the page's one bridge to it.
 
+Playing Steam's Ultima V with this engine (see
+[Steam's Ultima V](../docs/install.md#steams-ultima-v)) is a few modules:
+`steam.cjs` finds Steam, the game's folder in its libraries and the
+account that launched it; `appinfo.cjs` reads and writes Steam's app cache,
+to give the game a Mac launch entry; `steamSaves.cjs` keeps a Steam
+launch's saves as `SAVED.GAM` files for Steam Cloud; `steamSetup.cjs` sets
+Steam up and takes that away again on each system; and `instanceMode.cjs`
+tells a second copy whether the open one is a Steam launch or not.
+
 Builds for all three platforms come from the "Desktop and Android builds"
 workflow under Actions. It runs when started by hand (Actions > Run
 workflow), with "publish" deciding between a release and artifacts. The
