@@ -8,6 +8,7 @@
  */
 
 import { menuUp } from './pageMenu.ts';
+import { connectedPads, pressed as isDown } from './pads.ts';
 
 const STYLE = `
 .u5-notice { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -80,9 +81,7 @@ export function showNotice(title: string, text: string, button = 'OK'): Promise<
     const held = new Set<string>();
     const armed = new Set<string>();
     const pressed = (): string[] =>
-      (navigator.getGamepads?.() ?? []).flatMap((pad) =>
-        pad ? CLOSE_BUTTONS.filter((b) => pad.buttons[b]?.pressed).map((b) => `${pad.index}:${b}`) : [],
-      );
+      connectedPads().flatMap((pad) => CLOSE_BUTTONS.filter((b) => isDown(pad, b)).map((b) => `${pad.index}:${b}`));
     for (const b of pressed()) held.add(b);
     const poll = (): void => {
       const now = pressed();

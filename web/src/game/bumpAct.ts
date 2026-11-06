@@ -58,6 +58,7 @@ import { AN_SANCT, unlockCaster } from './magic.ts';
 import { Status } from './save.ts';
 import { isTrigger } from './targets.ts';
 import { T } from './tiles.ts';
+import { npcOfActor } from './town.ts';
 import { tileAt } from './world.ts';
 
 const C = 0x43; // Cast
@@ -100,6 +101,19 @@ const LOOK = new Set([
 ]);
 
 /**
+ * Whether actor `i` is one of the settlement's own people who has something to say and is not out to attack (their
+ * schedule's kind for the hour not 6 or 7, npc.ts approach): no foe, whatever they look like - Grendel, the alchemist
+ * turned giant rat in his hut, or Sin Vraal the daemon. Their look alone made the hut "foes near" (the port's error).
+ */
+function friendly(g: Game, i: number): boolean {
+  const s = g.s;
+  const npc = npcOfActor(g, i);
+  if (npc < 0 || s.npcs[npc].fa === 0) return false;
+  const kind = s.schedules[npc].type(s.npcs[npc].fe);
+  return kind !== 6 && kind !== 7;
+}
+
+/**
  * Whether foes are about (the port's): in a fight, any still standing on the field; elsewhere, a monster in the
  * party's view. While they are, what lies about is not searched, opened, taken or pushed at a bump - the party has
  * other business, and a bump in a fight is a step or a blow - though a door is still opened, rocks climbed, a thing
@@ -118,6 +132,7 @@ export function foesAbout(g: Game, where: BumpPlace): boolean {
     const a = s.actors[i];
     const t = a.tile;
     if (!t || a.z !== s.level || Math.abs(a.x - s.x) > 5 || Math.abs(a.y - s.y) > 5) continue;
+    if (where === 'town' && friendly(g, i)) continue;
     if ((t >= 0x80 && t !== 0xfc) || (t & 0xfc) === 0x2c) return true;
   }
   return false;
