@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { K, Pad } from '../src/game/io.ts';
 import { settingLines } from '../src/game/menu.ts';
@@ -96,5 +98,56 @@ describe('the Steam line in Settings', () => {
   it('shows a short failure line, and still opens, when the status cannot be had', async () => {
     const { menus } = await useSteam(new Error('boom'), []);
     expect(menus[0].join(' ')).toContain("Steam's state could not be read");
+  });
+
+  it('speaks only in letters the game can draw (0x20-0x7e), in every state of every system', async () => {
+    const systems = ['linux', 'windows', 'mac'] as const;
+    const states = ['ready', 'not-set-up', 'steam-running', 'no-steam', 'not-owned'] as const;
+    for (const system of systems) {
+      for (const state of states) {
+        const { g, p } = newGame();
+        g.options.input = 'controller';
+        g.hooks.steam = hook({ system, state, line: 'x' });
+        const todo = ['Set up', 'Copy launch line', 'Remove Steam setup', 'Yes'];
+        const seen: string[] = [];
+        p.next = () => {
+          const m = g.menuShown;
+          if (!m) {
+            seen.push(p.log);
+            return Pad.A;
+          }
+          seen.push(...m.labels);
+          const i = m.labels.findIndex((l) => todo.includes(l));
+          if (i < 0) return Pad.B;
+          if (m.at !== i) return K.Down;
+          todo.splice(todo.indexOf(m.labels[i]), 1);
+          return Pad.A;
+        };
+        await settingLines(g).find((l) => l.label === 'Steam')!.act!();
+        expect(seen.join('').match(/[^\x20-\x7e\n]/g) ?? []).toEqual([]);
+      }
+    }
+  });
+
+  it('says a setup or removal that rejects as "That didn\'t work"', async () => {
+    const { g, p } = newGame();
+    g.options.input = 'controller';
+    g.hooks.steam = { ...hook({ system: 'linux', state: 'ready', line: null }), setup: () => Promise.reject(new Error('disk full')) };
+    let sent = false;
+    p.next = () => {
+      const m = g.menuShown;
+      if (!m) return Pad.A;
+      if (sent) return Pad.B;
+      if (m.labels[m.at] === 'Set up') return ((sent = true), Pad.A);
+      return K.Down;
+    };
+    await settingLines(g).find((l) => l.label === 'Steam')!.act!();
+    expect(p.log.replace(/\s+/g, ' ')).toContain("That didn't work: disk full");
+  });
+
+  it("keeps the desktop app's Steam messages to the same letters", () => {
+    const main = readFileSync(fileURLToPath(new URL('../../desktop/main.cjs', import.meta.url)), 'utf8');
+    const strings = main.split('\n').filter((l) => !/^\s*(\/\/|\/?\*)/.test(l));
+    expect(strings.filter((l) => /[^\t -~]/.test(l))).toEqual([]);
   });
 });

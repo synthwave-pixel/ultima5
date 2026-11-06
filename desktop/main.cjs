@@ -197,7 +197,7 @@ async function setUpSteam() {
   if (SYSTEM === 'windows') {
     return launchLineHere() === null
       ? 'The portable Ultima V has no fixed place for Steam to start it from. Play from Steam with the installed Ultima V.'
-      : 'Nothing to install on Windows. Copy the launch line, then in Steam: Ultima V → ⚙ → Properties → Launch Options, ' +
+      : 'Nothing to install on Windows. Copy the launch line, then in Steam: Ultima V > Properties > Launch Options, ' +
           'and paste.';
   }
   if (SYSTEM === 'mac') {
@@ -217,7 +217,7 @@ async function setUpSteam() {
   if (written.length === 0) return "Steam isn't here. Install Steam and start it once, then try again.";
   const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
   return (
-    'Done. Restart Steam, then in Ultima V → ⚙ → Properties → Compatibility, choose Ultima V (new engine). Steam downloads ' +
+    'Done. Restart Steam, then in Ultima V > Properties > Compatibility, choose Ultima V (new engine). Steam downloads ' +
     'the game, and Play starts this engine.' +
     (flathub ? ` Steam from Flathub needs this run once too: ${steamSetup.OVERRIDE}` : '')
   );
@@ -226,7 +226,7 @@ async function setUpSteam() {
 /** Takes Steam's setup away on this system, and says how it went. */
 async function removeSteamSetup() {
   if (SYSTEM === 'windows') {
-    return 'In Steam: Ultima V → ⚙ → Properties → Launch Options, and clear the line. Nothing else was changed.';
+    return 'In Steam: Ultima V > Properties > Launch Options, and clear the line. Nothing else was changed.';
   }
   if (SYSTEM === 'mac') {
     const result = await steamSetup.macRestore(macWhere());

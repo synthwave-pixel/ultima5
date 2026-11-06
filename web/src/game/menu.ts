@@ -1990,12 +1990,12 @@ function steamWords(s: SteamStatus): string {
   if (s.state === 'no-steam') return "Steam isn't here. Install Steam and start it once, then come back.";
   if (s.state === 'not-owned') return "Steam doesn't list Ultima V here. Check this Steam account has it.";
   if (s.system === 'windows') {
-    return 'Steam is here. Copy the launch line, then in Steam: Ultima V → ⚙ → Properties → Launch Options, and paste.';
+    return 'Steam is here. Copy the launch line, then in Steam: Ultima V > Properties > Launch Options, and paste.';
   }
   if (s.system === 'linux') {
     return s.state === 'ready'
-      ? 'Set up. In Steam: Ultima V → ⚙ → Properties → Compatibility, choose Ultima V (new engine).'
-      : 'Set up installs the Ultima V (new engine) tool. Restart Steam, then in Ultima V → ⚙ → Properties → Compatibility, choose it.';
+      ? 'Set up. In Steam: Ultima V > Properties > Compatibility, choose Ultima V (new engine).'
+      : 'Set up installs the Ultima V (new engine) tool. Restart Steam, then in Ultima V > Properties > Compatibility, choose it.';
   }
   return (
     (s.state === 'ready' ? 'Set up. Play in Steam starts this engine.' : 'Set up points Play in Steam at this engine.') +
@@ -2012,6 +2012,14 @@ async function steamMenu(g: Game): Promise<void> {
   const steam = g.hooks.steam;
   if (!steam) return;
   const say = async (text: string): Promise<void> => void (await showText(g, 'Steam', wrap(text)));
+  // Setting up or removing may still reject: said as the desktop app says its own failures.
+  const attempt = async (what: () => Promise<string>): Promise<string> => {
+    try {
+      return await what();
+    } catch (e) {
+      return `That didn't work: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  };
   let at = 0;
   for (;;) {
     let s: SteamStatus | null = null;
@@ -2033,7 +2041,7 @@ async function steamMenu(g: Game): Promise<void> {
         run: async () => {
           if (s.system === 'mac' && s.state === 'steam-running' && !(await confirm(g, 'Steam must be closed for this. Quit Steam now?')))
             return;
-          await say(await steam.setup());
+          await say(await attempt(() => steam.setup()));
         },
       });
     }
@@ -2044,7 +2052,7 @@ async function steamMenu(g: Game): Promise<void> {
           try {
             await say(
               (await steam.copyLine())
-                ? 'Copied. In Steam: Ultima V → ⚙ → Properties → Launch Options, and paste.'
+                ? 'Copied. In Steam: Ultima V > Properties > Launch Options, and paste.'
                 : 'This copy of Ultima V has no launch line for Steam to use. Play from Steam with the installed Ultima V.',
             );
           } catch {
@@ -2054,7 +2062,7 @@ async function steamMenu(g: Game): Promise<void> {
       });
     }
     if (s !== null && s.state !== 'no-steam') {
-      actions.push({ item: { label: 'Remove Steam setup', key: c('R') }, run: async () => say(await steam.remove()) });
+      actions.push({ item: { label: 'Remove Steam setup', key: c('R') }, run: async () => say(await attempt(() => steam.remove())) });
     }
     items.push(...actions.map((a) => a.item));
     at = await choose(g, 'Steam', items, Math.min(at, items.length - 1));
