@@ -26,15 +26,17 @@ function readOptions(file) {
   return o;
 }
 
-/** `o` written to `file`, whole or not at all. A failure to write is not fatal. */
+/** `o` written to `file`, whole or not at all: whether it was. A failure to write is not fatal. */
 function writeOptions(file, o) {
   try {
     mkdirSync(dirname(file), { recursive: true });
     const temp = `${file}.${process.pid}.tmp`;
     writeFileSync(temp, JSON.stringify(o));
     renameSync(temp, file);
+    return true;
   } catch (e) {
     console.warn('steam options:', e?.message ?? e);
+    return false;
   }
 }
 
@@ -135,4 +137,26 @@ async function switchOption({ options, name, on, system, account, now, failed, e
   }
 }
 
-module.exports = { readOptions, writeOptions, switchOption };
+/**
+ * An option switched (switchOption) and the options written to `file`, as main.cjs answers the page: whether it is on,
+ * what to say, and a launch line to show; null where refused. Where the file can't be written, the switch is not kept:
+ * the page is told so, and the option as the file still has it (as the menu and the next launch read it), with no
+ * launch line, so that Cloud saves' copy is not followed by a change of where the game keeps its saves this session
+ * that the next launch would not make.
+ */
+async function switchAndKeep(file, args) {
+  const r = await switchOption(args);
+  if (r === null) return null;
+  if (writeOptions(file, r.options)) return { on: r.on, message: r.message, ...(r.line ? { line: r.line } : {}) };
+  const was = args.name === 'cloud' ? args.options.cloud[args.account] === true : args.options[args.name];
+  if (r.on === was) return { on: was, message: r.message };
+  return {
+    on: was,
+    message:
+      args.name === 'cloud'
+        ? "The app's settings couldn't be saved, so this can't change now."
+        : `${r.message} But the app's settings couldn't be saved, so this shows as it was.`,
+  };
+}
+
+module.exports = { readOptions, writeOptions, switchOption, switchAndKeep };

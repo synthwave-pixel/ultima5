@@ -43,7 +43,7 @@ const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, libraryPaths, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writable, writeKey } = require('./steamSaves.cjs');
-const { readOptions, switchOption, writeOptions } = require('./steamOptions.cjs');
+const { readOptions, switchAndKeep } = require('./steamOptions.cjs');
 const { mask, report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
@@ -531,8 +531,8 @@ app.whenReady().then(() => {
   let switching = Promise.resolve();
   ipcMain.handle('steam-option', (event, name, on, failed) => {
     if (!String(event.senderFrame?.url ?? '').startsWith('app://')) return null;
-    const run = async () => {
-      const r = await switchOption({
+    const run = () =>
+      switchAndKeep(optionsFile, {
         options: readOptions(optionsFile),
         name,
         on,
@@ -542,10 +542,6 @@ app.whenReady().then(() => {
         failed: typeof failed === 'string' ? failed : undefined,
         effects: optionEffects,
       });
-      if (r === null) return null;
-      writeOptions(optionsFile, r.options);
-      return { on: r.on, message: r.message, ...(r.line ? { line: r.line } : {}) };
-    };
     const turned = switching.then(run);
     switching = turned.catch(() => undefined);
     return turned;

@@ -2,7 +2,14 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readOptions, switchOption, writeOptions, type OptionEffects, type SteamOptions } from '../../desktop/steamOptions.cjs';
+import {
+  readOptions,
+  switchAndKeep,
+  switchOption,
+  writeOptions,
+  type OptionEffects,
+  type SteamOptions,
+} from '../../desktop/steamOptions.cjs';
 
 /** The Steam options kept per machine (desktop/steamOptions.cjs). */
 describe('the Steam options', () => {
@@ -57,7 +64,11 @@ describe('the Steam options', () => {
       expect(readOptions(file)).toEqual({ ...OFF, compatTool: true, cloud: { a: true }, results: { x: 'ok' } });
     }));
 
-  it('are not fatal to fail to write', () => expect(() => writeOptions('/dev/null/steam-options.json', { ...OFF })).not.toThrow());
+  it('are not fatal to fail to write, and say whether they were written', () =>
+    withDir((_dir, file) => {
+      expect(writeOptions('/dev/null/steam-options.json', { ...OFF })).toBe(false);
+      expect(writeOptions(file, { ...OFF })).toBe(true);
+    }));
 });
 
 /** An option turned on or off (desktop/steamOptions.cjs switchOption): its effect here, its result kept, and what to say. */
@@ -190,5 +201,52 @@ describe('switching a Steam option', () => {
         ascii((await turn(name, on, { system }))!.message);
         ascii((await turn(name, on, { system, effects: effects([], { ...fails, line: () => null, installTool: () => [] }) }))!.message);
       }
+  });
+});
+
+/** An option switched and kept (desktop/steamOptions.cjs switchAndKeep), as main.cjs answers the page. */
+describe('keeping a Steam option switched', () => {
+  const OFF: SteamOptions = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0 };
+  const effects: OptionEffects = {
+    line: () => 'x %command%',
+    installTool: () => ['/s/compatibilitytools.d/ultima5_sp'],
+    removeTool: () => undefined,
+    macSetup: async () => 'done',
+    macRestore: async () => 'done',
+  };
+  const args = (name: string, on: boolean, account: string | null = null) => ({
+    options: OFF,
+    name,
+    on,
+    system: 'linux',
+    account,
+    now: 1,
+    effects,
+  });
+  const UNWRITABLE = '/dev/null/steam-options.json';
+
+  it('writes the switch and tells the page how it went', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'u5-options-'));
+    try {
+      const file = join(dir, 'steam-options.json');
+      const line = (await switchAndKeep(file, args('playLine', true)))!;
+      expect(line).toMatchObject({ on: true, line: 'x %command%' });
+      expect(line.message).toContain('Launch Options');
+      expect(readOptions(file).playLine).toBe(true);
+      expect(await switchAndKeep(file, args('cloud', true, '42'))).toEqual({ on: true, message: '' });
+      expect(await switchAndKeep(file, args('macPlay', true))).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("tells the page a switch couldn't be kept, the option as it was, where the file can't be written", async () => {
+    const cloud = (await switchAndKeep(UNWRITABLE, args('cloud', true, '42')))!;
+    expect(cloud).toEqual({ on: false, message: "The app's settings couldn't be saved, so this can't change now." });
+    const line = (await switchAndKeep(UNWRITABLE, args('playLine', true)))!;
+    expect(line.on).toBe(false);
+    expect(line.line).toBeUndefined();
+    expect(line.message).toContain("But the app's settings couldn't be saved, so this shows as it was.");
+    expect(line.message.match(/[^\x20-\x7e]/g) ?? []).toEqual([]);
   });
 });

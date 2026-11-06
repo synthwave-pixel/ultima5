@@ -9,8 +9,8 @@ export interface SteamOptions {
 }
 /** What `file` holds; all off where it is missing or unreadable. */
 export function readOptions(file: string): SteamOptions;
-/** `o` written to `file`, whole or not at all. */
-export function writeOptions(file: string, o: SteamOptions): void;
+/** `o` written to `file`, whole or not at all: whether it was. */
+export function writeOptions(file: string, o: SteamOptions): boolean;
 /** What turning an option on or off does on this system (main.cjs: Steam's own folders, steamSetup.cjs). */
 export interface OptionEffects {
   /** The launch line for this copy, or null where it has none. */
@@ -40,3 +40,8 @@ export function switchOption(args: {
   failed?: string;
   effects: OptionEffects;
 }): Promise<Switched | null>;
+/** An option switched and the options written to `file`, as the page is told; where they can't be written, the option as it was. */
+export function switchAndKeep(
+  file: string,
+  args: Parameters<typeof switchOption>[0],
+): Promise<{ on: boolean; message: string; line?: string } | null>;
