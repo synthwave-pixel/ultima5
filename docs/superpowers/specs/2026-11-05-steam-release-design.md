@@ -25,7 +25,10 @@ source of the game files the engine needs.
 - Shared saves between Steam and non-Steam launches. **A Steam launch uses Steam saves only; any other launch uses
   the app's own saves only, even on a machine with a Steam copy.** Moving a game between the two uses the existing
   Export and Import.
-- Syncing settings. Settings stay per machine.
+- Syncing machine-wide settings. The game keeps a full block of settings with each character
+  (`ultima5.char.<id>.settings`), and in a Steam launch that block travels with the character's saves, sound,
+  Input and Battery saver included (decided 2026-11-05; splitting device settings off is a possible later
+  refinement). Only the no-character fallback (`ultima5.settings`) and the app's own bookkeeping stay per machine.
 - Using Valve's Steamworks library (licensed to a game's own developer; this would use EA's app id).
 - Patching or injecting into Steam's program (the NotProton approach).
 - Android. The Capacitor app is not part of this.
