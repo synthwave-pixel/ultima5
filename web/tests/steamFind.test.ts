@@ -1,4 +1,6 @@
 // web/tests/steamFind.test.ts
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { accountId, APP_ID, findGame, isSteamLaunch, libraryPaths, parseVdf, steamRoots } from '../../desktop/steam.cjs';
 
@@ -137,5 +139,12 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     const noRecent = disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: LOGINS.replace('"1"', '"0"') });
     expect(accountId(MAC_ROOT, {}, noRecent.read)).toBeNull();
     expect(accountId(MAC_ROOT, { SteamUser: 'wiverson' }, () => null)).toBeNull();
+  });
+
+  it('can reach a library on an SD card from the Flatpak: /run/media is in its permissions', () => {
+    const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
+      build: { flatpak: { finishArgs: string[] } };
+    };
+    expect(pkg.build.flatpak.finishArgs).toContain('--filesystem=/run/media');
   });
 });
