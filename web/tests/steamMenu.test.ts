@@ -647,6 +647,7 @@ describe('the two sides of Cloud saves, through the app', () => {
         remove: (k) => folder.delete(k),
       },
       setOption: async (_name, on, failed) => (asked.push([on, failed]), { on, message: '' }),
+      options: () => ({ account: '42' }),
     });
     expect(sides.own()).toEqual({ 'ultima5.characters': 'here' });
     expect(sides.steam()).toEqual({ 'ultima5.characters': 'steam' });

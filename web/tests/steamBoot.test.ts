@@ -347,6 +347,21 @@ describe('a launch from Steam', () => {
     expect(other.steamNote()).not.toBeNull();
   });
 
+  it('says nothing of it on the next launch where Cloud saves was turned on in a session, which said as much', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, { account: 'me' });
+    const { cloudSaves } = await import('../src/game/keyStore.ts');
+    const native = (globalThis as unknown as { u5native: { steam: Parameters<typeof cloudSaves>[0] } }).u5native.steam;
+    const sides = cloudSaves({ ...native, setOption: async (_name, on, failed) => ({ on: failed === undefined && on, message: '' }) });
+    await sides.record(true, 'ENOSPC');
+    expect(localStorage.getItem('ultima5.steamNoted.me')).toBeNull();
+    await sides.record(true);
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, ON);
+    vi.resetModules();
+    const next = await import('../src/boot.ts');
+    next.chooseStore();
+    expect(next.steamNote()).toBeNull();
+  });
+
   it('says nothing of it outside Steam', async () => {
     bridge(null);
     expect((await import('../src/boot.ts')).steamNote()).toBeNull();

@@ -92,7 +92,15 @@ export function steamStore(initial: Record<string, string>, bridge: SteamBridge)
 export interface CloudBridge {
   saves: { all(): Record<string, string> | null } & SteamBridge;
   setOption(name: 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
+  /** This launch's Steam account, null with none known. */
+  options(): { account: string | null };
 }
+
+/**
+ * Where this machine keeps that an account's player has been told how saves are kept with Cloud saves on (boot.ts
+ * steamNote), under the account's id: `${STEAM_NOTED_KEY}.<account>`.
+ */
+export const STEAM_NOTED_KEY = 'ultima5.steamNoted';
 
 /**
  * The two sides of Steam Cloud saves' copy (game.ts CloudSaves): this computer's own saves - local storage itself,
@@ -133,7 +141,19 @@ export function cloudSaves(native: CloudBridge): CloudSaves {
         return false;
       }
     },
-    record: (on, failed) => native.setOption('cloud', on, failed),
+    async record(on, failed) {
+      const r = await native.setOption('cloud', on, failed);
+      // Turned on here, the player has just been told how the saves are kept: the next Steam launch need not say it again.
+      const account = r?.on === true && on && failed === undefined ? native.options().account : null;
+      if (account !== null) {
+        try {
+          localStorage.setItem(`${STEAM_NOTED_KEY}.${account}`, '1');
+        } catch {
+          // Nowhere to keep it: the next launch says it once more.
+        }
+      }
+      return r;
+    },
     use(on) {
       const all = on ? native.saves.all() : null;
       useStore(all ? steamStore(all, native.saves) : undefined);

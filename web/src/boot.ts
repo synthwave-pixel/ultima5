@@ -11,13 +11,12 @@ import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
 import { noteFilesFrom, steamFound, steamLaunch, steamNative } from './install/sources.ts';
-import { steamStore, useStore } from './game/keyStore.ts';
+import { STEAM_NOTED_KEY, steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
 let told = false;
 /** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
 let settled: { text: string; seen: () => void } | null | undefined;
-const NOTED_KEY = 'ultima5.steamNoted';
 const FOUND_KEY = 'ultima5.steamFoundNoted';
 const FOUND = 'Found Ultima V in your Steam library.';
 /** Whether this launch took Steam's copy and has yet to say so. */
@@ -105,7 +104,7 @@ function noteFor(): { text: string; seen: () => void } | null {
     };
   }
   if (cloudAccount === null) return null;
-  const key = `${NOTED_KEY}.${cloudAccount}`;
+  const key = `${STEAM_NOTED_KEY}.${cloudAccount}`;
   try {
     if (localStorage.getItem(key) !== null) return null;
   } catch {
