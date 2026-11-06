@@ -134,16 +134,31 @@ describe('switching a Steam option', () => {
     const cannot = (await turn('compatTool', true, { effects: effects([], { installTool: () => null }) }))!;
     expect(cannot.options.compatTool).toBe(false);
     expect(cannot.message).toContain('Flatpak or the AppImage');
+    const calls: string[] = [];
     const broke = (await turn('compatTool', true, {
-      effects: effects([], {
+      effects: effects(calls, {
         installTool: () => {
           throw new Error('EACCES');
         },
       }),
     }))!;
+    // What was written before it stopped is taken away again, so nothing is left with the option off.
+    expect(calls).toEqual(['remove']);
     expect(broke.options.compatTool).toBe(false);
     expect(broke.options.results.compatTool).toBe('on: failed: EACCES');
     expect(broke.message).toBe("That didn't work: EACCES");
+    // Where taking it away fails too, it is still the install's failure that is said.
+    const worse = (await turn('compatTool', true, {
+      effects: effects([], {
+        installTool: () => {
+          throw new Error('EACCES');
+        },
+        removeTool: () => {
+          throw new Error('EBUSY');
+        },
+      }),
+    }))!;
+    expect(worse.message).toBe("That didn't work: EACCES");
   });
 
   it('sets a Mac up and takes it away, and stays as it was where Steam would not quit', async () => {

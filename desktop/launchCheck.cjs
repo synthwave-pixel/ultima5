@@ -39,7 +39,8 @@ function shellWords(line) {
     } else if (c === '"') {
       word ??= '';
       for (i++; i < line.length && line[i] !== '"'; i++) {
-        if (line[i] === '\\' && '\\"$`'.includes(line[i + 1] ?? '')) i++;
+        // (A \ at the very end, the quote never closed, is kept: ''.includes('') would step past the line.)
+        if (line[i] === '\\' && i + 1 < line.length && '\\"$`'.includes(line[i + 1])) i++;
         word += line[i];
       }
     } else {

@@ -133,6 +133,15 @@ async function switchOption({ options, name, on, system, account, now, failed, e
     return done(value, result, MAC_SAYS[`${word}:${result}`] ?? `That didn't work: ${result}`);
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
+    // The tool stopped part way while off: whatever folders it wrote are taken away again, as best they can be, so that
+    // none is left in Steam's with the option off.
+    if (name === 'compatTool' && on && !options.compatTool) {
+      try {
+        effects.removeTool();
+      } catch {
+        /* the install's failure is the one said */
+      }
+    }
     return done(options[name], `failed: ${why}`, `That didn't work: ${why}`);
   }
 }

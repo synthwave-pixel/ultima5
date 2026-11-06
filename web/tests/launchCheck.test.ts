@@ -85,6 +85,11 @@ describe('lineState', () => {
     expect(lineState(config('%command%'), flatpak, 'com.synthwavepixel.ultima5', false)).toBe('stale');
   });
 
+  it('keeps a \\ that ends a line inside an open quote as it is', () => {
+    const odd = '/opt/odd\\';
+    expect(lineState(config(`%command% "${odd}`), `"${odd}" %command%`, odd, false)).toBe('correct');
+  });
+
   it('is not fooled by a broken file', () => {
     expect(lineState('"UserLocalConfigStore" { "Software"', EXPECTED, EXE, false)).toBe('missing');
   });
