@@ -62,3 +62,30 @@ export function androidFolder(): (() => Promise<FoundCopy | null>) | null {
     return { where: got.where, files: got.files.map((f) => ({ path: f.path, data: bytes(f.data) })) };
   };
 }
+
+/** What the desktop app found when Steam launched the game (desktop/main.cjs steamLaunch). */
+export type SteamLaunch = { steam: false } | { steam: true; game: 'ok' | 'missing' | 'none'; where: string; account: boolean };
+
+/** The desktop app's Steam bridge (desktop/preload.cjs u5native.steam), where the page has one. */
+export interface SteamNative {
+  launch(): SteamLaunch;
+  gameFiles(names: string[]): Promise<FoundCopy | null>;
+  saves: { all(): Record<string, string> | null; set(key: string, value: string): boolean; remove(key: string): boolean };
+}
+
+/** The desktop app's Steam bridge; null outside the app, and in an app of before it. */
+export function steamNative(): SteamNative | null {
+  return (globalThis as { u5native?: { steam?: SteamNative } }).u5native?.steam ?? null;
+}
+
+/** How this launch began: by Steam or not (not, outside the desktop app). */
+export function steamLaunch(): SteamLaunch {
+  return steamNative()?.launch() ?? { steam: false };
+}
+
+/** The game's files from the folder Steam gave, where Steam launched the game and has the folder; else null. */
+export function steamCopy(): (() => Promise<FoundCopy | null>) | null {
+  const steam = steamNative();
+  const launch = steamLaunch();
+  return steam && launch.steam && launch.game === 'ok' ? () => steam.gameFiles([...REQUIRED]) : null;
+}

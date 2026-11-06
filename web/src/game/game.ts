@@ -116,6 +116,8 @@ export interface GameHooks {
    * opened - taking it up, and the player told of it (its box at the title, once a version).
    */
   update?: UpdateHook;
+  /** A note for the title to say once, in the news box (a Steam launch's, boot.ts steamNote): its text, and the player told. */
+  note?: () => { text: string; seen: () => void } | null;
   /** Leave the game, where it runs as an app that can (ui/platform.ts appQuit); a browser tab has none. */
   quit?: (() => void) | undefined;
 }

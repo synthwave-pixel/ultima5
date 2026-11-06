@@ -20,7 +20,7 @@ const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
 const { writeFileSync, existsSync, readFileSync } = require('node:fs');
-const { scanForGameFiles } = require('./scan.cjs');
+const { readCopy, scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const {
   applyUpdate,
@@ -66,11 +66,13 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 /**
- * Where a Steam launch keeps the saves, or null: <game folder>/Ultima V Engine/<account id>. Null when Steam did not
- * launch the game, the game's folder is not found (steam.cjs), or no account is known (a launch that mixed accounts
- * would be worse than none). The Steam folder whose library holds the game is the one whose login file names the account.
+ * What a Steam launch found, looked for once at the start (the page asks for it again and again): null when Steam did
+ * not launch the game, else `game` - 'ok' (its folder is there), 'missing' (Steam lists it in a library whose folder is
+ * not there) or 'none' (no library holds it) - and `where`: the folder, or the library it was expected in. `dir` is
+ * where the saves are kept, <game folder>/Ultima V Engine/<account id>, null without a folder or an account (a launch
+ * that mixed accounts would be worse than none); `folder` is the game's own.
  */
-function steamSaveDir() {
+function steamLaunch() {
   if (!isSteamLaunch(process.env)) return null;
   const read = (path) => {
     try {
@@ -81,13 +83,23 @@ function steamSaveDir() {
   };
   // The registry's Steam path would come in here for Windows (a later step); the usual places are tried without it.
   const roots = steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: undefined });
+  let missing = null;
   for (const root of roots) {
     const found = findGame([root], read, existsSync);
+    if (found && 'missing' in found) missing ??= found.missing;
     if (!found || !('folder' in found)) continue;
+    // The Steam folder whose library holds the game is the one whose login file names the account.
     const account = accountId(root, process.env, read);
-    return account === null ? null : join(found.folder, 'Ultima V Engine', account);
+    return {
+      game: 'ok',
+      where: found.folder,
+      folder: found.folder,
+      account: account !== null,
+      dir: account === null ? null : join(found.folder, 'Ultima V Engine', account),
+    };
   }
-  return null;
+  if (missing !== null) return { game: 'missing', where: missing, folder: null, account: false, dir: null };
+  return { game: 'none', where: '', folder: null, account: false, dir: null };
 }
 
 /** Where the window was last as a window, and whether it was last full screen (windowState.cjs). */
@@ -203,10 +215,28 @@ app.whenReady().then(() => {
       ? scanForGameFiles(names)
       : [],
   );
+  // A Steam launch (preload.cjs u5native.steam), decided here once and answered only to the game's own page: whether
+  // there is one, where the game's files are, and whether an account is known. The game's files are read from the folder
+  // Steam gave, the files the page names; none where there is no folder.
+  const launch = steamLaunch();
+  ipcMain.on('steam-launch', (event) => {
+    event.returnValue =
+      launch && String(event.senderFrame?.url ?? '').startsWith('app://')
+        ? { steam: true, game: launch.game, where: launch.where, account: launch.account }
+        : { steam: false };
+  });
+  ipcMain.handle('steam-game-files', (event, names) =>
+    launch?.folder &&
+    String(event.senderFrame?.url ?? '').startsWith('app://') &&
+    Array.isArray(names) &&
+    names.every((n) => typeof n === 'string')
+      ? { where: launch.folder, files: readCopy(launch.folder, names) }
+      : null,
+  );
   // The saves of a Steam launch (preload.cjs u5native.steam.saves, web/src/game/keyStore.ts), asked for synchronously so
-  // that a write the disk refuses fails the save at once. Decided here once; answered only to the game's own page, and
-  // only with a folder to keep them in (otherwise all gives null, and the others say false).
-  const saveDir = steamSaveDir();
+  // that a write the disk refuses fails the save at once. Answered only to the game's own page, and only with a folder to
+  // keep them in (otherwise all gives null, and the others say false).
+  const saveDir = launch?.dir ?? null;
   const savesFor = (event) => (String(event.senderFrame?.url ?? '').startsWith('app://') ? saveDir : null);
   ipcMain.on('steam-saves-all', (event) => {
     const dir = savesFor(event);

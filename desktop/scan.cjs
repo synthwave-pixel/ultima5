@@ -156,4 +156,4 @@ function scanForGameFiles(wanted) {
   return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children }), wanted, { platform, home });
 }
 
-module.exports = { gameFolderName, roots, findCopies, scanForGameFiles };
+module.exports = { gameFolderName, roots, findCopies, readCopy, scanForGameFiles };

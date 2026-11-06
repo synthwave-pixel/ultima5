@@ -767,17 +767,26 @@ export class Intro {
   /** Whether a newer version waits to be told of (updateBox). */
   private updateDue(): boolean {
     const offer = this.g.hooks.update?.offer();
-    return (!!offer && !offer.told) || !!this.g.hooks.update?.news?.();
+    return (!!offer && !offer.told) || !!this.g.hooks.update?.news?.() || !!this.g.hooks.note?.();
   }
 
   /**
-   * The first start of a newer version (the desktop app's), said once in a box of its own over the title: updated
-   * from what, and What's new - the release's notes, fetched from GitHub, as the game's own text pages. Whether the
+   * A note (hooks.note: a Steam launch's), or the first start of a newer version (the desktop app's), said once in a
+   * box of its own over the title: for a version, updated from what, and What's new - the release's notes, fetched from GitHub, as the game's own text pages. Whether the
    * box was shown (the title to be drawn again).
    */
   private async newsBox(): Promise<boolean> {
     const g = this.g;
     const update = g.hooks.update;
+    const note = g.hooks.note?.();
+    if (note) {
+      note.seen();
+      g.p.flushKeys();
+      const { choose, wrap } = await import('./menu.ts');
+      const lines = [...wrap(note.text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
+      await choose(g, 'Steam', [...lines, { label: 'OK' }], lines.length, true);
+      return true;
+    }
     const news = update?.news?.();
     if (!update || !news) return false;
     update.newsSeen?.();

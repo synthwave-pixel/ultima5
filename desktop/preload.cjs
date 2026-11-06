@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('u5native', {
     notes: (version) => ipcRenderer.invoke('update-notes', version),
   },
   steam: {
+    // Whether Steam launched the game, and what it found (main.cjs steamLaunch): { steam: false }, or { steam: true,
+    // game: 'ok' | 'missing' | 'none', where, account }. And the game's files from the folder it gave.
+    launch: () => ipcRenderer.sendSync('steam-launch'),
+    gameFiles: (names) => ipcRenderer.invoke('steam-game-files', names),
     // A Steam launch's saves, as files (main.cjs, web/src/game/keyStore.ts). Synchronous, so that a save the disk
     // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them.
     saves: {
