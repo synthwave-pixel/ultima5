@@ -397,6 +397,7 @@ app.whenReady().then(() => {
   });
   ipcMain.on('steam-saves-set', (event, key, value) => {
     const dir = savesFor(event);
+    // True, or why the write was refused (steamSaves.cjs): the page lets earlier saves go only for a full disk.
     event.returnValue = dir !== null && typeof key === 'string' && typeof value === 'string' && writeKey(dir, key, value);
   });
   ipcMain.on('steam-saves-remove', (event, key) => {

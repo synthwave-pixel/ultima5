@@ -71,7 +71,7 @@ export type SteamLaunch = { steam: false } | { steam: true; game: 'ok' | 'missin
 export interface SteamNative {
   launch(): SteamLaunch;
   gameFiles(names: string[]): Promise<FoundCopy | null>;
-  saves: { all(): Record<string, string> | null; set(key: string, value: string): boolean; remove(key: string): boolean };
+  saves: { all(): Record<string, string> | null; set(key: string, value: string): true | string | false; remove(key: string): boolean };
   /** The Steam line in Settings (game.ts SteamHook): the launch line is null where this copy has none. */
   status(): Promise<SteamStatus>;
   setup(): Promise<string>;

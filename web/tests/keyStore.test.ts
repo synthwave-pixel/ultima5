@@ -30,8 +30,8 @@ function bridge(fail = false) {
   const files = new Map<string, string>();
   return {
     files,
-    set: (k: string, v: string): boolean => {
-      if (fail) return false;
+    set: (k: string, v: string): true | string => {
+      if (fail) return 'ENOSPC';
       files.set(k, v);
       return true;
     },
@@ -114,6 +114,35 @@ describe("Steam's store", () => {
     expect(caught).toBeInstanceOf(DOMException);
     expect((caught as DOMException).name).toBe('QuotaExceededError');
     expect(store.getItem('ultima5.char.k3x.save')).toBe('old');
+  });
+
+  it('fails a write refused for any other reason as not kept, not as a full storage', () => {
+    const b = { set: () => 'EPERM', remove: () => true };
+    const { store } = make({ 'ultima5.char.k3x.save': 'old' }, { ...bridge(), ...b });
+    let caught: unknown;
+    try {
+      store.setItem('ultima5.char.k3x.save', 'new');
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(DOMException);
+    expect((caught as DOMException).name).not.toBe('QuotaExceededError');
+    expect(store.getItem('ultima5.char.k3x.save')).toBe('old');
+  });
+
+  it('fails a write refused for want of space as a full storage does', () => {
+    for (const reason of ['ENOSPC', 'EDQUOT']) {
+      const { store } = make({}, { ...bridge(), set: () => reason });
+      expect(() => store.setItem('ultima5.save', 'x')).toThrow(expect.objectContaining({ name: 'QuotaExceededError' }));
+    }
+  });
+
+  it('clears no local key of the same name as a Steam key the files would not let go', () => {
+    const { store } = make({ 'ultima5.save': 'old' }, bridge(true));
+    local.setItem('ultima5.save', 'from before');
+    store.clear();
+    expect(local.getItem('ultima5.save')).toBe('from before');
+    expect(store.getItem('ultima5.save')).toBe('old');
   });
 
   it('keeps a removal the files refuse', () => {

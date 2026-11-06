@@ -28,16 +28,23 @@ export function isSteamKey(key: string): boolean {
   return /^ultima5\.(save|saves|characters)(\.|$)/.test(key) || key.startsWith('ultima5.char.');
 }
 
-/** What the files are written through: false where one could not be written. */
+/**
+ * What the files are written through. A write says true, or why it could not be made: the system's code for it
+ * ('ENOSPC' for a full disk), or false with none. A removal says false where it could not be made.
+ */
 export interface SteamBridge {
-  set(key: string, value: string): boolean;
+  set(key: string, value: string): true | string | false;
   remove(key: string): boolean;
 }
 
+/** The codes of a write refused for want of space: a full disk, or the account's quota spent. */
+const NO_ROOM = new Set(['ENOSPC', 'EDQUOT']);
+
 /**
  * A store whose Steam keys are held in memory, from what the files held (`initial`), and written to the files at once,
- * so that a write the disk refuses fails as a full local storage does (QuotaExceededError) and the old value stays.
- * Every other key is local storage's.
+ * so that a write the disk refuses fails at once and the old value stays. Only a full disk fails as a full local
+ * storage does (QuotaExceededError), for storage.ts to let earlier saves go to make room; any other refusal (a file
+ * held open, a read-only card) fails as one that letting saves go would not help. Every other key is local storage's.
  */
 export function steamStore(initial: Record<string, string>, bridge: SteamBridge): Storage {
   const held = new Map(Object.entries(initial));
@@ -59,7 +66,11 @@ export function steamStore(initial: Record<string, string>, bridge: SteamBridge)
     setItem: (k: string, v: string) => {
       if (!isSteamKey(k)) return local().setItem(k, v);
       const text = String(v);
-      if (!bridge.set(k, text)) throw new DOMException('The save could not be written.', 'QuotaExceededError');
+      const written = bridge.set(k, text);
+      if (written !== true) {
+        const name = typeof written === 'string' && NO_ROOM.has(written) ? 'QuotaExceededError' : 'NoModificationAllowedError';
+        throw new DOMException('The save could not be written.', name);
+      }
       held.set(k, text);
     },
     removeItem: (k: string) => {
@@ -69,7 +80,8 @@ export function steamStore(initial: Record<string, string>, bridge: SteamBridge)
     },
     clear: () => {
       for (const k of [...held.keys()]) if (bridge.remove(k)) held.delete(k);
-      for (const k of keys()) local().removeItem(k);
+      // Only local storage's own keys: a Steam key the files would not let go keeps any local key of its name too.
+      for (const k of keys()) if (!isSteamKey(k)) local().removeItem(k);
     },
   };
 }

@@ -57,10 +57,10 @@ describe("Steam launch's save files", () => {
     expect(removeKey(dir, 'ultima5.nothing')).toBe(true);
   });
 
-  it.skipIf(asRoot)('says false, and does not throw, where it cannot write', () => {
+  it.skipIf(asRoot)('says why, and does not throw, where it cannot write', () => {
     const dir = temp();
     chmodSync(dir, 0o555);
-    expect(writeKey(dir, 'ultima5.save', 'x')).toBe(false);
+    expect(writeKey(dir, 'ultima5.save', 'x')).toBe('EACCES');
   });
 
   it('touches nothing outside the folder it is given, whatever the key', () => {
@@ -68,7 +68,7 @@ describe("Steam launch's save files", () => {
     const dir = join(outer, 'mine');
     mkdirSync(dir);
     expect(writeKey(dir, '../escape', 'x')).toBe(true);
-    expect(writeKey(dir, '..', 'x')).toBe(false);
+    expect(writeKey(dir, '..', 'x')).toBe('EINVAL');
     expect(removeKey(dir, '..')).toBe(false);
     expect(readdirSync(outer)).toEqual(['mine']);
     expect(loadAll(dir)).toEqual({ '../escape': 'x' });

@@ -30,10 +30,14 @@ contextBridge.exposeInMainWorld('u5native', {
     remove: () => ipcRenderer.invoke('steam-remove'),
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
     // A Steam launch's saves, as files (main.cjs, web/src/game/keyStore.ts). Synchronous, so that a save the disk
-    // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them.
+    // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them. `set` says true, or
+    // why the write was refused (the system's code, 'ENOSPC' for a full disk), or false.
     saves: {
       all: () => ipcRenderer.sendSync('steam-saves-all'),
-      set: (key, value) => ipcRenderer.sendSync('steam-saves-set', key, value) === true,
+      set: (key, value) => {
+        const written = ipcRenderer.sendSync('steam-saves-set', key, value);
+        return written === true || typeof written === 'string' ? written : false;
+      },
       remove: (key) => ipcRenderer.sendSync('steam-saves-remove', key) === true,
     },
   },

@@ -1076,4 +1076,20 @@ describe("saves Steam's folder refuses", () => {
     chooseCharacter(iolo);
     expect(goldOf(localSave.read())).toBe(3);
   });
+
+  it('let nothing go where a write is refused for any reason but a full disk', () => {
+    const files = new Map<string, string>();
+    let refuse: string | null = null;
+    const bridge = {
+      set: (k: string, v: string): true | string => refuse ?? !!files.set(k, v),
+      remove: (k: string): boolean => files.delete(k),
+    };
+    useStore(steamStore({}, bridge));
+    make('Iolo', 1, 2, 3);
+    make('Dupre', 10, 11, 12);
+    const before = new Map(files);
+    refuse = 'EPERM'; // a file held open (Windows), a read-only card: removals still go through
+    expect(localSave.write(game('Dupre', 13))).toBe(false);
+    expect(files).toEqual(before);
+  });
 });
