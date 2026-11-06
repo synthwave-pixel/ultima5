@@ -11,10 +11,10 @@ const { appEntry, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs
 const { APP_ID, findGame } = require('./steam.cjs');
 
 const FLATPAK_ID = 'com.synthwavepixel.ultima5';
-const TOOL = 'ultima5_engine';
+const TOOL = 'ultima5_sp';
 const TOOL_NAME = 'Ultima V SP';
-const LAUNCHER = 'Ultima V Engine.app';
-const LAUNCHER_EXE = 'Ultima V Engine';
+const LAUNCHER = 'Ultima V SP.app';
+const LAUNCHER_EXE = 'Ultima V SP';
 const INSTALLDIR = 'Ultima V';
 const OVERRIDE = 'flatpak override --user --talk-name=org.freedesktop.Flatpak com.valvesoftware.Steam';
 

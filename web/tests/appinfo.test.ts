@@ -8,7 +8,7 @@ const STR = 1;
 const INT32 = 2;
 const ULTIMA = 3067520;
 const OTHER = 22320;
-const LAUNCHER = 'Ultima V Engine.app';
+const LAUNCHER = 'Ultima V SP.app';
 
 const str = (key: string, value: string): KvNode => [STR, key, value];
 const map = (key: string, value: KvNode[]): KvNode => [MAP, key, value];

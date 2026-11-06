@@ -23,7 +23,7 @@ const STR = 1;
 const INT32 = 2;
 const ULTIMA = 3067520;
 const OTHER = 22320;
-const LAUNCHER = 'Ultima V Engine.app';
+const LAUNCHER = 'Ultima V SP.app';
 // Every path the tests make has a space and a ' in it (Review focus 1).
 const ODD = "it's a test";
 
@@ -178,13 +178,13 @@ describe('the Linux compatibility tool', () => {
 
   it('is written once under each Steam that is there, and parses as Steam reads it', () => {
     const { viaLink, written } = setUp({ flatpak: true, appImage: null });
-    const tool = join(viaLink, 'compatibilitytools.d', 'ultima5_engine');
+    const tool = join(viaLink, 'compatibilitytools.d', 'ultima5_sp');
     expect(written).toEqual([tool]);
     const compat = parseVdf(fs.readFileSync(join(tool, 'compatibilitytool.vdf'), 'utf8'));
     expect(compat).toEqual({
       compatibilitytools: {
         compat_tools: {
-          ultima5_engine: { install_path: '.', display_name: 'Ultima V SP', from_oslist: 'windows', to_oslist: 'linux' },
+          ultima5_sp: { install_path: '.', display_name: 'Ultima V SP', from_oslist: 'windows', to_oslist: 'linux' },
         },
       },
     });
@@ -255,7 +255,7 @@ describe('the Linux compatibility tool', () => {
   it('is removed from every Steam', () => {
     const { native, absent } = setUp({ flatpak: true, appImage: null });
     removeCompatTool(fs, [native, absent]);
-    expect(fs.existsSync(join(native, 'compatibilitytools.d', 'ultima5_engine'))).toBe(false);
+    expect(fs.existsSync(join(native, 'compatibilitytools.d', 'ultima5_sp'))).toBe(false);
   });
 });
 
@@ -446,7 +446,7 @@ describe("the Mac's cache entry", () => {
   it('re-applies the cache edit from such a copy, but keeps the launcher on the installed app', async () => {
     const m = mac();
     expect(await macSetup({ ...m, ...closed })).toBe('done');
-    const script = join(m.launcher, 'Contents', 'MacOS', 'Ultima V Engine');
+    const script = join(m.launcher, 'Contents', 'MacOS', 'Ultima V SP');
     const aimed = fs.readFileSync(script, 'utf8');
     fs.writeFileSync(
       m.cacheFile,

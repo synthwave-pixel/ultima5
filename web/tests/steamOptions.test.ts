@@ -78,7 +78,7 @@ describe('switching a Steam option', () => {
   /** Effects that only note what was asked, each answering as `as` says. */
   const effects = (calls: string[], as: Partial<OptionEffects> = {}): OptionEffects => ({
     line: () => (calls.push('line'), '"/opt/ultima5-sp-x86_64.AppImage" %command%'),
-    installTool: () => (calls.push('install'), ['/home/u/.steam/root/compatibilitytools.d/ultima5_engine']),
+    installTool: () => (calls.push('install'), ['/home/u/.steam/root/compatibilitytools.d/ultima5_sp']),
     removeTool: () => void calls.push('remove'),
     macSetup: async () => (calls.push('macSetup'), 'done'),
     macRestore: async () => (calls.push('macRestore'), 'done'),
