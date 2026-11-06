@@ -1,5 +1,6 @@
 import type { UpdateOffer } from '../src/ui/updates.ts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { steamStore, useStore } from '../src/game/keyStore.ts';
 import { characterIds, chooseCharacter, CHARACTERS_KEY, charKey, MAX_CHARACTERS, newCharacter } from '../src/game/characters.ts';
 import { Relocate } from '../src/game/cheats.ts';
 import type { Game } from '../src/game/game.ts';
@@ -1053,5 +1054,26 @@ describe('an update at the title', () => {
     expect(shown).toMatch(/ Update /);
     expect(shown).not.toContain('\u0018');
     expect(p.log).not.toContain('is out'); // the web's: no box
+  });
+});
+
+describe("saves Steam's folder refuses", () => {
+  afterEach(() => useStore(undefined as unknown as Storage));
+
+  it('are reported as not kept, not retried for ever, when nothing can be let go either', () => {
+    const files = new Map<string, string>();
+    let refuse = false;
+    const bridge = {
+      set: (k: string, v: string): boolean => !refuse && !!files.set(k, v),
+      remove: (k: string): boolean => !refuse && files.delete(k),
+    };
+    useStore(steamStore({}, bridge));
+    const iolo = make('Iolo', 1, 2, 3);
+    make('Dupre', 10, 11, 12);
+    refuse = true;
+    const g = game('Dupre', 13);
+    expect(localSave.write(g)).toBe(false);
+    chooseCharacter(iolo);
+    expect(goldOf(localSave.read())).toBe(3);
   });
 });

@@ -302,7 +302,7 @@ function writtenAt(key: string): number {
 /**
  * The oldest of every character's earlier saves let go to make room - never `spare`, nor anyone's last save - and
  * its index written again (but for `writing`, the index about to be written anyway). Character `id`'s index is `ix`,
- * the one in hand, changed in place. False with none left to go.
+ * the one in hand, changed in place. False with none left to go, or where the one chosen could not be removed.
  */
 function evictOldest(id: string, ix: Index, spare: string | null, writing: string): boolean {
   let oldest: { owner: string; key: string; at: number } | null = null;
@@ -315,6 +315,12 @@ function evictOldest(id: string, ix: Index, spare: string | null, writing: strin
   }
   if (oldest === null) return false;
   forget(oldest.key);
+  // A removal the storage refused (a read-only disk) made no room: not counted, or the same save would be tried forever.
+  try {
+    if (kept().getItem(oldest.key) !== null) return false;
+  } catch {
+    return false;
+  }
   localSave.evicted++;
   const owned = oldest.owner === id ? ix : readIndex(oldest.owner);
   owned.keys.splice(owned.keys.indexOf(oldest.key), 1);

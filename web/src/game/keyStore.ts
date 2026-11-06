@@ -19,8 +19,12 @@ export function useStore(s: Storage): void {
   chosen = s;
 }
 
-/** Whether a key is a save, the list of characters, or one character's own (their saves and settings). */
+/**
+ * Whether a key is a save, the list of characters, or one character's own (their saves and settings). Not their
+ * "playing" mark, which only says that this machine has them open (otherWindows.ts).
+ */
 export function isSteamKey(key: string): boolean {
+  if (/^ultima5\.char\.[^.]+\.playing$/.test(key)) return false;
   return /^ultima5\.(save|saves|characters)(\.|$)/.test(key) || key.startsWith('ultima5.char.');
 }
 

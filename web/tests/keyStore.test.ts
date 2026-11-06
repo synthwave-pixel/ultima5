@@ -57,7 +57,8 @@ describe('which keys are saves', () => {
       expect(isSteamKey(k), k).toBe(true);
   });
   it('leaves the machine settings and everything else', () => {
-    for (const k of ['ultima5.settings', 'ultima5.windows', 'other', 'ultima5.charm']) expect(isSteamKey(k), k).toBe(false);
+    for (const k of ['ultima5.settings', 'ultima5.char.k3x.playing', 'ultima5.windows', 'other', 'ultima5.charm'])
+      expect(isSteamKey(k), k).toBe(false);
   });
 });
 
@@ -89,7 +90,7 @@ describe("Steam's store", () => {
     local.clear();
     return { store: steamStore(initial, b), b };
   };
-  afterEach(() => Object.defineProperty(globalThis, 'localStorage', { value: had, configurable: true, writable: true }));
+  afterEach(() => restore(had));
 
   it('starts from what the files held and passes writes to the bridge', () => {
     const { store, b } = make({ 'ultima5.characters': 'a' });
