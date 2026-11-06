@@ -17,7 +17,7 @@ describe('the settings, at the title and in play', () => {
     const title = names(settingLines(g, true).map((l) => l.label));
     const play = names(settingLines(g, false).map((l) => l.label));
     expect(title.filter((l) => l !== 'Audio' && l !== 'Gameplay')).toEqual(play.filter((l) => !/saved game/.test(l)));
-    expect(title.slice(-2)).toEqual(['Audio', 'Gameplay']);
+    expect(title.slice(-3, -1)).toEqual(['Audio', 'Gameplay']);
   });
 
   it('keep the music and sound in Audio: none of it in Settings, nor on the Pause menu, which opens Audio', async () => {
@@ -34,5 +34,26 @@ describe('the settings, at the title and in play', () => {
     expect(pause).toContain('Audio');
     expect(pause).toContain('Gameplay');
     expect(pause.some((l) => /^(Music|Sound)/.test(l))).toBe(false);
+  });
+});
+
+/** The edition's name and version, as Settings' last line (menu.ts): grey and not to be chosen. */
+describe('the SP edition in Settings', () => {
+  it('ends with its name and the version the page gives, greyed and unselectable', () => {
+    for (const title of [true, false]) {
+      const { g } = newGame();
+      g.hooks.version = () => '1.1.200';
+      const last = settingLines(g, title).at(-1);
+      expect(last?.label).toBe('Ultima V SP 1.1.200');
+      expect(last?.enabled).toBe(false);
+      expect(last?.rest).not.toBe(true);
+    }
+  });
+
+  it('says the name alone where the page has no version (the web)', () => {
+    const { g } = newGame();
+    expect(settingLines(g).at(-1)?.label).toBe('Ultima V SP');
+    g.hooks.version = () => undefined;
+    expect(settingLines(g).at(-1)?.label).toBe('Ultima V SP');
   });
 });

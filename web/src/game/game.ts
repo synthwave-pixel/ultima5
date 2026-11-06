@@ -122,6 +122,8 @@ export interface GameHooks {
   quit?: (() => void) | undefined;
   /** The title's Steam (beta) menu (the desktop app's; web and Android have none): see SteamHook. */
   steam?: SteamHook;
+  /** This app's own version (the desktop app's, the Android app's), for the edition's name; none on the web. */
+  version?: () => string | undefined;
 }
 
 /** What the Steam (beta) menu opens with (desktop/main.cjs steamStatus). Only found by reading. */

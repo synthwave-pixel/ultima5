@@ -42,7 +42,25 @@ export const WARNING_INTERVAL_MS = 24 * 60 * 60 * 1000;
 /** The Capacitor bridge the Android app's web view is given, with its App plugin where the app carries it. */
 export interface CapacitorLike {
   isNativePlatform?: () => boolean;
-  Plugins?: { App?: { exitApp?: () => unknown } };
+  Plugins?: { App?: { exitApp?: () => unknown; getInfo?: () => Promise<{ version: string }> } };
+}
+
+/**
+ * This app's own version, for the edition's name: the desktop app's (app.getVersion(), through preload.cjs) or the
+ * Android APK's, as its update check knows it (ui/updates.ts). The web has none, and so says the name alone.
+ */
+export async function appVersion(capacitor?: CapacitorLike): Promise<string | undefined> {
+  const desktop = (globalThis as { u5native?: { version?: () => unknown } }).u5native?.version;
+  if (desktop) {
+    const v = desktop();
+    return typeof v === 'string' && v ? v : undefined;
+  }
+  const app = capacitor?.isNativePlatform?.() ? capacitor.Plugins?.App : undefined;
+  try {
+    return (await app?.getInfo?.call(app))?.version || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

@@ -362,10 +362,12 @@ function createWindow() {
     // macOS altogether (the green button, Window > Enter Full Screen, F11), so it is left unsaid otherwise.
     fullscreenable: true,
     ...(startsFullScreen(process.argv, process.env, saved) ? { fullscreen: true } : {}),
-    title: 'Ultima V',
+    title: `Ultima V SP ${app.getVersion()}`,
     icon: join(__dirname, 'build', 'icons', '256x256.png'), // the window's (packaged: package.json build.files)
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
   });
+  // The page's own <title> (Ultima V SP) must not replace the window's, which carries the version.
+  win.on('page-title-updated', (event) => event.preventDefault());
   win.setMenuBarVisibility(false);
   win.removeMenu();
   win.on('resize', () => saveBounds(win));
@@ -516,6 +518,9 @@ app.whenReady().then(() => {
   // option does here and keeps how it went (steamOptions.cjs switchOption); Cloud saves' copy is the page's, only
   // recorded here, and only in a Steam launch that knows its account. One switch at a time: a second waits.
   const optionsFile = join(app.getPath('userData'), 'steam-options.json');
+  ipcMain.on('app-version', (event) => {
+    event.returnValue = String(event.senderFrame?.url ?? '').startsWith('app://') ? app.getVersion() : null;
+  });
   ipcMain.on('steam-options', (event) => {
     event.returnValue = String(event.senderFrame?.url ?? '').startsWith('app://')
       ? { ...readOptions(optionsFile), account: launch?.accountId ?? null }

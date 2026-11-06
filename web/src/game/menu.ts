@@ -1772,6 +1772,12 @@ const RULES_NOTES: Record<Rules, string> = {
 };
 const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller: 'Controller' };
 
+/** The edition's name with the app's version, where the page has one (the web has none): Settings' last line, the title's. */
+export function editionName(g: Game): string {
+  const version = g.hooks.version?.();
+  return version ? `Ultima V SP ${version}` : 'Ultima V SP';
+}
+
 /** One line of the Settings menu: what it says, and what choosing it does. */
 export interface Setting extends Item {
   /** What choosing it does; a command key returned here leaves the menu with it. */
@@ -1968,6 +1974,8 @@ export function settingLines(g: Game, title = false): Setting[] {
     // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
     // Character and Remove game files.
     ...(title ? [] : transferLines(g)),
+    // Which edition this is and its version, for a tester's report: grey, and the bar steps over it.
+    { label: editionName(g), enabled: false },
   ];
 }
 

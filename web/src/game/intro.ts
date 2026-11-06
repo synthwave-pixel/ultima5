@@ -13,7 +13,7 @@ import { Colour } from '../ui/colours.ts';
 import { blinker, waitMark } from './waitMark.ts';
 import { leftArrow, rightArrow, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
-import { menuSound, titleShown } from './menu.ts';
+import { editionName, menuSound, titleShown } from './menu.ts';
 import { asPad, upper } from './input.ts';
 import { addressedAsLady, customisable, DEFAULT_APPEARANCE } from './appearance.ts';
 import { K, Pad, type Place, type Dressing } from './io.ts';
@@ -1636,7 +1636,22 @@ export class Intro {
     t.setWindow(1, 0x18, 1, 0x27, 9);
     t.setWindow(2, 0x18, 0xb, 0x27, 0x17);
     this.banner(g.t(0x31c1)); // "Copyright 1988 Lord British"
+    this.edition();
     this.menu(sel);
+  }
+
+  /**
+   * The edition's name and version in grey, at the right of the clear row above the menu's box: the menu fills the box
+   * (it scrolls on the desktop) and the banner is the scenes' and the copyright's, so this row overlaps nothing.
+   */
+  private edition(): void {
+    const t = this.g.text;
+    const name = editionName(this.g);
+    const fg = t.win.fg;
+    t.win.fg = Colour.darkGray;
+    t.moveTo(0x27 - name.length, 14);
+    this.g.print(name);
+    t.win.fg = fg;
   }
 
   /** "Select:" in the menu's top border, and the cursor after it. */

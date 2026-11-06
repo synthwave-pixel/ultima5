@@ -266,6 +266,7 @@ describe('the Pause menu, Gameplay and Settings', () => {
       'Battery saver',
       'Export saved game',
       'Import saved game',
+      'Ultima V SP',
     ]);
     // At the title there is no Pause menu: Settings holds Audio and Gameplay.
     expect(settingLines(g, true).map(name)).toEqual(expect.arrayContaining(['Audio', 'Gameplay']));

@@ -25,7 +25,7 @@ import { installPageHooks } from './ui/pageHooks.ts';
 import { PcSound } from './ui/sound.ts';
 import { loadOptions } from './game/settings.ts';
 import { chromeTone } from './game/chromeTone.ts';
-import { appQuit, launchWarning, warningDue, type CapacitorLike } from './ui/platform.ts';
+import { appQuit, appVersion, launchWarning, warningDue, type CapacitorLike } from './ui/platform.ts';
 import { showNotice } from './ui/notice.ts';
 import { installCrashHandler, reportCrash } from './ui/crash.ts';
 import { androidUpdates, desktopUpdates, webUpdates, type DesktopUpdates, type UpdateHook } from './ui/updates.ts';
@@ -297,6 +297,8 @@ async function start(): Promise<void> {
   await keepStorage();
   installPageHooks(g, screen, canvas, tiles, sound);
   g.hooks.update = updateHook(capacitor);
+  const version = await appVersion(capacitor);
+  g.hooks.version = () => version;
   g.hooks.note = steamNote;
   // The desktop app closes its window to quit (its last window closing quits it), the Android app exits; a browser
   // tab gets no Quit.

@@ -4,6 +4,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('u5native', {
+  // The app's own version (main.cjs app.getVersion()), for the edition's name in Settings and on the title.
+  version: () => ipcRenderer.sendSync('app-version'),
   scanForGameFiles: (names) => ipcRenderer.invoke('scan-game-files', names),
   // A newer version (updates.cjs; web/src/ui/updates.ts): what it is, taking it up, the player told of it.
   updates: {
