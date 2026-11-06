@@ -8,6 +8,7 @@
 
 import { REQUIRED } from './gameFiles.ts';
 import type { FoundCopy } from './scan.ts';
+import type { SteamStatus } from '../game/game.ts';
 
 /** The site's gamedata/: its index.json, then each file named in it. None where there is no index (or its page). */
 export async function webCopy(fetcher: typeof fetch, base: string): Promise<FoundCopy[]> {
@@ -71,6 +72,11 @@ export interface SteamNative {
   launch(): SteamLaunch;
   gameFiles(names: string[]): Promise<FoundCopy | null>;
   saves: { all(): Record<string, string> | null; set(key: string, value: string): boolean; remove(key: string): boolean };
+  /** The Steam line in Settings (game.ts SteamHook): the launch line is null where this copy has none. */
+  status(): Promise<SteamStatus>;
+  setup(): Promise<string>;
+  remove(): Promise<string>;
+  launchLine(): Promise<string | null>;
 }
 
 /** The desktop app's Steam bridge; null outside the app, and in an app of before it. */

@@ -120,6 +120,24 @@ export interface GameHooks {
   note?: () => { text: string; seen: () => void } | null;
   /** Leave the game, where it runs as an app that can (ui/platform.ts appQuit); a browser tab has none. */
   quit?: (() => void) | undefined;
+  /** The Steam line in Settings (the desktop app's; web and Android have none): see SteamHook. */
+  steam?: SteamHook;
+}
+
+/** Where this system stands with Steam (desktop/main.cjs steamStatus). `line` is the launch line to paste, where there is one. */
+export interface SteamStatus {
+  system: 'linux' | 'windows' | 'mac';
+  state: 'ready' | 'not-set-up' | 'steam-running' | 'no-steam' | 'not-owned';
+  line: string | null;
+}
+
+/** What the Steam line in Settings asks of the desktop app. setup and remove give the message to show, whatever went wrong. */
+export interface SteamHook {
+  status(): Promise<SteamStatus>;
+  setup(): Promise<string>;
+  remove(): Promise<string>;
+  /** Puts the launch line on the clipboard; false where this copy has none. */
+  copyLine(): Promise<boolean>;
 }
 
 /** What bump to act remembers of a thing (Game.bumped). */

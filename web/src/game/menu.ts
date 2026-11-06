@@ -15,7 +15,7 @@ import { actorTileAt } from './actors.ts';
 import { foesAbout } from './bumpAct.ts';
 import { animating, clearBorderTitle, drawVitals, updateFrame, Win } from './frame.ts';
 import { drawTextCard } from './shopCard.ts';
-import { CF, Game } from './game.ts';
+import { CF, Game, type SteamStatus } from './game.ts';
 import { menuKey, PAUSED } from './input.ts';
 import { besideHarpsichord } from './harpsichord.ts';
 import { HARPSICHORD, K, Pad, SAVE_NOW } from './io.ts';
@@ -1968,7 +1968,99 @@ export function settingLines(g: Game, title = false): Setting[] {
     // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
     // Character and Remove game files.
     ...(title ? [] : transferLines(g)),
+    // The desktop app's, where there is a Steam to set up.
+    ...(g.hooks.steam ? [steamLine(g)] : []),
   ];
+}
+
+/** The line that opens the Steam box (steamMenu). */
+function steamLine(g: Game): Setting {
+  return {
+    label: 'Steam',
+    note: 'Play Ultima V from Steam with this engine: set it up, copy the launch line, or take it away.',
+    act: () => steamMenu(g),
+  };
+}
+
+const MAC_STEAM_NOTE =
+  "If Play in Steam ever says 'Invalid platform', Steam has refreshed Ultima V's settings. Open this app once with Steam closed (or let it quit Steam) and it puts things back.";
+
+/** What the Steam box says of this system and where it stands: the steps, in the game's voice. */
+function steamWords(s: SteamStatus): string {
+  if (s.state === 'no-steam') return "Steam isn't here. Install Steam and start it once, then come back.";
+  if (s.state === 'not-owned') return "Steam doesn't list Ultima V here. Check this Steam account has it.";
+  if (s.system === 'windows') {
+    return 'Steam is here. Copy the launch line, then in Steam: Ultima V → ⚙ → Properties → Launch Options, and paste.';
+  }
+  if (s.system === 'linux') {
+    return s.state === 'ready'
+      ? 'Set up. In Steam: Ultima V → ⚙ → Properties → Compatibility, choose Ultima V (new engine).'
+      : 'Set up installs the Ultima V (new engine) tool. Restart Steam, then in Ultima V → ⚙ → Properties → Compatibility, choose it.';
+  }
+  return (
+    (s.state === 'ready' ? 'Set up. Play in Steam starts this engine.' : 'Set up points Play in Steam at this engine.') +
+    `\n${MAC_STEAM_NOTE}`
+  );
+}
+
+/**
+ * The Steam box: where this system stands, and to set up, copy the launch line (Windows and Linux) or remove the setup.
+ * What each says is shown, and the box is drawn again from Steam's state as it then is. A Mac with Steam running is asked
+ * to quit it first: setting up would otherwise quit it unasked.
+ */
+async function steamMenu(g: Game): Promise<void> {
+  const steam = g.hooks.steam;
+  if (!steam) return;
+  const say = async (text: string): Promise<void> => void (await showText(g, 'Steam', wrap(text)));
+  let at = 0;
+  for (;;) {
+    let s: SteamStatus | null = null;
+    try {
+      s = await steam.status();
+    } catch {
+      /* shown below */
+    }
+    const around = s !== null && (s.state === 'ready' || s.state === 'not-set-up' || s.state === 'steam-running');
+    const items: Item[] = [
+      { label: 'Back', note: '' },
+      ...wrap(s === null ? "Steam's state could not be read here." : steamWords(s)).map((l) => ({ label: l, enabled: false })),
+    ];
+    const lead = items.length;
+    const actions: { item: Item; run: () => Promise<void> }[] = [];
+    if (s !== null && around && s.system !== 'windows') {
+      actions.push({
+        item: { label: 'Set up', key: c('S') },
+        run: async () => {
+          if (s.system === 'mac' && s.state === 'steam-running' && !(await confirm(g, 'Steam must be closed for this. Quit Steam now?')))
+            return;
+          await say(await steam.setup());
+        },
+      });
+    }
+    if (s !== null && around && s.system !== 'mac') {
+      actions.push({
+        item: { label: 'Copy launch line', key: c('C') },
+        run: async () => {
+          try {
+            await say(
+              (await steam.copyLine())
+                ? 'Copied. In Steam: Ultima V → ⚙ → Properties → Launch Options, and paste.'
+                : 'This copy of Ultima V has no launch line for Steam to use. Play from Steam with the installed Ultima V.',
+            );
+          } catch {
+            await say('The clipboard is not available here.');
+          }
+        },
+      });
+    }
+    if (s !== null && s.state !== 'no-steam') {
+      actions.push({ item: { label: 'Remove Steam setup', key: c('R') }, run: async () => say(await steam.remove()) });
+    }
+    items.push(...actions.map((a) => a.item));
+    at = await choose(g, 'Steam', items, Math.min(at, items.length - 1));
+    if (at <= 0) return;
+    await actions[at - lead]?.run();
+  }
 }
 
 /** Export and Import saved game (transfer.ts): in play, Settings' lines; at the title, Manage Saves'. */
