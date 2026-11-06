@@ -11,3 +11,32 @@ export interface SteamOptions {
 export function readOptions(file: string): SteamOptions;
 /** `o` written to `file`, whole or not at all. */
 export function writeOptions(file: string, o: SteamOptions): void;
+/** What turning an option on or off does on this system (main.cjs: Steam's own folders, steamSetup.cjs). */
+export interface OptionEffects {
+  /** The launch line for this copy, or null where it has none. */
+  line(): string | null;
+  /** The compatibility tool written: the folders it went in (none: no Steam), or null where it has nothing to start. */
+  installTool(): string[] | null;
+  removeTool(): void;
+  macSetup(): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
+  macRestore(): Promise<'done' | 'steam-running' | 'kept-unusable'>;
+}
+/** An option switched: the options now (to be written), whether it is on, what to say, and a launch line to show. */
+export interface Switched {
+  options: SteamOptions;
+  on: boolean;
+  message: string;
+  line?: string;
+}
+/** Option `name` turned on or off with its effect here, its result kept; null for one this system has not. */
+export function switchOption(args: {
+  options: SteamOptions;
+  name: string;
+  on: boolean;
+  system: string;
+  account: string | null;
+  now: number;
+  /** Cloud saves: why the page's copy failed, the option left as it was. */
+  failed?: string;
+  effects: OptionEffects;
+}): Promise<Switched | null>;
