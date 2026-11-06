@@ -155,6 +155,8 @@ export interface SteamChoices {
   compatTool: boolean;
   macPlay: boolean;
   cloud: boolean;
+  /** Whether Cloud saves is on for any Steam account on this machine, this launch's or another's. */
+  cloudAny: boolean;
 }
 
 /** An option switched (desktop/steamOptions.cjs switchOption): whether it is on now, what to say, a launch line to show. */

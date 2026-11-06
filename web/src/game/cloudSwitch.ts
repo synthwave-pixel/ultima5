@@ -126,7 +126,8 @@ export async function switchCloud(g: Game, cloud: CloudSaves, on: boolean): Prom
     return `Some saves could not be copied (${failed}). ${stays}`;
   }
   const recorded = await cloud.record(on);
-  if (recorded?.on !== on) return `Steam Cloud saves can't be changed in this launch. ${stays}`;
+  // Not kept by the app (refused, or its settings not written): the game's saves stay where they were.
+  if (recorded?.on !== on) return `${recorded?.message || "Steam Cloud saves can't be changed in this launch."} ${stays}`;
   cloud.use(on);
   return on
     ? 'Done. Your saves are copied into Steam, and saves made while playing from Steam stay with Steam.'

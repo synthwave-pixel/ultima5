@@ -25,6 +25,10 @@ const PASTE = 'In Steam: Ultima V > Properties > General > Launch Options, and p
 const MAC_WARNING =
   "This closes Steam and changes Steam's own settings for Ultima V. Steam may undo the change when EA updates the " +
   "game; then this app puts it back. Turning this off puts Steam's settings back as they were.";
+// Turning a Mac's Play off quits Steam, which in a Steam launch would end this game and cut short its Cloud sync.
+const MAC_QUIT_FIRST = 'Quit the game, then turn this off from outside Steam.';
+const CLOUD_STAYS =
+  'Saves made from Steam stay with Steam until Cloud saves is turned off from a game Steam started. Turn this off anyway?';
 const MAC_NOTE =
   "If Play in Steam ever says 'Invalid platform', Steam has refreshed Ultima V's settings. Open this app once with " +
   'Steam closed (or let it quit Steam) and it puts things back.';
@@ -45,17 +49,26 @@ const grey = (label: string): Line => ({ label, enabled: false });
 const said = (text: string): Line[] => wrap(text).map(grey);
 const onOff = (on: boolean): string => (on ? 'On' : 'Off');
 
+/** A path as the game's font can draw it: any letter it has not (an accent, a dash) a ?. */
+const drawable = (path: string): string => path.replace(/[^\x20-\x7e]/g, '?');
+
 /** The menu's head: what the app found of Steam, Ultima V and the account. */
 function found(s: SteamStatus | null): string[] {
   if (s === null) return ['What Steam has could not be read here.'];
   if (s.steam === null) return ['Steam: not found. Install Steam and start it once, then come back.'];
+  const where = drawable(s.where);
   const game =
     s.game === 'ok'
-      ? `Ultima V: installed in ${s.where}`
+      ? `Ultima V: installed in ${where}`
       : s.game === 'missing'
-        ? `Ultima V: Steam lists it in ${s.where}, but its folder is not there.`
+        ? `Ultima V: Steam lists it in ${where}, but its folder is not there.`
         : 'Ultima V: not installed in Steam.';
-  return [`Steam: ${s.steam}`, game, `Steam account: ${s.account ? 'known' : 'not known'}`, ...(s.launch ? ['Started from Steam.'] : [])];
+  return [
+    `Steam: ${drawable(s.steam)}`,
+    game,
+    `Steam account: ${s.account ? 'known' : 'not known'}`,
+    ...(s.launch ? ['Started from Steam.'] : []),
+  ];
 }
 
 /**
@@ -145,9 +158,14 @@ function playLines(
   say: (text: string) => Promise<void>,
 ): Line[] {
   const noSteam = s.steam === null ? NO_STEAM : null;
-  /** The option turned the other way, with what the app says of it: a Mac warned first, and asked to quit Steam. */
+  /**
+   * The option turned the other way, with what the app says of it: a Mac warned first, and asked to quit Steam. Turned
+   * off with Cloud saves on for an account here, the player is asked first: the saves made from Steam come back only by
+   * turning Cloud saves off from a game Steam started.
+   */
   const toggle = (name: PlayOption) => async (): Promise<void> => {
     const on = !o[name];
+    if (!on && o.cloudAny && !(await confirm(g, CLOUD_STAYS))) return;
     if (name === 'macPlay' && on && !(await confirm(g, MAC_WARNING))) return;
     if (name === 'macPlay' && !on && s.steamRunning && !(await confirm(g, 'Steam must be closed for this. Quit Steam now?'))) return;
     let r;
@@ -162,16 +180,15 @@ function playLines(
     else await say(r.message);
   };
   if (s.system === 'mac') {
-    return [
-      option(
-        'Play from Steam',
-        o.macPlay,
-        "Play from Steam (changes Steam's settings): Play starts this engine.",
-        noSteam,
-        toggle('macPlay'),
-      ),
-      ...(o.macPlay ? said(MAC_NOTE) : []),
-    ];
+    const play = option(
+      'Play from Steam',
+      o.macPlay,
+      "Play from Steam (changes Steam's settings): Play starts this engine.",
+      noSteam,
+      toggle('macPlay'),
+    );
+    const held = o.macPlay && s.launch ? { enabled: false, rest: true, note: MAC_QUIT_FIRST } : {};
+    return [{ ...play, ...held }, ...(o.macPlay ? said(MAC_NOTE) : [])];
   }
   const cannot =
     s.line !== null
@@ -229,24 +246,37 @@ function playLines(
 
 /**
  * Steam Cloud saves' line: switched only in a Steam launch that knows its account and has the game's folder (where the
- * saves go), and on a Mac only with Play on.
+ * saves go), on or off. On a Mac it is turned on only with Play on, but one that is on may always be turned off there.
+ * A launch that knows no account while it is on for one here can't use it, and says so rather than Off.
  */
 function cloudLine(g: Game, steam: SteamHook, s: SteamStatus, o: SteamChoices, say: (text: string) => Promise<void>): Line {
-  const why = !s.launch
+  // Unlike Play, never switched outside a Steam launch, on or off: Steam's folder is only known in one.
+  const cannot = !s.launch
     ? 'Start Ultima V from Steam to change this.'
     : s.game !== 'ok'
       ? "Ultima V's folder in Steam isn't there, so this can't change now."
       : !s.account
         ? "Steam didn't say which account is playing, so this can't change now."
-        : s.system === 'mac' && !o.macPlay
-          ? "Turn Play from Steam on first: a Mac's Steam keeps these saves only then."
-          : null;
+        : null;
+  const notYet = s.system === 'mac' && !o.macPlay ? "Turn Play from Steam on first: a Mac's Steam keeps these saves only then." : null;
+  const line = option(
+    'Cloud saves',
+    o.cloud,
+    'Steam Cloud saves: saves made in Steam launches stay with Steam.',
+    cannot ?? notYet,
+    async () => say(await switchCloud(g, steam.cloud, !o.cloud)),
+  );
+  const unknown = s.launch && !s.account && o.cloudAny;
   return {
-    ...option('Cloud saves', o.cloud, 'Steam Cloud saves: saves made in Steam launches stay with Steam.', why, async () =>
-      say(await switchCloud(g, steam.cloud, !o.cloud)),
-    ),
-    // Unlike Play, never switched outside a Steam launch, on or off: Steam's folder is only known in one.
-    ...(why !== null ? { enabled: false, rest: true, note: why } : {}),
+    ...line,
+    ...(unknown ? { label: 'Cloud saves: Unknown' } : {}),
+    ...(cannot !== null
+      ? {
+          enabled: false,
+          rest: true,
+          note: unknown ? "Steam didn't say which account is playing, so its Cloud saves can't be used." : cannot,
+        }
+      : {}),
   };
 }
 
