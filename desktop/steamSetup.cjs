@@ -89,11 +89,15 @@ function launchScript({ flatpak, appImageLink }) {
   const target = flatpak ? `flatpak run ${FLATPAK_ID}` : shellQuote(appImageLink);
   return `#!/bin/sh
 # ${TOOL_NAME}: written by the Ultima V app so that Steam's Ultima V plays with its engine.
-if [ "$SteamAppId" != "${APP_ID}" ]; then
-  echo "${TOOL_NAME} only plays Ultima V (Steam app ${APP_ID})." >&2
-  echo "Choose another compatibility tool for this game in its Properties, under Compatibility." >&2
-  exit 1
-fi
+# Steam names the game in SteamAppId, SteamGameId or STEAM_COMPAT_APP_ID, as its version has it.
+case "${APP_ID}" in
+  "$SteamAppId"|"$SteamGameId"|"$STEAM_COMPAT_APP_ID") ;;
+  *)
+    echo "${TOOL_NAME} only plays Ultima V (Steam app ${APP_ID})." >&2
+    echo "Choose another compatibility tool for this game in its Properties, under Compatibility." >&2
+    exit 1
+    ;;
+esac
 case "$1" in
   run|waitforexitandrun) ;;
   *) exit 0 ;;

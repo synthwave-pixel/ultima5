@@ -113,8 +113,10 @@ function accountId(root, env, read) {
   const users = text === null ? null : parseVdf(text).users;
   if (!users || typeof users !== 'object') return null;
   const entries = Object.entries(users).filter(([id, u]) => /^\d+$/.test(id) && u && typeof u === 'object');
-  const named = env.SteamUser ? entries.find(([, u]) => u.AccountName === env.SteamUser) : undefined;
-  const found = named ?? entries.find(([, u]) => u.MostRecent === '1');
+  // Older files write their keys in lower case (mostrecent), so a key is matched whatever its case.
+  const field = (u, name) => Object.entries(u).find(([k]) => k.toLowerCase() === name)?.[1];
+  const named = env.SteamUser ? entries.find(([, u]) => field(u, 'accountname') === env.SteamUser) : undefined;
+  const found = named ?? entries.find(([, u]) => field(u, 'mostrecent') === '1');
   return found ? (BigInt(found[0]) & 0xffffffffn).toString() : null;
 }
 

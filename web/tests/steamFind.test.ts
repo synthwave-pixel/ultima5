@@ -141,6 +141,13 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     expect(accountId(MAC_ROOT, { SteamUser: 'wiverson' }, () => null)).toBeNull();
   });
 
+  it('reads an older loginusers.vdf, whose keys are written in lower case', () => {
+    const older = LOGINS.replaceAll('"AccountName"', '"accountname"').replaceAll('"MostRecent"', '"mostrecent"');
+    const { read } = disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: older });
+    expect(accountId(MAC_ROOT, { SteamUser: 'wiverson' }, read)).toBe('32554223');
+    expect(accountId(MAC_ROOT, {}, read)).toBe('39734273');
+  });
+
   it('can reach a library on an SD card from the Flatpak: /run/media is in its permissions', () => {
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
       build: { flatpak: { finishArgs: string[] } };

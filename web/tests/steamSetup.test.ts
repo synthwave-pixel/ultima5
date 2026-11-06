@@ -219,6 +219,17 @@ describe('the Linux compatibility tool', () => {
     expect(other.stdout).toBe('');
   });
 
+  it('takes the app id from whichever of its names Steam gives', () => {
+    const home = temp();
+    const link = fakeProgram(appImageLink(home));
+    const { written } = setUp({ flatpak: false, appImageLink: link });
+    const script = join(written[0], 'launch.sh');
+    for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID']) {
+      expect(run(script, 'run', { [name]: '3067520' }).status, name).toBe(0);
+      expect(run(script, 'run', { [name]: '22320' }).status, name).not.toBe(0);
+    }
+  });
+
   it("inside Flatpak Steam, goes through flatpak-spawn, or says what to run when it can't", () => {
     const { written, home } = setUp({ flatpak: true, appImageLink: '' });
     const bin = join(home, 'bin');
