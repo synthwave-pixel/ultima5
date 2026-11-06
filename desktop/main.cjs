@@ -42,7 +42,7 @@ const {
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, libraryPaths, saveDir, steamRoots } = require('./steam.cjs');
-const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
+const { loadAll, removeKey, writable, writeKey } = require('./steamSaves.cjs');
 const { readOptions, switchOption, writeOptions } = require('./steamOptions.cjs');
 const { mask, report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
@@ -290,7 +290,7 @@ function reportFacts(options, launch, page) {
   let cloudCharacters = null;
   if (cloud && launch.dir) {
     try {
-      const ids = JSON.parse(loadAll(launch.dir)['ultima5.characters'] ?? '').ids;
+      const ids = JSON.parse(loadAll(launch.dir)?.['ultima5.characters'] ?? '').ids;
       cloudCharacters = Array.isArray(ids) ? ids.length : 0;
     } catch {
       cloudCharacters = 0;
@@ -500,9 +500,11 @@ app.whenReady().then(() => {
   // keep them in (otherwise all gives null, and the others say false).
   const saveDir = launch?.dir ?? null;
   const savesFor = (event) => (String(event.senderFrame?.url ?? '').startsWith('app://') ? saveDir : null);
+  // A folder that will not read, or reads but can't be written, is out of reach (null): the page keeps this computer's
+  // saves instead and says so (boot.ts chooseStore), rather than lose each save it makes there.
   ipcMain.on('steam-saves-all', (event) => {
     const dir = savesFor(event);
-    event.returnValue = dir === null ? null : loadAll(dir);
+    event.returnValue = dir === null || !writable(dir) ? null : loadAll(dir);
   });
   ipcMain.on('steam-saves-set', (event, key, value) => {
     const dir = savesFor(event);

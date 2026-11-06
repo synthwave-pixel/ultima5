@@ -3,8 +3,9 @@
 // wants. <dir> is <game folder>/ultima5-sp/<account id> (main.cjs). Nothing here throws: a write that could not be
 // made says why (the system's code: 'ENOSPC' for a full disk), and a removal that could not be made says false, for the
 // page to report as a save that was not kept. Only a full disk lets the page make room by letting earlier saves go.
-const { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } = require('node:fs');
-const { join } = require('node:path');
+const fs = require('node:fs');
+const { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } = fs;
+const { dirname, join } = require('node:path');
 
 const FILE = 'SAVED.GAM';
 
@@ -14,14 +15,17 @@ function folderFor(dir, key) {
   return name === '' || name === '.' || name === '..' ? null : join(dir, name);
 }
 
-/** Every key kept in `dir` and its value; none where the folder is missing or will not read. */
+/**
+ * Every key kept in `dir` and its value: none where the folder is not there yet (no save made in it), but null where
+ * it is there and will not read, so that the page takes it as out of reach rather than as holding no saves.
+ */
 function loadAll(dir) {
   const out = {};
   let names;
   try {
     names = readdirSync(dir);
-  } catch {
-    return out;
+  } catch (e) {
+    return e?.code === 'ENOENT' ? out : null;
   }
   for (const name of names) {
     try {
@@ -31,6 +35,22 @@ function loadAll(dir) {
     }
   }
   return out;
+}
+
+/**
+ * Whether saves can be written in `dir`: it, or where it is not there yet the nearest folder above it that is, may be
+ * written to. A folder that reads but refuses every write would only fail each save in turn. Nothing is made to find
+ * out, so the game's folder is left as it was. `files` is node:fs, or a test's own.
+ */
+function writable(dir, files = fs) {
+  for (let at = dir; ; at = dirname(at)) {
+    try {
+      files.accessSync(at, files.constants.W_OK);
+      return files.statSync(at).isDirectory();
+    } catch (e) {
+      if (e?.code !== 'ENOENT' || dirname(at) === at) return false;
+    }
+  }
 }
 
 /**
@@ -68,4 +88,4 @@ function removeKey(dir, key) {
   }
 }
 
-module.exports = { loadAll, writeKey, removeKey };
+module.exports = { loadAll, writable, writeKey, removeKey };
