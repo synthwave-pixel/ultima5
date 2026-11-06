@@ -57,58 +57,137 @@ folder picker.
 - **Android**: the APK on the Releases page, or
   [Obtainium](https://github.com/ImranR98/Obtainium) to keep it updated;
   see Android handhelds below.
-- **Linux without Flatpak**: the `AppImage` on the Releases page.
+- **Linux without Flatpak**: the AppImage, `ultima5-sp-x86_64.AppImage`, from
+  the [Releases page](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage).
+  It is also the build to use for Steam; see Steam's Ultima V below.
 
 ## Steam's Ultima V
 
-If you own Ultima V on Steam, the desktop app can be what Play starts, in
-place of the 1988 DOS game. In the app, Settings → Steam says where your
-system stands and sets it up; Remove Steam setup undoes it. The Mac route
-was tried on a real Mac while this was being designed; this build's own
-check on one is still to come. The Windows and Linux routes will be tried
-by players through pre-releases (the Releases page marks them), so expect
-rough edges there, and say what you find.
+If you own Ultima V on Steam, the desktop app can be what Steam's Play
+starts, in place of the 1988 DOS game. This is a beta: it lives in the
+title screen's **Steam (beta)** entry (desktop builds only; the web and
+Android have none), and every option in it is **off until you turn it on**.
+With all of them off the app writes nothing to Steam's folders and keeps
+its saves in its own store. Turning an option off undoes it.
+
+The menu opens with what the app found: Steam's folder, whether Ultima V is
+installed in one of Steam's libraries (and which), and the Steam account.
+Where Steam or the game is missing it says so, and the options that need
+them are greyed (the bar still rests on one, and its note says why).
+Choose a line to turn it on or off; the note at the foot says what it does.
+
+The options differ by system:
+
+| System | Option | On | Off |
+| --- | --- | --- | --- |
+| Windows | Play from Steam | Shows the launch line to copy | Tells you to clear the line in Steam |
+| Linux | Play from Steam: Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
+| Linux | Play from Steam: Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
+| macOS | Play from Steam | Warns, offers to quit Steam, then edits Steam's settings | With Steam closed, puts Steam's settings back |
+| All | Cloud saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
 
 - **Windows**: Steam's files are never edited, and Steam must have
-  installed Ultima V first. Choose Copy launch line, then in Steam open
-  Ultima V → ⚙ → Properties → Launch Options and paste. This needs the
-  installed app: the portable `.exe` has no fixed place for Steam to point
-  at, so it has no line.
-- **Linux and SteamOS**: this needs the Flatpak or the AppImage; other
-  builds have nothing for Steam to start. Set up installs a compatibility
-  tool, Ultima V (new engine). Restart Steam, then in Ultima V → ⚙ →
-  Properties → Compatibility, choose it: Steam downloads the game if it
-  has not yet, and Play starts this engine. The launch line is the
-  fallback: paste it as on Windows. Steam installed as a Flatpak cannot run
-  the game's Flatpak until it is allowed to, with one line in a terminal,
-  after which Steam needs a restart:
+  installed Ultima V first. Turn Play from Steam on and choose Copy launch
+  line, then in Steam open Ultima V → ⚙ → Properties → Launch Options and
+  paste. This needs the installed app: the portable `.exe` has no fixed
+  place for Steam to point at, so it has no line.
+- **Linux and SteamOS**: the AppImage is the build to use (see below); the
+  Flatpak works less well with Steam, and its Steam (beta) menu says so and
+  links the AppImage's download. The two options are separate on purpose,
+  since which works best on a Deck is what the beta is finding out: either,
+  both or neither may be on. Compat. tool installs a compatibility tool
+  named Ultima V SP. Restart Steam, then in Ultima V → ⚙ → Properties →
+  Compatibility, choose it: Steam downloads the game if it has not yet, and
+  Play starts this engine. Launch line is the other way: copy the line and
+  paste it as on Windows. If both are on, Steam runs the launch line and the
+  tool goes unused, and the menu says so. Steam installed as a Flatpak
+  cannot run the game's Flatpak until it is allowed to, with one line in a
+  terminal, after which Steam needs a restart:
 
       flatpak override --user --talk-name=org.freedesktop.Flatpak com.valvesoftware.Steam
 
-- **macOS**: Steam has no Mac launch for Ultima V, so Set up gives it one.
-  The app must be in Applications and opened from there: Set up refuses a
-  copy still in Downloads, or a development run. Setting up edits Steam's
-  files, which Steam must be closed for: if Steam is running, the app asks
-  to quit it, before Set up and before Remove Steam setup alike. Steam then
-  downloads the game if it has not yet, and Play starts this engine. If Play ever says "Invalid
+- **macOS**: Steam has no Mac launch for Ultima V, so Play from Steam gives
+  it one. The app must be in Applications and opened from there: it refuses
+  a copy still in Downloads, or a development run. Before it does anything
+  it warns that it closes Steam and changes Steam's own settings for Ultima
+  V, that Steam may undo the change when EA updates the game (the app puts
+  it back), and that turning the option off puts Steam's settings back as
+  they were; nothing happens unless you confirm. Because it edits Steam's
+  files, Steam must be closed: if Steam is running the app asks to quit it,
+  for turning the option on and off alike. Steam then downloads the game if
+  it has not yet, and Play starts this engine. If Play ever says "Invalid
   platform", Steam has refreshed Ultima V's settings: open the app once
   with Steam closed (or let it quit Steam) and it puts them back. EA seldom
   updates Ultima V, so this is rarely needed.
 
+Steam names the game "Ultima V" wherever the app cannot rename it, which is
+the Windows and Linux launch line. The app says which edition it is itself:
+the window title and the title screen show **Ultima V SP** and its version,
+and Settings ends with the same, greyed. The Mac launch entry and the Linux
+compatibility tool are named Ultima V SP in Steam.
+
+**Checking the launch line.** Where Play uses a pasted line (Windows, and
+Linux's Launch line), the menu reads back what Steam has saved for Ultima V
+(it only ever reads that file) and says one of: found and right; missing;
+out of date (it starts an engine somewhere else, such as an older AppImage
+name or a moved app); pasted twice; or not seen yet. Steam writes the line
+when it closes, so one pasted moments ago may not be there yet, and the menu
+says "not seen yet" rather than "wrong". Each comes with what to do, and
+Copy launch line. In a game Steam started, the line is known to work.
+
+**Cloud saves.** The option can be switched only from a game Steam started
+(Steam's folder is known only then), with Ultima V's folder present and
+the Steam account known; on a Mac only with Play from Steam on. Turning it
+on copies this computer's saves into Steam's folder
+(`ultima5-sp/<your Steam account id>/` inside the game's folder, each save a
+subfolder holding one `SAVED.GAM`), and saves made in a Steam launch then stay
+with Steam, which syncs them with Steam Cloud. Turning it off copies them
+back. If a character was played here and in Steam apart, the app shows both
+versions and asks which to keep; Cancel leaves everything as it was, and
+if any copy fails the option stays as it was. The option is kept per Steam
+account; the other options are kept per machine. Export and Import carry a
+game between launches with the option off.
+
+Testers: the menu ends with **Copy report**, a plain-text report of what was
+found (system, build, Steam, the game, the launch line, the options) to
+paste into an issue, and **Report an issue**, which opens
+[the issues page](https://github.com/synthwave-pixel/ultima5/issues) in your
+browser.
+
 The game is played from its folder in Steam, wherever its library is: a
-second drive, an external disk, or an SD card. Saves made in a Steam
-launch live in `Ultima V Engine/<your Steam account id>/` inside the
-game's folder, and Steam Cloud syncs them. They are kept apart from the
-saves of any other launch of the app: neither sees the other's, and
-Export and Import carry a game from one to the other. Only one copy runs
-at a time across both, so starting one while the other is open says which
-is open and quits. A Steam launch never restarts itself into an update:
-the Windows installer's copy and the AppImage download it in the
-background and install it when the game quits; the Flatpak installs it
-through Flatpak's update service, and you start the new version from
-Steam again; the other builds say a newer release is out. Remove Steam
-setup takes away what Set up made (on Windows, it tells you to clear the
-Launch Options line).
+second drive or an external disk (an SD card too, with the AppImage; the
+Flatpak does not reach SD-card libraries yet,
+[#16](https://github.com/synthwave-pixel/ultima5/issues/16)). Only one copy
+runs at a time, so starting one while another is open says which is open and
+quits. A Steam launch never restarts itself into an update: the Windows
+installer's copy and the AppImage download it in the background and install
+it when the game quits; the Flatpak installs it through Flatpak's update
+service, and you start the new version from Steam again; the other builds
+say a newer release is out.
+
+### The AppImage, for Steam on Linux and the Deck
+
+For Steam on a Steam Deck or any Linux, use the AppImage. It updates itself
+quietly, it reaches libraries on an SD card, and the launch line and
+compatibility tool point straight at its file, which keeps one name and
+place across updates. The Flatpak stays the easy store install for those who
+prefer it. Against the AppImage: you download it in Desktop Mode, mark it
+executable and add it to the application menu by hand.
+
+Download
+[`ultima5-sp-x86_64.AppImage`](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage)
+(this link always gives the newest), save it somewhere permanent, such as
+`~/Applications`, and make it executable (right-click → Properties →
+Permissions → Is executable, or `chmod +x`). Run it, open Steam (beta) on
+the title screen and turn on a Play option. Move the file afterwards and a
+launch line or tool pointing at it goes stale.
+
+The file has no version in its name, so an update replaces it in place and
+its path never changes. If you already use the AppImage under its old,
+versioned name, your next update brings the new name by itself (the old file
+is removed); after that every update overwrites it in place. A launch line
+that names the old file is then out of date: the menu says so, and Copy
+launch line gives the new one.
 
 ## Desktop app, and the Steam Deck
 
@@ -183,8 +262,10 @@ installed when the game quits.
   acceleration and the browser sandbox, which have hung other Electron
   apps under gamescope. The `.flatpak` bundle on the Releases page is the
   same build for an offline install (`flatpak install --user <file>`,
-  which then never updates), and the `AppImage` suits a Linux without
-  Flatpak: make it executable and run it.
+  which then never updates). The AppImage
+  (`ultima5-sp-x86_64.AppImage`) suits a Linux without Flatpak, and is the
+  build to recommend for playing through Steam, on a Deck too (see Steam's
+  Ultima V above): make it executable and run it.
 
 ## Android handhelds
 

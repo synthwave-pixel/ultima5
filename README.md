@@ -101,7 +101,9 @@ games.
   [add Ultima V to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.synthwavepixel.ultima5%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsynthwave-pixel%2Fultima5%22%2C%22author%22%3A%22synthwave-pixel%22%2C%22name%22%3A%22Ultima%20V%22%7D)
   on the device, or add `https://github.com/synthwave-pixel/ultima5` in
   Obtainium by hand. iOS has no app on purpose: use the browser.
-- **Linux without Flatpak**: the `AppImage` on the Releases page. Make it
+- **Linux without Flatpak**: the AppImage,
+  [`ultima5-sp-x86_64.AppImage`](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage),
+  from the Releases page; also the build to use for Steam. Make it
   executable and run it; it keeps itself up to date. On Ubuntu 22.04 or
   newer (and Mint, Pop!_OS...), if it won't start, install libfuse2 first:
   `sudo apt install libfuse2t64` (`libfuse2` before Ubuntu 24.04).
