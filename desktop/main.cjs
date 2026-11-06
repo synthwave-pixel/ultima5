@@ -173,7 +173,7 @@ const STEAM_STILL_RUNNING = "Steam didn't quit. Quit it yourself, then try again
 
 /**
  * Where this system stands with Steam, for the Steam line. On a Mac that was set up, asking also puts the edit back if
- * Steam has undone it and is closed. Windows never edits Steam's files, so whether the line was pasted is not known.
+ * Steam has undone it and is closed; and a Mac says whether Steam is running, which setting up or removing would quit. Windows never edits Steam's files, so whether the line was pasted is not known.
  */
 function steamStatus() {
   const line = launchLineHere();
@@ -182,10 +182,11 @@ function steamStatus() {
   if (SYSTEM === 'mac') {
     // The Settings line must always open: a cache that cannot be read or written is logged, and shown as not set up.
     try {
-      return { system: SYSTEM, state: steamSetup.macReapply(macWhere()), line };
+      const { state, steamRunning: running } = steamSetup.macStatus(macWhere());
+      return { system: SYSTEM, state, line, steamRunning: running };
     } catch (e) {
       console.warn('steam status:', e);
-      return { system: SYSTEM, state: 'not-set-up', line };
+      return { system: SYSTEM, state: 'not-set-up', line, steamRunning: steamRunning() };
     }
   }
   if (SYSTEM === 'linux') return { system: SYSTEM, state: steamSetup.hasCompatTool(fs, roots) ? 'ready' : 'not-set-up', line };

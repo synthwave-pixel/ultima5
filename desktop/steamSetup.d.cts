@@ -32,4 +32,8 @@ export function macSetup(
   where: MacWhere & AppPlace & { quitSteam(): Promise<void> },
 ): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
 export function macReapply(where: MacWhere & AppPlace): 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
+export function macStatus(where: MacWhere & AppPlace): {
+  state: 'ready' | 'not-set-up' | 'steam-running' | 'not-owned';
+  steamRunning: boolean;
+};
 export function macRestore(where: MacWhere & { quitSteam(): Promise<void> }): Promise<'done' | 'steam-running' | 'kept-unusable'>;

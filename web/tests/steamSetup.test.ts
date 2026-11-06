@@ -12,6 +12,7 @@ import {
   installCompatTool,
   launchLine,
   macReapply,
+  macStatus,
   macRestore,
   macSetup,
   relinkAppImage,
@@ -472,6 +473,17 @@ describe("the Mac's cache entry", () => {
 
     expect(await macRestore({ ...m, ...closed })).toBe('done');
     expect(sameEntries(fs.readFileSync(m.cacheFile), newer)).toBe(true);
+  });
+
+  it('tells the Steam line whether Steam is running, set up or not, and that a cache without Ultima V is not owned', async () => {
+    const m = mac();
+    expect(macStatus({ ...m, steamRunning: () => true })).toEqual({ state: 'not-set-up', steamRunning: true });
+    expect(macStatus({ ...m, steamRunning: () => false })).toEqual({ state: 'not-set-up', steamRunning: false });
+    expect(await macSetup({ ...m, ...closed })).toBe('done');
+    expect(macStatus({ ...m, steamRunning: () => true })).toEqual({ state: 'ready', steamRunning: true });
+    const other = mac();
+    fs.writeFileSync(other.cacheFile, cache([{ appid: OTHER, kv: otherKv() }]));
+    expect(macStatus({ ...other, steamRunning: () => false })).toEqual({ state: 'not-owned', steamRunning: false });
   });
 
   it('does nothing at startup for a Mac that never set it up', () => {

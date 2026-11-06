@@ -2006,7 +2006,7 @@ function steamWords(s: SteamStatus): string {
 /**
  * The Steam box: where this system stands, and to set up, copy the launch line (Windows and Linux) or remove the setup.
  * What each says is shown, and the box is drawn again from Steam's state as it then is. A Mac with Steam running is asked
- * to quit it first: setting up would otherwise quit it unasked.
+ * to quit it first: setting up or removing would otherwise quit it unasked.
  */
 async function steamMenu(g: Game): Promise<void> {
   const steam = g.hooks.steam;
@@ -2029,6 +2029,9 @@ async function steamMenu(g: Game): Promise<void> {
       /* shown below */
     }
     const around = s !== null && (s.state === 'ready' || s.state === 'not-set-up' || s.state === 'steam-running');
+    // Whether a Mac's Steam must be quit for setting up or removing: asked first, and nothing done on No.
+    const quitFirst = s !== null && s.system === 'mac' && (s.steamRunning === true || s.state === 'steam-running');
+    const mayQuit = async (): Promise<boolean> => !quitFirst || (await confirm(g, 'Steam must be closed for this. Quit Steam now?'));
     const items: Item[] = [
       { label: 'Back', note: '' },
       ...wrap(s === null ? "Steam's state could not be read here." : steamWords(s)).map((l) => ({ label: l, enabled: false })),
@@ -2039,9 +2042,7 @@ async function steamMenu(g: Game): Promise<void> {
       actions.push({
         item: { label: 'Set up', key: c('S') },
         run: async () => {
-          if (s.system === 'mac' && s.state === 'steam-running' && !(await confirm(g, 'Steam must be closed for this. Quit Steam now?')))
-            return;
-          await say(await attempt(() => steam.setup()));
+          if (await mayQuit()) await say(await attempt(() => steam.setup()));
         },
       });
     }
@@ -2062,7 +2063,12 @@ async function steamMenu(g: Game): Promise<void> {
       });
     }
     if (s !== null && s.state !== 'no-steam') {
-      actions.push({ item: { label: 'Remove Steam setup', key: c('R') }, run: async () => say(await attempt(() => steam.remove())) });
+      actions.push({
+        item: { label: 'Remove Steam setup', key: c('R') },
+        run: async () => {
+          if (await mayQuit()) await say(await attempt(() => steam.remove()));
+        },
+      });
     }
     items.push(...actions.map((a) => a.item));
     at = await choose(g, 'Steam', items, Math.min(at, items.length - 1));

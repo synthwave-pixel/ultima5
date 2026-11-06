@@ -75,6 +75,21 @@ describe('the Steam line in Settings', () => {
     expect(yes.texts.join('\n')).toContain('Set up done.');
   });
 
+  it('asks a Mac with Steam running to quit it before the first setup, and before removing, doing nothing on No', async () => {
+    const running: SteamStatus = { system: 'mac', state: 'not-set-up', line: null, steamRunning: true };
+    const no = await useSteam(running, ['Set up', 'No']);
+    expect(no.texts.join('\n')).toContain('Steam must be closed for this. Quit Steam now?');
+    expect(no.calls).not.toContain('setup');
+    const set = await useSteam(running, ['Set up', 'Yes']);
+    expect(set.calls).toContain('setup');
+    const ready: SteamStatus = { system: 'mac', state: 'ready', line: null, steamRunning: true };
+    const keep = await useSteam(ready, ['Remove Steam setup', 'No']);
+    expect(keep.texts.join('\n')).toContain('Steam must be closed for this. Quit Steam now?');
+    expect(keep.calls).not.toContain('remove');
+    const gone = await useSteam(ready, ['Remove Steam setup', 'Yes']);
+    expect(gone.calls).toContain('remove');
+  });
+
   it('sets up a Mac with Steam closed without asking', async () => {
     const { calls, menus } = await useSteam({ system: 'mac', state: 'not-set-up', line: null }, ['Set up']);
     expect(calls).toContain('setup');

@@ -356,6 +356,17 @@ function macReapply({ fs, steamRoot, appExe, packaged, keptOriginal, noteFile, s
 }
 
 /**
+ * Where a Mac stands, for the Steam line: as macReapply says, but a Mac not set up whose cache has no Ultima V is
+ * 'not-owned' (setup would say so); and whether Steam is running, so that the player is asked before setting up or
+ * removing quits it.
+ */
+function macStatus(where) {
+  let state = macReapply(where);
+  if (state === 'not-set-up' && !ultimaEntry(where.fs, where.steamRoot)) state = 'not-owned';
+  return { state, steamRunning: where.steamRunning() };
+}
+
+/**
  * Takes a Mac's setup away: with Steam closed, the kept entry back in the cache (unless Steam has since sent a newer
  * one, which is left as it is), then the launcher. The manifest, if we wrote it, goes only while nothing has been
  * downloaded (the game's folder holds no more than the launcher), as Steam would otherwise forget the installed game;
@@ -399,5 +410,6 @@ module.exports = {
   removeCompatTool,
   macSetup,
   macReapply,
+  macStatus,
   macRestore,
 };

@@ -129,6 +129,8 @@ export interface SteamStatus {
   system: 'linux' | 'windows' | 'mac';
   state: 'ready' | 'not-set-up' | 'steam-running' | 'no-steam' | 'not-owned';
   line: string | null;
+  /** A Mac's: whether Steam is running, which setting up or removing would quit. */
+  steamRunning?: boolean;
 }
 
 /** What the Steam line in Settings asks of the desktop app. setup and remove give the message to show, whatever went wrong. */
