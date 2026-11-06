@@ -36,9 +36,12 @@ function report(f) {
   if (f.game === 'ok') lines.push(`Ultima V: installed in ${f.where}`);
   else if (f.game === 'missing') lines.push(`Ultima V: listed by Steam, but its folder is missing (${f.where})`);
   else lines.push('Ultima V: not installed');
-  if (f.hasDataOvl !== null) lines.push(`Ultima V files: DATA.OVL ${f.hasDataOvl ? 'found' : 'missing'}`);
-  // Where the engine took its game files from is the page's to know; what is known here is whether Steam's copy is there.
-  lines.push(`Game files: found in Steam's library: ${yesNo(f.game === 'ok')}`);
+  if (f.steamMissing !== null) {
+    lines.push(`Ultima V files: ${f.steamMissing === 0 ? 'complete' : `incomplete (${f.steamMissing} missing)`}`);
+  }
+  // Where the engine took its game files from is what the page recorded when it kept them.
+  const from = { steam: "Steam's library", installer: 'the installer' }[f.filesFrom] ?? 'unknown';
+  lines.push(`Game files from: ${from}`);
   lines.push('');
 
   // Only the options this system has.

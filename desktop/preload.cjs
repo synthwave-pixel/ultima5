@@ -33,8 +33,9 @@ contextBridge.exposeInMainWorld('u5native', {
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
     // Whether Steam's saved launch line is this copy's: { state: 'correct' | 'missing' | 'not-seen' | 'stale' | 'twice', bothLinux }, or null (main.cjs steamLineState).
     lineState: () => ipcRenderer.invoke('steam-line-state'),
-    // The plain-text report for testers to paste into an issue (main.cjs reportFacts, steamReport.cjs).
-    report: () => ipcRenderer.invoke('steam-report'),
+    // The plain-text report for testers to paste into an issue (main.cjs reportFacts, steamReport.cjs). The page gives
+    // what only it knows: { filesFrom, required } (web/src/install/sources.ts reportArgs).
+    report: (page) => ipcRenderer.invoke('steam-report', page),
     // The Steam options kept on this machine (main.cjs), with this launch's Steam account id or null; and a switch.
     options: () => ipcRenderer.sendSync('steam-options'),
     setOption: (name, on) => ipcRenderer.invoke('steam-set-option', name, on),

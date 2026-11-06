@@ -17,8 +17,10 @@ export interface ReportFacts {
   /** 'ok' (installed), 'missing' (listed, its folder is gone) or 'none'; `where` is the folder or the library expected. */
   game: 'ok' | 'missing' | 'none';
   where: string;
-  /** Whether the game folder holds DATA.OVL (null: no folder to look in). */
-  hasDataOvl: boolean | null;
+  /** Where the engine's kept game files came from, as the page recorded it. */
+  filesFrom: 'steam' | 'installer' | 'unknown';
+  /** How many required game files Steam's folder lacks (0: complete; null: no folder to look in). */
+  steamMissing: number | null;
   options: {
     playLine: boolean;
     compatTool: boolean;

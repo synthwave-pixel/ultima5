@@ -10,7 +10,7 @@ import { runInstaller } from './install/installer.ts';
 import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
-import { steamFound, steamLaunch, steamNative } from './install/sources.ts';
+import { noteFilesFrom, steamFound, steamLaunch, steamNative } from './install/sources.ts';
 import { steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
@@ -148,6 +148,7 @@ export async function gameFiles(): Promise<GameFiles> {
       let kept = true;
       try {
         await saveInstalled(got.found.files);
+        noteFilesFrom('steam');
       } catch {
         kept = false;
       }

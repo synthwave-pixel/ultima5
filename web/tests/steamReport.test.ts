@@ -16,7 +16,8 @@ describe('the Steam report', () => {
     libraries: ['/home/alice/.local/share/Steam', '/run/media/alice/SD/SteamLibrary'],
     game: 'ok',
     where: '/run/media/alice/SD/SteamLibrary/steamapps/common/Ultima V',
-    hasDataOvl: true,
+    filesFrom: 'steam',
+    steamMissing: 0,
     options: { playLine: true, compatTool: false, macPlay: false, results: { playLine: 'done', compatTool: 'ENOSPC' } },
     cloud: true,
     accountKnown: true,
@@ -41,8 +42,8 @@ describe('the Steam report', () => {
     expect(lines).toContain('Library: ~/.local/share/Steam');
     expect(lines).toContain('Library: /run/media/<user>/SD/SteamLibrary');
     expect(lines).toContain('Ultima V: installed in /run/media/<user>/SD/SteamLibrary/steamapps/common/Ultima V');
-    expect(lines).toContain('Ultima V files: DATA.OVL found');
-    expect(lines).toContain("Game files: found in Steam's library: yes");
+    expect(lines).toContain('Ultima V files: complete');
+    expect(lines).toContain("Game files from: Steam's library");
     expect(lines).toContain('Account: known');
     expect(lines).toContain('Play from Steam, launch line: on; last result: done');
     expect(lines).toContain('Play from Steam, compatibility tool: off; last result: ENOSPC');
@@ -73,7 +74,8 @@ describe('the Steam report', () => {
       libraries: [],
       game: 'none',
       where: '',
-      hasDataOvl: null,
+      filesFrom: 'unknown',
+      steamMissing: null,
       accountKnown: false,
       cloud: null,
       lineState: null,
@@ -82,10 +84,17 @@ describe('the Steam report', () => {
     expect(text).toContain('Started by Steam: no');
     expect(text).toContain('Steam folder: not found');
     expect(text).toContain('Ultima V: not installed');
-    expect(text).toContain("Game files: found in Steam's library: no");
+    expect(text).toContain('Game files from: unknown');
+    expect(text).not.toContain('Ultima V files');
     expect(text).toContain('Account: unknown');
     expect(text).toContain('Cloud saves: not available');
     expect(text).not.toContain("Characters in Steam's folder");
+  });
+
+  it("says where the files came from, and whether Steam's copy is whole", () => {
+    expect(report({ ...facts, filesFrom: 'installer' })).toContain('Game files from: the installer');
+    expect(report({ ...facts, filesFrom: 'unknown' })).toContain('Game files from: unknown');
+    expect(report({ ...facts, filesFrom: 'steam', steamMissing: 2 })).toContain('Ultima V files: incomplete (2 missing)');
   });
 
   it('keeps the player out of it', () => {

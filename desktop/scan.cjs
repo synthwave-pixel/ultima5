@@ -106,6 +106,29 @@ function readCopy(dir, wanted) {
 }
 
 /**
+ * How many of the `required` names `dir` lacks, matched as readCopy matches them (any case, in the folder or one folder
+ * down). Only names are listed; no file is read.
+ */
+function missingNames(dir, required) {
+  const have = new Set();
+  const take = (folder, deep) => {
+    let names;
+    try {
+      names = readdirSync(folder);
+    } catch {
+      return;
+    }
+    for (const n of names) {
+      if (isDir(join(folder, n))) {
+        if (deep) take(join(folder, n), false);
+      } else have.add(n.toUpperCase());
+    }
+  };
+  take(dir, true);
+  return required.filter((n) => !have.has(n.toUpperCase())).length;
+}
+
+/**
  * The home folders macOS guards: reading inside one (Desktop, Documents, Downloads ...) raises an access prompt, which a
  * first Scan would raise a string of, unasked. They are not listed, so a copy kept inside one is not found by a scan;
  * it can still be dropped on the installer or chosen with its buttons.
@@ -156,4 +179,4 @@ function scanForGameFiles(wanted) {
   return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children }), wanted, { platform, home });
 }
 
-module.exports = { gameFolderName, roots, findCopies, readCopy, scanForGameFiles };
+module.exports = { gameFolderName, missingNames, roots, findCopies, readCopy, scanForGameFiles };

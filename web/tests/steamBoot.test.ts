@@ -101,6 +101,10 @@ describe('finding the game in Steam on any start', () => {
     expect(files.names()).toContain('DATA.OVL');
     expect(saveInstalled).toHaveBeenCalledTimes(1);
     expect(runInstaller).not.toHaveBeenCalled();
+    expect(localStorage.getItem('ultima5.filesFrom')).toBe('steam');
+    const { reportArgs } = await import('../src/install/sources.ts');
+    expect(reportArgs().filesFrom).toBe('steam');
+    expect(reportArgs().required).toContain('DATA.OVL');
     const note = steamNote();
     expect(note?.text).toBe(FOUND_NOTE);
     note?.seen();

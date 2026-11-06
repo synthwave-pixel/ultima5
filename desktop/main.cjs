@@ -24,7 +24,7 @@ const { homedir } = require('node:os');
 const fs = require('node:fs');
 const { writeFileSync, existsSync, readFileSync } = fs;
 const { execFile, spawnSync } = require('node:child_process');
-const { readCopy, scanForGameFiles } = require('./scan.cjs');
+const { missingNames, readCopy, scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const {
   applyUpdate,
@@ -263,10 +263,10 @@ let macReapplied = null;
 
 /**
  * What the tester report is made from (steamReport.cjs): only what is found by reading. Where the engine took its game
- * files from is the page's to know, so the report says whether Steam's copy was found. The characters in Steam's
+ * files from, and the names that make a copy whole, are the page's to say (`page`, validated by the handler). The characters in Steam's
  * folder are the ids on its list (ultima5.characters), counted with the saves' contents left unsaid.
  */
-function reportFacts(options, launch) {
+function reportFacts(options, launch, page) {
   const f = steamFind();
   const read = (path) => {
     try {
@@ -277,7 +277,7 @@ function reportFacts(options, launch) {
   };
   const root = f.root ?? steamRootsHere().find((r) => existsSync(r)) ?? null;
   const libraries = root === null ? [] : libraryPaths(root, read);
-  const hasDataOvl = f.folder === null ? null : fs.readdirSync(f.folder).some((n) => n.toUpperCase() === 'DATA.OVL');
+  const steamMissing = f.folder === null ? null : missingNames(f.folder, page.required);
   const account = launch?.accountId ?? null;
   const cloud = account === null ? null : options.cloud[account] === true;
   let cloudCharacters = null;
@@ -313,7 +313,8 @@ function reportFacts(options, launch) {
     libraries,
     game: f.game === 'ok' ? 'ok' : f.game === 'missing' ? 'missing' : 'none',
     where: f.where,
-    hasDataOvl,
+    filesFrom: page.filesFrom,
+    steamMissing,
     options,
     cloud,
     accountKnown: account !== null,
@@ -598,7 +599,14 @@ app.whenReady().then(() => {
   // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam line in Settings.
   ipcMain.handle('steam-line-state', (event) => (fromGame(event) ? steamLineState(readOptions(optionsFile)) : null));
   // The tester report for Copy report (steamReport.cjs): plain text, no save or file contents.
-  ipcMain.handle('steam-report', (event) => (fromGame(event) ? steamReport(reportFacts(readOptions(optionsFile), launch)) : null));
+  ipcMain.handle('steam-report', (event, page) => {
+    const ok =
+      page &&
+      ['steam', 'installer', 'unknown'].includes(page.filesFrom) &&
+      Array.isArray(page.required) &&
+      page.required.every((n) => typeof n === 'string');
+    return fromGame(event) && ok ? steamReport(reportFacts(readOptions(optionsFile), launch, page)) : null;
+  });
   const win = createWindow();
   onOffer((o) => {
     if (!win.isDestroyed()) win.webContents.send('update-offer-changed', o);

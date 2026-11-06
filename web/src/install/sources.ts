@@ -101,6 +101,39 @@ export interface SteamNative {
   options(): SteamOptionsHere;
   /** Records an option's value (Cloud saves: for this launch's account only); false where it was refused. */
   setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean): Promise<boolean>;
+  /** The tester report (desktop/steamReport.cjs), given what only the page knows; null where refused. */
+  report(page: ReportArgs): Promise<string | null>;
+}
+
+/** Where the kept game files came from: recorded when they are kept, 'unknown' for a copy kept before it was. */
+export type FilesFrom = 'steam' | 'installer' | 'unknown';
+/** What the page tells the app for the tester report. */
+export interface ReportArgs {
+  filesFrom: FilesFrom;
+  required: string[];
+}
+
+export const FILES_FROM_KEY = 'ultima5.filesFrom';
+
+/** Records where the files just kept came from. Storage that will not take it leaves the copy 'unknown'. */
+export function noteFilesFrom(from: 'steam' | 'installer'): void {
+  try {
+    localStorage.setItem(FILES_FROM_KEY, from);
+  } catch {
+    // Not recorded; the report says unknown.
+  }
+}
+
+/** What the page gives for the tester report: where the kept files came from, and the names of a whole copy. */
+export function reportArgs(): ReportArgs {
+  let filesFrom: FilesFrom = 'unknown';
+  try {
+    const v = localStorage.getItem(FILES_FROM_KEY);
+    if (v === 'steam' || v === 'installer') filesFrom = v;
+  } catch {
+    // Unreadable: unknown.
+  }
+  return { filesFrom, required: [...REQUIRED] };
 }
 
 /** The desktop app's Steam bridge; null outside the app, and in an app of before it. */
