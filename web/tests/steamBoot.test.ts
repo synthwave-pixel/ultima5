@@ -34,7 +34,12 @@ const wholeCopy = (): FoundCopy => {
 };
 
 /** The desktop app's bridge as a Steam launch gives it (or, without `launch`, no Steam part at all). */
-function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null = {}, find?: SteamFind) {
+function bridge(
+  launch: SteamLaunch | null,
+  saves: Record<string, string> | null = {},
+  find?: SteamFind,
+  options: { cloud?: Record<string, boolean>; account?: string | null } = {},
+) {
   const written = new Map<string, string>();
   const found: SteamFind =
     find ?? (launch && launch.steam ? { steam: true, game: launch.game, where: launch.where } : { steam: false, game: 'none', where: '' });
@@ -45,6 +50,16 @@ function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null
         launch: () => launch,
         find: () => found,
         gameFiles: vi.fn(() => Promise.resolve(wholeCopy())),
+        options: () => ({
+          playLine: false,
+          compatTool: false,
+          macPlay: false,
+          results: {},
+          lineOnAt: 0,
+          cloud: {},
+          account: null,
+          ...options,
+        }),
         saves: {
           all: () => saves,
           set: (k: string, v: string) => (written.set(k, v), true),
@@ -56,6 +71,8 @@ function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null
   return written;
 }
 
+/** Cloud saves on for the account `me`, the launch's own. */
+const ON = { cloud: { me: true }, account: 'me' };
 const FOUND_NOTE = 'Found Ultima V in your Steam library.';
 const steamOf = () => (globalThis as unknown as { u5native: { steam: { gameFiles: ReturnType<typeof vi.fn> } } }).u5native.steam;
 
@@ -138,7 +155,7 @@ describe('finding the game in Steam on any start', () => {
   });
 
   it('says the found note first and lets the first-launch Steam note wait', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {});
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, ON);
     const { chooseStore, gameFiles, steamNote } = await import('../src/boot.ts');
     chooseStore();
     await gameFiles();
@@ -151,7 +168,7 @@ describe('finding the game in Steam on any start', () => {
     const again = await import('../src/boot.ts');
     again.chooseStore();
     await again.gameFiles();
-    expect(again.steamNote()?.text).toMatch(/^Playing through Steam/);
+    expect(again.steamNote()?.text).toMatch(/^Saves made while playing from Steam/);
   });
 
   it('asks the app to find Steam once a page', async () => {
@@ -218,8 +235,8 @@ describe('a launch from Steam', () => {
     expect(runInstaller).toHaveBeenCalledWith(undefined);
   });
 
-  it('keeps the saves with Steam, seeded from its files', async () => {
-    const written = bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' });
+  it('keeps the saves with Steam, seeded from its files, where Cloud saves is on', async () => {
+    const written = bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' }, undefined, ON);
     const { chooseStore } = await import('../src/boot.ts');
     const { kept } = await import('../src/game/keyStore.ts');
     chooseStore();
@@ -229,21 +246,70 @@ describe('a launch from Steam', () => {
     expect(localStorage.getItem('ultima5.save')).toBeNull();
   });
 
-  it('refuses every save where no account is known, never falling back to the browser’s', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: false }, null);
-    const { chooseStore } = await import('../src/boot.ts');
+  it('keeps the saves in the app, writing nothing to the folder, where Cloud saves is off', async () => {
+    const written = bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' }, undefined, {
+      account: 'me',
+    });
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
     const { kept } = await import('../src/game/keyStore.ts');
     chooseStore();
-    expect(() => kept().setItem('ultima5.save', 'new')).toThrow();
-    expect(localStorage.getItem('ultima5.save')).toBeNull();
+    expect(kept().getItem('ultima5.saves')).toBeNull();
+    kept().setItem('ultima5.save', 'new');
+    expect(written.size).toBe(0);
+    expect(localStorage.getItem('ultima5.save')).toBe('new');
+    expect(steamNote()).toBeNull();
   });
 
-  it('refuses saves where the game has no folder', async () => {
-    bridge({ steam: true, game: 'missing', where: 'x', account: false }, null);
-    const { chooseStore } = await import('../src/boot.ts');
+  it('keeps Cloud saves to the account it was turned on for', async () => {
+    const written = bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, {
+      cloud: { other: true },
+      account: 'me',
+    });
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
     const { kept } = await import('../src/game/keyStore.ts');
     chooseStore();
-    expect(() => kept().setItem('ultima5.save', 'new')).toThrow();
+    kept().setItem('ultima5.save', 'new');
+    expect(written.size).toBe(0);
+    expect(steamNote()).toBeNull();
+  });
+
+  it('uses the app’s saves and says so each launch where Cloud saves is on but no account is known', async () => {
+    const written = bridge({ steam: true, game: 'ok', where: 'x', account: false }, null, undefined, {
+      cloud: { me: true },
+      account: null,
+    });
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    const { kept } = await import('../src/game/keyStore.ts');
+    chooseStore();
+    kept().setItem('ultima5.save', 'new');
+    expect(written.size).toBe(0);
+    expect(localStorage.getItem('ultima5.save')).toBe('new');
+    const note = steamNote();
+    expect(note?.text).toBe("Steam's saves can't be reached; using this computer's saves.");
+    note?.seen();
+    expect(steamNote()).toBeNull();
+    vi.resetModules();
+    const again = await import('../src/boot.ts');
+    again.chooseStore();
+    expect(again.steamNote()?.text).toBe("Steam's saves can't be reached; using this computer's saves.");
+  });
+
+  it('uses the app’s saves and says so where Cloud saves is on but the folder will not load', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, null, undefined, ON);
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    const { kept } = await import('../src/game/keyStore.ts');
+    chooseStore();
+    kept().setItem('ultima5.save', 'new');
+    expect(localStorage.getItem('ultima5.save')).toBe('new');
+    expect(steamNote()?.text).toBe("Steam's saves can't be reached; using this computer's saves.");
+  });
+
+  it('puts the can’t-be-reached note before the first-launch one, which waits', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, null, undefined, ON);
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    steamNote()?.seen();
+    expect(localStorage.getItem('ultima5.steamNoted.me')).toBeNull();
   });
 
   it('leaves the browser’s storage to any other launch', async () => {
@@ -255,34 +321,36 @@ describe('a launch from Steam', () => {
     expect(localStorage.getItem('ultima5.save')).toBe('new');
   });
 
-  it('says how saves are kept once, when there are none yet', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {});
+  it('says how saves are kept once for an account whose Cloud saves is on', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, ON);
     const { chooseStore, steamNote } = await import('../src/boot.ts');
     chooseStore();
     const note = steamNote();
-    expect(note?.text).toMatch(/^Playing through Steam: your saves here are kept with Steam, apart from any made outside it\./);
+    expect(note?.text).toBe('Saves made while playing from Steam stay with Steam. Turning Steam Cloud saves off copies them back.');
     note?.seen();
     expect(steamNote()).toBeNull();
-    // On a later launch too: the flag is the machine's.
+    // On a later launch too: the flag is the account's, on this machine.
     vi.resetModules();
     const again = await import('../src/boot.ts');
     again.chooseStore();
     expect(again.steamNote()).toBeNull();
-    expect(localStorage.getItem('ultima5.steamNoted')).not.toBeNull();
+    expect(localStorage.getItem('ultima5.steamNoted.me')).not.toBeNull();
+    // Another account has its own.
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, { cloud: { you: true }, account: 'you' });
+    vi.resetModules();
+    const other = await import('../src/boot.ts');
+    other.chooseStore();
+    expect(other.steamNote()).not.toBeNull();
   });
 
-  it('says nothing of it to a player who already has saves, or outside Steam', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' });
-    const first = await import('../src/boot.ts');
-    first.chooseStore();
-    expect(first.steamNote()).toBeNull();
+  it('says nothing of it outside Steam', async () => {
     bridge(null);
-    vi.resetModules();
     expect((await import('../src/boot.ts')).steamNote()).toBeNull();
   });
 
   it('asks the app how it was launched once a page, however often the title looks for its note', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' });
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' }, undefined, ON);
+    localStorage.setItem('ultima5.steamNoted.me', '1');
     const steam = (globalThis as unknown as { u5native: { steam: { launch: () => SteamLaunch } } }).u5native.steam;
     const launch = vi.fn(steam.launch);
     steam.launch = launch;
@@ -292,23 +360,17 @@ describe('a launch from Steam', () => {
     const walk = vi.spyOn(kept(), 'key');
     for (let i = 0; i < 100; i++) expect(steamNote()).toBeNull();
     expect(launch).toHaveBeenCalledTimes(1);
-    expect(walk.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(walk.mock.calls.length).toBe(0);
   });
 
   it('keeps saying the first-launch note until it is seen, then says it no more', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {});
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {}, undefined, ON);
     const { chooseStore, steamNote } = await import('../src/boot.ts');
     chooseStore();
-    expect(steamNote()?.text).toMatch(/^Playing through Steam/);
+    expect(steamNote()?.text).toMatch(/^Saves made while playing from Steam/);
     const note = steamNote();
-    expect(note?.text).toMatch(/^Playing through Steam/);
+    expect(note?.text).toMatch(/^Saves made while playing from Steam/);
     note?.seen();
     expect(steamNote()).toBeNull();
-  });
-
-  it('says when no account is known', async () => {
-    bridge({ steam: true, game: 'ok', where: 'x', account: false }, null);
-    const { steamNote } = await import('../src/boot.ts');
-    expect(steamNote()?.text).toBe('Steam launched the game, but which Steam account did is unknown, so nothing can be saved.');
   });
 });

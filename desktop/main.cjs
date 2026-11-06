@@ -43,6 +43,7 @@ const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
+const { readOptions, writeOptions } = require('./steamOptions.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
 
@@ -128,7 +129,7 @@ function steamFind() {
 function steamLaunch() {
   if (!isSteamLaunch(process.env)) return null;
   const f = steamFind();
-  if (f.root === null) return { game: f.game, where: f.where, folder: null, account: false, dir: null };
+  if (f.root === null) return { game: f.game, where: f.where, folder: null, account: false, accountId: null, dir: null };
   const read = (path) => {
     try {
       return readFileSync(path, 'utf8');
@@ -143,6 +144,7 @@ function steamLaunch() {
     where: f.folder,
     folder: f.folder,
     account: account !== null,
+    accountId: account,
     dir: account === null ? null : saveDir(f.folder, account),
   };
 }
@@ -434,6 +436,27 @@ app.whenReady().then(() => {
   ipcMain.on('steam-saves-remove', (event, key) => {
     const dir = savesFor(event);
     event.returnValue = dir !== null && typeof key === 'string' && removeKey(dir, key);
+  });
+  // The Steam options (preload.cjs u5native.steam.options / setOption), kept per machine. The page is told them with
+  // this launch's account (null off Steam or with none known), as Cloud saves is per account. Here a switch only records
+  // its value; Cloud saves can be switched only in a Steam launch that knows its account.
+  const optionsFile = join(app.getPath('userData'), 'steam-options.json');
+  ipcMain.on('steam-options', (event) => {
+    event.returnValue = String(event.senderFrame?.url ?? '').startsWith('app://')
+      ? { ...readOptions(optionsFile), account: launch?.accountId ?? null }
+      : { ...readOptions(null), account: null };
+  });
+  ipcMain.handle('steam-set-option', (event, name, on) => {
+    if (!String(event.senderFrame?.url ?? '').startsWith('app://') || typeof on !== 'boolean') return false;
+    const o = readOptions(optionsFile);
+    if (name === 'cloud') {
+      if (!launch?.accountId) return false;
+      if (on) o.cloud[launch.accountId] = true;
+      else delete o.cloud[launch.accountId];
+    } else if (name === 'playLine' || name === 'compatTool' || name === 'macPlay') o[name] = on;
+    else return false;
+    writeOptions(optionsFile, o);
+    return true;
   });
   // The touch pad's full-screen button (preload.cjs): whether the window is full screen, set first if `on` is given.
   // Only the game's own page may ask.

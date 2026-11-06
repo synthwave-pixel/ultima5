@@ -31,6 +31,9 @@ contextBridge.exposeInMainWorld('u5native', {
     setup: () => ipcRenderer.invoke('steam-setup'),
     remove: () => ipcRenderer.invoke('steam-remove'),
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
+    // The Steam options kept on this machine (main.cjs), with this launch's Steam account id or null; and a switch.
+    options: () => ipcRenderer.sendSync('steam-options'),
+    setOption: (name, on) => ipcRenderer.invoke('steam-set-option', name, on),
     // A Steam launch's saves, as files (main.cjs, web/src/game/keyStore.ts). Synchronous, so that a save the disk
     // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them. `set` says true, or
     // why the write was refused (the system's code, 'ENOSPC' for a full disk), or false.

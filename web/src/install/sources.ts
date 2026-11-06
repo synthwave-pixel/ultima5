@@ -74,6 +74,19 @@ export interface SteamFind {
   where: string;
 }
 
+/** The Steam options kept on this machine (desktop/steamOptions.cjs): all off until turned on; Cloud saves per account id. */
+export interface SteamOptions {
+  playLine: boolean;
+  compatTool: boolean;
+  macPlay: boolean;
+  cloud: Record<string, boolean>;
+  results: Record<string, string>;
+  lineOnAt: number;
+}
+
+/** The options, with this launch's Steam account, if one is known. */
+export type SteamOptionsHere = SteamOptions & { account: string | null };
+
 /** The desktop app's Steam bridge (desktop/preload.cjs u5native.steam), where the page has one. */
 export interface SteamNative {
   launch(): SteamLaunch;
@@ -85,6 +98,9 @@ export interface SteamNative {
   setup(): Promise<string>;
   remove(): Promise<string>;
   launchLine(): Promise<string | null>;
+  options(): SteamOptionsHere;
+  /** Records an option's value (Cloud saves: for this launch's account only); false where it was refused. */
+  setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean): Promise<boolean>;
 }
 
 /** The desktop app's Steam bridge; null outside the app, and in an app of before it. */

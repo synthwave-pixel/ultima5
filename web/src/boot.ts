@@ -11,7 +11,7 @@ import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
 import { steamFound, steamLaunch, steamNative } from './install/sources.ts';
-import { isSteamKey, kept, steamStore, useStore } from './game/keyStore.ts';
+import { steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
 let told = false;
@@ -22,9 +22,12 @@ const FOUND_KEY = 'ultima5.steamFoundNoted';
 const FOUND = 'Found Ultima V in your Steam library.';
 /** Whether this launch took Steam's copy and has yet to say so. */
 let foundPending = false;
-const NO_ACCOUNT = 'Steam launched the game, but which Steam account did is unknown, so nothing can be saved.';
-const FIRST_LAUNCH =
-  'Playing through Steam: your saves here are kept with Steam, apart from any made outside it. Export and Import carry a game across.';
+/** Whether Cloud saves is on but Steam's saves could not be reached this launch. */
+let unreachable = false;
+/** The Steam account whose saves this launch keeps with Steam, else null. */
+let cloudAccount: string | null = null;
+const UNREACHABLE = "Steam's saves can't be reached; using this computer's saves.";
+const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turning Steam Cloud saves off copies them back.';
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
 async function installedCopy(): Promise<{ files: GameFiles | null; notice?: string }> {
@@ -47,22 +50,37 @@ export async function filesAtHand(): Promise<GameFiles | null> {
 }
 
 /**
- * Where the saves are kept, chosen before anything reads one. A Steam launch always keeps them with Steam: from the
- * files there, or, with no folder or no account to keep them in, in a store that refuses every write - never the
- * browser's, which would mix this game's saves with the other launches'. Any other launch keeps the browser's.
+ * Where the saves are kept, chosen before anything reads one. Steam's folder only where the player has turned Cloud
+ * saves on for this launch's Steam account and the folder can be read; every other launch, and a Steam launch with
+ * Cloud saves off (the default, in which nothing is written to Steam's folders), keeps the browser's. Cloud saves on
+ * but out of reach (no account known, or the folder will not load) falls back to the browser's too, and says so.
  */
 export function chooseStore(): void {
+  unreachable = false;
+  cloudAccount = null;
   const launch = steamLaunch();
   const steam = steamNative();
   if (!launch.steam || !steam) return;
-  const initial = (launch.account && steam.saves.all()) || null;
-  useStore(steamStore(initial ?? {}, initial ? steam.saves : { set: () => false, remove: () => false }));
+  const { cloud, account } = steam.options();
+  if (account === null) {
+    // Cloud saves is kept per account, so with none known it is on only if it is on for some account: whose saves these are is lost.
+    unreachable = Object.values(cloud).some((on) => on);
+    return;
+  }
+  if (cloud[account] !== true) return;
+  const initial = steam.saves.all();
+  if (!initial) {
+    unreachable = true;
+    return;
+  }
+  cloudAccount = account;
+  useStore(steamStore(initial, steam.saves));
 }
 
 /**
- * What the title says once, in the news box: that the game was found in Steam's library and kept, or, about a
- * Steam launch, that no Steam account is known (each launch, as
- * nothing is saved), or, the first time on this machine with no saves yet, how the saves are kept. Null otherwise.
+ * What the title says once, in the news box: that the game was found in Steam's library and kept, or, when Cloud
+ * saves is on but Steam's saves cannot be reached, that this computer's are in use (each launch it applies), or, the
+ * first time on this machine that Cloud saves is on for the account, how the saves are kept. Null otherwise.
  */
 export function steamNote(): { text: string; seen: () => void } | null {
   if (told) return null;
@@ -70,8 +88,9 @@ export function steamNote(): { text: string; seen: () => void } | null {
   return settled;
 }
 
-/** steamNote's note, worked out from the launch and what is kept. Finding the game goes first; the rest wait a launch. */
+/** steamNote's note, worked out from the launch and the options. What explains the saves in play goes first. */
 function noteFor(): { text: string; seen: () => void } | null {
+  if (unreachable) return { text: UNREACHABLE, seen: () => void (told = true) };
   if (foundPending) {
     return {
       text: FOUND,
@@ -85,25 +104,19 @@ function noteFor(): { text: string; seen: () => void } | null {
       },
     };
   }
-  const launch = steamLaunch();
-  if (told || !launch.steam || launch.game !== 'ok') return null;
-  if (!launch.account) return { text: NO_ACCOUNT, seen: () => void (told = true) };
+  if (cloudAccount === null) return null;
+  const key = `${NOTED_KEY}.${cloudAccount}`;
   try {
-    if (localStorage.getItem(NOTED_KEY) !== null) return null;
+    if (localStorage.getItem(key) !== null) return null;
   } catch {
     return null;
-  }
-  const store = kept();
-  for (let i = 0; i < store.length; i++) {
-    const key = store.key(i);
-    if (key !== null && isSteamKey(key)) return null;
   }
   return {
     text: FIRST_LAUNCH,
     seen: () => {
       told = true;
       try {
-        localStorage.setItem(NOTED_KEY, '1');
+        localStorage.setItem(key, '1');
       } catch {
         // Nowhere to keep it: said again next time.
       }
