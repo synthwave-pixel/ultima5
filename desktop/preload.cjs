@@ -1,4 +1,4 @@
-// The page's bridge to the app: a newer version (updates.cjs), a scan for the player's copy of Ultima V, made by the main process (scan.cjs; web/src/
+// The page's bridge to the app: a Steam launch's saves, a newer version (updates.cjs), a scan for the player's copy of Ultima V, made by the main process (scan.cjs; web/src/
 // install/sources.ts desktopScan), and the window's full screen, for the touch pad's button (web/src/ui/fullScreen.ts).
 // The page stays sandboxed and isolated; this is all it is given.
 const { contextBridge, ipcRenderer } = require('electron');
@@ -18,6 +18,15 @@ contextBridge.exposeInMainWorld('u5native', {
     news: () => ipcRenderer.invoke('update-news'),
     newsSeen: () => ipcRenderer.invoke('update-news-seen'),
     notes: (version) => ipcRenderer.invoke('update-notes', version),
+  },
+  steam: {
+    // A Steam launch's saves, as files (main.cjs, web/src/game/keyStore.ts). Synchronous, so that a save the disk
+    // refuses fails at once. `all` is every key kept, or null where there is nowhere to keep them.
+    saves: {
+      all: () => ipcRenderer.sendSync('steam-saves-all'),
+      set: (key, value) => ipcRenderer.sendSync('steam-saves-set', key, value) === true,
+      remove: (key) => ipcRenderer.sendSync('steam-saves-remove', key) === true,
+    },
   },
   fullScreen: {
     /** Whether the window is full screen; made so first if `on` is given. */

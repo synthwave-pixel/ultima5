@@ -13,6 +13,8 @@
  */
 export const MAX_CHARACTERS = 8;
 
+import { kept } from './keyStore.ts';
+
 /** Every character's id, in the order they were made: `{ version: 1, ids }`. */
 export const CHARACTERS_KEY = 'ultima5.characters';
 
@@ -28,7 +30,7 @@ const made = new Set<string>();
 /** The ids on the list, in the order made; none where it is missing or will not read. */
 function listed(): string[] {
   try {
-    const d = JSON.parse(globalThis.localStorage?.getItem(CHARACTERS_KEY) ?? '') as { ids?: unknown };
+    const d = JSON.parse(kept()?.getItem(CHARACTERS_KEY) ?? '') as { ids?: unknown };
     return Array.isArray(d.ids) ? d.ids.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
   } catch {
     return [];
@@ -39,7 +41,7 @@ function listed(): string[] {
 function found(): string[] {
   const out: string[] = [];
   try {
-    const ls = globalThis.localStorage;
+    const ls = kept();
     if (!ls || typeof ls.key !== 'function' || typeof ls.length !== 'number') return out;
     for (let i = 0; i < ls.length; i++) {
       const m = /^ultima5\.char\.([a-z0-9]+)\.save$/.exec(ls.key(i) ?? '');
@@ -64,7 +66,7 @@ export function characterIds(): string[] {
 /** Whether there is a list of characters at all (none: a machine from before them, or a fresh one). */
 export function haveCharacterList(): boolean {
   try {
-    return globalThis.localStorage?.getItem(CHARACTERS_KEY) != null;
+    return kept()?.getItem(CHARACTERS_KEY) != null;
   } catch {
     return false;
   }
@@ -73,7 +75,7 @@ export function haveCharacterList(): boolean {
 /** The list written; false where it could not be. */
 export function writeCharacterIds(ids: string[]): boolean {
   try {
-    globalThis.localStorage?.setItem(CHARACTERS_KEY, JSON.stringify({ version: 1, ids }));
+    kept()?.setItem(CHARACTERS_KEY, JSON.stringify({ version: 1, ids }));
     return true;
   } catch {
     return false;

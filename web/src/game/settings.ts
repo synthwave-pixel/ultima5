@@ -10,6 +10,7 @@ import { INPUT_PACE_NAMES, type InputPace } from '../ui/holds.ts';
 import type { Suite } from '../audio/sfxKeys.ts';
 import type { Soundtrack } from '../audio/soundtracks.ts';
 import { charKey, chosenCharacter } from './characters.ts';
+import { kept } from './keyStore.ts';
 
 /** Auto combat's choices, in the order the Pause menu's line turns through them. */
 export const AUTO_COMBAT = ['off', 'allies', 'all'] as const;
@@ -341,7 +342,7 @@ export function normaliseOptions(from: Saved): Partial<Options> {
  */
 export function loadOptions(): Options {
   try {
-    const raw = globalThis.localStorage?.getItem(settingsKey()) ?? globalThis.localStorage?.getItem(SETTINGS_KEY);
+    const raw = kept()?.getItem(settingsKey()) ?? kept()?.getItem(SETTINGS_KEY);
     if (raw) return { ...DEFAULTS, ...normaliseOptions(JSON.parse(raw) as Saved) };
   } catch {
     // Private windows and blocked storage: the defaults will do.
@@ -351,7 +352,7 @@ export function loadOptions(): Options {
 
 export function saveOptions(o: Options): void {
   try {
-    globalThis.localStorage?.setItem(settingsKey(), JSON.stringify(o));
+    kept()?.setItem(settingsKey(), JSON.stringify(o));
   } catch {
     // Nowhere to keep them; they last the session.
   }

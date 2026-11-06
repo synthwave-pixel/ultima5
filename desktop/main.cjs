@@ -12,14 +12,14 @@
 // The page is sandboxed, and the installer's scan for the game's files is the
 // one thing it may ask of the disk (preload.cjs, scan.cjs). Launched from a
 // non-Steam shortcut, the app puts Steam's library artwork in place, once
-// (steamArt.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
+// (steamArt.cjs). Launched by Steam itself, the saves are files in the game's folder (steamSaves.cjs). Newer releases are looked for once it is up, and installed or told of as the copy allows
 // (updates.cjs). The Windows portable .exe keeps its data in a folder beside it (portable.cjs).
 const electron = require('electron');
 const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = electron;
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
-const { writeFileSync, existsSync } = require('node:fs');
+const { writeFileSync, existsSync, readFileSync } = require('node:fs');
 const { scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const {
@@ -37,6 +37,8 @@ const {
 } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
+const { accountId, findGame, isSteamLaunch, steamRoots } = require('./steam.cjs');
+const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
 
 // The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it - and
 // before anything asks for the data folder, which Electron makes as it is asked (portable.cjs).
@@ -62,6 +64,31 @@ const UPDATE_HOLD_MS = 60_000;
 protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
+
+/**
+ * Where a Steam launch keeps the saves, or null: <game folder>/Ultima V Engine/<account id>. Null when Steam did not
+ * launch the game, the game's folder is not found (steam.cjs), or no account is known (a launch that mixed accounts
+ * would be worse than none). The Steam folder whose library holds the game is the one whose login file names the account.
+ */
+function steamSaveDir() {
+  if (!isSteamLaunch(process.env)) return null;
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  // The registry's Steam path would come in here for Windows (a later step); the usual places are tried without it.
+  const roots = steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: undefined });
+  for (const root of roots) {
+    const found = findGame([root], read, existsSync);
+    if (!found || !('folder' in found)) continue;
+    const account = accountId(root, process.env, read);
+    return account === null ? null : join(found.folder, 'Ultima V Engine', account);
+  }
+  return null;
+}
 
 /** Where the window was last as a window, and whether it was last full screen (windowState.cjs). */
 const stateFile = () => join(app.getPath('userData'), 'window.json');
@@ -176,6 +203,23 @@ app.whenReady().then(() => {
       ? scanForGameFiles(names)
       : [],
   );
+  // The saves of a Steam launch (preload.cjs u5native.steam.saves, web/src/game/keyStore.ts), asked for synchronously so
+  // that a write the disk refuses fails the save at once. Decided here once; answered only to the game's own page, and
+  // only with a folder to keep them in (otherwise all gives null, and the others say false).
+  const saveDir = steamSaveDir();
+  const savesFor = (event) => (String(event.senderFrame?.url ?? '').startsWith('app://') ? saveDir : null);
+  ipcMain.on('steam-saves-all', (event) => {
+    const dir = savesFor(event);
+    event.returnValue = dir === null ? null : loadAll(dir);
+  });
+  ipcMain.on('steam-saves-set', (event, key, value) => {
+    const dir = savesFor(event);
+    event.returnValue = dir !== null && typeof key === 'string' && typeof value === 'string' && writeKey(dir, key, value);
+  });
+  ipcMain.on('steam-saves-remove', (event, key) => {
+    const dir = savesFor(event);
+    event.returnValue = dir !== null && typeof key === 'string' && removeKey(dir, key);
+  });
   // The touch pad's full-screen button (preload.cjs): whether the window is full screen, set first if `on` is given.
   // Only the game's own page may ask.
   ipcMain.handle('full-screen', (event, on) => {

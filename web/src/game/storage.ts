@@ -21,6 +21,7 @@ import type { Dressing } from './io.ts';
 import { addressedAsLady, type Appearance, LADY, validAppearance } from './appearance.ts';
 import { placeTitle } from './journal.ts';
 import { SETTINGS_KEY } from './settings.ts';
+import { kept } from './keyStore.ts';
 import {
   characterIds,
   charKey,
@@ -269,7 +270,7 @@ export function saveKeys(id = currentCharacter()): { last: string; index: string
 /** An index of earlier saves, read from `key`: only keys under `prefix` (a save's own) are taken, `most` of them. */
 function readIndexAt(key: string, prefix: string, most = EARLIER): Index {
   try {
-    const d = JSON.parse(localStorage.getItem(key) ?? '') as Partial<Index>;
+    const d = JSON.parse(kept().getItem(key) ?? '') as Partial<Index>;
     const keys = Array.isArray(d.keys) ? d.keys.filter((k): k is string => typeof k === 'string' && k.startsWith(`${prefix}.`)) : [];
     return { next: typeof d.next === 'number' && d.next > 0 ? d.next : 1, keys: keys.slice(0, most) };
   } catch {
@@ -281,7 +282,7 @@ const readIndex = (id: string): Index => readIndexAt(indexKey(id), lastKey(id));
 
 function forget(key: string): void {
   try {
-    localStorage.removeItem(key);
+    kept().removeItem(key);
   } catch {
     /* nothing to be done */
   }
@@ -295,7 +296,7 @@ function full(e: unknown): boolean {
 
 /** When the save under `key` was written; 0 where it will not read (let go first). */
 function writtenAt(key: string): number {
-  return parsed(localStorage.getItem(key))?.written ?? 0;
+  return parsed(kept().getItem(key))?.written ?? 0;
 }
 
 /**
@@ -319,7 +320,7 @@ function evictOldest(id: string, ix: Index, spare: string | null, writing: strin
   owned.keys.splice(owned.keys.indexOf(oldest.key), 1);
   if (indexKey(oldest.owner) !== writing) {
     try {
-      localStorage.setItem(indexKey(oldest.owner), JSON.stringify(owned));
+      kept().setItem(indexKey(oldest.owner), JSON.stringify(owned));
     } catch {
       /* the index is written again with the save, or names a save that is gone - passed over on reading */
     }
@@ -337,13 +338,13 @@ function store(key: string, text: () => string, id: string, ix: Index, spare: st
   for (;;) {
     const want = text();
     try {
-      localStorage.setItem(key, want);
+      kept().setItem(key, want);
     } catch (e) {
       if (!full(e) || !evictOldest(id, ix, spare, key)) return false;
       continue;
     }
     try {
-      return localStorage.getItem(key) === want;
+      return kept().getItem(key) === want;
     } catch {
       return false;
     }
@@ -357,10 +358,10 @@ const sameGame = (a: SaveData, b: SaveData): boolean => a.save === b.save && a.b
 function keptOf(id: string): Kept[] {
   const out: Kept[] = [];
   try {
-    const last = parsed(localStorage.getItem(lastKey(id)));
+    const last = parsed(kept().getItem(lastKey(id)));
     if (last) out.push({ key: lastKey(id), data: last });
     for (const key of readIndex(id).keys) {
-      const data = parsed(localStorage.getItem(key));
+      const data = parsed(kept().getItem(key));
       if (data) out.push({ key, data });
     }
   } catch {
@@ -372,7 +373,7 @@ function keptOf(id: string): Kept[] {
 /** Character `id`'s last save; where it will not read, the newest of those before it that will. Null with none. */
 function lastOf(id: string): SaveData | null {
   try {
-    const last = parsed(localStorage.getItem(lastKey(id)));
+    const last = parsed(kept().getItem(lastKey(id)));
     if (last) return last;
   } catch {
     return null;
@@ -422,8 +423,8 @@ export const avatarName = (d: SaveData): string => new Save(fromBase64(d.save)).
 export function deleteCharacter(id: string): void {
   const rest = characterIds().filter((other) => other !== id);
   try {
-    const settings = localStorage.getItem(charKey(id, 'settings'));
-    if (rest.length === 0 && settings !== null) localStorage.setItem(SETTINGS_KEY, settings);
+    const settings = kept().getItem(charKey(id, 'settings'));
+    if (rest.length === 0 && settings !== null) kept().setItem(SETTINGS_KEY, settings);
   } catch {
     /* the defaults will do */
   }
@@ -449,13 +450,13 @@ function migrate(): void {
   const oldKeys = [SAVE_KEY, ...readIndexAt(SAVES_KEY, SAVE_KEY, OLD_EARLIER).keys, SAVES_KEY];
   let settings: string | null;
   try {
-    const last = parsed(localStorage.getItem(SAVE_KEY));
+    const last = parsed(kept().getItem(SAVE_KEY));
     if (last) old.push({ key: SAVE_KEY, data: last });
     for (const key of oldKeys.slice(1, -1)) {
-      const data = parsed(localStorage.getItem(key));
+      const data = parsed(kept().getItem(key));
       if (data) old.push({ key, data });
     }
-    settings = localStorage.getItem(SETTINGS_KEY);
+    settings = kept().getItem(SETTINGS_KEY);
   } catch {
     return;
   }
@@ -470,8 +471,8 @@ function migrate(): void {
   const written: string[] = [];
   const put = (key: string, text: string): void => {
     written.push(key);
-    localStorage.setItem(key, text);
-    if (localStorage.getItem(key) !== text) throw new Error('not kept');
+    kept().setItem(key, text);
+    if (kept().getItem(key) !== text) throw new Error('not kept');
   };
   try {
     for (const saves of [...groups.values()].sort((a, b) => newest(b) - newest(a))) {
@@ -556,12 +557,12 @@ export const localSave = {
     const last = lastKey(id);
     try {
       const ix = readIndex(id);
-      const lastText = localStorage.getItem(last);
+      const lastText = kept().getItem(last);
       const before = parsed(lastText);
       let copy: string | null = null;
       if (before && lastText !== null && !sameGame(before, fresh)) {
         const key = `${last}.${ix.next++}`;
-        if (!store(key, () => lastText, id, ix) || parsed(localStorage.getItem(key)) === null) {
+        if (!store(key, () => lastText, id, ix) || parsed(kept().getItem(key)) === null) {
           forget(key);
           return false;
         }
@@ -574,18 +575,18 @@ export const localSave = {
         for (const k of gone) forget(k);
         copy = key;
       }
-      if (store(last, () => packed, id, ix, copy) && parsed(localStorage.getItem(last)) !== null) return true;
+      if (store(last, () => packed, id, ix, copy) && parsed(kept().getItem(last)) !== null) return true;
       // Not kept: the last save as it was - written back from its copy, should the failed write have touched it -
       // and then the copy let go, or kept among the earlier ones where the last could not be put back.
       if (copy !== null && lastText !== null) {
-        if (localStorage.getItem(last) !== lastText) {
+        if (kept().getItem(last) !== lastText) {
           try {
-            localStorage.setItem(last, lastText);
+            kept().setItem(last, lastText);
           } catch {
             /* the copy stands for it */
           }
         }
-        if (localStorage.getItem(last) === lastText) {
+        if (kept().getItem(last) === lastText) {
           ix.keys = ix.keys.filter((k) => k !== copy);
           store(indexKey(id), () => JSON.stringify(ix), id, ix);
           forget(copy);
