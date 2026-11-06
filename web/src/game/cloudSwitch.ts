@@ -31,17 +31,19 @@ function sameSaves(a: Keys, b: Keys): boolean {
   return saves(a) === saves(b);
 }
 
-/** Whether `key` lists other keys: the list of characters, or an index of earlier saves (a character's, or the old one). */
-const lists = (key: string): boolean => key === CHARACTERS_KEY || key === SAVES_KEY || /^ultima5\.char\.[^.]+\.saves$/.test(key);
+/** Whether `key` is an index of earlier saves: a character's, or the one from before characters. */
+const isIndex = (key: string): boolean => key === SAVES_KEY || /^ultima5\.char\.[^.]+\.saves$/.test(key);
 
 /**
  * The writes in an order a failure part way can lose nothing by: first the keys the receiving side (`to`) has not yet
- * (a clash's new earlier slot, where its own version goes), then those it has, written over, then the lists that name
- * other keys, last, so that none names a save not yet written. Stopped at any write, the receiving side still holds
- * every save it had, in a place it reads.
+ * (a clash's new earlier slot, where its own version goes), then the indexes, which name only keys there by then, then
+ * the keys it has, written over (a last save among them), and the list of characters last, so that it names no one not
+ * yet written. Stopped at any write, the receiving side still holds every save it had (bar those the finished copy
+ * lets go), in a place its index names: a last save written over before its index would leave the old one in a slot
+ * nothing reads, and a copy tried again would pass the character over, its last save now the same on both sides.
  */
 function inSafeOrder(writes: Keys, to: Keys): [string, string][] {
-  const rank = ([key]: [string, string]): number => (lists(key) ? 2 : key in to ? 1 : 0);
+  const rank = ([key]: [string, string]): number => (key === CHARACTERS_KEY ? 3 : isIndex(key) ? 1 : key in to ? 2 : 0);
   return Object.entries(writes).sort((a, b) => rank(a) - rank(b));
 }
 

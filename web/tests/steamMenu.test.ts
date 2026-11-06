@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CHARACTERS_KEY, listText } from '../src/game/characters.ts';
+import { CHARACTERS_KEY, characterIds, chooseCharacter, listText } from '../src/game/characters.ts';
 import type { Game, SteamChoices, SteamHook, SteamStatus } from '../src/game/game.ts';
 import { Intro } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { cloudSaves, kept, useStore } from '../src/game/keyStore.ts';
 import { settingLines } from '../src/game/menu.ts';
 import { APPIMAGE_PAGE, ISSUES, steamMenu } from '../src/game/steamMenu.ts';
-import { saveKeys, serialize, type SaveData } from '../src/game/storage.ts';
+import { localSave, saveKeys, serialize, type SaveData } from '../src/game/storage.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
 
 /**
@@ -137,6 +137,20 @@ function character(id: string, saves: SaveData[], top = saves.length - 2): Keys 
 }
 
 const fill = (m: Map<string, string>, keys: Keys): void => Object.entries(keys).forEach(([k, v]) => m.set(k, v));
+
+/** A Storage over a map. */
+function mapStorage(m: Map<string, string>): Storage {
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+    removeItem: (k: string) => void m.delete(k),
+    key: (i: number) => [...m.keys()][i] ?? null,
+    get length() {
+      return m.size;
+    },
+    clear: () => m.clear(),
+  };
+}
 
 describe('Steam (beta) on the title', () => {
   const storage = (): void => {
@@ -436,17 +450,49 @@ describe('Steam Cloud saves in the menu', () => {
     expect(choosable(menus.at(-1)!)).toContain('Cloud saves: Off');
   });
 
-  it("keeps the receiving side's own version of a clash readable where a write fails part way", async () => {
-    const { g, p } = newGame();
-    const f = fake({ launch: true });
-    g.hooks.steam = f.hook;
-    clashing(g, f);
-    const theirs = f.steam.get(saveKeys('a')!.last)!;
-    f.state.failAt = 2;
-    await drive(g, p, ['Cloud saves: Off', 'Iolo, level 3']);
-    expect(f.recorded).toEqual([[true, 'ENOSPC']]);
-    // At its old place as the last save, or already in its new earlier slot.
-    expect([...f.steam.values()]).toContain(theirs);
+  /** Every save the game reads from `side` through its indexes (storage.ts), each character's in turn. */
+  const readable = (side: Map<string, string>): SaveData[] => {
+    useStore(mapStorage(new Map(side)));
+    try {
+      return characterIds().flatMap((id) => {
+        chooseCharacter(id);
+        return localSave.all().map((k) => k.data);
+      });
+    } finally {
+      chooseCharacter(null);
+      useStore();
+    }
+  };
+  const holds = (saves: SaveData[], d: SaveData): boolean => saves.some((s) => s.written === d.written && s.save === d.save);
+
+  it("keeps every save of the receiving side's readable through its index, wherever a clash's copy stops", async () => {
+    for (const keep of ['Iolo, level 3', 'Iolo, level 5'])
+      for (let failAt = 1; failAt <= 5; failAt++) {
+        const { g, p } = newGame();
+        const f = fake({ launch: true });
+        g.hooks.steam = f.hook;
+        clashing(g, f);
+        const before = readable(f.steam);
+        f.state.failAt = failAt;
+        await drive(g, p, ['Cloud saves: Off', keep]);
+        const after = readable(f.steam);
+        for (const d of before) expect(holds(after, d), `${keep}, write ${failAt} failing`).toBe(true);
+      }
+  });
+
+  it("keeps the receiving side's last save readable through its index, wherever a copy over it stops", async () => {
+    for (let failAt = 1; failAt <= 5; failAt++) {
+      const { g, p } = newGame();
+      const f = fake({ launch: true });
+      g.hooks.steam = f.hook;
+      // Played on here from Steam's last save, which this computer keeps as an earlier one in a slot Steam has not.
+      const s1 = save(g, 'Iolo', 1, 1000);
+      fill(f.own, character('a', [save(g, 'Iolo', 3, 3000), s1], 4));
+      fill(f.steam, character('a', [s1]));
+      f.state.failAt = failAt;
+      await drive(g, p, ['Cloud saves: Off']);
+      expect(holds(readable(f.steam), s1), `write ${failAt} failing`).toBe(true);
+    }
   });
 
   it('lets go of no save where a write failed', async () => {
