@@ -3,7 +3,9 @@
  *
  * The copy made when Steam Cloud saves is turned on (the app's own saves into Steam's folder) or off (Steam's back
  * into the app's own). Both sides are the keys as kept (keyStore.ts): Steam's folder holds the same keys and values,
- * a file each. Every character is carried across with their settings block, and nothing is let go on either side.
+ * a file each. Every character is carried across with their settings block. The side copied from is never touched;
+ * on the receiving side the only saves let go are the earlier ones its index no longer names once the copy is made,
+ * as storage.ts lets go of those past its own limit, so that none is left behind where nothing would find it.
  * Where one side has only played on from the other, the newer is copied over the older without asking; only a
  * character played on both sides apart (on two machines, say) is a clash, for the player to choose which to keep.
  * Pure: what to write on the receiving side is worked out here, and written by whoever asked.
@@ -28,10 +30,14 @@ interface Held {
   saves: { key: string; data: SaveData }[];
 }
 
-/** What a copy writes on the receiving side, and what it must ask about first. */
-export interface CopyPlan {
-  /** Everything settled without asking. */
+/** What a copy does to the receiving side: the keys written, and the earlier saves it put out of the index. */
+export interface Copy {
   writes: Keys;
+  removes: string[];
+}
+
+/** What a copy does to the receiving side settled without asking, and what it must ask about first. */
+export interface CopyPlan extends Copy {
   /** The characters to choose between (applyChoice), in the order of the side copied from. */
   clashes: Clash[];
   /** Each clash's two sides as they were, for applyChoice to work from. */
@@ -99,6 +105,15 @@ function whole(h: Held, id: string): Keys {
   return out;
 }
 
+/**
+ * The receiving side's earlier saves (`b`) its index named but the one now written (naming `named`) does not: to be
+ * let go, as storage.ts lets go of those it trims, or they would be kept - in Steam's folder, synced - for nothing.
+ */
+function displaced(b: Held, id: string, named: string[]): string[] {
+  const { last, index } = saveKeys(id)!;
+  return parseIndex(b.keys[index] ?? null, last).keys.filter((k) => k in b.keys && !named.includes(k));
+}
+
 /** Only what `to` does not already hold as it is: a copy of the same changes nothing, and writes nothing. */
 function changes(writes: Keys, to: Keys): Keys {
   return Object.fromEntries(Object.entries(writes).filter(([k, v]) => to[k] !== v));
@@ -116,6 +131,7 @@ export function planCopy(from: Keys, to: Keys): CopyPlan {
   const source = steamOnly(from);
   const target = steamOnly(to);
   const writes: Keys = {};
+  const removes: string[] = [];
   const clashes: Clash[] = [];
   const sides: CopyPlan['sides'] = {};
   const theirIds = idsOn(source);
@@ -124,8 +140,13 @@ export function planCopy(from: Keys, to: Keys): CopyPlan {
     const a = held(source, id);
     const b = held(target, id);
     if (a.saves.length === 0 || among(a.saves[0].data, b.saves)) continue;
-    if (b.saves.length === 0 || among(b.saves[0].data, a.saves)) Object.assign(writes, whole(a, id));
-    else {
+    if (b.saves.length === 0 || among(b.saves[0].data, a.saves)) {
+      const copied = whole(a, id);
+      Object.assign(writes, copied);
+      // Their index written over (where there is one to write), the earlier saves only the old one named go with it.
+      const { last, index } = saveKeys(id)!;
+      if (index in copied) removes.push(...displaced(b, id, parseIndex(copied[index], last).keys));
+    } else {
       clashes.push({ id, from: a.saves[0].data, to: b.saves[0].data });
       sides[id] = { from: a, to: b };
     }
@@ -133,18 +154,18 @@ export function planCopy(from: Keys, to: Keys): CopyPlan {
   const added = theirIds.filter((id) => !ourIds.includes(id));
   if (added.length > 0) writes[CHARACTERS_KEY] = listText([...ourIds, ...added]);
   for (const [k, v] of Object.entries(source)) if (k !== CHARACTERS_KEY && !k.startsWith('ultima5.char.') && !(k in target)) writes[k] = v;
-  return { writes: changes(writes, target), clashes, sides };
+  return { writes: changes(writes, target), removes, clashes, sides };
 }
 
 /**
  * The writes for clash `id` once the player has chosen which version to keep: on the receiving side, the version kept
  * is the last save and the other its newest earlier save, in a slot of its own, with the rest of that side's earlier
- * saves after it as they were (the oldest past EARLIER dropped from the index). The settings block is the kept
- * version's. Nothing for an id not among the plan's clashes.
+ * saves after it as they were (the oldest past EARLIER let go). The settings block is the kept version's. Nothing for
+ * an id not among the plan's clashes.
  */
-export function applyChoice(plan: CopyPlan, id: string, keep: 'from' | 'to'): Keys {
+export function applyChoice(plan: CopyPlan, id: string, keep: 'from' | 'to'): Copy {
   const pair = plan.sides[id];
-  if (pair === undefined) return {};
+  if (pair === undefined) return { writes: {}, removes: [] };
   const { from: a, to: b } = pair;
   const { last, index } = saveKeys(id)!;
   const ours = b.saves[0];
@@ -156,13 +177,13 @@ export function applyChoice(plan: CopyPlan, id: string, keep: 'from' | 'to'): Ke
   while (`${last}.${n}` in b.keys || ix.keys.includes(`${last}.${n}`)) n++;
   const slot = `${last}.${n}`;
   // The receiving side's last save may have been one of its earlier ones (its own slot would not read): now the last
-  // save or the other version, it is no longer one of them.
-  const earlier = ix.keys.filter((k) => k !== ours.key);
+  // save or the other version, it is no longer one of them, and its old slot goes.
+  const keys = [slot, ...ix.keys.filter((k) => k !== ours.key)].slice(0, EARLIER);
   const writes: Keys = {
     ...(keep === 'from' ? besides(a, id) : {}),
     [last]: kept,
     [slot]: other,
-    [index]: JSON.stringify({ next: n + 1, keys: [slot, ...earlier].slice(0, EARLIER) }),
+    [index]: JSON.stringify({ next: n + 1, keys }),
   };
-  return changes(writes, b.keys);
+  return { writes: changes(writes, b.keys), removes: displaced(b, id, keys) };
 }
