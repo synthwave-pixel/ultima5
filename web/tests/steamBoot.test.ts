@@ -165,6 +165,31 @@ describe('a launch from Steam', () => {
     expect((await import('../src/boot.ts')).steamNote()).toBeNull();
   });
 
+  it('asks the app how it was launched once a page, however often the title looks for its note', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, { 'ultima5.saves': 'old' });
+    const steam = (globalThis as unknown as { u5native: { steam: { launch: () => SteamLaunch } } }).u5native.steam;
+    const launch = vi.fn(steam.launch);
+    steam.launch = launch;
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    const { kept } = await import('../src/game/keyStore.ts');
+    const walk = vi.spyOn(kept(), 'key');
+    for (let i = 0; i < 100; i++) expect(steamNote()).toBeNull();
+    expect(launch).toHaveBeenCalledTimes(1);
+    expect(walk.mock.calls.length).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps saying the first-launch note until it is seen, then says it no more', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {});
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    expect(steamNote()?.text).toMatch(/^Playing through Steam/);
+    const note = steamNote();
+    expect(note?.text).toMatch(/^Playing through Steam/);
+    note?.seen();
+    expect(steamNote()).toBeNull();
+  });
+
   it('says when no account is known', async () => {
     bridge({ steam: true, game: 'ok', where: 'x', account: false }, null);
     const { steamNote } = await import('../src/boot.ts');

@@ -15,6 +15,8 @@ import { isSteamKey, kept, steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
 let told = false;
+/** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
+let settled: { text: string; seen: () => void } | null | undefined;
 const NOTED_KEY = 'ultima5.steamNoted';
 const NO_ACCOUNT = 'Steam launched the game, but which Steam account did is unknown, so nothing can be saved.';
 const FIRST_LAUNCH =
@@ -58,6 +60,13 @@ export function chooseStore(): void {
  * nothing is saved), or, the first time on this machine with no saves yet, how the saves are kept. Null otherwise.
  */
 export function steamNote(): { text: string; seen: () => void } | null {
+  if (told) return null;
+  if (settled === undefined) settled = noteFor();
+  return settled;
+}
+
+/** steamNote's note, worked out from the launch and what is kept. */
+function noteFor(): { text: string; seen: () => void } | null {
   const launch = steamLaunch();
   if (told || !launch.steam || launch.game !== 'ok') return null;
   if (!launch.account) return { text: NO_ACCOUNT, seen: () => void (told = true) };

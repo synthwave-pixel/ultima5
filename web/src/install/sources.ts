@@ -84,9 +84,15 @@ export function steamNative(): SteamNative | null {
   return (globalThis as { u5native?: { steam?: SteamNative } }).u5native?.steam ?? null;
 }
 
-/** How this launch began: by Steam or not (not, outside the desktop app). */
+let launched: SteamLaunch | undefined;
+
+/**
+ * How this launch began: by Steam or not (not, outside the desktop app). Asked of the app once a page, as the answer
+ * never changes and the asking is synchronous.
+ */
 export function steamLaunch(): SteamLaunch {
-  return steamNative()?.launch() ?? { steam: false };
+  launched ??= steamNative()?.launch() ?? { steam: false };
+  return launched;
 }
 
 /** The game's files from the folder Steam gave, where Steam launched the game and has the folder; else null. */
