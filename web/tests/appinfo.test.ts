@@ -130,7 +130,7 @@ describe.each([28, 29] as const)('appinfo v%i', (version) => {
     const mine = launch.filter((n) => (n[2] as KvNode[]).some((c) => c[1] === 'executable' && c[2] === LAUNCHER));
     expect(mine).toHaveLength(1);
     expect(mine[0][2]).toEqual([
-      str('description', 'Ultima V (new engine)'),
+      str('description', 'Ultima V SP'),
       str('executable', LAUNCHER),
       str('type', 'default'),
       map('config', [str('oslist', 'macos')]),

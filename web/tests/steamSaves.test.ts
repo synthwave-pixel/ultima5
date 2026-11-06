@@ -41,7 +41,7 @@ describe("Steam launch's save files", () => {
   });
 
   it('makes the folder it is given when it is not there yet', () => {
-    const dir = join(temp(), 'Ultima V Engine', '1234');
+    const dir = join(temp(), 'ultima5-sp', '1234');
     expect(loadAll(dir)).toEqual({});
     expect(writeKey(dir, 'ultima5.save', 'x')).toBe(true);
     expect(loadAll(dir)).toEqual({ 'ultima5.save': 'x' });

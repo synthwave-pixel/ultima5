@@ -12,7 +12,7 @@ const { APP_ID, findGame } = require('./steam.cjs');
 
 const FLATPAK_ID = 'com.synthwavepixel.ultima5';
 const TOOL = 'ultima5_engine';
-const TOOL_NAME = 'Ultima V (new engine)';
+const TOOL_NAME = 'Ultima V SP';
 const LAUNCHER = 'Ultima V Engine.app';
 const LAUNCHER_EXE = 'Ultima V Engine';
 const INSTALLDIR = 'Ultima V';
@@ -83,6 +83,8 @@ case "$1" in
   run|waitforexitandrun) ;;
   *) exit 0 ;;
 esac
+# The engine reads the app id from the environment: say it is Ultima V's, whichever name Steam gave it by.
+export SteamAppId=${APP_ID}
 if [ "$FLATPAK_ID" = "com.valvesoftware.Steam" ]; then
   if ! flatpak-spawn --host true >/dev/null 2>&1; then
     echo "Steam from Flathub needs leave to start Ultima V. Run this once, then restart Steam:" >&2

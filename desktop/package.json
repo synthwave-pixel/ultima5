@@ -139,8 +139,7 @@
         "--filesystem=/run/udev:ro",
         "--socket=pulseaudio",
         "--share=network",
-        "--filesystem=home",
-        "--filesystem=/run/media"
+        "--filesystem=home"
       ]
     }
   },

@@ -18,3 +18,4 @@ export function accountId(
   env: Record<string, string | undefined>,
   read: (path: string) => string | null,
 ): string | null;
+export function saveDir(gameFolder: string, account: string): string;

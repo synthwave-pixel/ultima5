@@ -1,6 +1,6 @@
 // The saves of a Steam launch as files Steam Cloud syncs: <dir>/<key, URI-encoded>/SAVED.GAM, one folder for each of the
 // game's storage keys (web/src/game/keyStore.ts). Every file is named SAVED.GAM, as EA's cloud rule for the game
-// wants. <dir> is <game folder>/Ultima V Engine/<account id> (main.cjs). Nothing here throws: a write that could not be
+// wants. <dir> is <game folder>/ultima5-sp/<account id> (main.cjs). Nothing here throws: a write that could not be
 // made says why (the system's code: 'ENOSPC' for a full disk), and a removal that could not be made says false, for the
 // page to report as a save that was not kept. Only a full disk lets the page make room by letting earlier saves go.
 const { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } = require('node:fs');

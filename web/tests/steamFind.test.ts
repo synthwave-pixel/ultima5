@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { accountId, APP_ID, findGame, isSteamLaunch, libraryPaths, parseVdf, steamRoots } from '../../desktop/steam.cjs';
+import { accountId, APP_ID, findGame, isSteamLaunch, libraryPaths, parseVdf, saveDir, steamRoots } from '../../desktop/steam.cjs';
 
 // The shape of a Mac's libraryfolders.vdf: the Steam folder itself, then a library on an external disk.
 const LIBRARIES = `"libraryfolders"
@@ -148,10 +148,15 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     expect(accountId(MAC_ROOT, {}, read)).toBe('39734273');
   });
 
-  it('can reach a library on an SD card from the Flatpak: /run/media is in its permissions', () => {
+  it('asks the Flatpak for no new permission to reach a library: /run/media is not in its permissions', () => {
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
       build: { flatpak: { finishArgs: string[] } };
     };
-    expect(pkg.build.flatpak.finishArgs).toContain('--filesystem=/run/media');
+    expect(pkg.build.flatpak.finishArgs.filter((a) => a.includes('/run/media'))).toEqual([]);
+  });
+
+  it('keeps saves in <game folder>/ultima5-sp/<account id>', () => {
+    expect(saveDir('/lib/steamapps/common/Ultima V', '1234')).toBe(join('/lib/steamapps/common/Ultima V', 'ultima5-sp', '1234'));
+    expect(saveDir('/lib/x', '1234')).toMatch(/ultima5-sp[\\/]1234$/);
   });
 });

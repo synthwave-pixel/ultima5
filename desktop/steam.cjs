@@ -120,4 +120,9 @@ function accountId(root, env, read) {
   return found ? (BigInt(found[0]) & 0xffffffffn).toString() : null;
 }
 
-module.exports = { APP_ID, isSteamLaunch, parseVdf, steamRoots, libraryPaths, findGame, accountId };
+/** Where a Steam launch keeps its saves: the game's folder, then ultima5-sp, then the account that launched it. */
+function saveDir(gameFolder, account) {
+  return join(gameFolder, 'ultima5-sp', account);
+}
+
+module.exports = { saveDir, APP_ID, isSteamLaunch, parseVdf, steamRoots, libraryPaths, findGame, accountId };

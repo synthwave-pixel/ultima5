@@ -175,7 +175,7 @@ describe('the Linux compatibility tool', () => {
     expect(compat).toEqual({
       compatibilitytools: {
         compat_tools: {
-          ultima5_engine: { install_path: '.', display_name: 'Ultima V (new engine)', from_oslist: 'windows', to_oslist: 'linux' },
+          ultima5_engine: { install_path: '.', display_name: 'Ultima V SP', from_oslist: 'windows', to_oslist: 'linux' },
         },
       },
     });
@@ -204,6 +204,15 @@ describe('the Linux compatibility tool', () => {
     const other = run(script, 'getcompatpath', { SteamAppId: '3067520' });
     expect(other.status).toBe(0);
     expect(other.stdout).toBe('');
+  });
+
+  it("exports Ultima V's app id before starting the engine, so the engine knows it is Steam's game", () => {
+    const { written } = setUp({ flatpak: false, appImage: fakeProgram(join(temp(), 'ultima5-sp-x86_64.AppImage')) });
+    const script = fs.readFileSync(join(written[0], 'launch.sh'), 'utf8');
+    expect(script).toContain('export SteamAppId=3067520');
+    // Steam may name the game only in SteamGameId; the engine still gets SteamAppId.
+    const r = run(join(written[0], 'launch.sh'), 'run', { SteamGameId: '3067520' });
+    expect(r.stdout).toBe('ran 3067520: \n');
   });
 
   it('takes the app id from whichever of its names Steam gives', () => {

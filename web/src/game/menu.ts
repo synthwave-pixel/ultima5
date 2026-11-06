@@ -1994,8 +1994,8 @@ function steamWords(s: SteamStatus): string {
   }
   if (s.system === 'linux') {
     return s.state === 'ready'
-      ? 'Set up. In Steam: Ultima V > Properties > Compatibility, choose Ultima V (new engine).'
-      : 'Set up installs the Ultima V (new engine) tool. Restart Steam, then in Ultima V > Properties > Compatibility, choose it.';
+      ? 'Set up. In Steam: Ultima V > Properties > Compatibility, choose Ultima V SP.'
+      : 'Set up installs the Ultima V SP tool. Restart Steam, then in Ultima V > Properties > Compatibility, choose it.';
   }
   return (
     (s.state === 'ready' ? 'Set up. Play in Steam starts this engine.' : 'Set up points Play in Steam at this engine.') +

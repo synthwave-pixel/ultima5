@@ -41,7 +41,7 @@ const {
 } = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
-const { accountId, findGame, isSteamLaunch, steamRoots } = require('./steam.cjs');
+const { accountId, findGame, isSteamLaunch, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writeKey } = require('./steamSaves.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
@@ -94,7 +94,7 @@ const steamRootsHere = () =>
  * What a Steam launch found, looked for once at the start (the page asks for it again and again): null when Steam did
  * not launch the game, else `game` - 'ok' (its folder is there), 'missing' (Steam lists it in a library whose folder is
  * not there) or 'none' (no library holds it) - and `where`: the folder, or the library it was expected in. `dir` is
- * where the saves are kept, <game folder>/Ultima V Engine/<account id>, null without a folder or an account (a launch
+ * where the saves are kept, <game folder>/ultima5-sp/<account id>, null without a folder or an account (a launch
  * that mixed accounts would be worse than none); `folder` is the game's own.
  */
 function steamLaunch() {
@@ -119,7 +119,7 @@ function steamLaunch() {
       where: found.folder,
       folder: found.folder,
       account: account !== null,
-      dir: account === null ? null : join(found.folder, 'Ultima V Engine', account),
+      dir: account === null ? null : saveDir(found.folder, account),
     };
   }
   if (missing !== null) return { game: 'missing', where: missing, folder: null, account: false, dir: null };
@@ -220,7 +220,7 @@ async function setUpSteam() {
   if (written.length === 0) return "Steam isn't here. Install Steam and start it once, then try again.";
   const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
   return (
-    'Done. Restart Steam, then in Ultima V > Properties > Compatibility, choose Ultima V (new engine). Steam downloads ' +
+    'Done. Restart Steam, then in Ultima V > Properties > Compatibility, choose Ultima V SP. Steam downloads ' +
     'the game, and Play starts this engine.' +
     (flathub ? ` Steam from Flathub needs this run once too: ${steamSetup.OVERRIDE}` : '')
   );
