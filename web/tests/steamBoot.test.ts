@@ -1,15 +1,16 @@
 // web/tests/steamBoot.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoundCopy } from '../src/install/scan.ts';
-import type { SteamLaunch } from '../src/install/sources.ts';
+import type { SteamFind, SteamLaunch } from '../src/install/sources.ts';
 import { gameFiles as checkedIn } from './helpers.ts';
 
 const runInstaller = vi.fn<(notice?: string) => Promise<string>>();
 const saveInstalled = vi.fn<(files: unknown) => Promise<void>>();
+let installed: { files: unknown; damaged: string[] } | null = null;
 vi.mock('../src/install/installer.ts', () => ({ runInstaller: (n?: string) => runInstaller(n) }));
 vi.mock('../src/install/store.ts', () => ({
   saveInstalled: (f: unknown) => saveInstalled(f),
-  loadInstalled: () => Promise.resolve(null),
+  loadInstalled: () => Promise.resolve(installed),
 }));
 
 /** A stand-in for localStorage. */
@@ -33,14 +34,17 @@ const wholeCopy = (): FoundCopy => {
 };
 
 /** The desktop app's bridge as a Steam launch gives it (or, without `launch`, no Steam part at all). */
-function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null = {}) {
+function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null = {}, find?: SteamFind) {
   const written = new Map<string, string>();
+  const found: SteamFind =
+    find ?? (launch && launch.steam ? { steam: true, game: launch.game, where: launch.where } : { steam: false, game: 'none', where: '' });
   (globalThis as { u5native?: unknown }).u5native = {
     scanForGameFiles: () => Promise.resolve([]),
     ...(launch && {
       steam: {
         launch: () => launch,
-        gameFiles: () => Promise.resolve(wholeCopy()),
+        find: () => found,
+        gameFiles: vi.fn(() => Promise.resolve(wholeCopy())),
         saves: {
           all: () => saves,
           set: (k: string, v: string) => (written.set(k, v), true),
@@ -52,13 +56,125 @@ function bridge(launch: SteamLaunch | null, saves: Record<string, string> | null
   return written;
 }
 
+const FOUND_NOTE = 'Found Ultima V in your Steam library.';
+const steamOf = () => (globalThis as unknown as { u5native: { steam: { gameFiles: ReturnType<typeof vi.fn> } } }).u5native.steam;
+
+describe('finding the game in Steam on any start', () => {
+  let was: PropertyDescriptor | undefined;
+  beforeEach(() => {
+    was = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { value: memory(), configurable: true });
+    runInstaller.mockReset();
+    saveInstalled.mockReset().mockResolvedValue(undefined);
+    installed = null;
+    vi.resetModules();
+  });
+  afterEach(() => {
+    delete (globalThis as { u5native?: unknown }).u5native;
+    if (was) Object.defineProperty(globalThis, 'localStorage', was);
+    else delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+  const notSteam: SteamLaunch = { steam: false };
+  const there: SteamFind = { steam: true, game: 'ok', where: '/steam/Ultima V' };
+
+  it("with no copy of its own, keeps Steam's once and says so once", async () => {
+    bridge(notSteam, {}, there);
+    const { gameFiles, steamNote } = await import('../src/boot.ts');
+    const files = await gameFiles();
+    expect(files.names()).toContain('DATA.OVL');
+    expect(saveInstalled).toHaveBeenCalledTimes(1);
+    expect(runInstaller).not.toHaveBeenCalled();
+    const note = steamNote();
+    expect(note?.text).toBe(FOUND_NOTE);
+    note?.seen();
+    expect(steamNote()).toBeNull();
+    expect(localStorage.getItem('ultima5.steamFoundNoted')).not.toBeNull();
+  });
+
+  it('does not say it again once it has been seen', async () => {
+    localStorage.setItem('ultima5.steamFoundNoted', '1');
+    bridge(notSteam, {}, there);
+    const { gameFiles, steamNote } = await import('../src/boot.ts');
+    await gameFiles();
+    expect(saveInstalled).toHaveBeenCalledTimes(1);
+    expect(steamNote()).toBeNull();
+  });
+
+  it('does not ask Steam for files when it has a copy', async () => {
+    installed = { files: checkedIn(), damaged: [] };
+    bridge(notSteam, {}, there);
+    const { gameFiles, steamNote } = await import('../src/boot.ts');
+    await gameFiles();
+    expect(steamOf().gameFiles).not.toHaveBeenCalled();
+    expect(saveInstalled).not.toHaveBeenCalled();
+    expect(runInstaller).not.toHaveBeenCalled();
+    expect(steamNote()).toBeNull();
+  });
+
+  it('goes to the installer when Steam’s copy lacks files', async () => {
+    bridge(notSteam, {}, there);
+    steamOf().gameFiles.mockResolvedValue({ where: '/steam/Ultima V', files: [{ path: 'DATA.OVL', data: new Uint8Array(4) }] });
+    runInstaller.mockResolvedValue('files');
+    const { gameFiles } = await import('../src/boot.ts');
+    await gameFiles();
+    expect(saveInstalled).not.toHaveBeenCalled();
+    expect(runInstaller).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes to the installer, plainly, when nothing is found', async () => {
+    bridge(notSteam, {}, { steam: true, game: 'none', where: '' });
+    runInstaller.mockResolvedValue('files');
+    const { gameFiles } = await import('../src/boot.ts');
+    await gameFiles();
+    expect(runInstaller).toHaveBeenCalledWith(undefined);
+  });
+
+  it('keeps the Steam launch’s own notice when nothing is found', async () => {
+    bridge({ steam: true, game: 'none', where: '', account: true });
+    runInstaller.mockResolvedValue('files');
+    const { gameFiles } = await import('../src/boot.ts');
+    await gameFiles();
+    expect(runInstaller).toHaveBeenCalledWith('Steam launched the game, but no Steam library holds Ultima V.');
+  });
+
+  it('says the found note first and lets the first-launch Steam note wait', async () => {
+    bridge({ steam: true, game: 'ok', where: 'x', account: true }, {});
+    const { chooseStore, gameFiles, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    await gameFiles();
+    const note = steamNote();
+    expect(note?.text).toBe(FOUND_NOTE);
+    note?.seen();
+    expect(steamNote()).toBeNull();
+    vi.resetModules();
+    installed = { files: checkedIn(), damaged: [] };
+    const again = await import('../src/boot.ts');
+    again.chooseStore();
+    await again.gameFiles();
+    expect(again.steamNote()?.text).toMatch(/^Playing through Steam/);
+  });
+
+  it('asks the app to find Steam once a page', async () => {
+    const find = vi.fn(() => there);
+    bridge(notSteam, {}, there);
+    (globalThis as unknown as { u5native: { steam: { find: unknown } } }).u5native.steam.find = find;
+    const { gameFiles } = await import('../src/boot.ts');
+    await gameFiles();
+    const { steamFind } = await import('../src/install/sources.ts');
+    steamFind();
+    steamFind();
+    expect(find).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('a launch from Steam', () => {
   let was: PropertyDescriptor | undefined;
   beforeEach(() => {
     was = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
     Object.defineProperty(globalThis, 'localStorage', { value: memory(), configurable: true });
     runInstaller.mockReset();
-    saveInstalled.mockReset();
+    saveInstalled.mockReset().mockResolvedValue(undefined);
+    installed = null;
     vi.resetModules();
   });
   afterEach(() => {
@@ -67,13 +183,13 @@ describe('a launch from Steam', () => {
     else delete (globalThis as { localStorage?: unknown }).localStorage;
   });
 
-  it("plays Steam's copy, installing nothing in the browser", async () => {
+  it("takes Steam's copy once, as the installer would", async () => {
     bridge({ steam: true, game: 'ok', where: '/steam/Ultima V', account: true });
     const { gameFiles } = await import('../src/boot.ts');
     const files = await gameFiles();
     expect(files.names()).toContain('DATA.OVL');
     expect(runInstaller).not.toHaveBeenCalled();
-    expect(saveInstalled).not.toHaveBeenCalled();
+    expect(saveInstalled).toHaveBeenCalledTimes(1);
   });
 
   it('names the library when its folder is not there', async () => {

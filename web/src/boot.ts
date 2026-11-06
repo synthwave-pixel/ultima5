@@ -7,10 +7,10 @@
 
 import { GameFiles } from './data/files.ts';
 import { runInstaller } from './install/installer.ts';
-import { loadInstalled } from './install/store.ts';
+import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
-import { steamCopy, steamLaunch, steamNative } from './install/sources.ts';
+import { steamFound, steamLaunch, steamNative } from './install/sources.ts';
 import { isSteamKey, kept, steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
@@ -18,6 +18,10 @@ let told = false;
 /** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
 let settled: { text: string; seen: () => void } | null | undefined;
 const NOTED_KEY = 'ultima5.steamNoted';
+const FOUND_KEY = 'ultima5.steamFoundNoted';
+const FOUND = 'Found Ultima V in your Steam library.';
+/** Whether this launch took Steam's copy and has yet to say so. */
+let foundPending = false;
 const NO_ACCOUNT = 'Steam launched the game, but which Steam account did is unknown, so nothing can be saved.';
 const FIRST_LAUNCH =
   'Playing through Steam: your saves here are kept with Steam, apart from any made outside it. Export and Import carry a game across.';
@@ -56,7 +60,8 @@ export function chooseStore(): void {
 }
 
 /**
- * What the title says once, in the news box, about a Steam launch: that no Steam account is known (each launch, as
+ * What the title says once, in the news box: that the game was found in Steam's library and kept, or, about a
+ * Steam launch, that no Steam account is known (each launch, as
  * nothing is saved), or, the first time on this machine with no saves yet, how the saves are kept. Null otherwise.
  */
 export function steamNote(): { text: string; seen: () => void } | null {
@@ -65,8 +70,21 @@ export function steamNote(): { text: string; seen: () => void } | null {
   return settled;
 }
 
-/** steamNote's note, worked out from the launch and what is kept. */
+/** steamNote's note, worked out from the launch and what is kept. Finding the game goes first; the rest wait a launch. */
 function noteFor(): { text: string; seen: () => void } | null {
+  if (foundPending) {
+    return {
+      text: FOUND,
+      seen: () => {
+        told = true;
+        try {
+          localStorage.setItem(FOUND_KEY, '1');
+        } catch {
+          // Nowhere to keep it: said again if the game is found again.
+        }
+      },
+    };
+  }
   const launch = steamLaunch();
   if (told || !launch.steam || launch.game !== 'ok') return null;
   if (!launch.account) return { text: NO_ACCOUNT, seen: () => void (told = true) };
@@ -101,18 +119,43 @@ function steamNotice(launch: Extract<ReturnType<typeof steamLaunch>, { steam: tr
 }
 
 /**
- * The installed copy, or the installer until one is installed (Scan for game files..., a drop, a choice). In a Steam
- * launch, Steam's own copy: its files are played from its folder and not kept in the browser's store.
+ * The installed copy; else Steam's, where it is found and whole, kept as the installer keeps one (so Steam may move or
+ * lose the folder after); else the installer, with what a Steam launch should say of Steam when it found nothing.
  */
 export async function gameFiles(): Promise<GameFiles> {
+  const { files, notice } = await installedCopy();
+  if (files) return files;
   const launch = steamLaunch();
-  if (launch.steam) {
-    const copy = steamCopy();
-    if (!copy) return runInstaller(steamNotice(launch));
+  const copy = steamFound();
+  let why = notice;
+  if (copy) {
     const found = await copy().catch(() => null);
     const got = scanOutcome(found ? [found] : [], 'No game files could be read from the folder Steam gave.');
-    return got.kind === 'install' ? got.found.files : runInstaller(got.text);
+    if (got.kind === 'install') {
+      let kept = true;
+      try {
+        await saveInstalled(got.found.files);
+      } catch {
+        kept = false;
+      }
+      // Said once, and only when it was kept: otherwise the next start finds it again.
+      if (kept && !seenFound()) {
+        foundPending = true;
+        settled = undefined;
+      }
+      return got.found.files;
+    }
+    // A Steam launch was expecting the game, so it is told what was wrong with Steam's copy.
+    if (launch.steam) why = got.text;
+  } else if (launch.steam) why = steamNotice(launch);
+  return runInstaller(why);
+}
+
+/** Whether the found note has been seen on this machine. */
+function seenFound(): boolean {
+  try {
+    return localStorage.getItem(FOUND_KEY) !== null;
+  } catch {
+    return false;
   }
-  const { files, notice } = await installedCopy();
-  return files ?? runInstaller(notice);
 }

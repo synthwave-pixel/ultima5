@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld('u5native', {
     // Whether Steam launched the game, and what it found (main.cjs steamLaunch): { steam: false }, or { steam: true,
     // game: 'ok' | 'missing' | 'none', where, account }. And the game's files from the folder it gave.
     launch: () => ipcRenderer.sendSync('steam-launch'),
+    // Steam's libraries and Ultima V in them, found whether or not Steam launched the app (main.cjs steamFind).
+    find: () => ipcRenderer.sendSync('steam-find'),
     gameFiles: (names) => ipcRenderer.invoke('steam-game-files', names),
     // The Steam line in Settings (main.cjs): where this system stands, setting up, removing, and the launch line to copy.
     status: () => ipcRenderer.invoke('steam-status'),

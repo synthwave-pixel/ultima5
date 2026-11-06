@@ -90,15 +90,16 @@ function registrySteamPath() {
 const steamRootsHere = () =>
   steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: registrySteamPath() });
 
+let found;
 /**
- * What a Steam launch found, looked for once at the start (the page asks for it again and again): null when Steam did
- * not launch the game, else `game` - 'ok' (its folder is there), 'missing' (Steam lists it in a library whose folder is
- * not there) or 'none' (no library holds it) - and `where`: the folder, or the library it was expected in. `dir` is
- * where the saves are kept, <game folder>/ultima5-sp/<account id>, null without a folder or an account (a launch
- * that mixed accounts would be worse than none); `folder` is the game's own.
+ * Steam and Ultima V in its libraries, looked for once whether or not Steam launched the app (the page asks again and
+ * again): `steam` - is there a Steam root at all - and `game` - 'ok' (its folder is there), 'missing' (Steam lists it
+ * in a library whose folder is not there) or 'none' (no library holds it) - and `where`: the folder, or the library it
+ * was expected in. `root` is the Steam folder whose library holds the game (it also names the account), else null.
+ * Only reads.
  */
-function steamLaunch() {
-  if (!isSteamLaunch(process.env)) return null;
+function steamFind() {
+  if (found) return found;
   const read = (path) => {
     try {
       return readFileSync(path, 'utf8');
@@ -107,23 +108,43 @@ function steamLaunch() {
     }
   };
   const roots = steamRootsHere();
+  const steam = roots.some((r) => existsSync(r));
   let missing = null;
   for (const root of roots) {
-    const found = findGame([root], read, existsSync);
-    if (found && 'missing' in found) missing ??= found.missing;
-    if (!found || !('folder' in found)) continue;
-    // The Steam folder whose library holds the game is the one whose login file names the account.
-    const account = accountId(root, process.env, read);
-    return {
-      game: 'ok',
-      where: found.folder,
-      folder: found.folder,
-      account: account !== null,
-      dir: account === null ? null : saveDir(found.folder, account),
-    };
+    const game = findGame([root], read, existsSync);
+    if (game && 'missing' in game) missing ??= game.missing;
+    if (!game || !('folder' in game)) continue;
+    return (found = { steam, game: 'ok', where: game.folder, folder: game.folder, root });
   }
-  if (missing !== null) return { game: 'missing', where: missing, folder: null, account: false, dir: null };
-  return { game: 'none', where: '', folder: null, account: false, dir: null };
+  if (missing !== null) return (found = { steam, game: 'missing', where: missing, folder: null, root: null });
+  return (found = { steam, game: 'none', where: '', folder: null, root: null });
+}
+
+/**
+ * What a Steam launch found: null when Steam did not launch the game, else steamFind's `game` and `where`. `dir` is
+ * where the saves are kept, <game folder>/ultima5-sp/<account id>, null without a folder or an account (a launch
+ * that mixed accounts would be worse than none); `folder` is the game's own.
+ */
+function steamLaunch() {
+  if (!isSteamLaunch(process.env)) return null;
+  const f = steamFind();
+  if (f.root === null) return { game: f.game, where: f.where, folder: null, account: false, dir: null };
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  // The Steam folder whose library holds the game is the one whose login file names the account.
+  const account = accountId(f.root, process.env, read);
+  return {
+    game: 'ok',
+    where: f.folder,
+    folder: f.folder,
+    account: account !== null,
+    dir: account === null ? null : saveDir(f.folder, account),
+  };
 }
 
 /**
@@ -381,12 +402,19 @@ app.whenReady().then(() => {
         ? { steam: true, game: launch.game, where: launch.where, account: launch.account }
         : { steam: false };
   });
+  // What Steam has, launched by it or not (preload.cjs u5native.steam.find), and its files for the one-time take.
+  ipcMain.on('steam-find', (event) => {
+    const f = steamFind();
+    event.returnValue = String(event.senderFrame?.url ?? '').startsWith('app://')
+      ? { steam: f.steam, game: f.game, where: f.where }
+      : { steam: false, game: 'none', where: '' };
+  });
   ipcMain.handle('steam-game-files', (event, names) =>
-    launch?.folder &&
+    steamFind().folder &&
     String(event.senderFrame?.url ?? '').startsWith('app://') &&
     Array.isArray(names) &&
     names.every((n) => typeof n === 'string')
-      ? { where: launch.folder, files: readCopy(launch.folder, names) }
+      ? { where: steamFind().folder, files: readCopy(steamFind().folder, names) }
       : null,
   );
   // The saves of a Steam launch (preload.cjs u5native.steam.saves, web/src/game/keyStore.ts), asked for synchronously so

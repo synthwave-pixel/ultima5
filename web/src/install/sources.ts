@@ -67,9 +67,17 @@ export function androidFolder(): (() => Promise<FoundCopy | null>) | null {
 /** What the desktop app found when Steam launched the game (desktop/main.cjs steamLaunch). */
 export type SteamLaunch = { steam: false } | { steam: true; game: 'ok' | 'missing' | 'none'; where: string; account: boolean };
 
+/** What the desktop app found of Steam and Ultima V in it, launched by Steam or not (desktop/main.cjs steamFind). */
+export interface SteamFind {
+  steam: boolean;
+  game: 'ok' | 'missing' | 'none';
+  where: string;
+}
+
 /** The desktop app's Steam bridge (desktop/preload.cjs u5native.steam), where the page has one. */
 export interface SteamNative {
   launch(): SteamLaunch;
+  find(): SteamFind;
   gameFiles(names: string[]): Promise<FoundCopy | null>;
   saves: { all(): Record<string, string> | null; set(key: string, value: string): true | string | false; remove(key: string): boolean };
   /** The Steam line in Settings (game.ts SteamHook): the launch line is null where this copy has none. */
@@ -95,9 +103,16 @@ export function steamLaunch(): SteamLaunch {
   return launched;
 }
 
-/** The game's files from the folder Steam gave, where Steam launched the game and has the folder; else null. */
-export function steamCopy(): (() => Promise<FoundCopy | null>) | null {
+let found: SteamFind | undefined;
+
+/** Steam's libraries and Ultima V in them, whether or not Steam launched the app; asked of the app once a page. */
+export function steamFind(): SteamFind {
+  found ??= steamNative()?.find() ?? { steam: false, game: 'none', where: '' };
+  return found;
+}
+
+/** The game's files from Steam's folder, where Steam has the game; else null (always null outside the desktop app). */
+export function steamFound(): (() => Promise<FoundCopy | null>) | null {
   const steam = steamNative();
-  const launch = steamLaunch();
-  return steam && launch.steam && launch.game === 'ok' ? () => steam.gameFiles([...REQUIRED]) : null;
+  return steam && steamFind().game === 'ok' ? () => steam.gameFiles([...REQUIRED]) : null;
 }
