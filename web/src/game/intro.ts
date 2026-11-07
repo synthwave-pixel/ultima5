@@ -204,6 +204,16 @@ const SUGGESTED = [
 
 /** The title menu's choices by letter. */
 const MENU = 'JCUAR';
+/** The game's five lines (INTRO_06bc), by letter: where each starts, and its text in the game's data. */
+const GAME_LINES: Record<string, [number, number]> = {
+  J: [0xc, 0x310c],
+  C: [9, 0x311b],
+  U: [9, 0x3148],
+  A: [0xb, 0x315e],
+  R: [10, 0x316f],
+};
+/** The title's line in Journey Onward's place where the game is played from Steam (Intro steamOnly). */
+const FROM_STEAM = 'Launch From Steam';
 /** The title menu's box: the lines it holds (more scroll, intro.ts menu). */
 const MENU_ROWS = 8;
 
@@ -654,31 +664,29 @@ export class Intro {
     // The Standard look's copper for the menu's box, below the logo.
     this.g.draw.chrome?.(true, TITLE_MENU_ROW);
     const g = this.g;
-    const items: [number, number | string][] = [
-      [0xc, 0x310c],
-      [9, 0x311b],
-      [9, 0x3148],
-      [0xb, 0x315e],
-      [10, 0x316f],
-    ];
-    // The port's own lines under the game's five: its settings, managing the saves (characterMenu.ts), Steam (beta) in
-    // the desktop app (steamMenu.ts), a newer version (ui/updates.ts), and Quit in the apps.
+    // The game's five, and the port's own lines under them: its settings, managing the saves (characterMenu.ts),
+    // Steam (beta) in the desktop app (steamMenu.ts), a newer version (ui/updates.ts), and Quit in the apps. Played
+    // from Steam, Launch From Steam stands in the place of the lines that start a game, and of Settings.
     const version = this.g.hooks.update?.offer()?.version;
-    for (const k of this.menuKeys().slice(MENU.length)) {
+    const keys = this.menuKeys();
+    const items = [...keys].map((k): [number, number | string] => {
+      if (GAME_LINES[k]) return GAME_LINES[k];
       const label =
-        k === 'S'
-          ? 'Settings'
-          : k === 'M'
-            ? 'Manage Saves'
-            : k === 'T'
-              ? 'Steam (beta)'
-              : k === 'Q'
-                ? 'Quit'
-                : version
-                  ? `Update (${version})`
-                  : 'Update';
-      items.push([(0x28 - label.length - 2) >> 1, label]);
-    }
+        k === 'L'
+          ? FROM_STEAM
+          : k === 'S'
+            ? 'Settings'
+            : k === 'M'
+              ? 'Manage Saves'
+              : k === 'T'
+                ? 'Steam (beta)'
+                : k === 'Q'
+                  ? 'Quit'
+                  : version
+                    ? `Update (${version})`
+                    : 'Update';
+      return [(0x28 - label.length - 2) >> 1, label];
+    });
     // The box holds eight lines: more, and they scroll with the bar, an arrow at the box's edge where there are more
     // above or below.
     const top = items.length > 6 ? 0x10 : 0x11;
@@ -707,9 +715,10 @@ export class Intro {
       const i = row + this.menuTop;
       if (i === sel) g.printChar(0xfd);
       g.text.moveTo(x, row + top);
-      // Journey Onward grey with no game saved to journey on with (the port's), passed over by the bar.
+      // Journey Onward grey with no game saved to journey on with, and Launch From Steam (the port's), passed over by
+      // the bar.
       const fg = g.text.win.fg;
-      if (i === 0 && this.noSave) g.text.win.fg = 8;
+      if (this.greyAt(keys, i)) g.text.win.fg = 8;
       g.printChar(' ');
       if (typeof text === 'string') g.print(text);
       else g.say(text);
@@ -773,7 +782,26 @@ export class Intro {
    */
   private menuKeys(): string {
     const after = (this.g.hooks.update?.offer() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
-    return MENU + 'SM' + (this.g.hooks.steam ? 'T' : '') + after;
+    const steam = this.g.hooks.steam ? 'T' : '';
+    if (this.steamOnly()) return 'L' + MENU.slice(2) + 'M' + steam + after;
+    return MENU + 'SM' + steam + after;
+  }
+
+  /**
+   * Whether the game is played from Steam (the port's): Play from Steam on, and this copy not started by Steam. Then
+   * Journey Onward, Create New Character and Settings give way to Launch From Steam, grey, so that a game is started
+   * only where Steam keeps it; Steam (beta) is still there to turn Play from Steam off.
+   */
+  private steamOnly(): boolean {
+    const steam = this.g.hooks.steam;
+    if (!steam || steam.launched()) return false;
+    const o = steam.options();
+    return o.playLine || o.compatTool || o.macPlay;
+  }
+
+  /** Whether the title's line `i` of `keys` is grey, passed over by the bar: Launch From Steam, or Journey Onward with no game. */
+  private greyAt(keys: string, i: number): boolean {
+    return keys[i] === 'L' || (keys[i] === 'J' && this.noSave);
   }
 
   /** Whether a newer version waits to be told of (updateBox). */
@@ -1691,11 +1719,12 @@ export class Intro {
     for (;;) {
       playTune(g, Tune.Theme, 'title');
       this.noSave = localSave.read() === null;
-      let choice = this.noSave ? 1 : 0;
+      let keys = this.menuKeys();
+      let choice = 0;
+      while (this.greyAt(keys, choice)) choice++;
       this.titleMenu(choice);
       let key = queued;
       queued = 0;
-      let keys = this.menuKeys();
       while (key <= 0x20) {
         // An update may come down while the title waits: its box, once a version, and its line added then.
         if ((await this.newsBox()) || (await this.updateBox())) {
@@ -1721,15 +1750,15 @@ export class Intro {
         switch (key) {
           case K.Left:
           case K.Up:
-            choice = choice === 0 ? keys.length - 1 : choice - 1;
-            if (choice === 0 && this.noSave) choice = keys.length - 1;
+            do choice = choice === 0 ? keys.length - 1 : choice - 1;
+            while (this.greyAt(keys, choice));
             this.menu(choice);
             menuSound(g, 'move');
             break;
           case K.Right:
           case K.Down:
-            choice = choice === keys.length - 1 ? 0 : choice + 1;
-            if (choice === 0 && this.noSave) choice = 1;
+            do choice = choice === keys.length - 1 ? 0 : choice + 1;
+            while (this.greyAt(keys, choice));
             this.menu(choice);
             menuSound(g, 'move');
             break;
@@ -1742,8 +1771,9 @@ export class Intro {
             key = 0x52;
             break;
           default: {
+            // (Launch From Steam is no choice: its letter is no key.)
             const i = keys.indexOf(String.fromCharCode(key));
-            if (i >= 0) this.menu(i);
+            if (i >= 0 && keys[i] !== 'L') this.menu(i);
             else key = 0;
           }
         }

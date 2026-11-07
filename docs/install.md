@@ -70,11 +70,17 @@ Android have none), and every option in it is **off until you turn it on**.
 With all of them off the app writes nothing for Ultima V in Steam's folders and keeps
 its saves in its own store. Turning an option off undoes it.
 
-The menu opens with what the app found: Steam's folder, whether Ultima V is
-installed in one of Steam's libraries (and which), and the Steam account.
-Where Steam or the game is missing it says so, and the options that need
-them are greyed (the bar still rests on one, and its note says why).
-Choose a line to turn it on or off; the note at the foot says what it does.
+The menu holds only the lines to choose: Back, the options, Copy report
+and Report an issue. Where Steam or the game is missing, the options that
+need them are greyed (the bar still rests on one, and its note says why).
+Choose a line to turn it on or off; the note at the foot says what it does,
+and for an option that is on, how it stands.
+
+While a Play from Steam option is on, the title screen expects the game to
+be started from Steam: run outside Steam, it shows **Launch From Steam**,
+greyed, in place of Journey Onward, Create New Character and Settings, so
+there is one place to play from. Manage Saves and Steam (beta) stay, so the
+option can be turned off there. Cloud saves alone does not change the title.
 
 The options differ by system:
 
@@ -100,7 +106,7 @@ The options differ by system:
   Compatibility, choose it: Steam downloads the game if it has not yet, and
   Play starts this engine. Launch line is the other way: copy the line and
   paste it as on Windows. If both are on, Steam runs the launch line and the
-  tool goes unused, and the menu says so. Steam installed as a Flatpak
+  tool goes unused, and the tool's note says so. Steam installed as a Flatpak
   cannot run the game's Flatpak until it is allowed to, with one line in a
   terminal, after which Steam needs a restart:
 
@@ -130,15 +136,15 @@ compatibility tool are named Ultima V SP in Steam.
 
 **Checking the launch line.** Where Play uses a pasted line (Windows, and
 Linux's Launch line), the menu reads back what Steam has saved for Ultima V
-(it only ever reads that file) and says one of: found and right; missing;
+(it only ever reads that file) and, in the option's note, says one of: found and right; missing;
 out of date (it starts an engine somewhere else, such as an older AppImage
 name or a moved app); pasted twice; or not seen yet. Steam writes the line
 when it closes, so one pasted moments ago may not be there yet, and the menu
 says "not seen yet" rather than "wrong". Each comes with what to do, and
 Copy launch line. In a game Steam started, the line is known to work.
 
-**Cloud saves.** The option can be switched only from a game Steam started
-(Steam's folder is known only then), with Ultima V's folder present and
+**Cloud saves.** The option shows, and can be switched, only in a game Steam
+started (Steam's folder is known only then), with Ultima V's folder present and
 the Steam account known; on a Mac it is turned on only with Play from
 Steam on, but can always be turned off. Turning it
 on copies this computer's saves into Steam's folder

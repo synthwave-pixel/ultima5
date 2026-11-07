@@ -191,6 +191,8 @@ export interface CloudSaves {
 /** What the Steam (beta) menu asks of the desktop app (steamMenu.ts). */
 export interface SteamHook {
   status(): Promise<SteamStatus>;
+  /** Whether Steam started this copy (boot.ts steamLaunch): asked at once, as the title's lines depend on it. */
+  launched(): boolean;
   options(): SteamChoices;
   /** Turns an option on or off, with what it does here; null where it was refused. */
   setOption(name: PlayOption, on: boolean): Promise<SteamSwitched | null>;

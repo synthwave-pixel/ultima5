@@ -50,13 +50,14 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
   const side = (s: 'own' | 'steam') => (s === 'own' ? own : steam);
   const hook: SteamHook = {
     status: async () => st,
+    launched: () => st.launch,
     options: () => ({ ...o, cloudAny: o.cloudAny || o.cloud }),
     setOption: async (name, on) => {
       calls.push(`${name} ${on ? 'on' : 'off'}`);
       o[name] = on;
       return { on, message: `Now ${name} is ${on ? 'on' : 'off'}.`, ...(name === 'playLine' && on && st.line ? { line: st.line } : {}) };
     },
-    lineState: async () => (calls.push('lineState'), { state: 'missing', bothLinux: false }),
+    lineState: async () => (calls.push('lineState'), { state: 'missing', bothLinux: o.playLine && o.compatTool }),
     copyLine: async () => (calls.push('copyLine'), true),
     copyReport: async () => (calls.push('copyReport'), true),
     open: (url) => void calls.push(`open ${url}`),
@@ -190,6 +191,34 @@ describe('Steam (beta) on the title', () => {
     expect(g.menuShown?.title).toBe('Steam (beta)');
   });
 
+  it('stands Launch From Steam in place of the lines that start a game, where Play from Steam is on outside Steam', () => {
+    storage();
+    const keys = (choices: Partial<SteamChoices>, status: Partial<SteamStatus> = {}): string => {
+      const { g } = newGame();
+      g.hooks.steam = fake(status, choices).hook;
+      return (new Intro(g) as unknown as { menuKeys(): string }).menuKeys();
+    };
+    expect(keys({ playLine: true })).toBe('LUARMT');
+    expect(keys({ compatTool: true })).toBe('LUARMT');
+    expect(keys({ macPlay: true }, { system: 'mac' })).toBe('LUARMT');
+    // Started by Steam, or with no Play from Steam on (Cloud saves alone starts nothing), the title is as ever.
+    expect(keys({ playLine: true }, { launch: true })).toBe('JCUARSMT');
+    expect(keys({ cloud: true })).toBe('JCUARSMT');
+  });
+
+  it('shows Launch From Steam grey, passed over by the bar, and takes no key for the lines it stands for', async () => {
+    storage();
+    const { g, p } = newGame();
+    g.hooks.steam = fake({}, { playLine: true }).hook;
+    // J, C, S and L do nothing; up from the first line the bar can take passes over it to the last, Steam (beta).
+    p.keys.push(K.Escape, K.Escape, K.Escape, 0x4a, 0x43, 0x53, 0x4c, K.Up, Pad.A);
+    await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
+    const rows = p.rows.map((r) => r.join('')).join('\n');
+    expect(rows).toContain('Launch From Steam');
+    expect(rows).not.toContain('Journey Onward');
+    expect(g.menuShown?.title).toBe('Steam (beta)');
+  });
+
   it('is no longer a line of Settings', () => {
     const { g } = newGame();
     g.hooks.steam = fake().hook;
@@ -203,40 +232,43 @@ describe('Steam (beta) on the title', () => {
 });
 
 describe('the Steam (beta) menu', () => {
-  it('opens with what was found: Steam, Ultima V and the account', async () => {
+  it('shows only the lines to choose: no paths, and nothing said in its body', async () => {
     const { g, p } = newGame();
     g.hooks.steam = fake().hook;
-    const { said } = await drive(g, p);
-    expect(said).toContain(sq('Steam: ~/.steam/steam'));
-    expect(said).toContain(sq('Ultima V: installed in ~/.steam/steam/steamapps/common/Ultima V'));
-    expect(said).toContain(sq('Steam account: known'));
+    const { menus, said } = await drive(g, p);
+    expect(menus[0].labels).toEqual([
+      'Back',
+      'Play from Steam:',
+      'Launch line: Off',
+      'Compat. tool: Off',
+      '',
+      'Copy report',
+      'Report an issue',
+    ]);
+    expect(said).not.toContain(sq('~/.steam/steam'));
+    const mac = newGame();
+    mac.g.hooks.steam = fake({ system: 'mac', line: null }, { macPlay: true }).hook;
+    expect((await drive(mac.g, mac.p)).menus[0].labels).toEqual(['Back', 'Play from Steam: On', '', 'Copy report', 'Report an issue']);
   });
 
-  it('draws a letter of a path the game font has not as ?', async () => {
-    const { g, p } = newGame();
-    g.hooks.steam = fake({ steam: '~/St\u00e9am', where: '~/Spiele/Ultima V \u2013 \u00dcber' }).hook;
-    const { said, shown } = await drive(g, p);
-    expect(said).toContain(sq('Steam: ~/St?am'));
-    expect(said).toContain(sq('Ultima V: installed in ~/Spiele/Ultima V ? ?ber'));
-    expect(
-      shown
-        .flatMap((s) => s.labels)
-        .join('')
-        .match(/[^\x20-\x7e]/g) ?? [],
-    ).toEqual([]);
-  });
-
-  it('says where Steam or the game is missing, and greys the options that need Steam', async () => {
+  it('greys the options that need Steam where it is missing', async () => {
     const { g, p } = newGame();
     g.hooks.steam = fake({ steam: null, game: 'none', where: '', account: false }).hook;
-    const { said, menus } = await drive(g, p);
-    expect(said).toContain(sq('Steam: not found'));
-    expect(choosable(menus[0])).toEqual(['Back', 'Copy report', 'Report an issue']);
-    const other = newGame();
-    other.g.hooks.steam = fake({ game: 'none', where: '', account: false }).hook;
-    const rest = await drive(other.g, other.p);
-    expect(rest.said).toContain(sq('Ultima V: not installed in Steam'));
-    expect(rest.said).toContain(sq('Steam account: not known'));
+    expect(choosable((await drive(g, p)).menus[0])).toEqual(['Back', 'Copy report', 'Report an issue']);
+  });
+
+  it('says in the note of an option that is on how it stands', async () => {
+    const notes = async (status: Partial<SteamStatus>, choices: Partial<SteamChoices>) => {
+      const { g, p } = newGame();
+      g.hooks.steam = fake(status, choices).hook;
+      return (await drive(g, p, ['Report an issue'])).said;
+    };
+    expect(await notes({ system: 'mac', line: null }, { macPlay: true })).toContain(
+      sq("If Steam says 'Invalid platform', open this app with Steam closed."),
+    );
+    const both = await notes({ system: 'linux' }, { playLine: true, compatTool: true });
+    expect(both).toContain(sq('Steam has no launch line yet: copy it, and paste it into Launch Options.'));
+    expect(both).toContain(sq('Unused: the launch line is on too, and Steam runs that.'));
   });
 
   it('offers the options of each system, every one off until turned on', async () => {
@@ -279,7 +311,7 @@ describe('the Steam (beta) menu', () => {
     expect(choosable(menus.at(-1)!)).toContain('Play from Steam: On');
     // With the line on, what Steam has saved of it is read back.
     expect(f.calls).toContain('lineState');
-    expect(said).toContain(sq('Steam has no launch line for Ultima V'));
+    expect(said).toContain(sq('Steam has no launch line yet: copy it, and paste it into Launch Options.'));
   });
 
   it('turns the compatibility tool on and off again', async () => {
@@ -357,8 +389,8 @@ describe('the Steam (beta) menu', () => {
     const { g, p } = newGame();
     const f = fake({ system: 'windows', launch: true, line: 'x %command%' }, { playLine: true });
     g.hooks.steam = f.hook;
-    const { said } = await drive(g, p);
-    expect(said).toContain(sq('Steam started this game, so Play from Steam works.'));
+    const { said } = await drive(g, p, ['Report an issue']);
+    expect(said).toContain(sq('Steam started this game: Play from Steam works.'));
     expect(f.calls).not.toContain('lineState');
   });
 
@@ -377,7 +409,7 @@ describe('the Steam (beta) menu', () => {
     const f = fake({ flatpak: true });
     g.hooks.steam = f.hook;
     const { said } = await drive(g, p, ['Get the AppImage']);
-    expect(said).toContain(sq('The AppImage works better with Steam.'));
+    expect(said).toContain(sq('The AppImage works better with Steam: its download page.'));
     expect(f.calls).toEqual([`open ${APPIMAGE_PAGE}`]);
     const plain = newGame();
     plain.g.hooks.steam = fake().hook;
@@ -388,13 +420,13 @@ describe('the Steam (beta) menu', () => {
 describe('Steam Cloud saves in the menu', () => {
   afterEach(() => useStore());
 
-  it('is grey outside a Steam launch, and says why', async () => {
+  it('is a line only in a Steam launch, where it is switched', async () => {
+    const outside = newGame();
+    outside.g.hooks.steam = fake().hook;
+    expect((await drive(outside.g, outside.p)).menus[0].labels.some((l) => l.startsWith('Cloud saves'))).toBe(false);
     const { g, p } = newGame();
-    g.hooks.steam = fake().hook;
-    const { menus, said } = await drive(g, p, ['Cloud saves: Off']);
-    const m = menus[0];
-    expect(m.enabled[m.labels.indexOf('Cloud saves: Off')]).toBe(false);
-    expect(said).toContain(sq('Start Ultima V from Steam to change this.'));
+    g.hooks.steam = fake({ launch: true }).hook;
+    expect((await drive(g, p)).menus[0].labels).toContain('Cloud saves: Off');
   });
 
   it('is grey in a Steam launch that has no game folder or no account', async () => {

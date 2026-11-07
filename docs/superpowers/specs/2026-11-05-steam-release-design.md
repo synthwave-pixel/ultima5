@@ -146,9 +146,15 @@ sandbox.
 
 - An entry **Steam (beta)** on the title screen's main menu, in desktop builds only. Not in Settings, and not in the
   web or Android builds.
-- It is shown whether or not Steam is installed. It opens with what the engine found: Steam's location, whether
-  Ultima V is installed and where, and the Steam account it will use. Where Steam or the game is missing, it says
-  so, and the options that need them are greyed.
+- It is shown whether or not Steam is installed. *(revised after Mac testing)* It holds only the lines to choose (Back,
+  the options, Copy report, Report an issue): no paths and no explanations in its body, which made it hard to read.
+  Where Steam or the game is missing, the options that need them are greyed and their notes say why; an option that
+  is on says how it stands in its note (the launch line's state, the Mac's "Invalid platform" hint). Cloud saves is a
+  line only in a Steam launch.
+- *(revised after Mac testing)* While a Play from Steam option is on and the game was not started by Steam, the title
+  menu shows **Launch From Steam**, greyed, in place of Journey Onward, Create New Character and Settings, so that
+  players are not left wondering where to play from. Manage Saves and Steam (beta) stay, so the option can be turned
+  off. Cloud saves alone does not count.
 - Below that, the options for this system, each with a short explanation, each **off until turned on**, and each
   undone when turned off:
 

@@ -1,13 +1,14 @@
 /**
  * steamMenu.ts
  *
- * The title's Steam (beta) menu, in the desktop app: what the app found of Steam (its folder, Ultima V in its
- * libraries, the account), then the options for this system, each off until turned on and undone when turned off -
- * Play from Steam (a launch line to paste on Windows and Linux, the compatibility tool on Linux, Steam's own settings
- * changed on a Mac) and Steam Cloud saves (cloudSwitch.ts) - and two buttons for testers: Copy report and Report an
- * issue. The menu is narrow, so each option's full name and what it does is its note, at the foot as the bar is on
- * it; an option that can't be changed here says why there instead. Turning one on or off is the app's to do
- * (desktop/steamOptions.cjs switchOption), and the menu is drawn again from what then stands.
+ * The title's Steam (beta) menu, in the desktop app: the lines to choose and nothing else (what the app found of
+ * Steam, with its paths, is the report's) - the options for this system, each off until turned on and undone when
+ * turned off - Play from Steam (a launch line to paste on Windows and Linux, the compatibility tool on Linux, Steam's
+ * own settings changed on a Mac) and, in a Steam launch, Steam Cloud saves (cloudSwitch.ts) - and two buttons for
+ * testers: Copy report and Report an issue. The menu is narrow, so each option's full name and what it does is its
+ * note, at the foot as the bar is on it; one that is on says there how it stands (the launch line Steam has saved), and
+ * one that can't be changed here says why. Turning one on or off is the app's to do (desktop/steamOptions.cjs
+ * switchOption), and the menu is drawn again from what then stands.
  */
 
 import { switchCloud } from './cloudSwitch.ts';
@@ -29,17 +30,16 @@ const MAC_WARNING =
 const MAC_QUIT_FIRST = 'Quit the game, then turn this off from outside Steam.';
 const CLOUD_STAYS =
   'Saves made from Steam stay with Steam until Cloud saves is turned off from a game Steam started. Turn this off anyway?';
-const MAC_NOTE =
-  "If Play in Steam ever says 'Invalid platform', Steam has refreshed Ultima V's settings. Open this app once with " +
-  'Steam closed (or let it quit Steam) and it puts things back.';
+// Play from Steam's note on a Mac while it is on: Steam refreshing Ultima V's settings undoes it, until the app puts it back.
+const MAC_NOTE = "If Steam says 'Invalid platform', open this app with Steam closed.";
 
-/** What Steam's saved launch line was found to be, and what to do about it. */
+/** What Steam's saved launch line was found to be, and what to do about it: the launch line's note while it is on. */
 const LINE_SAYS: Record<LineCheck['state'], string> = {
-  correct: "Steam's launch line is found and right: Play starts this engine.",
-  missing: `Steam has no launch line for Ultima V. Copy it, then: ${PASTE}`,
-  'not-seen': "Steam's launch line isn't seen yet: Steam saves it when it closes. Look again after.",
-  stale: "Steam's launch line is out of date: it starts an engine somewhere else. Copy this one over it.",
-  twice: "Steam's launch line is pasted twice. Clear it, then paste it once.",
+  correct: "Steam's launch line is right: Play starts this engine.",
+  missing: 'Steam has no launch line yet: copy it, and paste it into Launch Options.',
+  'not-seen': 'Steam saves the launch line when it closes: look again after.',
+  stale: "Steam's launch line is out of date: copy this one over it.",
+  twice: "Steam's launch line is pasted twice: clear it, paste it once.",
 };
 
 /** A line of the menu, and what choosing it does. */
@@ -48,28 +48,6 @@ type Line = Item & { act?: () => Promise<void> };
 const grey = (label: string): Line => ({ label, enabled: false });
 const said = (text: string): Line[] => wrap(text).map(grey);
 const onOff = (on: boolean): string => (on ? 'On' : 'Off');
-
-/** A path as the game's font can draw it: any letter it has not (an accent, a dash) a ?. */
-const drawable = (path: string): string => path.replace(/[^\x20-\x7e]/g, '?');
-
-/** The menu's head: what the app found of Steam, Ultima V and the account. */
-function found(s: SteamStatus | null): string[] {
-  if (s === null) return ['What Steam has could not be read here.'];
-  if (s.steam === null) return ['Steam: not found. Install Steam and start it once, then come back.'];
-  const where = drawable(s.where);
-  const game =
-    s.game === 'ok'
-      ? `Ultima V: installed in ${where}`
-      : s.game === 'missing'
-        ? `Ultima V: Steam lists it in ${where}, but its folder is not there.`
-        : 'Ultima V: not installed in Steam.';
-  return [
-    `Steam: ${drawable(s.steam)}`,
-    game,
-    `Steam account: ${s.account ? 'known' : 'not known'}`,
-    ...(s.launch ? ['Started from Steam.'] : []),
-  ];
-}
 
 /**
  * An option's line: its short name and On or Off, its full name and what it does as its note. Where it can't be
@@ -109,20 +87,19 @@ export async function steamMenu(g: Game): Promise<void> {
 /** The menu's lines for what stands now. */
 function menuLines(g: Game, steam: SteamHook, s: SteamStatus | null, o: SteamChoices, check: LineCheck | null): Line[] {
   const say = async (text: string): Promise<void> => void (await showText(g, TITLE, wrap(text)));
-  const lines: Line[] = [{ label: 'Back', note: '' }, ...found(s).flatMap(said)];
+  const lines: Line[] = [{ label: 'Back', note: '' }];
   if (s?.flatpak) {
-    lines.push(grey(''), ...said('The AppImage works better with Steam.'), {
+    lines.push({
       label: 'Get the AppImage',
-      note: 'Its download page, in your browser.',
+      note: 'The AppImage works better with Steam: its download page.',
       act: async () => {
         steam.open(APPIMAGE_PAGE);
         await say(`Opened in your browser: ${APPIMAGE_PAGE}`);
       },
     });
   }
-  if (s !== null) {
-    lines.push(grey(''), ...playLines(g, steam, s, o, check, say), cloudLine(g, steam, s, o, say));
-  }
+  // Cloud saves is switched only in a Steam launch, so it is a line only there.
+  if (s !== null) lines.push(...playLines(g, steam, s, o, check, say), ...(s.launch ? [cloudLine(g, steam, s, o, say)] : []));
   lines.push(
     grey(''),
     {
@@ -183,12 +160,12 @@ function playLines(
     const play = option(
       'Play from Steam',
       o.macPlay,
-      "Play from Steam (changes Steam's settings): Play starts this engine.",
+      o.macPlay ? MAC_NOTE : "Play from Steam (changes Steam's settings): Play starts this engine.",
       noSteam,
       toggle('macPlay'),
     );
     const held = o.macPlay && s.launch ? { enabled: false, rest: true, note: MAC_QUIT_FIRST } : {};
-    return [{ ...play, ...held }, ...(o.macPlay ? said(MAC_NOTE) : [])];
+    return [{ ...play, ...held }];
   }
   const cannot =
     s.line !== null
@@ -196,13 +173,19 @@ function playLines(
       : s.system === 'windows'
         ? "The portable Ultima V can't be started by Steam. Use the installed one."
         : "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
+  // While it is on, the launch line's note is how Steam's saved line stands.
+  const state = s.launch
+    ? 'Steam started this game: Play from Steam works.'
+    : check === null
+      ? "Steam's launch line can't be read here."
+      : LINE_SAYS[check.state];
   const out: Line[] =
     s.system === 'windows'
       ? [
           option(
             'Play from Steam',
             o.playLine,
-            "Play from Steam: Steam's Play starts this engine, by a line you paste.",
+            o.playLine ? state : "Play from Steam: Steam's Play starts this engine, by a line you paste.",
             noSteam ?? cannot,
             toggle('playLine'),
           ),
@@ -212,19 +195,13 @@ function playLines(
           option(
             'Launch line',
             o.playLine,
-            'Play from Steam: launch line. Steam starts this by a line you paste.',
+            o.playLine ? state : 'Play from Steam: launch line. Steam starts this by a line you paste.',
             noSteam ?? cannot,
             toggle('playLine'),
           ),
         ];
   if (o.playLine) {
-    const state = s.launch
-      ? 'Steam started this game, so Play from Steam works.'
-      : check === null
-        ? "Steam's launch line can't be read here."
-        : LINE_SAYS[check.state] +
-          (check.bothLinux ? ' Both are on: Steam runs the launch line, and the compatibility tool goes unused.' : '');
-    out.push(...said(state), {
+    out.push({
       label: 'Copy launch line',
       note: "The line to paste into Ultima V's Launch Options in Steam.",
       act: () => copyLine(steam, say),
@@ -235,7 +212,9 @@ function playLines(
       option(
         'Compat. tool',
         o.compatTool,
-        'Play from Steam: compatibility tool, chosen in Steam.',
+        o.compatTool && check?.bothLinux
+          ? 'Unused: the launch line is on too, and Steam runs that.'
+          : 'Play from Steam: compatibility tool, chosen in Steam.',
         noSteam ?? cannot,
         toggle('compatTool'),
       ),

@@ -12,7 +12,7 @@ import type { Game } from '../game/game.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
 import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
 import { clearInstalled } from '../install/store.ts';
-import { reportArgs, steamNative } from '../install/sources.ts';
+import { reportArgs, steamLaunch, steamNative } from '../install/sources.ts';
 import { cloudSaves } from '../game/keyStore.ts';
 import { GamepadInput } from './gamepad.ts';
 import type { CapacitorLike } from './platform.ts';
@@ -355,6 +355,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
       ? {
           steam: {
             status: () => steam.status(),
+            launched: () => steamLaunch().steam,
             options() {
               const { playLine, compatTool, macPlay, cloud, account } = steam.options();
               return {
