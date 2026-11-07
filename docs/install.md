@@ -70,11 +70,15 @@ Android have none), and every option in it is **off until you turn it on**.
 With all of them off the app writes nothing for Ultima V in Steam's folders and keeps
 its saves in its own store. Turning an option off undoes it.
 
-The menu holds only the lines to choose: Back, the options, Copy report
-and Report an issue. Where Steam or the game is missing, the options that
-need them are greyed (the bar still rests on one, and its note says why).
-Choose a line to turn it on or off; the note at the foot says what it does,
-and for an option that is on, how it stands.
+The menu always shows the same six lines: Back, **Play from Steam**,
+**Cloud Saves**, **Copy report**, **Report an issue** and **Paths**. The
+note at the foot says what the line under the bar does and, for an option
+that is on, how it stands. A line that can't be used here is greyed (the
+bar still rests on it, and its note says why). **Paths** shows where the app
+found Steam, Ultima V and its Steam saves, and this copy's launch line; they
+are shown only when you choose it. On a Mac, Play from Steam is the option
+itself. On Windows and Linux it opens its own menu: Launch line, Copy launch
+line and, on Linux, Compat. tool (and on the Flatpak, Get the AppImage).
 
 While a Play from Steam option is on, the title screen expects the game to
 be started from Steam: run outside Steam, it shows **Launch From Steam**,
@@ -86,14 +90,14 @@ The options differ by system:
 
 | System | Option | On | Off |
 | --- | --- | --- | --- |
-| Windows | Play from Steam | Shows the launch line to copy | Tells you to clear the line in Steam |
-| Linux | Play from Steam: Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
-| Linux | Play from Steam: Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
+| Windows | Play from Steam → Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
+| Linux | Play from Steam → Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
+| Linux | Play from Steam → Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
 | macOS | Play from Steam | Warns that it closes Steam and asks you to confirm, then edits Steam's settings | Asks to quit Steam if it is running, then puts Steam's settings back |
-| All | Cloud saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
+| All | Cloud Saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
 
 - **Windows**: Steam's files are never edited, and Steam must have
-  installed Ultima V first. Turn Play from Steam on and choose Copy launch
+  installed Ultima V first. In Play from Steam, turn Launch line on and choose Copy launch
   line, then in Steam open Ultima V → ⚙ → Properties → Launch Options and
   paste. This needs the installed app: the portable `.exe` has no fixed
   place for Steam to point at, so it has no line.
@@ -143,7 +147,7 @@ when it closes, so one pasted moments ago may not be there yet, and the menu
 says "not seen yet" rather than "wrong". Each comes with what to do, and
 Copy launch line. In a game Steam started, the line is known to work.
 
-**Cloud saves.** The option shows, and can be switched, only in a game Steam
+**Cloud saves.** The option can be switched only in a game Steam
 started (Steam's folder is known only then), with Ultima V's folder present and
 the Steam account known; on a Mac it is turned on only with Play from
 Steam on, but can always be turned off. Turning it

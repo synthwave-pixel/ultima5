@@ -146,11 +146,13 @@ sandbox.
 
 - An entry **Steam (beta)** on the title screen's main menu, in desktop builds only. Not in Settings, and not in the
   web or Android builds.
-- It is shown whether or not Steam is installed. *(revised after Mac testing)* It holds only the lines to choose (Back,
-  the options, Copy report, Report an issue): no paths and no explanations in its body, which made it hard to read.
-  Where Steam or the game is missing, the options that need them are greyed and their notes say why; an option that
-  is on says how it stands in its note (the launch line's state, the Mac's "Invalid platform" hint). Cloud saves is a
-  line only in a Steam launch.
+- It is shown whether or not Steam is installed. *(revised after Mac testing)* It always shows the same six lines, so
+  that it reads the same each time: Back, Play from Steam, Cloud Saves, Copy report, Report an issue, Paths. No paths
+  and no explanations in its body; the note at the foot says what the line under the bar does and how an option that
+  is on stands. A line that can't be used here is greyed, its note saying why. Paths shows where Steam, the game and
+  its Steam saves were found, and the launch line, only when chosen. On a Mac Play from Steam is the option itself; on
+  Windows and Linux it opens its own menu (Launch line, Copy launch line, Linux's Compat. tool, the Flatpak's Get the
+  AppImage).
 - *(revised after Mac testing)* While a Play from Steam option is on and the game was not started by Steam, the title
   menu shows **Launch From Steam**, greyed, in place of Journey Onward, Create New Character and Settings, so that
   players are not left wondering where to play from. Manage Saves and Steam (beta) stay, so the option can be turned
