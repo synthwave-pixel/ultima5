@@ -228,6 +228,11 @@ export class StandardArt implements TileArt {
    */
   squares = false;
 
+  /** Every tile a whole square where they are drawn on black (`squares`): Smooth motion glides them so (viewGlide.ts). */
+  get wholeSquares(): boolean {
+    return this.squares;
+  }
+
   constructor(
     /** RGBA in memory order, SHEET_COLUMNS * CELL wide; grown a row at a time for cells made here (addCell). */
     private sheet: Uint32Array,

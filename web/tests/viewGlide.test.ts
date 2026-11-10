@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ViewCell, ViewDrawn } from '../src/game/io.ts';
-import { EGA_RGBA, Framebuffer, HI, HI_HEIGHT, HI_WIDTH, TILE_X, TILE_Y } from '../src/ui/framebuffer.ts';
+import { appleArt } from '../src/ui/appleArt.ts';
+import { egaTileArt } from '../src/ui/egaTiles.ts';
+import { EGA_RGBA, EgaArt, Framebuffer, HI, HI_HEIGHT, HI_WIDTH, TILE_X, TILE_Y, TilesAlone, type TileArt } from '../src/ui/framebuffer.ts';
+import { StandardArt } from '../src/ui/standardArt.ts';
 import { ViewGlide } from '../src/ui/viewGlide.ts';
 
 const fonts = [{ rows: new Uint8Array(128 * 8) }, { rows: new Uint8Array(128 * 8) }];
@@ -122,5 +125,89 @@ describe('Smooth motion over the view (viewGlide.ts)', () => {
     expect(vg.moving(1001)).toBe(false);
     vg.drawn({ ...draw(fb, { x: 10, y: 10 }, [5, 3], [0, 0]), covered: true }, 0);
     expect(vg.moving(2000)).toBe(false);
+  });
+
+  /**
+   * Issue #17 (reported by devonsoft, who found the line): a figure was cut from its square by the pixels where the
+   * square differs from its ground, so a figure's pixel that matched the ground there went missing as it glided -
+   * the PC EGA and Apple ][ tiles' black squares in pieces.
+   */
+  describe('a figure that matches its ground somewhere', () => {
+    /** EGA colours by pixel (16 by 16) packed as a tile, at `t`. */
+    const tile = (t: number, colour: (r: number, c: number) => number): void => {
+      for (let r = 0; r < 16; r++) for (let b = 0; b < 8; b++) tiles[t * 128 + r * 8 + b] = (colour(r, b * 2) << 4) | colour(r, b * 2 + 1);
+    };
+    const [BLACK, HALF, EYED] = [5, 6, 7];
+    /** The see-through art's clear colour: what it leaves of the ground. */
+    const CLEAR = 5;
+    tile(BLACK, () => 0);
+    tile(HALF, (_r, c) => (c < 8 ? 0 : 4)); // left half black, right half red
+    // A clear border, red within, a black eye in the middle.
+    tile(EYED, (r, c) => (r < 4 || r > 11 || c < 4 || c > 11 ? CLEAR : r >= 6 && r <= 9 && c >= 6 && c <= 9 ? 0 : 4));
+
+    /** Tile art that draws a figure over its ground, as the Modern PC tiles do: CLEAR leaves the ground. */
+    const seeThrough = (fb: Framebuffer): TileArt => {
+      const ega = fb.art;
+      return {
+        draw(page, t, x, y, ground) {
+          if (ground !== undefined) ega.draw(page, ground, x, y);
+          for (let r = 0; r < 16; r++)
+            for (let c = 0; c < 16; c++) {
+              const v = tiles[t * 128 + r * 8 + (c >> 1)];
+              if ((c & 1 ? v & 15 : v >> 4) !== CLEAR || ground === undefined) ega.block(page, t, c, r, x + c * HI, y + r * HI);
+            }
+        },
+        block: (page, t, rx, ry, x, y) => ega.block(page, t, rx, ry, x, y),
+      };
+    };
+
+    /** A walker `figure` at view square `at`, on black ground there and green everywhere else. */
+    const field = (fb: Framebuffer, figure: number, at: [number, number]): ViewDrawn => {
+      for (let y = 0; y < 11; y++)
+        for (let x = 0; x < 11; x++) fb.tile(x === 4 && y === 3 ? BLACK : GROUND, TILE_X + x * 16, TILE_Y + y * 16);
+      const ground = at[0] === 4 && at[1] === 3 ? BLACK : GROUND;
+      fb.tile(figure, TILE_X + at[0] * 16, TILE_Y + at[1] * 16, undefined, ground);
+      const cells: ViewCell[] = [];
+      cells[at[1] * 11 + at[0]] = { mover: 'a5', bare: { tile: ground, ground: undefined, place: undefined } };
+      return { scene: 'town', origin: { x: 10, y: 10 }, wrap: 0, cells, covered: false };
+    };
+
+    /** The view halfway through `figure`'s step from (3, 3) onto the black square (4, 3). */
+    const halfway = (fb: Framebuffer, figure: number): ((x: number, y: number) => number) => {
+      const vg = new ViewGlide(fb, () => 150);
+      vg.drawn(field(fb, figure, [3, 3]), 0);
+      vg.moving(0);
+      vg.drawn(field(fb, figure, [4, 3]), 0);
+      expect(vg.moving(1000)).toBe(true);
+      return (x, y) => shown(vg, 1000 + 85, x, y);
+    };
+
+    it('glides an EGA tile whole, its black with it, as it stands still', () => {
+      const at = halfway(new Framebuffer(tiles, fonts), HALF);
+      // The figure's black half, gliding over the green square it left: black, not the green beneath.
+      expect(at(3 * CELL + CELL / 2 + 4, 3 * CELL + 8)).toBe(EGA_RGBA[0]);
+      expect(at(4 * CELL + 4, 3 * CELL + 8)).toBe(EGA_RGBA[4]); // its red half
+      expect(at(3 * CELL + 4, 3 * CELL + 8)).toBe(EGA_RGBA[2]); // the ground behind it
+    });
+
+    it('glides whole the tile sets that draw every tile whole on black, and cuts out only the Modern PC figures', () => {
+      // The Modern look's PC EGA and Apple ][ sets (the reporter's), and the PC (1988) look's EGA and Apple ][ tiles.
+      const apple2 = appleArt(tiles, null, 0, null);
+      for (const art of [egaTileArt(tiles, null), apple2, new EgaArt(tiles), new TilesAlone(apple2)]) expect(art.wholeSquares).toBe(true);
+      // The Modern PC set draws its figures over their ground.
+      expect(new StandardArt(new Uint32Array(CELL * CELL), CELL, {}).wholeSquares).toBe(false);
+    });
+
+    it("keeps a see-through figure's own pixels that match its ground, and leaves its clear edge clear", () => {
+      const fb = new Framebuffer(tiles, fonts);
+      fb.art = seeThrough(fb);
+      const at = halfway(fb, EYED);
+      const y = 3 * CELL + 8 * HI;
+      // The eye, enclosed by the figure, black over the green square it left - not a hole showing the green.
+      expect(at(3 * CELL + CELL / 2 + 7 * HI, y)).toBe(EGA_RGBA[0]);
+      expect(at(3 * CELL + CELL / 2 + 5 * HI, y)).toBe(EGA_RGBA[4]); // red round it
+      // The clear border, the figure's ground left behind: the green beneath.
+      expect(at(3 * CELL + CELL / 2 + 1 * HI, y)).toBe(EGA_RGBA[2]);
+    });
   });
 });

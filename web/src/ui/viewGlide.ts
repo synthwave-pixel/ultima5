@@ -11,7 +11,10 @@
  * In layers, so that a figure between two squares is over both: every square's ground (a walker's square bare of
  * them, the squares that slid out of view kept from the views before), then the party's followers, the party, and
  * whoever walks. A figure is its square as drawn less its square bare: so a companion's colours, a fight's marks on
- * them and their tint go with them.
+ * them and their tint go with them. Less only the ground round it, though (figureMask): a pixel of the figure that
+ * happens to match its ground there - a black outline on black ground - is the figure's still. Where the tile art
+ * draws every tile as a whole square (the PC EGA and Apple ][ tiles, black round their figures), the figure is its
+ * whole square, as it is at rest (issue #17).
  */
 
 import type { ViewDrawn } from '../game/io.ts';
@@ -38,6 +41,8 @@ interface Shot {
   view: ViewDrawn;
   picture: Uint32Array;
   bare: Map<number, Uint32Array>;
+  /** Each walker's figure in their square (figureMask), by square; null where it is the whole square. */
+  figures: Map<number, Uint8Array | null>;
 }
 
 const STILL: Point = { x: 0, y: 0 };
@@ -83,7 +88,10 @@ export class ViewGlide {
     } finally {
       fb.page = was;
     }
-    this.latest = { view, picture, bare };
+    const whole = this.fb.art.wholeSquares === true;
+    const figures = new Map<number, Uint8Array | null>();
+    for (const [i, ground] of bare) figures.set(i, whole ? null : figureMask(cut(picture, i % SIDE, Math.floor(i / SIDE)), ground));
+    this.latest = { view, picture, bare, figures };
   }
 
   /** The view's square of the colour page `page`. */
@@ -164,10 +172,10 @@ export class ViewGlide {
     const figures = (which: (c: NonNullable<ViewDrawn['cells'][number]>) => string | undefined): void =>
       view.cells.forEach((c, i) => {
         const id = c && which(c);
-        const bare = shot.bare.get(i);
-        if (!id || !bare) return;
+        const figure = shot.figures.get(i);
+        if (!id || figure === undefined) return;
         const [x, y] = cellOf(i);
-        blit(out, shot.picture, SPAN, x * CELL, y * CELL, ...at(x, y, id === 'party' ? camera : lag(id)), bare);
+        blit(out, shot.picture, SPAN, x * CELL, y * CELL, ...at(x, y, id === 'party' ? camera : lag(id)), figure ?? undefined);
       });
     figures((c) => c.follower);
     figures((c) => (c.party ? 'party' : undefined));
@@ -227,29 +235,53 @@ function cut(picture: Uint32Array, x: number, y: number): Uint32Array {
 }
 
 /**
- * A square of `src` (`stride` wide, from (sx, sy)) onto the view at (dx, dy) of its own pixels, cut to the view; with
- * `bare`, only the pixels where the square differs from it - a figure, without its ground.
+ * Which pixels of a walker's `square` are their figure (1), and not the ground round it (0): every pixel where the
+ * square differs from its `bare` ground, and of those where it matches, all but the ones joined to the square's edge
+ * through matching pixels - the ground round the figure. So a figure's pixel that matches the ground beneath it (a
+ * black outline, a black eye, on black ground) is the figure's, enclosed by it, as the Apple II art finds a figure's
+ * ground (appleArt.ts).
  */
-function blit(
-  out: Uint32Array,
-  src: Uint32Array,
-  stride: number,
-  sx: number,
-  sy: number,
-  dx: number,
-  dy: number,
-  bare?: Uint32Array,
-): void {
+export function figureMask(square: Uint32Array, bare: Uint32Array): Uint8Array {
+  const mask = new Uint8Array(CELL * CELL).fill(1);
+  const todo: number[] = [];
+  const reach = (k: number): void => {
+    if (mask[k] && square[k] === bare[k]) {
+      mask[k] = 0;
+      todo.push(k);
+    }
+  };
+  for (let i = 0; i < CELL; i++) {
+    reach(i);
+    reach((CELL - 1) * CELL + i);
+    reach(i * CELL);
+    reach(i * CELL + CELL - 1);
+  }
+  while (todo.length > 0) {
+    const k = todo.pop() as number;
+    const [r, c] = [Math.floor(k / CELL), k % CELL];
+    if (r > 0) reach(k - CELL);
+    if (r < CELL - 1) reach(k + CELL);
+    if (c > 0) reach(k - 1);
+    if (c < CELL - 1) reach(k + 1);
+  }
+  return mask;
+}
+
+/**
+ * A square of `src` (`stride` wide, from (sx, sy)) onto the view at (dx, dy) of its own pixels, cut to the view; with
+ * `mask` (figureMask), only the figure's pixels.
+ */
+function blit(out: Uint32Array, src: Uint32Array, stride: number, sx: number, sy: number, dx: number, dy: number, mask?: Uint8Array): void {
   const c0 = Math.max(0, -dx);
   const c1 = Math.min(CELL, SPAN - dx);
   if (c0 >= c1) return;
   for (let r = Math.max(0, -dy); r < Math.min(CELL, SPAN - dy); r++) {
     const s = (sy + r) * stride + sx;
     const o = (TOP + dy + r) * HI_WIDTH + LEFT + dx;
-    if (!bare) {
+    if (!mask) {
       out.set(src.subarray(s + c0, s + c1), o + c0);
       continue;
     }
-    for (let c = c0; c < c1; c++) if (src[s + c] !== bare[r * CELL + c]) out[o + c] = src[s + c];
+    for (let c = c0; c < c1; c++) if (mask[r * CELL + c]) out[o + c] = src[s + c];
   }
 }
