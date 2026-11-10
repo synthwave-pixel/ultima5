@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { drawCombatMarks } from '../src/game/combat.ts';
+import { charm, drawCombatMarks, placeCombatant } from '../src/game/combat.ts';
 import { turnColour } from '../src/game/frame.ts';
 import { CF } from '../src/game/game.ts';
 import { type Member, Status } from '../src/game/save.ts';
@@ -108,5 +108,24 @@ describe('the turn marker', () => {
     expect(colourFor((m) => Object.assign(m, { status: Status.Poisoned, hp: 5 }))).toBe(Colour.brightGreen);
     expect(colourFor((m) => (m.exp = 100))).toBe(Colour.levelBlue); // a level due
     expect(colourFor((m) => Object.assign(m, { exp: 100, hp: 5 }))).toBe(Colour.levelBlue);
+  });
+
+  it("marks a summoned daemon's turn in white, its creature number no member's (issue #20)", () => {
+    for (const tileSet of ['standard', 'original'] as const) {
+      const { g, p } = newGame();
+      const s = g.s;
+      s.mapId = 0xff;
+      g.options.tileSet = tileSet;
+      Object.assign(g.combat[0], { who: 0, x: 5, y: 7, flags: CF.Player });
+      // As a Summon Daemon scroll places it (magic.ts summonDaemon): a daemon, 0x26, bound to the party's side.
+      const i = placeCombatant(g, 0x26, 0, 6, 7, s.level);
+      charm(g, i, 'bound');
+      Object.assign(s, { combatTurn: i, blink: 0, crosshair: 0 });
+      let drawn: number | undefined;
+      p.draw.marker = (_x, _y, colour) => void (drawn = colour);
+      p.draw.aim = () => {};
+      expect(() => drawCombatMarks(g)).not.toThrow();
+      if (tileSet === 'standard') expect(drawn).toBe(Colour.brightWhite);
+    }
   });
 });
