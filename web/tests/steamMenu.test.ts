@@ -191,6 +191,22 @@ describe('Steam (beta) on the title', () => {
     expect(g.menuShown?.title).toBe('Steam (beta)');
   });
 
+  it('shows the edition and its version above the menu, in the desktop app and on the web', async () => {
+    storage();
+    /** What the title printed, up to Manage Saves (up from Create New Character), which waits for a key. */
+    const printed = async (version?: string): Promise<string> => {
+      const { g, p } = newGame();
+      if (version) g.hooks.version = () => version;
+      p.keys.push(K.Escape, K.Escape, K.Escape, K.Up, Pad.A);
+      await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
+      return p.log;
+    };
+    expect(await printed('1.1.195')).toContain('Ultima V SP 1.1.195');
+    const web = await printed();
+    expect(web).toContain('Ultima V SP');
+    expect(web).not.toContain('Ultima V SP 1.');
+  });
+
   it('stands Launch From Steam in place of the lines that start a game, where Play from Steam is on outside Steam', () => {
     storage();
     const keys = (choices: Partial<SteamChoices>, status: Partial<SteamStatus> = {}): string => {
