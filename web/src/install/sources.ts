@@ -65,7 +65,9 @@ export function androidFolder(): (() => Promise<FoundCopy | null>) | null {
 }
 
 /** What the desktop app found when Steam launched the game (desktop/main.cjs steamLaunch). */
-export type SteamLaunch = { steam: false } | { steam: true; game: 'ok' | 'missing' | 'none'; where: string; account: boolean };
+export type SteamLaunch =
+  | { steam: false }
+  | { steam: true; game: 'ok' | 'missing' | 'none'; where: string; account: boolean; /** On a Steam Deck (SteamDeck=1). */ deck?: boolean };
 
 /** What the desktop app found of Steam and Ultima V in it, launched by Steam or not (desktop/main.cjs steamFind). */
 export interface SteamFind {

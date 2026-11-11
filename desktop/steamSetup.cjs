@@ -61,15 +61,28 @@ const toolManifestVdf = `"manifest"
 
 /**
  * The tool's launcher. Steam runs it with a verb and its own command for the game, which is ignored: run and
- * waitforexitandrun start the engine in its place, and stay until it closes; anything else Steam asks is answered with
- * nothing. Chosen for any game but Ultima V, it says so rather than starting Ultima V. Inside Flatpak Steam's sandbox
- * the host is only reached through flatpak-spawn, which Steam needs leave for; without it, the launcher says what to
- * run. flatpak-spawn starts the engine with the host's environment, so Steam's own is passed on.
+ * waitforexitandrun start the engine in its place, and stay until it closes; anything else Steam asks - it calls with
+ * other verbs, for app 0 among others - is answered quietly with nothing. Asked to start any game but Ultima V, it says
+ * so rather than starting Ultima V. Running as the game's tool keeps the engine inside Steam's launch of it, which is
+ * how Game Mode knows the window is the game's (a launch line put it outside, and Game Mode waited on it for ever).
+ *
+ * Steam's own runtime libraries (LD_LIBRARY_PATH) and its overlay (LD_PRELOAD) are taken away before the engine starts:
+ * with them the AppImage hung before it drew anything, and the overlay crashed Chromium's zygote. The AppImage is
+ * started with --no-sandbox, as its own menu entry starts it: the sandbox's choice is made before the app's own code
+ * runs, so the app can't make it later (main.cjs). The Flatpak keeps its own sandbox.
+ *
+ * Inside Flatpak Steam's sandbox the host is only reached through flatpak-spawn, which Steam needs leave for; without
+ * it, the launcher says what to run. flatpak-spawn starts the engine with the host's environment, so Steam's own is
+ * passed on.
  */
 function launchScript({ flatpak, appImage }) {
-  const target = flatpak ? `flatpak run ${FLATPAK_ID}` : shellQuote(appImage);
+  const target = flatpak ? `flatpak run ${FLATPAK_ID}` : `${shellQuote(appImage)} --no-sandbox`;
   return `#!/bin/sh
 # ${TOOL_NAME}: written by the Ultima V app so that Steam's Ultima V plays with its engine.
+case "$1" in
+  run|waitforexitandrun) ;;
+  *) exit 0 ;;
+esac
 # Steam names the game in SteamAppId, SteamGameId or STEAM_COMPAT_APP_ID, as its version has it.
 case "${APP_ID}" in
   "$SteamAppId"|"$SteamGameId"|"$STEAM_COMPAT_APP_ID") ;;
@@ -79,12 +92,10 @@ case "${APP_ID}" in
     exit 1
     ;;
 esac
-case "$1" in
-  run|waitforexitandrun) ;;
-  *) exit 0 ;;
-esac
 # The engine reads the app id from the environment: say it is Ultima V's, whichever name Steam gave it by.
 export SteamAppId=${APP_ID}
+# Steam's runtime libraries hang the engine, and its overlay crashes it: the engine brings its own libraries.
+unset LD_LIBRARY_PATH LD_PRELOAD
 if [ "$FLATPAK_ID" = "com.valvesoftware.Steam" ]; then
   if ! flatpak-spawn --host true >/dev/null 2>&1; then
     echo "Steam from Flathub needs leave to start Ultima V. Run this once, then restart Steam:" >&2
@@ -131,6 +142,31 @@ function installCompatTool(fs, roots, launcher) {
     written.push(dir);
   }
   return written;
+}
+
+/**
+ * The compatibility tool written again where it is installed, so that a newer app's launcher replaces an older one's
+ * and follows an AppImage that was moved (each start, while the option is on). A Steam folder without it is left alone,
+ * and so is a tool that starts the other build - the Flatpak's, started from the AppImage, or the other way - so that
+ * two builds each set up do not take it from each other. Gives the folders that changed.
+ */
+function refreshCompatTool(fs, roots, launcher) {
+  if (!launcher.flatpak && !launcher.appImage) return [];
+  const changed = [];
+  for (const root of existingRoots(fs, roots)) {
+    const dir = toolDir(root);
+    const now = readOr(fs, join(dir, 'launch.sh'), null);
+    if (now === null || now.includes(`flatpak run ${FLATPAK_ID}`) !== !!launcher.flatpak) continue;
+    const files = [
+      ['compatibilitytool.vdf', compatToolVdf, undefined],
+      ['toolmanifest.vdf', toolManifestVdf, undefined],
+      ['launch.sh', launchScript(launcher), 0o755],
+    ];
+    if (files.every(([name, text]) => readOr(fs, join(dir, name), null) === text)) continue;
+    for (const [name, text, mode] of files) writeIfChanged(fs, join(dir, name), text, mode);
+    changed.push(dir);
+  }
+  return changed;
 }
 
 /** Whether any Steam folder has the compatibility tool. */
@@ -401,6 +437,7 @@ module.exports = {
   OVERRIDE,
   launchLine,
   installCompatTool,
+  refreshCompatTool,
   hasCompatTool,
   removeCompatTool,
   macSetup,

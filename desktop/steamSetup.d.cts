@@ -19,6 +19,7 @@ export function launchLine(build: {
   portable: boolean;
 }): string | null;
 export function installCompatTool(fs: Fs, roots: string[], launcher: { flatpak: boolean; appImage: string | null }): string[];
+export function refreshCompatTool(fs: Fs, roots: string[], launcher: { flatpak: boolean; appImage: string | null }): string[];
 export function hasCompatTool(fs: Fs, roots: string[]): boolean;
 export function removeCompatTool(fs: Fs, roots: string[]): void;
 /** The app's executable, and whether it is a built app (Electron's app.isPackaged): Play is aimed only at such a copy. */

@@ -54,13 +54,16 @@ const steamSetup = require('./steamSetup.cjs');
 const beside = portableData({ env: process.env, appData: app.getPath('appData'), name: app.getName() });
 if (beside) app.setPath('userData', beside);
 
-// Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
-// its seccomp sandbox has killed apps Steam launched. The game is a 2D canvas that needs neither, so under gamescope
-// both are off, and the window is X11 (XWayland), the path gamescope handles best. Desktop Mode is left alone.
+// Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions. The
+// game is a 2D canvas that needs no GPU, so under gamescope it is off, and the window is X11 (XWayland), the path
+// gamescope handles best. Desktop Mode is left alone. The sandbox is not switched here: Chromium has started its
+// zygote, sandboxed or not, before this code runs, and --no-sandbox given now reached only the page processes it
+// started, which then could not reach /dev/shm inside the zygote's sandbox and crashed one after another (a black
+// window on a Steam Deck). Turned off, it is turned off on the command line, as the AppImage's menu entry and the
+// Steam compatibility tool do (steamSetup.cjs).
 const inGamescope = !!process.env.GAMESCOPE_WAYLAND_DISPLAY || /gamescope/i.test(process.env.XDG_CURRENT_DESKTOP ?? '');
 if (inGamescope) {
   app.disableHardwareAcceleration();
-  app.commandLine.appendSwitch('no-sandbox');
   app.commandLine.appendSwitch('ozone-platform', 'x11');
 }
 
@@ -479,7 +482,7 @@ app.whenReady().then(() => {
   ipcMain.on('steam-launch', (event) => {
     event.returnValue =
       launch && String(event.senderFrame?.url ?? '').startsWith('app://')
-        ? { steam: true, game: launch.game, where: launch.where, account: launch.account }
+        ? { steam: true, game: launch.game, where: launch.where, account: launch.account, deck: process.env.SteamDeck === '1' }
         : { steam: false };
   });
   // What Steam has, launched by it or not (preload.cjs u5native.steam.find), and its files for the one-time take.
@@ -623,6 +626,15 @@ app.whenReady().then(() => {
     })
       .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
       .catch(() => {});
+    // Play from Steam's compatibility tool on, on Linux: its launcher brought up to date with this version's.
+    try {
+      if (SYSTEM === 'linux' && readOptions(optionsFile).compatTool) {
+        const changed = steamSetup.refreshCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImage });
+        if (changed.length > 0) console.log('steam compatibility tool updated:', changed.length);
+      }
+    } catch (e) {
+      console.warn('steam compatibility tool not updated:', e);
+    }
     // Play from Steam on, on a Mac: its cache entry given our launch again if Steam has replaced it (or left for a start
     // with Steam closed).
     try {

@@ -79,8 +79,8 @@ window loads it from, and quits by closing that window.
 Linux gets an AppImage and a Flatpak bundle. The AppImage is published as
 `ultima5-sp-<arch>.AppImage` (`appImage.artifactName`), with no version in
 the name: electron-updater then overwrites the file in place, so its path
-never changes and the Steam launch line and compatibility tool can point
-at it. It is the build the docs recommend for Steam on Linux and the Deck;
+never changes and the Steam compatibility tool can point at it (each start
+with the tool on points it at the AppImage started, `refreshCompatTool`). It is the build the docs recommend for Steam on Linux and the Deck;
 the permanent link is `releases/latest/download/ultima5-sp-x86_64.AppImage`.
 The window title is `Ultima V SP <version>`; the page reads the version
 through `u5native.version()`. The Flatpak is built only
@@ -95,8 +95,12 @@ Export and Import, every device, and read access to udev's device
 database, which Chromium needs before it lists a gamepad. In Desktop Mode under Wayland
 the app runs on Wayland itself; under gamescope (Steam's Game Mode)
 `main.cjs` still makes the window X11 (XWayland), and turns off GPU
-acceleration and the Chromium sandbox, which have hung other Electron
-apps there.
+acceleration, which has hung other Electron apps there. The Chromium sandbox
+can only be turned off on the command line: Chromium starts its zygote before
+`main.cjs` runs, and `--no-sandbox` appended later reached only the page
+processes, which then crashed one after another in the zygote's sandbox (a
+black window in Game Mode). The AppImage's menu entry and the Steam
+compatibility tool pass it on the command line.
 
 The site also serves the newest release as a Flatpak repository, at
 `/flatpak/` under the Pages address: the Pages workflow runs

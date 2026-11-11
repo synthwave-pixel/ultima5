@@ -103,6 +103,22 @@ export interface CloudBridge {
 export const STEAM_NOTED_KEY = 'ultima5.steamNoted';
 
 /**
+ * Where this machine keeps that a gamepad has reached the game (ui/gamepad.ts), and so that a Steam Deck's buttons
+ * work here: the note on Steam's controller layout (boot.ts steamNote) is not needed. Kept in local storage, never with
+ * Steam's saves, as it is this machine's.
+ */
+export const PAD_SEEN_KEY = 'ultima5.padSeen';
+
+/** A gamepad has reached the game: kept, where it can be. */
+export function notePadSeen(): void {
+  try {
+    localStorage.setItem(PAD_SEEN_KEY, '1');
+  } catch {
+    // Nowhere to keep it: the note may be said once more.
+  }
+}
+
+/**
  * The two sides of Steam Cloud saves' copy (game.ts CloudSaves): this computer's own saves - local storage itself,
  * whichever store the game keeps in now - and Steam's folder, through the app. Once the switch is recorded, the game
  * keeps from then on in Steam's folder (on) or local storage (off), as the next launch would choose (boot.ts chooseStore).

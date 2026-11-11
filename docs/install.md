@@ -77,8 +77,8 @@ that is on, how it stands. A line that can't be used here is greyed (the
 bar still rests on it, and its note says why). **Paths** shows where the app
 found Steam, Ultima V and its Steam saves, and this copy's launch line; they
 are shown only when you choose it. On a Mac, Play from Steam is the option
-itself. On Windows and Linux it opens its own menu: Launch line, Copy launch
-line and, on Linux, Compat. tool (and on the Flatpak, Get the AppImage).
+itself. On Windows it opens its own menu, Launch line and Copy launch line;
+on Linux, Compat. tool (and on the Flatpak, Get the AppImage).
 
 While a Play from Steam option is on, the title screen expects the game to
 be started from Steam: run outside Steam, it shows **Launch From Steam**,
@@ -91,7 +91,7 @@ The options differ by system:
 | System | Option | On | Off |
 | --- | --- | --- | --- |
 | Windows | Play from Steam → Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
-| Linux | Play from Steam → Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
+| Linux | Play from Steam → Launch line, kept from 1.1.196–1.1.198 | No longer offered | Tells you to clear the line in Steam |
 | Linux | Play from Steam → Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
 | macOS | Play from Steam | Warns that it closes Steam and asks you to confirm, then edits Steam's settings | Asks to quit Steam if it is running, then puts Steam's settings back |
 | All | Cloud Saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
@@ -103,14 +103,26 @@ The options differ by system:
   place for Steam to point at, so it has no line.
 - **Linux and SteamOS**: the AppImage is the build to use (see below); the
   Flatpak works less well with Steam, and its Steam (beta) menu says so and
-  links the AppImage's download. The two options are separate on purpose,
-  since which works best on a Deck is what the beta is finding out: either,
-  both or neither may be on. Compat. tool installs a compatibility tool
+  links the AppImage's download. Compat. tool installs a compatibility tool
   named Ultima V SP. Restart Steam, then in Ultima V → ⚙ → Properties →
-  Compatibility, choose it: Steam downloads the game if it has not yet, and
-  Play starts this engine. Launch line is the other way: copy the line and
-  paste it as on Windows. If both are on, Steam runs the launch line and the
-  tool goes unused, and the tool's note says so. Steam installed as a Flatpak
+  Compatibility, choose it, and leave Launch Options empty: Steam downloads
+  the game if it has not yet, and Play starts this engine, in Desktop Mode
+  and in a Steam Deck's Game Mode. The tool runs the engine as Steam's own
+  launch of the game, which is how Game Mode knows its window is the game's,
+  and starts it without Steam's runtime libraries and overlay, which hung
+  and crashed it. Each start of the app brings the tool up to date. Linux
+  has no launch line any more: pasted into Launch Options, it ran the engine
+  outside Steam's launch, and Game Mode never showed its window. A line
+  turned on in 1.1.196–1.1.198 is still listed, to be turned off; clear
+  Launch Options in Steam too.
+
+  On a Steam Deck, Steam's own controller layout for Ultima V is keyboard
+  and mouse, made for the DOS game, and the buttons then do nothing here:
+  press the Steam button, open the controller settings and choose the
+  Gamepad template, once. The game says so the first time Steam starts it
+  on a Deck, until a gamepad has reached it.
+
+  Steam installed as a Flatpak
   cannot run the game's Flatpak until it is allowed to, with one line in a
   terminal, after which Steam needs a restart:
 
@@ -133,13 +145,13 @@ The options differ by system:
   updates Ultima V, so this is rarely needed.
 
 Steam names the game "Ultima V" wherever the app cannot rename it, which is
-the Windows and Linux launch line. The app says which edition it is itself:
+the Windows launch line. The app says which edition it is itself:
 the window title and the title screen show **Ultima V SP** and its version,
 and Settings ends with the same, greyed. The Mac launch entry and the Linux
 compatibility tool are named Ultima V SP in Steam.
 
-**Checking the launch line.** Where Play uses a pasted line (Windows, and
-Linux's Launch line), the menu reads back what Steam has saved for Ultima V
+**Checking the launch line.** Where Play uses a pasted line (Windows), the
+menu reads back what Steam has saved for Ultima V
 (it only ever reads that file) and, in the option's note, says one of: found and right; missing;
 out of date (it starts an engine somewhere else, such as an older AppImage
 name or a moved app); pasted twice; or not seen yet. Steam writes the line
@@ -187,9 +199,8 @@ say a newer release is out.
 ### The AppImage, for Steam on Linux and the Deck
 
 For Steam on a Steam Deck or any Linux, use the AppImage. It updates itself
-quietly, it reaches libraries on an SD card, and the launch line and
-compatibility tool point straight at its file, which keeps one name and
-place across updates. The Flatpak stays the easy store install for those who
+quietly, it reaches libraries on an SD card, and the compatibility tool
+points straight at its file, which keeps one name and place across updates. The Flatpak stays the easy store install for those who
 prefer it. Against the AppImage: you download it in Desktop Mode, mark it
 executable and add it to the application menu by hand.
 
@@ -198,15 +209,15 @@ Download
 (this link always gives the newest), save it somewhere permanent, such as
 `~/Applications`, and make it executable (right-click → Properties →
 Permissions → Is executable, or `chmod +x`). Run it, open Steam (beta) on
-the title screen and turn on a Play option. Move the file afterwards and a
-launch line or tool pointing at it goes stale.
+the title screen and turn on Play from Steam → Compat. tool. Move the file
+afterwards and start it once from its new place: each start points the tool
+at the file that was started.
 
 The file has no version in its name, so an update replaces it in place and
 its path never changes. If you already use the AppImage under its old,
 versioned name, your next update brings the new name by itself (the old file
-is removed); after that every update overwrites it in place. A launch line
-that names the old file is then out of date: the menu says so, and Copy
-launch line gives the new one.
+is removed); after that every update overwrites it in place, and the
+compatibility tool follows it.
 
 ## Desktop app, and the Steam Deck
 
@@ -278,8 +289,7 @@ installed when the game quits.
   artwork already there), which Steam shows once it restarts. The app sees the controller as a
   gamepad and switches to controller mode on the first press, and always
   starts full screen when Steam launches it. In Game Mode it also turns off GPU
-  acceleration and the browser sandbox, which have hung other Electron
-  apps under gamescope. The `.flatpak` bundle on the Releases page is the
+  acceleration, which has hung other Electron apps under gamescope. The `.flatpak` bundle on the Releases page is the
   same build for an offline install (`flatpak install --user <file>`,
   which then never updates). The AppImage
   (`ultima5-sp-x86_64.AppImage`) suits a Linux without Flatpak, and is the

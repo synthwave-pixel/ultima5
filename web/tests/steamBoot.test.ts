@@ -393,3 +393,64 @@ describe('a launch from Steam', () => {
     expect(steamNote()).toBeNull();
   });
 });
+
+describe("a Steam Deck's controller, under Steam's keyboard layout", () => {
+  const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
+  let was: PropertyDescriptor | undefined;
+  beforeEach(() => {
+    was = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { value: memory(), configurable: true });
+    vi.resetModules();
+  });
+  afterEach(() => {
+    delete (globalThis as { u5native?: unknown }).u5native;
+    if (was) Object.defineProperty(globalThis, 'localStorage', was);
+    else delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+  const deck: SteamLaunch = { steam: true, game: 'ok', where: 'x', account: true, deck: true };
+
+  it('says once, on a Deck that Steam started and no gamepad has yet reached, which layout to choose', async () => {
+    bridge(deck, {}, undefined, { account: 'me' });
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    const note = steamNote();
+    expect(note?.text).toBe(PAD_NOTE);
+    note?.seen();
+    expect(steamNote()).toBeNull();
+    vi.resetModules();
+    const again = await import('../src/boot.ts');
+    again.chooseStore();
+    expect(again.steamNote()).toBeNull();
+  });
+
+  it('says nothing once a gamepad has reached the game, off a Deck, or outside Steam', async () => {
+    const { PAD_SEEN_KEY, notePadSeen } = await import('../src/game/keyStore.ts');
+    notePadSeen();
+    expect(localStorage.getItem(PAD_SEEN_KEY)).not.toBeNull();
+    bridge(deck, {}, undefined, { account: 'me' });
+    let boot = await import('../src/boot.ts');
+    boot.chooseStore();
+    expect(boot.steamNote()).toBeNull();
+    for (const launch of [{ ...deck, deck: false }, { steam: false } as SteamLaunch]) {
+      localStorage.clear();
+      vi.resetModules();
+      bridge(launch, {}, undefined, { account: 'me' });
+      boot = await import('../src/boot.ts');
+      boot.chooseStore();
+      expect(boot.steamNote()).toBeNull();
+    }
+  });
+
+  it("lets the Cloud saves note go first, and says the controller's after", async () => {
+    bridge(deck, {}, undefined, ON);
+    const { chooseStore, steamNote } = await import('../src/boot.ts');
+    chooseStore();
+    const first = steamNote();
+    expect(first?.text).toMatch(/^Saves made while playing from Steam/);
+    first?.seen();
+    vi.resetModules();
+    const again = await import('../src/boot.ts');
+    again.chooseStore();
+    expect(again.steamNote()?.text).toBe(PAD_NOTE);
+  });
+});

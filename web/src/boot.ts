@@ -11,7 +11,7 @@ import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
 import { noteFilesFrom, steamFound, steamLaunch, steamNative } from './install/sources.ts';
-import { STEAM_NOTED_KEY, steamStore, useStore } from './game/keyStore.ts';
+import { PAD_SEEN_KEY, STEAM_NOTED_KEY, steamStore, useStore } from './game/keyStore.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
 let told = false;
@@ -27,6 +27,13 @@ let unreachable = false;
 let cloudAccount: string | null = null;
 const UNREACHABLE = "Steam's saves can't be reached; using this computer's saves.";
 const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turning Steam Cloud saves off copies them back.';
+/**
+ * A Steam Deck's buttons under Steam's own layout for Ultima V - keyboard and mouse, as the DOS game wants - reach the
+ * engine as keys it does not use, and no gamepad at all. Said once, on a Deck that Steam started, until a gamepad has
+ * reached the game here.
+ */
+const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
+const PAD_NOTED_KEY = 'ultima5.deckPadNoted';
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
 async function installedCopy(): Promise<{ files: GameFiles | null; notice?: string }> {
@@ -103,15 +110,36 @@ function noteFor(): { text: string; seen: () => void } | null {
       },
     };
   }
+  return cloudNote() ?? padNote();
+}
+
+/** Said once, the first time on this machine that Cloud saves is on for the account. */
+function cloudNote(): { text: string; seen: () => void } | null {
   if (cloudAccount === null) return null;
-  const key = `${STEAM_NOTED_KEY}.${cloudAccount}`;
+  return once(`${STEAM_NOTED_KEY}.${cloudAccount}`, FIRST_LAUNCH);
+}
+
+/** Said once, on a Steam Deck that Steam started, where no gamepad has reached the game yet. */
+function padNote(): { text: string; seen: () => void } | null {
+  const launch = steamLaunch();
+  if (!launch.steam || launch.deck !== true) return null;
+  try {
+    if (localStorage.getItem(PAD_SEEN_KEY) !== null) return null;
+  } catch {
+    return null;
+  }
+  return once(PAD_NOTED_KEY, PAD_NOTE);
+}
+
+/** `text`, unless the machine keeps under `key` that it was said; seen, it is kept so. */
+function once(key: string, text: string): { text: string; seen: () => void } | null {
   try {
     if (localStorage.getItem(key) !== null) return null;
   } catch {
     return null;
   }
   return {
-    text: FIRST_LAUNCH,
+    text,
     seen: () => {
       told = true;
       try {

@@ -10,6 +10,7 @@ import { parseVdf } from '../../desktop/steam.cjs';
 import {
   installCompatTool,
   launchLine,
+  refreshCompatTool,
   macPatched,
   macReapply,
   macStatus,
@@ -200,7 +201,7 @@ describe('the Linux compatibility tool', () => {
     expect(r.stderr).toContain('only plays Ultima V');
   });
 
-  it('runs the AppImage file itself for run and waitforexitandrun, without Steam arguments, and does nothing else', () => {
+  it('runs the AppImage file itself for run and waitforexitandrun, sandbox off, without Steam arguments, and does nothing else', () => {
     const home = temp();
     const link = fakeProgram(join(home, 'Apps', 'ultima5-sp-x86_64.AppImage'));
     const { written } = setUp({ flatpak: false, appImage: link });
@@ -208,11 +209,84 @@ describe('the Linux compatibility tool', () => {
     for (const verb of ['run', 'waitforexitandrun']) {
       const r = run(script, verb, { SteamAppId: '3067520' });
       expect(r.status).toBe(0);
-      expect(r.stdout).toBe('ran 3067520: \n');
+      // --no-sandbox on the command line, as the AppImage's own menu entry starts it: given later, by the app, it
+      // reaches the page processes but not the zygote that starts them, and on a Steam Deck in Game Mode every one crashed.
+      expect(r.stdout).toBe('ran 3067520: --no-sandbox\n');
     }
     const other = run(script, 'getcompatpath', { SteamAppId: '3067520' });
     expect(other.status).toBe(0);
     expect(other.stdout).toBe('');
+  });
+
+  it("starts the engine without Steam's runtime libraries or its overlay, which hung and crashed it", () => {
+    const home = temp();
+    const app = join(home, 'Apps', 'ultima5-sp-x86_64.AppImage');
+    fs.mkdirSync(join(app, '..'), { recursive: true });
+    fs.writeFileSync(app, '#!/bin/sh\necho "lib=${LD_LIBRARY_PATH-unset} preload=${LD_PRELOAD-unset}"\n', { mode: 0o755 });
+    const { written } = setUp({ flatpak: false, appImage: app });
+    const r = run(join(written[0], 'launch.sh'), 'waitforexitandrun', {
+      SteamAppId: '3067520',
+      LD_LIBRARY_PATH: '/steam/ubuntu12_32/steam-runtime/pinned_libs_64',
+      LD_PRELOAD: '/steam/ubuntu12_64/gameoverlayrenderer.so',
+    });
+    expect(r.stdout).toBe('lib=unset preload=unset\n');
+  });
+
+  it("answers Steam's own calls quietly, whatever game they name - app 0 among them - and refuses only a game it would start", () => {
+    const { written } = setUp({ flatpak: false, appImage: fakeProgram(join(temp(), 'ultima5-sp-x86_64.AppImage')) });
+    const script = join(written[0], 'launch.sh');
+    for (const env of [{ STEAM_COMPAT_APP_ID: '0' }, { SteamAppId: '22320' }, {}]) {
+      const r = run(script, 'getcompatpath', env);
+      expect(r.status).toBe(0);
+      expect(r.stdout + r.stderr).toBe('');
+    }
+    expect(run(script, 'run', { STEAM_COMPAT_APP_ID: '0' }).stderr).toContain('only plays Ultima V');
+  });
+
+  it('runs the Flatpak by its id, with no sandbox switch (the Flatpak keeps its own)', () => {
+    const { written, home } = setUp({ flatpak: true, appImage: null });
+    const bin = join(home, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(join(bin, 'flatpak'), '#!/bin/sh\necho "flatpak $*"\n', { mode: 0o755 });
+    const r = run(join(written[0], 'launch.sh'), 'run', { SteamAppId: '3067520', PATH: `${bin}:/usr/bin:/bin` });
+    expect(r.stdout).toBe('flatpak run com.synthwavepixel.ultima5\n');
+  });
+
+  it('is brought up to date where it is installed, and is not put where it is not', () => {
+    const app = fakeProgram(join(temp(), 'ultima5-sp-x86_64.AppImage'));
+    const { written, native } = setUp({ flatpak: false, appImage: app });
+    const script = join(written[0], 'launch.sh');
+    fs.writeFileSync(script, '#!/bin/sh\nexec /old/engine\n', { mode: 0o755 });
+    expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: app })).toEqual([
+      join(native, 'compatibilitytools.d', 'ultima5_sp'),
+    ]);
+    expect(run(script, 'run', { SteamAppId: '3067520' }).stdout).toBe('ran 3067520: --no-sandbox\n');
+    // A second start changes nothing.
+    expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: app })).toEqual([]);
+    const bare = temp();
+    expect(refreshCompatTool(fs, [bare], { flatpak: false, appImage: app })).toEqual([]);
+    expect(fs.existsSync(join(bare, 'compatibilitytools.d'))).toBe(false);
+  });
+
+  it('follows an AppImage that moved, but leaves a tool that starts the other build to it', () => {
+    const program = (dir: string, says: string): string => {
+      const path = join(temp(), dir, 'ultima5-sp-x86_64.AppImage');
+      fs.mkdirSync(join(path, '..'), { recursive: true });
+      fs.writeFileSync(path, `#!/bin/sh\necho ${says}\n`, { mode: 0o755 });
+      return path;
+    };
+    const before = program('old', 'before');
+    const after = program('new', 'after');
+    const { written, native } = setUp({ flatpak: false, appImage: before });
+    const script = join(written[0], 'launch.sh');
+    const ran = () => run(script, 'run', { SteamAppId: '3067520' }).stdout;
+    expect(refreshCompatTool(fs, [native], { flatpak: true, appImage: null })).toEqual([]);
+    expect(ran()).toBe('before\n');
+    expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: after })).toHaveLength(1);
+    expect(ran()).toBe('after\n');
+    const flat = setUp({ flatpak: true, appImage: null });
+    expect(refreshCompatTool(fs, [flat.native], { flatpak: false, appImage: after })).toEqual([]);
+    expect(fs.readFileSync(join(flat.written[0], 'launch.sh'), 'utf8')).toContain('flatpak run com.synthwavepixel.ultima5');
   });
 
   it("exports Ultima V's app id before starting the engine, so the engine knows it is Steam's game", () => {
@@ -221,7 +295,7 @@ describe('the Linux compatibility tool', () => {
     expect(script).toContain('export SteamAppId=3067520');
     // Steam may name the game only in SteamGameId; the engine still gets SteamAppId.
     const r = run(join(written[0], 'launch.sh'), 'run', { SteamGameId: '3067520' });
-    expect(r.stdout).toBe('ran 3067520: \n');
+    expect(r.stdout).toBe('ran 3067520: --no-sandbox\n');
   });
 
   it('takes the app id from whichever of its names Steam gives', () => {

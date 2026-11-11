@@ -313,6 +313,9 @@ describe('the Steam (beta) menu', () => {
     );
     const both = await notes({ system: 'linux' }, { playLine: true, compatTool: true }, ['Play from Steam', 'Compat. tool']);
     expect(both).toContain(sq('Unused: the launch line is on too, and Steam runs that.'));
+    // A Linux launch line, kept from an earlier version, is said to fail in Game Mode, at the top and in its menu.
+    const kept = await notes({ system: 'linux' }, { playLine: true }, ['Play from Steam', 'Launch line']);
+    expect(kept).toContain(sq('Fails in Game Mode. Turn it off, clear Launch Options, and use Compat. tool.'));
   });
 
   it("opens Play from Steam's own menu on Windows and Linux, every option off until turned on", async () => {
@@ -324,7 +327,20 @@ describe('the Steam (beta) menu', () => {
     const windows = await lines('windows');
     expect(windows.labels).toEqual(['Back', 'Launch line: Off', 'Copy launch line']);
     expect(choosable(windows)).toEqual(['Back', 'Launch line: Off']);
-    expect((await lines('linux')).labels).toEqual(['Back', 'Launch line: Off', 'Copy launch line', 'Compat. tool: Off']);
+    // On Linux the compatibility tool alone: a launch line puts the engine outside Steam's launch, and Game Mode never
+    // shows its window.
+    expect((await lines('linux')).labels).toEqual(['Back', 'Compat. tool: Off']);
+  });
+
+  it('offers a Linux launch line from an earlier version only to be turned off, with no Copy', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'linux', line: 'x %command%' }, { playLine: true });
+    g.hooks.steam = f.hook;
+    const { shown } = await drive(g, p, ['Play from Steam', 'Launch line: On']);
+    const menus = shown.filter((m) => m.title === 'Play from Steam');
+    expect(menus[0].labels).toEqual(['Back', 'Launch line: On', 'Compat. tool: Off']);
+    expect(f.calls.filter((c) => c !== 'lineState')).toEqual(['playLine off']);
+    expect(menus.at(-1)!.labels).toEqual(['Back', 'Compat. tool: Off']);
   });
 
   it('names each option in full, in a note that fits at the foot', async () => {
@@ -335,9 +351,8 @@ describe('the Steam (beta) menu', () => {
       return (await drive(g, p, script)).said;
     };
     const linux = await notes('linux', {}, ['Play from Steam', 'Compat. tool', 'Back', 'Paths']);
-    expect(linux).toContain(sq("Steam's Play starts this engine: a launch line or a compat. tool."));
-    expect(linux).toContain(sq('Steam starts this engine by a line you paste into Launch Options.'));
-    expect(linux).toContain(sq('Turn the launch line on first.'));
+    expect(linux).toContain(sq("Steam's Play starts this engine, by a compat. tool. Choose to set it up."));
+    expect(linux).not.toContain(sq('Steam starts this engine by a line you paste into Launch Options.'));
     expect(linux).toContain(sq('A compatibility tool, Ultima V SP, chosen in Steam.'));
     expect(linux).toContain(sq('Start Ultima V from Steam to change this.'));
     expect(linux).toContain(sq('Where the app found Steam, Ultima V and its Steam saves.'));

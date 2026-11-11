@@ -5,8 +5,9 @@
  * time - Back, Play from Steam, Cloud Saves, Copy report, Report an issue and Paths - each saying at the foot, as the
  * bar is on it, what it does and how it stands; one that can't be changed here is grey and says why. Every option is
  * off until turned on and undone when turned off. Play from Steam is the option itself on a Mac (Steam's own settings
- * changed); on Windows and Linux it opens its own menu (the launch line to paste, its Copy, the compatibility tool on
- * Linux). Cloud Saves (cloudSwitch.ts) is switched only in a Steam launch. Paths shows where Steam, the game and its
+ * changed); on Windows and Linux it opens its own menu: on Windows the launch line to paste and its Copy, on Linux the
+ * compatibility tool (a launch line put the engine outside Steam's launch of the game, where a Steam Deck's Game Mode
+ * never showed its window, so on Linux one is offered only to be turned off). Cloud Saves (cloudSwitch.ts) is switched only in a Steam launch. Paths shows where Steam, the game and its
  * Steam saves were found, only when chosen. Turning an option on or off is the app's to do
  * (desktop/steamOptions.cjs switchOption), and the menu is drawn again from what then stands.
  */
@@ -28,6 +29,8 @@ const MAC_WARNING =
   "game; then this app puts it back. Turning this off puts Steam's settings back as they were.";
 // Turning a Mac's Play off quits Steam, which in a Steam launch would end this game and cut short its Cloud sync.
 const MAC_QUIT_FIRST = 'Quit the game, then turn this off from outside Steam.';
+/** A Linux launch line, kept from an earlier version: what to do instead. */
+const LINUX_LINE = 'Fails in Game Mode. Turn it off, clear Launch Options, and use Compat. tool.';
 const CLOUD_STAYS =
   'Saves made from Steam stay with Steam until Cloud saves is turned off from a game Steam started. Turn this off anyway?';
 // Play from Steam's note on a Mac while it is on: Steam refreshing Ultima V's settings undoes it, until the app puts it back.
@@ -178,9 +181,11 @@ function playLine(
   const note = !on
     ? s.system === 'windows'
       ? "Steam's Play starts this engine, by a line you paste. Choose to set it up."
-      : "Steam's Play starts this engine: a launch line or a compat. tool."
+      : "Steam's Play starts this engine, by a compat. tool. Choose to set it up."
     : o.playLine
-      ? lineSays(s, check)
+      ? s.system === 'linux'
+        ? LINUX_LINE
+        : lineSays(s, check)
       : 'Compat. tool on: in Steam, choose Ultima V SP under Compatibility.';
   // Without Steam there is nothing to set up, but what is on may be turned off, and the Flatpak's AppImage is offered.
   const blocked = !on && noSteam !== null && !s.flatpak;
@@ -204,7 +209,10 @@ const lineSays = (s: SteamStatus, check: LineCheck | null): string =>
       ? "Steam's launch line can't be read here."
       : LINE_SAYS[check.state];
 
-/** Play from Steam's own menu on Windows and Linux: the launch line, its Copy, and on Linux the compatibility tool. */
+/**
+ * Play from Steam's own menu: on Windows the launch line and its Copy; on Linux the compatibility tool, and the launch
+ * line only while one is on from an earlier version, to be turned off.
+ */
 function playMenu(
   g: Game,
   steam: SteamHook,
@@ -231,18 +239,22 @@ function playMenu(
       },
     });
   }
-  out.push(
-    option(
-      'Launch line',
-      o.playLine,
-      o.playLine ? lineSays(s, check) : 'Steam starts this engine by a line you paste into Launch Options.',
-      noSteam ?? cannot,
-      toggler(g, steam, s, o, 'playLine', say),
-    ),
-    o.playLine
-      ? { label: 'Copy launch line', note: "The line to paste into Ultima V's Launch Options in Steam.", act: () => copyLine(steam, say) }
-      : { label: 'Copy launch line', enabled: false, rest: true, note: 'Turn the launch line on first.' },
-  );
+  if (s.system !== 'linux') {
+    out.push(
+      option(
+        'Launch line',
+        o.playLine,
+        o.playLine ? lineSays(s, check) : 'Steam starts this engine by a line you paste into Launch Options.',
+        noSteam ?? cannot,
+        toggler(g, steam, s, o, 'playLine', say),
+      ),
+      o.playLine
+        ? { label: 'Copy launch line', note: "The line to paste into Ultima V's Launch Options in Steam.", act: () => copyLine(steam, say) }
+        : { label: 'Copy launch line', enabled: false, rest: true, note: 'Turn the launch line on first.' },
+    );
+  } else if (o.playLine) {
+    out.push(option('Launch line', true, LINUX_LINE, null, toggler(g, steam, s, o, 'playLine', say)));
+  }
   if (s.system === 'linux') {
     out.push(
       option(

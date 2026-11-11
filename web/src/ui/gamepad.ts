@@ -14,6 +14,7 @@
  */
 
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
+import { notePadSeen } from '../game/keyStore.ts';
 import { HOLD_FIRST_MS, INPUT_PACES, type Holds } from './holds.ts';
 import { axesOf, connectedPads, firstPad } from './pads.ts';
 const DEADZONE = 0.5;
@@ -67,8 +68,12 @@ export class GamepadInput {
     /** The keyboard's holds: their pace, whether the game waits for a key, and the holds broken. */
     private readonly holds: Pick<Holds, 'pace' | 'breaks' | 'waiting'> = { pace: INPUT_PACES.medium, breaks: 0, waiting: () => true },
   ) {
-    // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh.
-    globalThis.addEventListener?.('gamepadconnected', () => this.wake());
+    // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh, and
+    // kept as seen, so a Steam Deck's note on Steam's controller layout is not said again (boot.ts steamNote).
+    globalThis.addEventListener?.('gamepadconnected', () => {
+      notePadSeen();
+      this.wake();
+    });
     this.wake();
   }
 
