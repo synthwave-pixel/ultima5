@@ -66,9 +66,10 @@ folder picker.
 If you own Ultima V on Steam, the desktop app can be what Steam's Play
 starts, in place of the 1988 DOS game. This is a beta: it lives in the
 title screen's **Steam (beta)** entry (desktop builds only; the web and
-Android have none), and every option in it is **off until you turn it on**.
-With all of them off the app writes nothing for Ultima V in Steam's folders and keeps
-its saves in its own store. Turning an option off undoes it.
+Android have none). Play from Steam is **off until you turn it on**, and
+until it is on the app writes nothing for Ultima V in Steam's folders and keeps
+its saves in its own store. Cloud Saves comes on by itself the first time Steam
+starts the game (see Cloud saves below). Turning an option off undoes it.
 
 The menu always shows the same six lines: Back, **Play from Steam**,
 **Cloud Saves**, **Copy report**, **Report an issue** and **Paths**. The
@@ -159,7 +160,14 @@ when it closes, so one pasted moments ago may not be there yet, and the menu
 says "not seen yet" rather than "wrong". Each comes with what to do, and
 Copy launch line. In a game Steam started, the line is known to work.
 
-**Cloud saves.** The option can be switched only in a game Steam
+**Cloud saves.** It comes on by itself at the title the first time Steam
+starts the game for a Steam account, on a computer first set up for Steam with 1.1.203 or
+later: this computer's saves are copied into Steam's folder, and a box says
+so. Where a character was played both here and in Steam apart, the box
+offers it instead: Turn on keeps the newer save of each as the last save and
+the other as an earlier save, so nothing is lost; Leave off copies nothing.
+Turned off, here or in the menu, it stays off. A computer set up before
+then keeps Cloud saves as it was. The option can be switched only in a game Steam
 started (Steam's folder is known only then), with Ultima V's folder present and
 the Steam account known; on a Mac it is turned on only with Play from
 Steam on, but can always be turned off. Turning it

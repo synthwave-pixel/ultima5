@@ -804,6 +804,9 @@ export class Intro {
     return keys[i] === 'L' || (keys[i] === 'J' && this.noSave);
   }
 
+  /** Whether Cloud saves on by default has been looked at this launch (newsBox). */
+  private cloudAsked = false;
+
   /** Whether a newer version waits to be told of (updateBox). */
   private updateDue(): boolean {
     const offer = this.g.hooks.update?.offer();
@@ -817,6 +820,15 @@ export class Intro {
    */
   private async newsBox(): Promise<boolean> {
     const g = this.g;
+    // Cloud saves on by default, first: where the saves are kept, before anything is said of them.
+    if (!this.cloudAsked && g.hooks.steam?.launched()) {
+      this.cloudAsked = true;
+      const { cloudByDefault } = await import('./cloudSwitch.ts');
+      if (await cloudByDefault(g)) {
+        this.noSave = localSave.read() === null;
+        return true;
+      }
+    }
     const update = g.hooks.update;
     const note = g.hooks.note?.();
     if (note) {

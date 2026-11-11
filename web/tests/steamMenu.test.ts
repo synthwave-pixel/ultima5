@@ -7,6 +7,7 @@ import { Intro } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { cloudSaves, kept, useStore } from '../src/game/keyStore.ts';
 import { settingLines } from '../src/game/menu.ts';
+import { cloudByDefault } from '../src/game/cloudSwitch.ts';
 import { APPIMAGE_PAGE, ISSUES, steamMenu } from '../src/game/steamMenu.ts';
 import { localSave, saveKeys, serialize, type SaveData } from '../src/game/storage.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
@@ -32,7 +33,15 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
     line: '"~/ultima5-sp-x86_64.AppImage" %command%',
     ...status,
   };
-  const o: SteamChoices = { playLine: false, compatTool: false, macPlay: false, cloud: false, cloudAny: false, ...choices };
+  const o: SteamChoices = {
+    playLine: false,
+    compatTool: false,
+    macPlay: false,
+    cloud: false,
+    cloudAny: false,
+    cloudOffered: false,
+    ...choices,
+  };
   const calls: string[] = [];
   const own = new Map<string, string>();
   const steam = new Map<string, string>();
@@ -189,6 +198,18 @@ describe('Steam (beta) on the title', () => {
     await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
     expect(p.rows.map((r) => r.join('')).join('\n')).toContain('Steam (beta)');
     expect(g.menuShown?.title).toBe('Steam (beta)');
+  });
+
+  it("turns Cloud saves on at the title of an account's first Steam launch, and says so in a box", async () => {
+    storage();
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    g.hooks.steam = f.hook;
+    // Through the intro to the title, its box closed, then on to a menu that waits for a key (as the edition's test).
+    p.keys.push(K.Escape, K.Escape, K.Escape, K.Escape, K.Up, Pad.A);
+    await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
+    expect(sq(p.log)).toContain(sq('Steam Cloud saves is on.'));
+    expect(f.recorded).toEqual([[true, undefined]]);
   });
 
   it('shows the edition and its version above the menu, in the desktop app and on the web', async () => {
@@ -716,6 +737,125 @@ describe('Steam Cloud saves in the menu', () => {
     const { said } = await drive(g, p, ['Cloud Saves: Off']);
     expect(said).toContain(sq("Steam's saves can't be reached"));
     expect(f.recorded).toEqual([[true, 'unreadable']]);
+  });
+});
+
+describe('Steam Cloud saves on by default', () => {
+  afterEach(() => useStore());
+
+  /** The title's turn of Cloud saves on by default, each box answered by `script` as drive does; whether it showed one. */
+  async function atTitle(g: Game, p: FakePlatform, script: string[] = []) {
+    g.options.input = 'controller';
+    const todo = [...script];
+    const shown: Shown[] = [];
+    p.next = () => {
+      const m = g.menuShown;
+      if (!m) return Pad.A;
+      const now = { title: m.title, labels: [...m.labels], enabled: [...m.enabled] };
+      if (JSON.stringify(shown.at(-1)) !== JSON.stringify(now)) shown.push(now);
+      const want = todo[0] ?? 'OK';
+      if (!m.labels[m.at].startsWith(want)) return K.Down;
+      if (todo.length > 0) todo.shift();
+      return Pad.A;
+    };
+    const showed = await cloudByDefault(g);
+    return { showed, shown, said: sq(p.log) };
+  }
+
+  it("turns it on at an account's first Steam launch, copying this computer's saves in, and says so", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    g.hooks.steam = f.hook;
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000)]));
+    const { showed, shown, said } = await atTitle(g, p);
+    expect(showed).toBe(true);
+    expect(shown.map((s) => s.title)).toEqual(['Steam Cloud']);
+    expect(said).toContain(sq('Steam Cloud saves is on.'));
+    expect(f.steam.get(saveKeys('a')!.last)).toBe(f.own.get(saveKeys('a')!.last));
+    expect(f.recorded).toEqual([[true, undefined]]);
+    expect(f.state.used).toBe(true);
+  });
+
+  it('does nothing outside a Steam launch, once chosen, on a machine set up before it was the default, or twice', async () => {
+    for (const [status, choices] of [
+      [{ launch: false }, { cloudOffered: true }],
+      [{ launch: true }, { cloudOffered: false }],
+    ] as const) {
+      const { g, p } = newGame();
+      const f = fake(status, choices);
+      g.hooks.steam = f.hook;
+      expect((await atTitle(g, p)).showed).toBe(false);
+      expect(f.recorded).toEqual([]);
+    }
+    // Asked once a launch: where the app would not keep the switch, the title does not ask again.
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    f.state.unkept = "The app's settings couldn't be saved, so this can't change now.";
+    g.hooks.steam = f.hook;
+    expect((await atTitle(g, p)).showed).toBe(true);
+    expect((await atTitle(g, p)).showed).toBe(false);
+    expect(f.recorded).toHaveLength(1);
+  });
+
+  it("waits where Steam's folder can't be read, recording nothing", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    f.state.steamReadable = false;
+    g.hooks.steam = f.hook;
+    expect((await atTitle(g, p)).showed).toBe(false);
+    expect(f.recorded).toEqual([]);
+  });
+
+  /** Iolo played on both sides apart: level 3 here at 2000, level 5 with Steam at 3000, from the same first save. */
+  const clashing = (g: Game, f: ReturnType<typeof fake>): void => {
+    const first = save(g, 'Iolo', 1, 1000);
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 2000), first]));
+    fill(f.steam, character('a', [save(g, 'Iolo', 5, 3000), first]));
+  };
+
+  it('offers to turn it on where a character was played on both sides apart, keeping the newer and the other as an earlier save', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const here = f.own.get(saveKeys('a')!.last)!;
+    const there = f.steam.get(saveKeys('a')!.last)!;
+    const { shown, said } = await atTitle(g, p, ['Turn on', 'OK']);
+    expect(shown[0].title).toBe('Steam Cloud');
+    expect(shown[0].labels.join(' ')).toContain('Iolo');
+    expect(said).toContain(sq('The newer save of each is kept, and the other as an earlier save.'));
+    // Steam's (level 5, newer) stays the last save; this computer's is kept beside it, as an earlier one.
+    expect(f.steam.get(saveKeys('a')!.last)).toBe(there);
+    expect([...f.steam.values()]).toContain(here);
+    expect(f.recorded).toEqual([[true, undefined]]);
+    expect(said).toContain(sq('Steam Cloud saves is on.'));
+  });
+
+  it("keeps this computer's version as the last save where it is the newer", async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    g.hooks.steam = f.hook;
+    const first = save(g, 'Iolo', 1, 1000);
+    fill(f.own, character('a', [save(g, 'Iolo', 3, 4000), first]));
+    fill(f.steam, character('a', [save(g, 'Iolo', 5, 3000), first]));
+    const here = f.own.get(saveKeys('a')!.last)!;
+    const there = f.steam.get(saveKeys('a')!.last)!;
+    await atTitle(g, p, ['Turn on', 'OK']);
+    expect(f.steam.get(saveKeys('a')!.last)).toBe(here);
+    expect([...f.steam.values()]).toContain(there);
+  });
+
+  it('leaves it off on Leave off, copying nothing, and records that, so it is not offered again', async () => {
+    const { g, p } = newGame();
+    const f = fake({ launch: true }, { cloudOffered: true });
+    g.hooks.steam = f.hook;
+    clashing(g, f);
+    const steam = new Map(f.steam);
+    const { said } = await atTitle(g, p, ['Leave off', 'OK']);
+    expect(f.steam).toEqual(steam);
+    expect(f.recorded).toEqual([[false, undefined]]);
+    expect(f.state.used).toBeNull();
+    expect(said).toContain(sq('Steam Cloud saves stays off. It can be turned on in Steam (beta).'));
   });
 });
 

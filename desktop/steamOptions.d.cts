@@ -1,4 +1,4 @@
-/** The Steam options, each off until turned on. `cloud` is per Steam account id; `results` is each option's last on/off result; `lineOnAt` is when a launch-line option was last turned on (ms since 1970, 0 never). */
+/** The Steam options, each off until turned on. `cloud` is per Steam account id (false: turned off; missing: not yet chosen); `results` is each option's last on/off result; `lineOnAt` is when a launch-line option was last turned on (ms since 1970, 0 never). */
 export interface SteamOptions {
   playLine: boolean;
   compatTool: boolean;
@@ -6,6 +6,8 @@ export interface SteamOptions {
   cloud: Record<string, boolean>;
   results: Record<string, string>;
   lineOnAt: number;
+  /** Whether Cloud saves comes on by itself at an account's first Steam launch (a machine whose options were first written by a version with it as the default). */
+  cloudDefault: boolean;
 }
 /** What `file` holds; all off where it is missing or unreadable. */
 export function readOptions(file: string): SteamOptions;

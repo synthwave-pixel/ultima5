@@ -357,13 +357,14 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
             status: () => steam.status(),
             launched: () => steamLaunch().steam,
             options() {
-              const { playLine, compatTool, macPlay, cloud, account } = steam.options();
+              const { playLine, compatTool, macPlay, cloud, account, cloudDefault } = steam.options();
               return {
                 playLine,
                 compatTool,
                 macPlay,
                 cloud: account !== null && cloud[account] === true,
                 cloudAny: Object.values(cloud).some((on) => on),
+                cloudOffered: steamLaunch().steam && account !== null && !(account in cloud) && cloudDefault === true,
               };
             },
             setOption: (name, on) => steam.setOption(name, on),

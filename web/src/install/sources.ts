@@ -81,9 +81,12 @@ export interface SteamOptions {
   playLine: boolean;
   compatTool: boolean;
   macPlay: boolean;
+  /** Per Steam account: on, off (turned off), or missing (not yet chosen). */
   cloud: Record<string, boolean>;
   results: Record<string, string>;
   lineOnAt: number;
+  /** Cloud saves comes on by itself for an account not yet chosen for (a machine set up since it became the default). */
+  cloudDefault: boolean;
 }
 
 /** The options, with this launch's Steam account, if one is known. */

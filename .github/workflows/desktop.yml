@@ -107,8 +107,18 @@ jobs:
       - run: npm run dist -- ${{ matrix.args }}
         working-directory: desktop
         env:
-          # Unsigned macOS builds: skip the notarisation step electron-builder would otherwise attempt.
+          # No identity looked for in the runner's keychain: the Mac build names its own (desktop/macSigning.cjs).
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # The Mac build signed with the Developer ID certificate, from the repository's secrets; without them (a
+          # fork's build) it is signed ad hoc, as before. Given to the Mac build alone: electron-builder would take a
+          # CSC_LINK for Windows signing too.
+          CSC_LINK: ${{ matrix.target == 'mac' && secrets.MACOS_CERTIFICATE_BASE64 || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.MACOS_CERTIFICATE_PASSWORD || '' }}
+          MACOS_SIGNING_IDENTITY: ${{ matrix.target == 'mac' && secrets.MACOS_SIGNING_IDENTITY || '' }}
+          # Notarized only for a release, which is what players download: a few minutes more a build.
+          APPLE_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_APP_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_TEAM_ID || '' }}
       # The built app, launched: it must start with its fuses set (its ASAR checked, and loaded from nothing else).
       - if: matrix.target == 'linux'
         run: xvfb-run -a node smoke-built.cjs

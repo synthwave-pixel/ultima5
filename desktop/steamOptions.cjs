@@ -1,11 +1,14 @@
 // The Steam options (the Steam (beta) menu), kept per machine in steam-options.json in the app's data folder. Every
-// option is off until the player turns it on, and a missing, unreadable or mangled file reads as all off, so that
-// nothing touches Steam's folders on a guess. Cloud saves is per Steam account, as the saves are.
+// Play option is off until the player turns it on, and an unreadable or mangled file reads as all off, so that nothing
+// touches Steam's folders on a guess. Cloud saves is per Steam account, as the saves are: on, off (kept as false, once
+// turned off), or not yet chosen. On a machine set up since it became the default - no file yet, so cloudDefault - an
+// account not yet chosen for has it turned on at its first Steam launch (the page's cloudSwitch.ts cloudByDefault); a
+// file written by an earlier version has no cloudDefault, and its Cloud saves stay as they were.
 const { mkdirSync, readFileSync, renameSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
 const { OVERRIDE } = require('./steamSetup.cjs');
 
-const fresh = () => ({ playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0 });
+const fresh = () => ({ playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0, cloudDefault: false });
 
 const plain = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -15,12 +18,14 @@ function readOptions(file) {
   let got;
   try {
     got = JSON.parse(readFileSync(file, 'utf8'));
-  } catch {
+  } catch (e) {
+    // No file at all: a machine set up since Cloud saves became the default.
+    if (e?.code === 'ENOENT') o.cloudDefault = true;
     return o;
   }
   if (!plain(got)) return o;
-  for (const name of ['playLine', 'compatTool', 'macPlay']) o[name] = got[name] === true;
-  if (plain(got.cloud)) for (const [account, on] of Object.entries(got.cloud)) if (on === true) o.cloud[account] = true;
+  for (const name of ['playLine', 'compatTool', 'macPlay', 'cloudDefault']) o[name] = got[name] === true;
+  if (plain(got.cloud)) for (const [account, on] of Object.entries(got.cloud)) if (typeof on === 'boolean') o.cloud[account] = on;
   if (plain(got.results)) for (const [name, text] of Object.entries(got.results)) if (typeof text === 'string') o.results[name] = text;
   if (Number.isFinite(got.lineOnAt) && got.lineOnAt > 0) o.lineOnAt = got.lineOnAt;
   return o;
@@ -76,8 +81,8 @@ async function switchOption({ options, name, on, system, account, now, failed, e
     if (!account) return null;
     if (typeof failed === 'string') o.results.cloud = `${word}: failed: ${failed}`;
     else {
-      if (on) o.cloud[account] = true;
-      else delete o.cloud[account];
+      // Kept either way: turned off, it is not turned on again by default.
+      o.cloud[account] = on;
       o.results.cloud = `${word}: done`;
     }
     return { options: o, on: o.cloud[account] === true, message: '' };

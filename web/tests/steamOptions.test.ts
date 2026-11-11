@@ -13,7 +13,7 @@ import {
 
 /** The Steam options kept per machine (desktop/steamOptions.cjs). */
 describe('the Steam options', () => {
-  const OFF = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0 };
+  const OFF = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0, cloudDefault: false };
   const withDir = (run: (dir: string, file: string) => void) => {
     const dir = mkdtempSync(join(tmpdir(), 'u5-options-'));
     try {
@@ -23,7 +23,10 @@ describe('the Steam options', () => {
     }
   };
 
-  it('are all off with no file', () => withDir((_dir, file) => expect(readOptions(file)).toEqual(OFF)));
+  // No file: a machine set up since Cloud saves became the default, where it comes on at an account's first Steam
+  // launch. A file from an earlier version has no cloudDefault, and keeps its Cloud saves as they were.
+  it('are all off with no file, Cloud saves to come on by default', () =>
+    withDir((_dir, file) => expect(readOptions(file)).toEqual({ ...OFF, cloudDefault: true })));
 
   it('are all off after a corrupt file, or one of the wrong shape', () =>
     withDir((_dir, file) => {
@@ -39,9 +42,10 @@ describe('the Steam options', () => {
         playLine: true,
         compatTool: false,
         macPlay: true,
-        cloud: { '12345': true },
+        cloud: { '12345': true, '678': false },
         results: { playLine: 'on' },
         lineOnAt: 1_700_000_000_000,
+        cloudDefault: true,
       };
       writeOptions(file, o);
       expect(readOptions(file)).toEqual(o);
@@ -61,7 +65,8 @@ describe('the Steam options', () => {
           lineOnAt: 'soon',
         }),
       );
-      expect(readOptions(file)).toEqual({ ...OFF, compatTool: true, cloud: { a: true }, results: { x: 'ok' } });
+      // Cloud saves turned off is kept as false, so that it is not turned on again by default.
+      expect(readOptions(file)).toEqual({ ...OFF, compatTool: true, cloud: { a: true, c: false }, results: { x: 'ok' } });
     }));
 
   it('are not fatal to fail to write, and say whether they were written', () =>
@@ -73,7 +78,15 @@ describe('the Steam options', () => {
 
 /** An option turned on or off (desktop/steamOptions.cjs switchOption): its effect here, its result kept, and what to say. */
 describe('switching a Steam option', () => {
-  const OFF: SteamOptions = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0 };
+  const OFF: SteamOptions = {
+    playLine: false,
+    compatTool: false,
+    macPlay: false,
+    cloud: {},
+    results: {},
+    lineOnAt: 0,
+    cloudDefault: false,
+  };
   const NOW = 1_800_000_000_000;
   /** Effects that only note what was asked, each answering as `as` says. */
   const effects = (calls: string[], as: Partial<OptionEffects> = {}): OptionEffects => ({
@@ -195,7 +208,7 @@ describe('switching a Steam option', () => {
     expect(failed.on).toBe(true);
     expect(failed.options).toMatchObject({ cloud: { '42': true }, results: { cloud: 'off: failed: ENOSPC' } });
     const off = (await turn('cloud', false, { account: '42', options: on.options }))!;
-    expect(off.options.cloud).toEqual({});
+    expect(off.options.cloud).toEqual({ '42': false });
   });
 
   it('never changes the options it was given', async () => {
@@ -221,7 +234,15 @@ describe('switching a Steam option', () => {
 
 /** An option switched and kept (desktop/steamOptions.cjs switchAndKeep), as main.cjs answers the page. */
 describe('keeping a Steam option switched', () => {
-  const OFF: SteamOptions = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0 };
+  const OFF: SteamOptions = {
+    playLine: false,
+    compatTool: false,
+    macPlay: false,
+    cloud: {},
+    results: {},
+    lineOnAt: 0,
+    cloudDefault: false,
+  };
   const effects: OptionEffects = {
     line: () => 'x %command%',
     installTool: () => ['/s/compatibilitytools.d/ultima5_sp'],

@@ -157,6 +157,11 @@ export interface SteamChoices {
   cloud: boolean;
   /** Whether Cloud saves is on for any Steam account on this machine, this launch's or another's. */
   cloudAny: boolean;
+  /**
+   * Whether Cloud saves is to come on by itself for this launch's account (cloudSwitch.ts cloudByDefault): not yet
+   * chosen for it, on a machine set up since it became the default.
+   */
+  cloudOffered: boolean;
 }
 
 /** An option switched (desktop/steamOptions.cjs switchOption): whether it is on now, what to say, a launch line to show. */

@@ -8,6 +8,11 @@
  * nothing is. Only the receiving side is written. The option is switched only once every write has gone through,
  * and then the game keeps its saves where the option now says; a write that fails leaves it as it was, and the
  * failure is kept for the tester report.
+ *
+ * On a machine set up since it became the default, Cloud saves comes on by itself at the title of an account's first
+ * Steam launch (cloudByDefault): this computer's saves are copied in without asking, and where a character was played
+ * on both sides apart, the title offers to turn it on, keeping the newer save of each as the last and the other as an
+ * earlier save (nothing is lost), or to leave it off, which is kept so it is not offered again.
  */
 
 import { applyChoice, planCopy, type Clash } from './cloudCopy.ts';
@@ -73,8 +78,16 @@ async function keepWhich(g: Game, clash: Clash, on: boolean): Promise<'from' | '
   return i === fromAt ? 'from' : i === toAt ? 'to' : null;
 }
 
-/** Turns Steam Cloud saves on or off with its copy, and says how it went. */
-export async function switchCloud(g: Game, cloud: CloudSaves, on: boolean): Promise<string> {
+/** Which version of a clash to keep: 'from' or 'to', or null to copy nothing (keepWhich asks the player). */
+type Pick = (clash: Clash) => Promise<'from' | 'to' | null>;
+
+/** Turns Steam Cloud saves on or off with its copy, and says how it went. `pick` settles each clash (the player, by default). */
+export async function switchCloud(
+  g: Game,
+  cloud: CloudSaves,
+  on: boolean,
+  pick: Pick = (clash) => keepWhich(g, clash, on),
+): Promise<string> {
   const stays = `Steam Cloud saves stays ${on ? 'off' : 'on'}.`;
   const read = (): { from: Keys; to: Keys } | null => {
     const steam = cloud.steam();
@@ -89,7 +102,7 @@ export async function switchCloud(g: Game, cloud: CloudSaves, on: boolean): Prom
   }
   const kept = new Map<string, 'from' | 'to'>();
   for (const clash of planCopy(first.from, first.to).clashes) {
-    const keep = await keepWhich(g, clash, on);
+    const keep = await pick(clash);
     if (keep === null) return `Nothing was copied. ${stays}`;
     kept.set(clash.id, keep);
   }
@@ -132,4 +145,58 @@ export async function switchCloud(g: Game, cloud: CloudSaves, on: boolean): Prom
   return on
     ? 'Done. Your saves are copied into Steam, and saves made while playing from Steam stay with Steam.'
     : "Done. Steam's saves are copied back to this computer, and saves stay here from now on.";
+}
+
+/** The games that have had Cloud saves offered by default this launch: it is asked once a launch, whatever came of it. */
+const offered = new WeakSet<Game>();
+
+/** `names` as a list: "A", "A and B", "A, B and C". */
+const listOf = (names: string[]): string => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
+
+/** A box of text with OK. */
+async function say(g: Game, text: string): Promise<void> {
+  const lines = wrap(text).map((label): Item => ({ label, enabled: false }));
+  await choose(g, 'Steam Cloud', [...lines, { label: '', enabled: false }, { label: 'OK' }], lines.length + 1, true);
+}
+
+/**
+ * Cloud saves turned on by default, at the title of a Steam launch whose account has not chosen yet on a machine set
+ * up since it became the default (SteamChoices.cloudOffered): this computer's saves copied into Steam's folder, and
+ * the player told. Where a character was played on both sides apart, the title offers it first: Turn on keeps the
+ * newer save of each as the last save and the other as an earlier one; Leave off copies nothing and is kept, so it is
+ * not offered again. Where Steam's folder can't be read nothing is done, to be tried at the next launch. Asked once a
+ * launch. Whether a box was shown (the title to be drawn again).
+ */
+export async function cloudByDefault(g: Game): Promise<boolean> {
+  const steam = g.hooks.steam;
+  if (!steam || offered.has(g) || !steam.launched() || !steam.options().cloudOffered) return false;
+  const theirs = steam.cloud.steam();
+  if (theirs === null) return false;
+  offered.add(g);
+  g.p.flushKeys();
+  const clashes = planCopy(steam.cloud.own(), theirs).clashes;
+  let said: string;
+  if (clashes.length > 0) {
+    const names = [...new Set(clashes.map((c) => avatarName(c.from) || 'The nameless'))];
+    const lines = wrap(
+      `${listOf(names)} ${names.length > 1 ? 'were' : 'was'} played here and in Steam apart. Turn Steam Cloud saves on? ` +
+        'The newer save of each is kept, and the other as an earlier save.',
+    ).map((label): Item => ({ label, enabled: false }));
+    const on = lines.length + 1;
+    const i = await choose(
+      g,
+      'Steam Cloud',
+      [...lines, { label: '', enabled: false }, { label: 'Turn on' }, { label: 'Leave off' }],
+      on,
+      true,
+    );
+    if (i !== on) {
+      await steam.cloud.record(false);
+      await say(g, 'Steam Cloud saves stays off. It can be turned on in Steam (beta).');
+      return true;
+    }
+    said = await switchCloud(g, steam.cloud, true, (c) => Promise.resolve(c.from.written >= c.to.written ? 'from' : 'to'));
+  } else said = await switchCloud(g, steam.cloud, true);
+  await say(g, steam.options().cloud ? `Steam Cloud saves is on. ${said.replace(/^Done\. /, '')}` : said);
+  return true;
 }
