@@ -52,8 +52,8 @@ folder picker.
 - **Windows and macOS**: the installers on the
   [Releases page](https://github.com/synthwave-pixel/ultima5/releases/latest),
   a Windows installer or portable `.exe` and an Apple Silicon `.dmg`.
-  They are unsigned; see Desktop app, and the Steam Deck below for the one-time step each
-  system asks for.
+  The Mac app is signed and notarized by Apple; the Windows ones are
+  unsigned, see Desktop app below for the one-time step Windows asks for.
 - **Android**: the APK on the Releases page, or
   [Obtainium](https://github.com/ImranR98/Obtainium) to keep it updated;
   see Android handhelds below.
@@ -249,8 +249,8 @@ installer, or run as the AppImage, it downloads the new version in the
 background and installs it when you quit the game (or at once, with
 Restart now). On macOS, and as the Windows portable `.exe`, it offers the
 release's page instead - to read what changed and download it yourself:
-macOS installs updates only into apps signed by an Apple developer, which
-this one is not yet ([#1](https://github.com/synthwave-pixel/ultima5/issues/1)). The Android app does the same,
+the Mac app does not install its own updates yet
+([#1](https://github.com/synthwave-pixel/ultima5/issues/1)). The Android app does the same,
 opening the release's page in your browser; Obtainium can update it for
 you instead. The Flatpak updates itself through Flatpak's own update
 service, so a Steam Deck kept in Game Mode stays up to date without a trip
@@ -278,11 +278,11 @@ installed when the game quits.
   brings its save along the first time). Where that folder cannot be
   written, as on a read-only drive, it falls back to AppData.
 - **macOS**: an Apple Silicon `.dmg`, for macOS 13 (Ventura) or later
-  (Intel Macs: use the web version). Signed by no Apple developer, so the first launch is refused. Try to open the app
-  once, then open System Settings, choose Privacy & Security, scroll down
-  to Security, click Open Anyway beside Ultima V, and confirm with your
-  password or Touch ID; it opens normally from then on. Or, in Terminal,
-  once: `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`.
+  (Intel Macs: use the web version). From 1.1.203 it is signed and
+  notarized by Apple, so it opens like any downloaded app: macOS asks once
+  whether to open an app from the internet. Earlier versions were
+  unsigned, and macOS refused their first launch until allowed under
+  System Settings, Privacy & Security, Open Anyway.
   If the game's sound plays through a device that is also a microphone (a
   USB microphone with a headphone jack, a headset), macOS may ask whether
   Ultima V may use the microphone when the sound first starts. The game

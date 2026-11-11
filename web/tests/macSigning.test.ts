@@ -22,6 +22,8 @@ describe('the Mac build signed', () => {
       hardenedRuntime: true,
       entitlements: 'build/entitlements.mac.plist',
       entitlementsInherit: 'build/entitlements.mac.plist',
+      // Not signed with it, the build fails instead of shipping ad hoc.
+      forceCodeSigning: true,
     });
     expect(c.extraMetadata).toEqual({ version: '1.2.3' });
     expect(c.appId).toBe('x');

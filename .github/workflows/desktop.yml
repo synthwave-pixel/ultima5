@@ -119,6 +119,15 @@ jobs:
           APPLE_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_APP_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_TEAM_ID || '' }}
+      # A release's Mac app must be notarized: electron-builder only warns when it cannot notarize (an Apple secret
+      # missing), and Gatekeeper would then refuse the download. Builds without the certificate (a fork's) are not checked.
+      - if: matrix.target == 'mac' && github.ref == 'refs/heads/release'
+        run: |
+          if [ "$SIGNED" != true ]; then echo 'Not signed: no certificate.'; exit 0; fi
+          for app in dist/mac*/*.app; do spctl --assess --type execute -vv "$app"; done
+        working-directory: desktop
+        env:
+          SIGNED: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' }}
       # The built app, launched: it must start with its fuses set (its ASAR checked, and loaded from nothing else).
       - if: matrix.target == 'linux'
         run: xvfb-run -a node smoke-built.cjs

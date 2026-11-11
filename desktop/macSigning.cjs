@@ -22,6 +22,9 @@ function macBuildConfig(build, env, version) {
     hardenedRuntime: true,
     entitlements: ENTITLEMENTS,
     entitlementsInherit: ENTITLEMENTS,
+    // A build given the certificate fails rather than ship ad hoc: electron-builder otherwise only warns when the
+    // certificate is not the one named (an Apple Development one, say), or its password is wrong.
+    forceCodeSigning: true,
   };
   return c;
 }
