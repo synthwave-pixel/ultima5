@@ -193,7 +193,7 @@ function writeAppinfo(info, appid, header, kv) {
   return Buffer.concat([head, entries, table]);
 }
 
-const find = (nodes, name) => nodes.find((n) => n[1].toLowerCase() === name.toLowerCase());
+const findNode = (nodes, name) => nodes.find((n) => n[1].toLowerCase() === name.toLowerCase());
 const str = (key, value) => [STR, key, value];
 const map = (key, value) => [MAP, key, value];
 
@@ -201,7 +201,7 @@ const map = (key, value) => [MAP, key, value];
 function mapAt(kv, ...path) {
   let nodes = kv;
   for (const name of path) {
-    const node = find(nodes, name);
+    const node = findNode(nodes, name);
     if (!node || node[0] !== MAP) throw new Error(`the app's entry has no ${path.join('/')}`);
     nodes = node[2];
   }
@@ -223,7 +223,7 @@ function macPatch(kv, launcherName) {
   let changed = false;
 
   const common = mapAt(out, 'appinfo', 'common');
-  const oslist = find(common, 'oslist');
+  const oslist = findNode(common, 'oslist');
   if (oslist) {
     const systems = String(oslist[2]).split(',');
     if (!systems.some((s) => s.trim().toLowerCase() === 'macos')) {
@@ -237,12 +237,12 @@ function macPatch(kv, launcherName) {
 
   const launch = mapAt(out, 'appinfo', 'config', 'launch');
   for (const entry of launch) {
-    if (entry[0] === MAP && !find(entry[2], 'config')) {
+    if (entry[0] === MAP && !findNode(entry[2], 'config')) {
       entry[2].push(map('config', [str('oslist', 'windows')]));
       changed = true;
     }
   }
-  const ours = launch.some((n) => n[0] === MAP && find(n[2], 'executable')?.[2] === launcherName);
+  const ours = launch.some((n) => n[0] === MAP && findNode(n[2], 'executable')?.[2] === launcherName);
   if (!ours) {
     launch.push(
       map(nextKey(launch), [
@@ -256,7 +256,7 @@ function macPatch(kv, launcherName) {
   }
 
   for (const rule of mapAt(out, 'appinfo', 'ufs', 'savefiles')) {
-    const platforms = rule[0] === MAP ? find(rule[2], 'platforms') : undefined;
+    const platforms = rule[0] === MAP ? findNode(rule[2], 'platforms') : undefined;
     if (platforms && !platforms[2].some((p) => p[2] === 'MacOS')) {
       platforms[2].push(str(nextKey(platforms[2]), 'MacOS'));
       changed = true;

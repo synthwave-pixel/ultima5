@@ -213,7 +213,9 @@ function steamLineState(options) {
   let written = null;
   try {
     if (file !== null) written = fs.statSync(file).mtimeMs;
-  } catch {}
+  } catch {
+    // No settings file yet: Steam has not written the launch line since (written stays null).
+  }
   const recentlyTurnedOn = options.lineOnAt !== 0 && (written === null || written < options.lineOnAt);
   return {
     state: lineState(file === null ? null : read(file), expected, launchLineName(), recentlyTurnedOn),

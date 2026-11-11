@@ -3,14 +3,14 @@
 // the facts. It holds no save and no file contents, and nothing that names the player: the home folder is written ~,
 // user names in paths <user>, the Steam account only as known or not, and SteamUser only as set or not.
 
-const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Hides what identifies the player in `text`: `home` becomes ~, user names in paths (any folder's) become <user>. */
 function mask(text, home) {
   let out = text;
   if (home) {
     // Either slash may stand for the other in a Windows path; a longer name (/home/alice2) is not this home.
-    const body = escape(home.replace(/[\\/]+$/, '')).replace(/\\\\|\//g, '[\\\\/]');
+    const body = escapeRegExp(home.replace(/[\\/]+$/, '')).replace(/\\\\|\//g, '[\\\\/]');
     out = out.replace(new RegExp(`${body}(?![^\\\\/\\s"'])`, /^[a-z]:/i.test(home) ? 'gi' : 'g'), '~');
   }
   return out
