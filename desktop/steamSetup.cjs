@@ -5,10 +5,12 @@
 // Mac, Steam has no macOS launch for the game, so its entry in Steam's app cache is given one (appinfo.cjs) that runs a
 // small launcher .app in the game's folder; that edit, and the manifest that makes Steam download the game, are only
 // made with Steam closed. Files are reached through the `fs` handed in, and Steam's state through steamRunning() and
-// quitSteam(), so all of it can be tried on temporary folders without a Steam.
+// quitSteam(), so all of it can be tried on temporary folders without a Steam. Linux's cache is given only MacOS in the
+// game's cloud save rules, as the Mac's is with its launch, so that saves uploaded from Linux reach a Mac too.
+const { createHash } = require('node:crypto');
 const { dirname, join } = require('node:path');
-const { appEntry, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs');
-const { APP_ID, findGame } = require('./steam.cjs');
+const { appEntry, cloudPatch, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs');
+const { APP_ID, findGame, parseVdf } = require('./steam.cjs');
 
 const FLATPAK_ID = 'com.synthwavepixel.ultima5';
 const TOOL = 'ultima5_sp';
@@ -252,11 +254,11 @@ const readNote = (fs, noteFile) => {
 const cacheFile = (steamRoot) => join(steamRoot, 'appcache', 'appinfo.vdf');
 
 /**
- * Ultima V's entry in the cache, and that entry with our launch added, or null when the account has not got the game
- * (or Steam has not cached anything yet) or the entry is not one macPatch knows how to edit. A cache that cannot be
- * read or makes no sense is an error, said as it is.
+ * Ultima V's entry in the cache, and that entry as `patch` makes it (our launch added, by default), or null when the
+ * account has not got the game (or Steam has not cached anything yet) or the entry is not one the patch knows how to
+ * edit. A cache that cannot be read or makes no sense is an error, said as it is.
  */
-function ultimaEntry(fs, steamRoot) {
+function ultimaEntry(fs, steamRoot, patch = (kv) => macPatch(kv, LAUNCHER)) {
   let bytes;
   try {
     bytes = fs.readFileSync(cacheFile(steamRoot));
@@ -268,7 +270,7 @@ function ultimaEntry(fs, steamRoot) {
   const entry = appEntry(info, Number(APP_ID));
   if (!entry) return null;
   try {
-    return { info, entry, patch: macPatch(entry.kv, LAUNCHER) };
+    return { info, entry, patch: patch(entry.kv) };
   } catch {
     return null;
   }
@@ -315,8 +317,13 @@ function patchCache(fs, steamRoot, keptOriginal, found) {
   };
   fs.mkdirSync(dirname(keptOriginal), { recursive: true });
   fs.writeFileSync(keptOriginal, writeAppinfo(alone, Number(APP_ID), entry.header, entry.kv));
+  writeCache(fs, steamRoot, info, entry.header, patch.kv);
+}
+
+/** The cache with Ultima V's entry as `kv`, written beside itself and renamed into place. */
+function writeCache(fs, steamRoot, info, header, kv) {
   const file = cacheFile(steamRoot);
-  fs.writeFileSync(`${file}.ultima5`, writeAppinfo(info, Number(APP_ID), entry.header, patch.kv));
+  fs.writeFileSync(`${file}.ultima5`, writeAppinfo(info, Number(APP_ID), header, kv));
   fs.renameSync(`${file}.ultima5`, file);
 }
 
@@ -415,9 +422,7 @@ async function macRestore({ fs, steamRoot, keptOriginal, noteFile, steamRunning,
     if (found && !found.patch.changed) {
       const original = appEntry(readAppinfo(fs.readFileSync(keptOriginal)), Number(APP_ID));
       if (!original) return 'kept-unusable';
-      const file = cacheFile(steamRoot);
-      fs.writeFileSync(`${file}.ultima5`, writeAppinfo(found.info, Number(APP_ID), original.header, original.kv));
-      fs.renameSync(`${file}.ultima5`, file);
+      writeCache(fs, steamRoot, found.info, original.header, original.kv);
     }
     fs.rmSync(keptOriginal, { force: true });
   }
@@ -432,7 +437,118 @@ async function macRestore({ fs, steamRoot, keptOriginal, noteFile, steamRunning,
   return 'done';
 }
 
+// Linux: the cloud rules.
+
+/** Ultima V's entry in a Steam folder's cache, and that entry with MacOS in its cloud rules (cloudPatch), as ultimaEntry. */
+const cloudEntry = (fs, root) => ultimaEntry(fs, root, cloudPatch);
+
+/**
+ * Where Linux's Steam folders stand: 'needed' where one has Ultima V without MacOS in its cloud rules, 'ready' where
+ * every one that has it has MacOS, null where none has it (or none will read). Only reads.
+ */
+function linuxCloud(fs, roots) {
+  let state = null;
+  for (const root of existingRoots(fs, roots)) {
+    let found;
+    try {
+      found = cloudEntry(fs, root);
+    } catch {
+      continue;
+    }
+    if (!found) continue;
+    if (found.patch.changed) return 'needed';
+    state = 'ready';
+  }
+  return state;
+}
+
+/** The mark Steam gives a file uploaded for a Mac (ERemoteStoragePlatform's OSX). */
+const FOR_MAC = 2;
+
+/**
+ * The saves Steam last synced from or to this Steam folder marked for Windows alone, each changed so that Steam
+ * uploads it again, marked as the rule now says: a line end added (or taken off one that ends with one), which neither
+ * the JSON nor the base64 a save is kept as minds. Only a file as Steam last synced it (its hash the one in Steam's
+ * remotecache.vdf) is changed: one changed since is uploaded anyway. Gives how many were.
+ */
+function remarkSaves(fs, root) {
+  const read = (p) => readOr(fs, p, null);
+  const game = findGame([root], read, (p) => fs.existsSync(p));
+  if (!game || !('folder' in game)) return 0;
+  let accounts;
+  try {
+    accounts = fs.readdirSync(join(root, 'userdata'));
+  } catch {
+    return 0;
+  }
+  let changed = 0;
+  for (const account of accounts) {
+    const text = read(join(root, 'userdata', account, APP_ID, 'remotecache.vdf'));
+    const files = text === null ? null : parseVdf(text)?.[APP_ID];
+    if (!files || typeof files !== 'object') continue;
+    for (const [name, file] of Object.entries(files)) {
+      if (!name.startsWith('ultima5-sp/') || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
+      if (file.root !== '1' || (Number(file.platformstosync2) & FOR_MAC) !== 0) continue;
+      const path = join(game.folder, ...name.split('/'));
+      let bytes;
+      try {
+        bytes = fs.readFileSync(path);
+      } catch {
+        continue;
+      }
+      if (createHash('sha1').update(bytes).digest('hex') !== String(file.sha).toLowerCase()) continue;
+      const kept = bytes.toString('utf8');
+      fs.writeFileSync(path, kept.endsWith('\n') ? kept.slice(0, -1) : `${kept}\n`);
+      changed++;
+    }
+  }
+  return changed;
+}
+
+/** MacOS added to the cloud rules of each Steam folder whose cache has not got it, and its saves re-marked. Steam closed. */
+function patchLinuxCloud(fs, roots) {
+  for (const root of existingRoots(fs, roots)) {
+    let found;
+    try {
+      found = cloudEntry(fs, root);
+    } catch {
+      continue;
+    }
+    if (!found || !found.patch.changed) continue;
+    writeCache(fs, root, found.info, found.entry.header, found.patch.kv);
+    remarkSaves(fs, root);
+  }
+}
+
+/**
+ * Linux's cloud rules given MacOS where a cache has not got it, with Steam closed: quit first, and started again after
+ * ('restarted') if it was running. 'done' where there was nothing to do, 'not-owned' where no Steam folder has the game.
+ */
+async function linuxCloudSetup({ fs, roots, steamRunning, quitSteam, openSteam }) {
+  const state = linuxCloud(fs, roots);
+  if (state === null) return 'not-owned';
+  if (state === 'ready') return 'done';
+  const wasRunning = steamRunning();
+  if (!(await steamClosed(steamRunning, quitSteam))) return 'steam-running';
+  patchLinuxCloud(fs, roots);
+  if (!wasRunning) return 'done';
+  openSteam();
+  return 'restarted';
+}
+
+/** At a start outside Steam: MacOS put back in the cloud rules where Steam has replaced the entry, if Steam is closed. */
+function linuxCloudReapply({ fs, roots, steamRunning }) {
+  const state = linuxCloud(fs, roots);
+  if (state !== 'needed') return state ?? 'not-owned';
+  if (steamRunning()) return 'steam-running';
+  patchLinuxCloud(fs, roots);
+  return 'ready';
+}
+
 module.exports = {
+  linuxCloud,
+  linuxCloudSetup,
+  linuxCloudReapply,
   FLATPAK_ID,
   OVERRIDE,
   launchLine,

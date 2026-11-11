@@ -5,11 +5,14 @@ import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { appEntry, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
+import { appEntry, cloudPatch, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
 import { parseVdf } from '../../desktop/steam.cjs';
 import {
   installCompatTool,
   launchLine,
+  linuxCloud,
+  linuxCloudReapply,
+  linuxCloudSetup,
   refreshCompatTool,
   macPatched,
   macReapply,
@@ -584,5 +587,120 @@ describe("the Mac's cache entry", () => {
     const before = fs.readFileSync(m.cacheFile);
     expect(macReapply({ ...m, steamRunning: () => false })).toBe('not-set-up');
     expect(fs.readFileSync(m.cacheFile).equals(before)).toBe(true);
+  });
+});
+
+describe("Linux's cloud rules", () => {
+  const ACCOUNT = '123';
+  const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex');
+  /**
+   * A Linux Steam folder with Ultima V installed and cached, and its saves: `marks` gives each save's mark in Steam's
+   * remotecache.vdf (1: Windows alone, 3: a Mac too), and `synced` whether the file is as Steam last synced it.
+   */
+  function linux(kv = ultimaKv(), saves: { key: string; text: string; mark: number; synced?: boolean }[] = []) {
+    const root = join(temp(), '.local', 'share', 'Steam');
+    fs.mkdirSync(join(root, 'appcache'), { recursive: true });
+    fs.writeFileSync(
+      join(root, 'appcache', 'appinfo.vdf'),
+      cache([
+        { appid: ULTIMA, kv },
+        { appid: OTHER, kv: otherKv() },
+      ]),
+    );
+    const folder = join(root, 'steamapps', 'common', 'Ultima V');
+    fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(join(root, 'steamapps', 'appmanifest_3067520.acf'), '"AppState"\n{\n\t"installdir"\t\t"Ultima V"\n}\n');
+    const entries: string[] = [];
+    for (const { key, text, mark, synced = true } of saves) {
+      const name = `ultima5-sp/${ACCOUNT}/${encodeURIComponent(key)}/SAVED.GAM`;
+      fs.mkdirSync(join(folder, ...name.split('/').slice(0, -1)), { recursive: true });
+      fs.writeFileSync(join(folder, ...name.split('/')), text);
+      const sha = synced ? sha1(text) : sha1('something else');
+      entries.push(`\t"${name}"\n\t{\n\t\t"root"\t\t"1"\n\t\t"sha"\t\t"${sha}"\n\t\t"platformstosync2"\t\t"${mark}"\n\t}`);
+    }
+    const remote = join(root, 'userdata', ACCOUNT, '3067520');
+    fs.mkdirSync(remote, { recursive: true });
+    fs.writeFileSync(join(remote, 'remotecache.vdf'), `"3067520"\n{\n\t"ChangeNumber"\t\t"4"\n${entries.join('\n')}\n}\n`);
+    const save = (key: string): string =>
+      fs.readFileSync(join(folder, 'ultima5-sp', ACCOUNT, encodeURIComponent(key), 'SAVED.GAM'), 'utf8');
+    return { fs, roots: [root, join(root, '..', 'missing')], cacheFile: join(root, 'appcache', 'appinfo.vdf'), save };
+  }
+  const ultimaIn = (file: string) => appEntry(readAppinfo(fs.readFileSync(file)), ULTIMA)!;
+  const hasMac = (file: string): boolean => !cloudPatch(ultimaIn(file).kv).changed;
+
+  it('says where the rules stand, and nothing where no Steam folder has the game', () => {
+    expect(linuxCloud(fs, linux().roots)).toBe('needed');
+    expect(linuxCloud(fs, linux(cloudPatch(ultimaKv()).kv).roots)).toBe('ready');
+    expect(linuxCloud(fs, [join(temp(), 'nothing')])).toBe(null);
+  });
+
+  it('quits Steam first, gives the rules MacOS and nothing else, and starts Steam again', async () => {
+    const l = linux();
+    const before = ultimaIn(l.cacheFile).kv;
+    let running = true;
+    let unchangedAtQuit = false;
+    let opened = 0;
+    const result = await linuxCloudSetup({
+      ...l,
+      steamRunning: () => running,
+      quitSteam: () => {
+        unchangedAtQuit = !hasMac(l.cacheFile);
+        running = false;
+        return Promise.resolve();
+      },
+      openSteam: () => void opened++,
+    });
+    expect(result).toBe('restarted');
+    expect(unchangedAtQuit).toBe(true);
+    expect(opened).toBe(1);
+    expect(ultimaIn(l.cacheFile).kv).toEqual(cloudPatch(before).kv);
+    // Its launch and OS list stay EA's: only the cloud rules changed.
+    expect(isMacPatched(ultimaIn(l.cacheFile).kv, LAUNCHER)).toBe(false);
+  });
+
+  it("leaves Steam alone where there is nothing to do, or it won't quit", async () => {
+    const ready = linux(cloudPatch(ultimaKv()).kv);
+    const never = () => Promise.reject(new Error('quit'));
+    expect(await linuxCloudSetup({ ...ready, steamRunning: () => true, quitSteam: never, openSteam: () => {} })).toBe('done');
+    const stuck = linux();
+    const out = await linuxCloudSetup({ ...stuck, steamRunning: () => true, quitSteam: () => Promise.resolve(), openSteam: () => {} });
+    expect(out).toBe('steam-running');
+    expect(hasMac(stuck.cacheFile)).toBe(false);
+    const closed = linux();
+    let opened = 0;
+    const done = await linuxCloudSetup({ ...closed, steamRunning: () => false, quitSteam: never, openSteam: () => void opened++ });
+    expect(done).toBe('done');
+    expect(opened).toBe(0);
+    expect(hasMac(closed.cacheFile)).toBe(true);
+  });
+
+  it('changes the saves uploaded for Windows alone so that Steam uploads them again, and no others', async () => {
+    const packed = 'z1:eJwLyc9Pzs8tKEotLs7Mz1NIzs8rSs0rAQBmTQh8';
+    const l = linux(ultimaKv(), [
+      { key: 'ultima5.characters', text: '{"version":1,"ids":["a"]}', mark: 1 },
+      { key: 'ultima5.char.a.save', text: packed, mark: 1 },
+      { key: 'ultima5.char.a.saves', text: '{"next":1,"keys":[]}\n', mark: 1 },
+      { key: 'ultima5.char.b.save', text: 'from a Mac', mark: 3 },
+      { key: 'ultima5.char.c.save', text: 'changed since', mark: 1, synced: false },
+    ]);
+    await linuxCloudSetup({ ...l, steamRunning: () => false, quitSteam: () => Promise.resolve(), openSteam: () => {} });
+    expect(l.save('ultima5.characters')).toBe('{"version":1,"ids":["a"]}\n');
+    expect(l.save('ultima5.char.a.save')).toBe(`${packed}\n`);
+    expect(l.save('ultima5.char.a.saves')).toBe('{"next":1,"keys":[]}');
+    expect(l.save('ultima5.char.b.save')).toBe('from a Mac');
+    expect(l.save('ultima5.char.c.save')).toBe('changed since');
+    // Read as the page reads them, the same as before.
+    expect(JSON.parse(l.save('ultima5.characters'))).toEqual({ version: 1, ids: ['a'] });
+    expect(atob(l.save('ultima5.char.a.save').slice(3))).toBe(atob(packed.slice(3)));
+  });
+
+  it('puts MacOS back at a start with Steam closed, and waits while it runs', () => {
+    const l = linux();
+    expect(linuxCloudReapply({ ...l, steamRunning: () => true })).toBe('steam-running');
+    expect(hasMac(l.cacheFile)).toBe(false);
+    expect(linuxCloudReapply({ ...l, steamRunning: () => false })).toBe('ready');
+    expect(hasMac(l.cacheFile)).toBe(true);
+    expect(linuxCloudReapply({ ...l, steamRunning: () => true })).toBe('ready');
+    expect(linuxCloudReapply({ fs, roots: [join(temp(), 'none')], steamRunning: () => false })).toBe('not-owned');
   });
 });

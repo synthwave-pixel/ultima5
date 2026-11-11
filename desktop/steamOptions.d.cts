@@ -22,6 +22,8 @@ export interface OptionEffects {
   removeTool(): void;
   macSetup(): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
   macRestore(): Promise<'done' | 'steam-running' | 'kept-unusable'>;
+  /** Linux: the game's cloud rules given MacOS (steamSetup.cjs linuxCloudSetup), or null where Steam may not be closed from here. */
+  linuxCloud?(): Promise<'done' | 'restarted' | 'steam-running' | 'not-owned' | null>;
 }
 /** An option switched: the options now (to be written), whether it is on, what to say, and a launch line to show. */
 export interface Switched {
@@ -47,3 +49,5 @@ export function switchAndKeep(
   file: string,
   args: Parameters<typeof switchOption>[0],
 ): Promise<{ on: boolean; message: string; line?: string } | null>;
+/** What to tell the player of giving Linux's cloud rules MacOS: a linuxCloudSetup result, or 'not-here'. */
+export function cloudRuleMessage(result: string): string;

@@ -454,3 +454,45 @@ describe("a Steam Deck's controller, under Steam's keyboard layout", () => {
     expect(again.steamNote()?.text).toBe(PAD_NOTE);
   });
 });
+
+describe("Linux's cloud rules without MacOS, in a Steam launch", () => {
+  const NOTE =
+    "Cloud saves made here don't reach a Mac yet. To fix it, open this app from the desktop, then Steam (beta) > Play from Steam > Fix Cloud for Mac.";
+  let was: PropertyDescriptor | undefined;
+  beforeEach(() => {
+    was = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', { value: memory(), configurable: true });
+    vi.resetModules();
+  });
+  afterEach(() => {
+    delete (globalThis as { u5native?: unknown }).u5native;
+    if (was) Object.defineProperty(globalThis, 'localStorage', was);
+    else delete (globalThis as { localStorage?: unknown }).localStorage;
+  });
+  const launch = (cloudRule: 'needed' | 'ready' | null): SteamLaunch => ({ steam: true, game: 'ok', where: 'x', account: true, cloudRule });
+  /** A launch's note, the first-launch Cloud note already seen. */
+  async function noteFor(cloudRule: 'needed' | 'ready' | null, options: { cloud: Record<string, boolean>; account: string } = ON) {
+    localStorage.setItem(`ultima5.steamNoted.${options.account}`, '1');
+    vi.resetModules();
+    bridge(launch(cloudRule), {}, undefined, options);
+    const boot = await import('../src/boot.ts');
+    boot.chooseStore();
+    return boot.steamNote();
+  }
+
+  it('says once, with Cloud saves on, where to fix it; again should Steam undo the fix later', async () => {
+    const note = await noteFor('needed');
+    expect(note?.text).toBe(NOTE);
+    note?.seen();
+    expect(await noteFor('needed')).toBeNull();
+    // Fixed, then undone by Steam: said again.
+    expect(await noteFor('ready')).toBeNull();
+    expect((await noteFor('needed'))?.text).toBe(NOTE);
+  });
+
+  it('says nothing with Cloud saves off, or where the rules have MacOS or were not read', async () => {
+    expect(await noteFor('needed', { cloud: {}, account: 'me' })).toBeNull();
+    expect(await noteFor('ready')).toBeNull();
+    expect(await noteFor(null)).toBeNull();
+  });
+});

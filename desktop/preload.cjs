@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('u5native', {
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
     // Whether Steam's saved launch line is this copy's: { state: 'correct' | 'missing' | 'not-seen' | 'stale' | 'twice', bothLinux }, or null (main.cjs steamLineState).
     lineState: () => ipcRenderer.invoke('steam-line-state'),
+    // Linux: Steam's cloud rules for the game given MacOS, closing Steam (main.cjs steam-fix-cloud): what to say.
+    fixCloud: () => ipcRenderer.invoke('steam-fix-cloud'),
     // The plain-text report for testers to paste into an issue (main.cjs reportFacts, steamReport.cjs). The page gives
     // what only it knows: { filesFrom, required } (web/src/install/sources.ts reportArgs).
     report: (page) => ipcRenderer.invoke('steam-report', page),

@@ -67,7 +67,16 @@ export function androidFolder(): (() => Promise<FoundCopy | null>) | null {
 /** What the desktop app found when Steam launched the game (desktop/main.cjs steamLaunch). */
 export type SteamLaunch =
   | { steam: false }
-  | { steam: true; game: 'ok' | 'missing' | 'none'; where: string; account: boolean; /** On a Steam Deck (SteamDeck=1). */ deck?: boolean };
+  | {
+      steam: true;
+      game: 'ok' | 'missing' | 'none';
+      where: string;
+      account: boolean;
+      /** On a Steam Deck (SteamDeck=1). */
+      deck?: boolean;
+      /** Linux: whether Steam's cloud rules for the game lack MacOS (desktop/steamSetup.cjs linuxCloud). */
+      cloudRule?: 'needed' | 'ready' | null;
+    };
 
 /** What the desktop app found of Steam and Ultima V in it, launched by Steam or not (desktop/main.cjs steamFind). */
 export interface SteamFind {
@@ -110,6 +119,8 @@ export interface SteamNative {
   setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
   /** The tester report (desktop/steamReport.cjs), given what only the page knows; null where refused. */
   report(page: ReportArgs): Promise<string | null>;
+  /** Linux: Steam's cloud rules given MacOS (desktop/main.cjs steam-fix-cloud); what to say, null where refused. */
+  fixCloud(): Promise<string | null>;
 }
 
 /** Where the kept game files came from: recorded when they are kept, 'unknown' for a copy kept before it was. */

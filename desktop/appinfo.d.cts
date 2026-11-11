@@ -11,4 +11,5 @@ export function readAppinfo(buf: Buffer): Appinfo;
 export function appEntry(info: Appinfo, appid: number): { header: Buffer; kv: KvNode[] } | null;
 export function writeAppinfo(info: Appinfo, appid: number, header: Buffer, kv: KvNode[]): Buffer;
 export function macPatch(kv: KvNode[], launcherName: string): { kv: KvNode[]; changed: boolean };
+export function cloudPatch(kv: KvNode[]): { kv: KvNode[]; changed: boolean };
 export function isMacPatched(kv: KvNode[], launcherName: string): boolean;

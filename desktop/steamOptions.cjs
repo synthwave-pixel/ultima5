@@ -54,6 +54,18 @@ const pasteLine = (system) =>
   'Copy the launch line, then in Steam: Ultima V > Properties > General > Launch Options, and paste it.' +
   (system === 'linux' ? ' Choose Proton under Compatibility too, so Steam downloads the game.' : '');
 
+/** What giving Linux's cloud rules MacOS came to (steamSetup.cjs linuxCloudSetup, main.cjs), said to the player. */
+const CLOUD_SAYS = {
+  done: "Nothing to do: Steam already sends this computer's Cloud saves to a Mac too.",
+  restarted: "Done, and Steam restarted. Steam sends this computer's Cloud saves to a Mac too, from when Ultima V next closes in Steam.",
+  'steam-running': "Steam didn't quit, so Cloud saves made here don't reach a Mac yet. Quit Steam, then open this app.",
+  'not-owned': "Steam doesn't list Ultima V here.",
+  'not-here': 'Open this app outside Steam, from the desktop (on a Steam Deck, Desktop Mode), to do this.',
+};
+
+/** What to tell the player of giving Linux's cloud rules MacOS (CLOUD_SAYS). */
+const cloudRuleMessage = (result) => CLOUD_SAYS[result] ?? `That didn't work: ${result}`;
+
 /** What a Mac's setup or removal came to (steamSetup.cjs macSetup, macRestore), said to the player. */
 const MAC_SAYS = {
   'on:done': 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.',
@@ -123,11 +135,19 @@ async function switchOption({ options, name, on, system, account, now, failed, e
       if (written === null) return done(false, 'no launcher', "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.");
       if (written.length === 0) return done(false, 'no Steam folder', "Steam isn't here. Install Steam and start it once, then try again.");
       const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
+      // The game's cloud rules given MacOS too, where Steam may be closed from here; the tool is on whatever comes of it.
+      let cloud = null;
+      try {
+        cloud = effects.linuxCloud ? await effects.linuxCloud() : null;
+      } catch (e) {
+        console.warn('steam cloud rules:', e?.message ?? e);
+      }
       return done(
         true,
         'done',
-        'Done. Restart Steam, then in Ultima V > Properties > Compatibility, choose Ultima V SP. Steam downloads the game, ' +
-          'and Play starts this engine.' +
+        (cloud === 'restarted' ? 'Done, and Steam restarted. In' : 'Done. Restart Steam, then in') +
+          ' Ultima V > Properties > Compatibility, choose Ultima V SP. Steam downloads the game, and Play starts this engine.' +
+          (cloud === 'steam-running' ? ` ${CLOUD_SAYS['steam-running']}` : '') +
           (flathub ? ` Steam from Flathub needs this run once too: ${OVERRIDE}` : ''),
       );
     }
@@ -173,4 +193,4 @@ async function switchAndKeep(file, args) {
   };
 }
 
-module.exports = { readOptions, writeOptions, switchOption, switchAndKeep };
+module.exports = { cloudRuleMessage, readOptions, writeOptions, switchOption, switchAndKeep };

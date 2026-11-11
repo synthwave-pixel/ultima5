@@ -142,8 +142,15 @@ export interface SteamStatus {
   launch: boolean;
   /** The launch line this copy would use; null where it has none (the portable .exe, a Mac). */
   line: string | null;
-  /** A Mac's: whether Steam is running, which setting up or taking away would quit. */
+  /** Whether Steam is running, which setting up or taking away would quit: a Mac's, and Linux's where canFixCloud. */
   steamRunning?: boolean;
+  /**
+   * Linux's: whether Steam's cloud rules for the game lack MacOS ('needed': saves uploaded from here never reach a
+   * Mac), have it, or were not found; and whether they may be set from here (not from the Flatpak, a Steam launch or
+   * Game Mode).
+   */
+  cloudRule?: 'needed' | 'ready' | null;
+  canFixCloud?: boolean;
 }
 
 /** The options that set Steam's Play up, by system: a launch line (Windows, Linux), the compatibility tool, a Mac's. */
@@ -203,6 +210,8 @@ export interface SteamHook {
   setOption(name: PlayOption, on: boolean): Promise<SteamSwitched | null>;
   /** Steam's saved launch line read back, or null where there is none to read. */
   lineState(): Promise<LineCheck | null>;
+  /** Linux: Steam's cloud rules given MacOS, closing Steam (desktop/steamSetup.cjs linuxCloudSetup); what to say. */
+  fixCloud(): Promise<string | null>;
   /** Puts the launch line on the clipboard; false where this copy has none. */
   copyLine(): Promise<boolean>;
   /** Puts the tester report on the clipboard; false where it could not be made. */

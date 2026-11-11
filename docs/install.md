@@ -117,6 +117,25 @@ The options differ by system:
   turned on in 1.1.196–1.1.198 is still listed, to be turned off; clear
   Launch Options in Steam too.
 
+  Steam marks each Cloud save it uploads with the systems it may go to, from
+  the game's cloud rules, and EA's rules for Ultima V name Windows alone. On
+  Linux, Steam runs the game as its Windows version, so without a change,
+  saves uploaded from here never reach a Mac. From 1.1.205, Compat. tool also
+  adds macOS to those rules in Steam's own settings. Steam must be closed for
+  that, so the app asks first, closes Steam and opens it again, which also
+  makes Steam see the tool. Saves already uploaded from here are changed
+  slightly, without changing what they hold, so that Steam sends them again
+  marked for a Mac too.
+
+  With the tool already on from an earlier version, Play from Steam shows
+  Fix Cloud for Mac until this is done. It works only in a copy started
+  outside Steam, from the desktop (on a Steam Deck, Desktop Mode): Game
+  Mode runs inside Steam, which can't be closed there. It also needs the
+  AppImage, because the Flatpak can't close Steam. Steam may undo the change
+  when it updates Ultima V's details; the app then puts it back the next time
+  it starts with Steam closed. A game Steam starts with Cloud saves on says
+  once when the change is missing.
+
   On a Steam Deck, Steam's own controller layout for Ultima V is keyboard
   and mouse, made for the DOS game, and the buttons then do nothing here:
   press the Steam button, open the controller settings and choose the

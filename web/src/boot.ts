@@ -34,6 +34,13 @@ const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turni
  */
 const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
 const PAD_NOTED_KEY = 'ultima5.deckPadNoted';
+/**
+ * Linux, Cloud saves on: Steam's cloud rules for the game lack MacOS, so the saves uploaded from here never reach a
+ * Mac (desktop/steamSetup.cjs). Said once while they do; said again should Steam later undo the fix.
+ */
+const CLOUD_RULE_NOTE =
+  "Cloud saves made here don't reach a Mac yet. To fix it, open this app from the desktop, then Steam (beta) > Play from Steam > Fix Cloud for Mac.";
+const CLOUD_RULE_NOTED_KEY = 'ultima5.cloudRuleNoted';
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
 async function installedCopy(): Promise<{ files: GameFiles | null; notice?: string }> {
@@ -110,7 +117,21 @@ function noteFor(): { text: string; seen: () => void } | null {
       },
     };
   }
-  return cloudNote() ?? padNote();
+  return cloudNote() ?? cloudRuleNote() ?? padNote();
+}
+
+/** Said once in a Linux Steam launch with Cloud saves on while Steam's cloud rules lack MacOS; forgotten once they have it. */
+function cloudRuleNote(): { text: string; seen: () => void } | null {
+  const launch = steamLaunch();
+  if (!launch.steam || cloudAccount === null) return null;
+  if (launch.cloudRule === 'ready') {
+    try {
+      localStorage.removeItem(CLOUD_RULE_NOTED_KEY);
+    } catch {
+      // Nowhere kept: nothing to forget.
+    }
+  }
+  return launch.cloudRule === 'needed' ? once(CLOUD_RULE_NOTED_KEY, CLOUD_RULE_NOTE) : null;
 }
 
 /** Said once, the first time on this machine that Cloud saves is on for the account. */

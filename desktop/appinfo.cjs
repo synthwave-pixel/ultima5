@@ -255,6 +255,19 @@ function macPatch(kv, launcherName) {
     changed = true;
   }
 
+  const cloud = cloudPatch(out);
+  return { kv: cloud.kv, changed: changed || cloud.changed };
+}
+
+/**
+ * Ultima V's entry with MacOS added to the platforms of each cloud save rule, on a copy. Steam marks each file it
+ * uploads with the platforms of the rule it matched there, and a Mac's Steam downloads only files marked MacOS: as EA
+ * has it (Windows alone), saves uploaded from Linux, where Steam runs the game as its Windows version, never reach a
+ * Mac. `changed` is false when every rule has MacOS already.
+ */
+function cloudPatch(kv) {
+  const out = structuredClone(kv);
+  let changed = false;
   for (const rule of mapAt(out, 'appinfo', 'ufs', 'savefiles')) {
     const platforms = rule[0] === MAP ? findNode(rule[2], 'platforms') : undefined;
     if (platforms && !platforms[2].some((p) => p[2] === 'MacOS')) {
@@ -270,4 +283,4 @@ function isMacPatched(kv, launcherName) {
   return !macPatch(kv, launcherName).changed;
 }
 
-module.exports = { readAppinfo, appEntry, writeAppinfo, macPatch, isMacPatched };
+module.exports = { readAppinfo, appEntry, writeAppinfo, macPatch, isMacPatched, cloudPatch };

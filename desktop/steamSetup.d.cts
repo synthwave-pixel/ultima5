@@ -38,3 +38,15 @@ export function macStatus(where: MacWhere & AppPlace): {
   steamRunning: boolean;
 };
 export function macRestore(where: MacWhere & { quitSteam(): Promise<void> }): Promise<'done' | 'steam-running' | 'kept-unusable'>;
+/** Linux's Steam folders, and Steam's state: quit and started again by its own command (main.cjs). */
+interface LinuxWhere {
+  fs: Fs;
+  roots: string[];
+  steamRunning(): boolean;
+}
+/** 'needed' where a Steam folder's cache lacks MacOS in Ultima V's cloud rules, 'ready' where none does, null without the game. Only reads. */
+export function linuxCloud(fs: Fs, roots: string[]): 'needed' | 'ready' | null;
+export function linuxCloudSetup(
+  where: LinuxWhere & { quitSteam(): Promise<void>; openSteam(): void },
+): Promise<'done' | 'restarted' | 'steam-running' | 'not-owned'>;
+export function linuxCloudReapply(where: LinuxWhere): 'ready' | 'steam-running' | 'not-owned';

@@ -23,7 +23,7 @@ const { pathToFileURL } = require('node:url');
 const { homedir } = require('node:os');
 const fs = require('node:fs');
 const { writeFileSync, existsSync, readFileSync } = fs;
-const { execFile, spawnSync } = require('node:child_process');
+const { execFile, spawn, spawnSync } = require('node:child_process');
 const { missingNames, readCopy, scanForGameFiles } = require('./scan.cjs');
 const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const {
@@ -43,7 +43,7 @@ const { installSteamArt } = require('./steamArt.cjs');
 const { portableData } = require('./portable.cjs');
 const { accountId, findGame, isSteamLaunch, libraryPaths, saveDir, steamRoots } = require('./steam.cjs');
 const { loadAll, removeKey, writable, writeKey } = require('./steamSaves.cjs');
-const { readOptions, switchAndKeep } = require('./steamOptions.cjs');
+const { cloudRuleMessage, readOptions, switchAndKeep } = require('./steamOptions.cjs');
 const { mask, report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
@@ -163,16 +163,64 @@ function steamRunning() {
   return name !== undefined && spawnSync('pgrep', ['-x', name]).status !== 1;
 }
 
-/** Asks Steam on a Mac to quit, then waits up to 40 s for it to go. It goes even when osascript says "User canceled". */
-function quitSteam() {
+/** Waits up to 40 s for Steam to go. */
+function steamGone() {
   return new Promise((resolve) => {
-    execFile('osascript', ['-e', 'quit app "Steam"'], () => {
-      const until = Date.now() + 40_000;
-      const look = () => (!steamRunning() || Date.now() > until ? resolve() : setTimeout(look, 500));
-      look();
-    });
+    const until = Date.now() + 40_000;
+    const look = () => (!steamRunning() || Date.now() > until ? resolve() : setTimeout(look, 500));
+    look();
   });
 }
+
+/** Asks Steam on a Mac to quit, then waits for it to go. It goes even when osascript says "User canceled". */
+function quitSteam() {
+  return new Promise((resolve) => execFile('osascript', ['-e', 'quit app "Steam"'], () => resolve())).then(steamGone);
+}
+
+/**
+ * Linux's Steam run with `args`, left to itself: its own command, else Flathub's Steam. Its environment is this app's
+ * without the AppImage's libraries or a Steam launch's runtime and overlay, which are not Steam's own. Whether it
+ * started.
+ */
+function runSteam(args) {
+  const env = { ...process.env };
+  for (const name of ['LD_LIBRARY_PATH', 'LD_PRELOAD', 'APPDIR', 'APPIMAGE', 'ARGV0', 'OWD']) delete env[name];
+  const tries = [
+    ['steam', args],
+    ['flatpak', ['run', 'com.valvesoftware.Steam', ...args]],
+  ];
+  return new Promise((resolve) => {
+    const next = (i) => {
+      if (i >= tries.length) return resolve(false);
+      const child = spawn(tries[i][0], tries[i][1], { env, detached: true, stdio: 'ignore' });
+      child.once('error', () => next(i + 1));
+      child.once('spawn', () => {
+        child.unref();
+        resolve(true);
+      });
+    };
+    next(0);
+  });
+}
+
+/** Asks Linux's Steam to quit (steam -shutdown), then waits for it to go. */
+const quitSteamLinux = () => runSteam(['-shutdown']).then(steamGone);
+
+/**
+ * Whether Linux's Steam may be closed from here, to give its cloud rules MacOS (steamSetup.cjs linuxCloudSetup): not
+ * from the Flatpak, whose sandbox cannot see Steam running, and not under Steam (a Steam launch, or Game Mode, where
+ * Steam is the session), which quitting would end.
+ */
+const linuxCloudHere = () => SYSTEM === 'linux' && !asFlatpak && !steamMode && !inGamescope;
+
+/** Linux's Steam folders and Steam itself, for its cloud rules. */
+const linuxWhere = () => ({
+  fs,
+  roots: steamRootsHere(),
+  steamRunning,
+  quitSteam: quitSteamLinux,
+  openSteam: () => void runSteam([]),
+});
 
 // This build, for the launch line: the Flatpak, the AppImage (its name has no version, so updates overwrite it and the line
 // holds), the portable .exe.
@@ -267,7 +315,23 @@ function steamStatus(launch) {
     launch: launch !== null,
     line: launchLineHere(),
     ...(SYSTEM === 'mac' ? { steamRunning: root !== null && steamRunning() } : {}),
+    ...(SYSTEM === 'linux' ? linuxCloudStatus() : {}),
   };
+}
+
+/**
+ * Linux's cloud rules for the Steam (beta) menu: whether they lack MacOS ('needed'), whether they may be set from
+ * here, and then whether Steam is running, which setting them would quit.
+ */
+function linuxCloudStatus() {
+  let cloudRule = null;
+  try {
+    cloudRule = steamSetup.linuxCloud(fs, steamRootsHere());
+  } catch {
+    // Unread: no line offered.
+  }
+  const canFixCloud = linuxCloudHere();
+  return { cloudRule, canFixCloud, ...(canFixCloud ? { steamRunning: steamRunning() } : {}) };
 }
 
 // Whether this start had to put Ultima V's cache entry back (null: not looked at yet, or not a Mac), for the report.
@@ -342,6 +406,7 @@ const optionEffects = {
   line: launchLineHere,
   installTool: () => (asFlatpak || appImage ? steamSetup.installCompatTool(fs, steamRootsHere(), { flatpak: asFlatpak, appImage }) : null),
   removeTool: () => steamSetup.removeCompatTool(fs, steamRootsHere()),
+  linuxCloud: () => (linuxCloudHere() ? steamSetup.linuxCloudSetup(linuxWhere()) : Promise.resolve(null)),
   macSetup: () => steamSetup.macSetup(macWhere()),
   macRestore: () => steamSetup.macRestore(macWhere()),
 };
@@ -438,7 +503,9 @@ const modeFile = join(app.getPath('userData'), 'instance.json');
 const primary = app.requestSingleInstanceLock({ steam: steamMode });
 const clash = primary ? null : clashMessage(modeFile, steamMode);
 if (primary) noteMode(modeFile, steamMode);
-else app.quit();
+// Quit at once unless there is something to say: quit before the app is ready, it never becomes ready, and the
+// message below would never be shown (a Steam Play that only flickers and returns to Play).
+else if (clash === null) app.quit();
 app.on('second-instance', (_event, _argv, _cwd, data) => {
   if (data?.steam !== steamMode) return;
   const win = BrowserWindow.getAllWindows()[0];
@@ -451,7 +518,12 @@ app.on('second-instance', (_event, _argv, _cwd, data) => {
 app.whenReady().then(() => {
   if (!primary) {
     // Quitting: see above. The refused copy of the other mode says why first.
-    if (clash !== null) dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
+    if (clash !== null) {
+      // Started by Steam, the app is not the active one, and its message would open behind Steam's window.
+      if (process.platform === 'darwin') app.focus({ steal: true });
+      dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
+      app.quit();
+    }
     return;
   }
   // app://ultima5/<path> -> app/<path>, confined to that folder.
@@ -479,10 +551,23 @@ app.whenReady().then(() => {
   // there is one, where the game's files are, and whether an account is known. The game's files are read from the folder
   // Steam gave, the files the page names; none where there is no folder.
   const launch = steamLaunch();
+  // On Linux, whether Steam's cloud rules lack MacOS, for the title's note (boot.ts): read once, on the first ask.
+  let launchCloudRule;
+  const cloudRuleOnce = () => {
+    if (launchCloudRule === undefined) launchCloudRule = SYSTEM === 'linux' ? linuxCloudStatus().cloudRule : null;
+    return launchCloudRule;
+  };
   ipcMain.on('steam-launch', (event) => {
     event.returnValue =
       launch && String(event.senderFrame?.url ?? '').startsWith('app://')
-        ? { steam: true, game: launch.game, where: launch.where, account: launch.account, deck: process.env.SteamDeck === '1' }
+        ? {
+            steam: true,
+            game: launch.game,
+            where: launch.where,
+            account: launch.account,
+            deck: process.env.SteamDeck === '1',
+            cloudRule: cloudRuleOnce(),
+          }
         : { steam: false };
   });
   // What Steam has, launched by it or not (preload.cjs u5native.steam.find), and its files for the one-time take.
@@ -576,6 +661,22 @@ app.whenReady().then(() => {
   // The Steam (beta) menu (web/src/game/steamMenu.ts): what was found, and the launch line to copy. Only the game's own
   // page may ask.
   ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus(launch) : null));
+  // Linux's cloud rules given MacOS (steamSetup.cjs linuxCloudSetup), from the Steam (beta) menu: what to say. One at a
+  // time with the options, which close Steam too.
+  ipcMain.handle('steam-fix-cloud', (event) => {
+    if (!fromGame(event)) return null;
+    const run = async () => {
+      if (!linuxCloudHere()) return cloudRuleMessage('not-here');
+      try {
+        return cloudRuleMessage(await steamSetup.linuxCloudSetup(linuxWhere()));
+      } catch (e) {
+        return `That didn't work: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    };
+    const fixed = switching.then(run);
+    switching = fixed.catch(() => undefined);
+    return fixed;
+  });
   ipcMain.handle('steam-launch-line', (event) => (fromGame(event) ? launchLineHere() : null));
   // Whether the launch line Steam saved is this copy's (steamLineState above), for the Steam (beta) menu.
   ipcMain.handle('steam-line-state', (event) => (fromGame(event) ? steamLineState(readOptions(optionsFile)) : null));
@@ -634,6 +735,16 @@ app.whenReady().then(() => {
       }
     } catch (e) {
       console.warn('steam compatibility tool not updated:', e);
+    }
+    // Linux with the compatibility tool on, outside Steam: MacOS put back in the game's cloud rules if Steam has replaced
+    // its entry and is closed.
+    try {
+      if (readOptions(optionsFile).compatTool && linuxCloudHere()) {
+        const state = steamSetup.linuxCloudReapply(linuxWhere());
+        if (state !== 'ready') console.log('steam cloud rules:', state);
+      }
+    } catch (e) {
+      console.warn('steam cloud rules not re-applied:', e);
     }
     // Play from Steam on, on a Mac: its cache entry given our launch again if Steam has replaced it (or left for a start
     // with Steam closed).

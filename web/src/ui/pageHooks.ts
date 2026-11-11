@@ -369,6 +369,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
             },
             setOption: (name, on) => steam.setOption(name, on),
             lineState: () => steam.lineState(),
+            fixCloud: () => steam.fixCloud(),
             async copyLine() {
               const line = await steam.launchLine();
               if (line === null) return false;

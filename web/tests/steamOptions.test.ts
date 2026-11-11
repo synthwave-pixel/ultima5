@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  cloudRuleMessage,
   readOptions,
   switchAndKeep,
   switchOption,
@@ -138,6 +139,37 @@ describe('switching a Steam option', () => {
     expect(off.options).toMatchObject({ compatTool: false, results: { compatTool: 'off: done' } });
     expect(off.message).toContain('Restart Steam');
     expect(calls).toEqual(['install', 'remove']);
+  });
+
+  it("gives Linux's cloud rules MacOS with the tool, the tool on whatever comes of it", async () => {
+    const said = async (cloud: Awaited<ReturnType<NonNullable<OptionEffects['linuxCloud']>>> | Error) => {
+      const calls: string[] = [];
+      const linuxCloud = async () => {
+        calls.push('linuxCloud');
+        if (cloud instanceof Error) throw cloud;
+        return cloud;
+      };
+      const r = (await turn('compatTool', true, { effects: effects(calls, { linuxCloud }) }))!;
+      expect(calls).toEqual(['install', 'linuxCloud']);
+      expect(r.options).toMatchObject({ compatTool: true, results: { compatTool: 'on: done' } });
+      ascii(r.message);
+      return r.message;
+    };
+    // Steam quit and started again: it has seen the tool already.
+    const restarted = await said('restarted');
+    expect(restarted).toContain('Steam restarted');
+    expect(restarted).not.toContain('Restart Steam');
+    expect(await said('done')).toContain('Restart Steam');
+    expect(await said(null)).toContain('Restart Steam');
+    expect(await said('steam-running')).toContain("don't reach a Mac yet");
+    expect(await said(new Error('EACCES'))).toContain('Restart Steam');
+  });
+
+  it('says what giving the cloud rules MacOS came to', () => {
+    for (const result of ['done', 'restarted', 'steam-running', 'not-owned', 'not-here']) ascii(cloudRuleMessage(result));
+    expect(cloudRuleMessage('restarted')).toContain('Steam restarted');
+    expect(cloudRuleMessage('not-here')).toContain('Desktop Mode');
+    expect(cloudRuleMessage('odd')).toBe("That didn't work: odd");
   });
 
   it('leaves the tool off where it could not be written, with the reason kept', async () => {

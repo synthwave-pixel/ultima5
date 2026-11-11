@@ -67,6 +67,7 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
       return { on, message: `Now ${name} is ${on ? 'on' : 'off'}.`, ...(name === 'playLine' && on && st.line ? { line: st.line } : {}) };
     },
     lineState: async () => (calls.push('lineState'), { state: 'missing', bothLinux: o.playLine && o.compatTool }),
+    fixCloud: async () => (calls.push('fixCloud'), 'Cloud fixed.'),
     copyLine: async () => (calls.push('copyLine'), true),
     copyReport: async () => (calls.push('copyReport'), true),
     open: (url) => void calls.push(`open ${url}`),
@@ -408,6 +409,42 @@ describe('the Steam (beta) menu', () => {
     const { shown } = await drive(g, p, ['Play from Steam', 'Compat. tool: Off', 'Compat. tool: On']);
     expect(f.calls).toEqual(['compatTool on', 'compatTool off']);
     expect(choosable(shown.filter((m) => m.title === 'Play from Steam').at(-1)!)).toContain('Compat. tool: Off');
+  });
+
+  it('offers Linux to fix the cloud rules with the tool on, asking first while Steam runs', async () => {
+    const no = newGame();
+    const f = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: true, steamRunning: true }, { compatTool: true });
+    no.g.hooks.steam = f.hook;
+    const asked = await drive(no.g, no.p, ['Play from Steam', 'Fix Cloud for Mac', 'No']);
+    expect(asked.said).toContain(sq('This closes Steam and opens it again'));
+    expect(f.calls).toEqual([]);
+    const yes = newGame();
+    yes.g.hooks.steam = f.hook;
+    const done = await drive(yes.g, yes.p, ['Play from Steam', 'Fix Cloud for Mac', 'Yes']);
+    expect(f.calls).toEqual(['fixCloud']);
+    expect(done.said).toContain(sq('Cloud fixed.'));
+  });
+
+  it('greys Fix Cloud for Mac where Steam may not be closed, and hides it where nothing needs fixing', async () => {
+    const deck = newGame();
+    deck.g.hooks.steam = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: false, launch: true }, { compatTool: true }).hook;
+    const grey = await drive(deck.g, deck.p, ['Play from Steam']);
+    const play = grey.shown.filter((m) => m.title === 'Play from Steam').at(-1)!;
+    expect(play.labels).toContain('Fix Cloud for Mac');
+    expect(choosable(play)).not.toContain('Fix Cloud for Mac');
+    const fine = newGame();
+    fine.g.hooks.steam = fake({ system: 'linux', cloudRule: 'ready', canFixCloud: true }, { compatTool: true }).hook;
+    const ready = await drive(fine.g, fine.p, ['Play from Steam']);
+    expect(ready.shown.filter((m) => m.title === 'Play from Steam').at(-1)!.labels).not.toContain('Fix Cloud for Mac');
+  });
+
+  it('asks Linux before turning the tool on where that closes Steam to fix the cloud rules', async () => {
+    const { g, p } = newGame();
+    const f = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: true, steamRunning: true });
+    g.hooks.steam = f.hook;
+    const { said } = await drive(g, p, ['Play from Steam', 'Compat. tool: Off', 'No']);
+    expect(said).toContain(sq('This closes Steam and opens it again'));
+    expect(f.calls).toEqual([]);
   });
 
   it("warns a Mac before changing Steam's settings, and does nothing on No", async () => {
