@@ -25,7 +25,8 @@ describe('the Mac build signed', () => {
       // Not signed with it, the build fails instead of shipping ad hoc.
       forceCodeSigning: true,
     });
-    expect(c.extraMetadata).toEqual({ version: '1.2.3' });
+    // Signed, the app may replace itself with a newer release (desktop/updates.cjs updateKind); ad hoc, it may not.
+    expect(c.extraMetadata).toEqual({ version: '1.2.3', selfUpdate: true });
     expect(c.appId).toBe('x');
   });
 

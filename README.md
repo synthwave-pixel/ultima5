@@ -79,18 +79,15 @@ games.
   [Releases page](https://github.com/synthwave-pixel/ultima5/releases/latest),
   a Windows installer or portable `.exe` and an Apple Silicon `.dmg`
   (macOS 13 or later; Intel Macs: use the browser). The Windows installer
-  then keeps itself up to date; the macOS app and the portable `.exe` say
-  when a newer version is out. They are unsigned, so each system asks once:
-  - Windows: SmartScreen asks; choose More info, then Run anyway.
-  - macOS: the first launch is refused. Open System Settings, choose
-    Privacy & Security, scroll down to Security and click Open Anyway
-    beside Ultima V. Or, in Terminal, once:
-    `xattr -dr com.apple.quarantine "/Applications/Ultima V.app"`. If
-    macOS later asks to let Ultima V use the microphone (it can when the
-    sound plays through a USB microphone or headset), choose Don't Allow:
-    the game never uses it, and the sound plays on.
-
-    <img src="docs/macos-open-anyway.png" alt="System Settings, Privacy &amp; Security: under Security, &quot;Ultima V&quot; was blocked to protect your Mac, with the Open Anyway button beside it" width="600">
+  keeps itself up to date, and so does the macOS app once dragged into
+  Applications; the portable `.exe`, and the macOS app run from anywhere
+  else, say when a newer version is out.
+  - Windows: the builds are unsigned, so SmartScreen asks once; choose
+    More info, then Run anyway.
+  - macOS: the app is signed and notarized by Apple, and opens like any
+    other. If macOS asks to let Ultima V use the microphone (it can when
+    the sound plays through a USB microphone or headset), choose Don't
+    Allow: the game never uses it, and the sound plays on.
 
 - **Android**: the APK (`Ultima-V-<version>-android.apk`) on the Releases
   page, for handhelds like the AYN Odin or the Retroid Pocket and for

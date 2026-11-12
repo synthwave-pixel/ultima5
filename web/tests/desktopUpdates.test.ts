@@ -22,17 +22,31 @@ import {
 
 /** Updates from the GitHub releases (desktop/updates.cjs). */
 describe('the desktop app’s updates', () => {
-  const kind = (platform: string, env: Record<string, string> = {}, packaged = true, argv: string[] = []) =>
-    updateKind({ packaged, platform, env, argv });
+  const kind = (
+    platform: string,
+    env: Record<string, string> = {},
+    packaged = true,
+    argv: string[] = [],
+    selfUpdate = false,
+    inApplications = false,
+  ) => updateKind({ packaged, platform, env, argv, selfUpdate, inApplications });
 
   it('install themselves where electron-updater can replace the copy: the Windows installer’s, the AppImage', () => {
     expect(kind('win32')).toBe('auto');
     expect(kind('linux', { APPIMAGE: '/home/deck/Ultima-V.AppImage' })).toBe('auto');
   });
 
-  it('are told of where it cannot: macOS (unsigned), the Windows portable .exe', () => {
+  it('are told of where it cannot: the Windows portable .exe, and a Mac build not signed for release', () => {
     expect(kind('darwin')).toBe('notice');
+    expect(kind('darwin', {}, true, [], false, true)).toBe('notice'); // ad hoc (a local or a fork's build), in Applications
     expect(kind('win32', { PORTABLE_EXECUTABLE_DIR: 'D:\\\\Games' })).toBe('notice');
+  });
+
+  it('on a Mac, install themselves in a release build run from Applications - told of where run from elsewhere', () => {
+    expect(kind('darwin', {}, true, [], true, true)).toBe('auto');
+    // From the disk image, or Downloads (macOS runs it from a read-only copy there): the app cannot be replaced.
+    expect(kind('darwin', {}, true, [], true, false)).toBe('notice');
+    expect(kind('darwin', {}, true, ['--no-update-check'], true, true)).toBe('none');
   });
 
   it('in the Flatpak, go through its update portal (flatpakUpdates.cjs)', () => {
@@ -124,6 +138,39 @@ describe('the desktop app’s updates', () => {
       const electron = { app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir }, net: {} };
       await checkForUpdates({ electron, quiet: false, file: join(dir, 'updates.json') });
       expect(autoUpdater.allowPrerelease).toBe(false);
+    } finally {
+      if (real) require.cache[path] = real;
+      else delete require.cache[path];
+      Object.defineProperty(process, 'platform', { value: was.platform });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('on a Mac, look for a release build with electron-updater, and tell of a newer release where it fails', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'u5-updates-'));
+    const was = { platform: process.platform };
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+    const path = createRequire(join(process.cwd(), '../desktop/updates.cjs')).resolve('electron-updater');
+    const real = require.cache[path];
+    let looked = 0;
+    let failed: (e: Error) => void = () => {};
+    const autoUpdater = {
+      on: (name: string, fn: typeof failed) => name === 'error' && (failed = fn),
+      checkForUpdates: async () => {
+        looked++;
+        failed(new Error('Code signature did not match'));
+        throw new Error('Code signature did not match');
+      },
+    };
+    require.cache[path] = { id: path, filename: path, loaded: true, exports: { autoUpdater } } as never;
+    try {
+      const electron = {
+        app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir, isInApplicationsFolder: () => true },
+        net: { fetch: async () => ({ ok: true, json: async () => ({ tag_name: 'v1.1.12' }) }) },
+      };
+      await checkForUpdates({ electron, quiet: false, file: join(dir, 'updates.json'), selfUpdate: true });
+      expect(looked).toBe(1);
+      expect(currentOffer()).toEqual({ kind: 'release', version: '1.1.12', current: '1.1.10', told: false });
     } finally {
       if (real) require.cache[path] = real;
       else delete require.cache[path];

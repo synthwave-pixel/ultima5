@@ -3,6 +3,8 @@ export function updateKind(where: {
   platform: string;
   env: Record<string, string | undefined>;
   argv: string[];
+  selfUpdate?: boolean;
+  inApplications?: boolean;
 }): 'auto' | 'notice' | 'flatpak' | 'none';
 export function isNewer(latest: string, current: string): boolean;
 export function shouldNotice(latest: string, current: string, told: string | null): boolean;
@@ -29,6 +31,7 @@ export function checkForUpdates(o: {
   file: string;
   flatpak?: FlatpakPortal;
   steam?: boolean;
+  selfUpdate?: boolean;
 }): Promise<void>;
 export function applyUpdate(o: { electron: unknown; steam?: boolean }): boolean;
 export function toldOfUpdate(o: { file: string }): void;
