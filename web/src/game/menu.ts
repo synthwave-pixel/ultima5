@@ -1135,9 +1135,11 @@ const ENTRANCES: number[] = [
  */
 function readied(g: Game): { name: string; ranged: boolean } | null {
   const s = g.s;
+  const playerInCombat = (s.combatTurn < 0xff) &&
+      (g.combat[s.combatTurn].flags & CF.Player)
   let who = s.activeMember;
   if (s.mapId > 0x7f && s.combatTurn < 0x20) who = g.combat[s.combatTurn].who;
-  if (who === 0xff || who >= s.partySize) {
+  if (playerInCombat && (who === 0xff || who >= s.partySize)) {
     who = 0xff;
     for (let i = 0; i < s.partySize && who === 0xff; i++) {
       const st = s.members[i].status;
