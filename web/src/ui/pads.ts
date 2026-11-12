@@ -7,9 +7,14 @@
  * and the controller did nothing at all (found by the ap0ught fork). Its slots may be null, or hold a pad no longer
  * connected; the call may be missing altogether, or throw where the page is not allowed gamepads. A pad's buttons
  * and axes are read by index too, for the same reason. Every one of those is no pad, never an error.
+ *
+ * Every connected pad is read, not the first alone (issue #19): the browser may list another device as a pad ahead
+ * of the one played with - a Shield's remote - and a Steam Deck's own controls and an external pad are both played
+ * with. A pad's stick axis counts only once that pad's has been seen at rest, near its middle (Rest): one that rests
+ * off it - a drifting stick, a trigger some pads give as an axis resting at -1 - would otherwise hold a way for good.
  */
 
-/** The connected pads, in the browser's order (its first is the one the game reads). */
+/** The connected pads, in the browser's order. */
 export function connectedPads(): Gamepad[] {
   let list: ArrayLike<Gamepad | null> | null | undefined;
   try {
@@ -25,9 +30,47 @@ export function connectedPads(): Gamepad[] {
   return out;
 }
 
-/** The first connected pad, or null. */
-export function firstPad(): Gamepad | null {
-  return connectedPads()[0] ?? null;
+/** How near its middle an axis must come to be taken for at rest. */
+const REST = 0.25;
+
+/** The axes of each pad seen at rest, by the pad's place in the browser's list: only these are read. */
+export class Rest {
+  private seen = new Map<number, { id: string; axes: Set<number> }>();
+
+  /** The pad's axes at rest now, noted. A different pad in a place forgets the one before. */
+  note(pad: Gamepad, place: number): void {
+    const key = typeof pad.index === 'number' ? pad.index : place;
+    let s = this.seen.get(key);
+    if (!s || s.id !== pad.id) this.seen.set(key, (s = { id: pad.id, axes: new Set() }));
+    axesOf(pad).forEach((v, i) => Math.abs(v) < REST && s.axes.add(i));
+  }
+
+  /** The pad's axis `i`, or 0 until it has been seen at rest. */
+  axis(pad: Gamepad, place: number, i: number): number {
+    const key = typeof pad.index === 'number' ? pad.index : place;
+    return this.seen.get(key)?.axes.has(i) ? (pad.axes[i] ?? 0) : 0;
+  }
+}
+
+/**
+ * Every connected pad read as one, its sticks only once at rest (`rest` noting them): a button is down if down on any,
+ * an axis is the one furthest from its middle. Null with no pad.
+ */
+export function readAll(rest: Rest): { buttons: boolean[]; axes: number[] } | null {
+  const pads = connectedPads();
+  if (pads.length === 0) return null;
+  const buttons: boolean[] = [];
+  const axes: number[] = [];
+  pads.forEach((pad, place) => {
+    rest.note(pad, place);
+    buttonsOf(pad).forEach((down, i) => (buttons[i] = (buttons[i] ?? false) || down));
+    for (let i = 0; i < pad.axes.length; i++) {
+      const v = rest.axis(pad, place, i);
+      if (Math.abs(v) > Math.abs(axes[i] ?? 0)) axes[i] = v;
+      else axes[i] ??= 0;
+    }
+  });
+  return { buttons, axes };
 }
 
 /** Whether a pad's button is down, by index (a missing one is up). */

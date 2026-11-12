@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { K, TURN_LEFT } from '../src/game/io.ts';
+import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../src/game/io.ts';
 import { GamepadInput } from '../src/ui/gamepad.ts';
 
 /** A pad as the Gamepad API reports it: its mapping, its axes, no button pressed. */
@@ -94,5 +94,78 @@ describe('a gamepad read lazily', () => {
     );
     for (let i = 0; i < 3; i++) f.next();
     expect(f.queued).toBe(1);
+  });
+});
+
+/**
+ * Every connected pad is read, not only the browser's first (issue #19): a Shield's remote, or another device the
+ * browser lists as a pad ahead of the controller played with, took every press of the controller's for itself; a
+ * Steam Deck's own controls and an external pad are both played with. A button is down if down on any pad; the
+ * direction is the one pushed furthest; each pad's sticks are read once that pad's own have been seen at rest.
+ */
+describe('several gamepads', () => {
+  /** A pad as the Gamepad API reports it, at `index`, with `down` pressed. */
+  const padAt = (index: number, mapping: string, axes: number[], down: number[] = []) => ({
+    index,
+    id: `pad ${index}`,
+    connected: true,
+    mapping,
+    axes,
+    buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: down.includes(i) })),
+  });
+
+  /** What a GamepadInput sends over a second of polls, the pads set by `at` (ms) as it goes. */
+  const sentFrom = (at: (ms: number) => ReturnType<typeof padAt>[]): number[] => {
+    const out: number[] = [];
+    let pads = at(0);
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    vi.stubGlobal('navigator', { getGamepads: () => pads });
+    const input = new GamepadInput((code) => out.push(code)) as unknown as { poll(now: number): void };
+    for (let ms = 0; ms <= 1000; ms += 16) {
+      pads = at(ms);
+      input.poll(ms);
+    }
+    return out;
+  };
+
+  /** A remote, listed first: no stick, nothing pressed. */
+  const remote = () => padAt(0, '', []);
+
+  it("takes the buttons of a pad listed after another, not only the first's", () => {
+    const out = sentFrom((ms) => [remote(), padAt(1, 'standard', [0, 0, 0, 0], ms >= 100 ? [0] : [])]);
+    expect(out).toEqual([Pad.A]);
+  });
+
+  it("takes the d-pad and the sticks of a pad listed after another, once that pad's have rested", () => {
+    expect(sentFrom((ms) => [remote(), padAt(1, 'standard', [0, 0, 0, 0], ms >= 100 ? [14] : [])])[0]).toBe(K.Left);
+    expect(sentFrom((ms) => [remote(), padAt(1, 'standard', [0, ms < 100 ? 0 : -1, 0, 0])])[0]).toBe(K.Up);
+    expect(sentFrom((ms) => [remote(), padAt(1, 'standard', [0, 0, ms < 100 ? 0 : 1, 0])])[0]).toBe(TURN_RIGHT);
+  });
+
+  it("reads each pad's sticks only once its own have rested: one pad's rest is not another's", () => {
+    // The first pad's sticks at rest; the second's left stick pushed up from the start, never at rest.
+    expect(sentFrom(() => [padAt(0, 'standard', [0, 0, 0, 0]), padAt(1, 'standard', [0, -1, 0, 0])])).toEqual([]);
+  });
+
+  it('holds no way from one pad that rests off its middle while another is played with', () => {
+    // A device resting with its axes at -1, listed first, and a pad pressed right on its d-pad, then let go.
+    const out = sentFrom((ms) => [padAt(0, '', [-1, -1, -1, -1]), padAt(1, 'standard', [0, 0, 0, 0], ms >= 100 && ms < 200 ? [15] : [])]);
+    expect(out).toEqual([K.Right]);
+  });
+
+  it('sends a button held on two pads once', () => {
+    const out = sentFrom((ms) => [
+      padAt(0, 'standard', [0, 0, 0, 0], ms >= 100 ? [0] : []),
+      padAt(1, 'standard', [0, 0, 0, 0], ms >= 200 ? [0] : []),
+    ]);
+    expect(out).toEqual([Pad.A]);
+  });
+
+  it('takes the stick pushed furthest, of all the pads', () => {
+    const out = sentFrom((ms) => [
+      padAt(0, 'standard', [ms < 100 ? 0 : 0.6, 0, 0, 0]),
+      padAt(1, 'standard', [0, ms < 100 ? 0 : -0.9, 0, 0]),
+    ]);
+    expect(out[0]).toBe(K.Up);
   });
 });

@@ -357,7 +357,10 @@ describes how the Modern look is drawn.
   pad's pause button, or Escape at the command prompt) opens the Pause
   menu wherever the game waits, and the game carries on where it was. A
   press on a gamepad or the touch pad puts the game in controller mode,
-  and a held button does not repeat into a second turn.
+  and a held button does not repeat into a second turn. Every connected
+  controller is read at once - a Steam Deck's own controls and an
+  external pad, or a pad on a TV box beside its remote - so it does not
+  matter which one the system lists first.
 - **The command menu** lists what the surroundings call for first, names
   the weapon in hand ("Attack (Bow)", or "Attack (no arrows)" for a bow
   with nothing to shoot) and leads with it when it reaches,

@@ -8,7 +8,7 @@
  * (gamepad.ts) is not running then or is held off (screen.ts push): one reader at a time.
  */
 
-import { axesOf, buttonsOf, firstPad } from './pads.ts';
+import { readAll, Rest } from './pads.ts';
 
 export type Move = 'up' | 'down' | 'left' | 'right';
 export type Press = Move | 'a' | 'b';
@@ -148,12 +148,6 @@ export function padStep(state: PadState, pad: PadReading | null, now: number): P
   return out;
 }
 
-/** The first connected gamepad, read (as gamepad.ts takes the first). */
-function readPad(): PadReading | null {
-  const pad = firstPad();
-  return pad ? { buttons: buttonsOf(pad), axes: axesOf(pad) } : null;
-}
-
 /** The boxes up now, the last on top: only the top one answers. */
 const boxes: object[] = [];
 
@@ -246,10 +240,12 @@ export function driveMenu(root: HTMLElement, opts: MenuOptions): () => void {
   window.addEventListener('keydown', keydown, true);
   window.addEventListener('keyup', keyup, true);
 
-  const state = padStart(readPad());
+  // Every connected gamepad, read as one (as gamepad.ts reads them all), its sticks once at rest.
+  const rest = new Rest();
+  const state = padStart(readAll(rest));
   let focused: Element | null = null;
   let polling = requestAnimationFrame(function poll(now) {
-    const presses = padStep(state, readPad(), now);
+    const presses = padStep(state, readAll(rest), now);
     if (top()) presses.forEach(press);
     // The focus moved by the page itself (Choose again, the installer's question) is followed too: a window without
     // the focus tells it nothing of that.

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Pad } from '../src/game/io.ts';
 import { GamepadInput } from '../src/ui/gamepad.ts';
-import { axesOf, buttonsOf, connectedPads, firstPad, pressed } from '../src/ui/pads.ts';
+import { axesOf, buttonsOf, connectedPads, pressed, readAll, Rest } from '../src/ui/pads.ts';
 
 /**
  * A list as older browsers give it (a GamepadList): a length and indexes, none of an Array's methods - no find, some,
@@ -31,13 +31,13 @@ describe('the browser’s gamepads, read alike in every browser', () => {
     const b = pad(1, true, [0]);
     vi.stubGlobal('navigator', { getGamepads: () => [null, b, pad(2, false)] });
     expect(connectedPads()).toEqual([b]);
-    expect(firstPad()).toBe(b);
+    expect(connectedPads()[0]).toBe(b);
   });
 
   it('reads a GamepadList with no Array methods, as older WebViews give, its pads’ buttons and axes too', () => {
     const b = pad(0, true, [1], [0.5, -1, 0, 0], true);
     vi.stubGlobal('navigator', { getGamepads: () => listLike([b, null, null, null]) });
-    expect(firstPad()).toBe(b);
+    expect(connectedPads()[0]).toBe(b);
     expect(pressed(b, 1)).toBe(true);
     expect(pressed(b, 0)).toBe(false);
     expect(pressed(b, 40)).toBe(false); // a button the pad has not
@@ -47,7 +47,7 @@ describe('the browser’s gamepads, read alike in every browser', () => {
 
   it('finds no pad, without an error, where there is none to find', () => {
     vi.stubGlobal('navigator', { getGamepads: () => listLike([null, pad(1, false)]) });
-    expect(firstPad()).toBeNull();
+    expect(connectedPads()).toEqual([]);
     vi.stubGlobal('navigator', { getGamepads: () => null });
     expect(connectedPads()).toEqual([]);
     vi.stubGlobal('navigator', {}); // no Gamepad API at all
@@ -70,5 +70,31 @@ describe('the browser’s gamepads, read alike in every browser', () => {
     a = true;
     input.poll(16);
     expect(out).toEqual([Pad.A]);
+  });
+});
+
+describe('every connected pad, read as one', () => {
+  it('has a button down where it is down on any pad, and each axis the one furthest from its middle', () => {
+    let pads = [pad(0, true, [], [0, 0, 0, 0]), pad(1, true, [], [0, 0, 0, 0])];
+    vi.stubGlobal('navigator', { getGamepads: () => pads });
+    const rest = new Rest();
+    readAll(rest); // the sticks seen at rest
+    pads = [pad(0, true, [], [0.3, 0, 0, 0]), pad(1, true, [1], [-0.8, 0.2, 0, 0], true)];
+    const r = readAll(rest);
+    expect(r?.buttons[1]).toBe(true);
+    expect(r?.buttons[0]).toBe(false);
+    expect(r?.axes.slice(0, 2)).toEqual([-0.8, 0.2]);
+  });
+
+  it("reads no axis of a pad's until that pad's has been at rest, another pad's rest no matter", () => {
+    vi.stubGlobal('navigator', { getGamepads: () => [pad(0, true, [], [0, 0, 0, 0]), pad(1, true, [], [-1, -1, -1, -1])] });
+    const rest = new Rest();
+    readAll(rest);
+    expect(readAll(rest)?.axes).toEqual([0, 0, 0, 0]);
+  });
+
+  it('is null with no pad', () => {
+    vi.stubGlobal('navigator', { getGamepads: () => [null] });
+    expect(readAll(new Rest())).toBeNull();
   });
 });
