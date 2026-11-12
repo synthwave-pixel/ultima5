@@ -182,6 +182,12 @@ export const corpseBlocks = (actor: number): boolean => actor === CORPSE;
 /** Loot lying on a field: a chest a slain foe left, and what lay in one - gold, potions, scrolls, arms, food (0x01-0x0f). */
 export const isLoot = (actor: number): boolean => actor >= CHEST && actor <= 0x0f;
 
+/** Whether the fight's turn is a creature's on the party's side - summoned, or charmed to it - not a member's. */
+function creatureTurn(g: Game): boolean {
+  const c = g.s.combatTurn < 0x20 ? g.combat[g.s.combatTurn] : undefined;
+  return c !== undefined && (c.flags & (CF.Monster | CF.Player)) === CF.Monster;
+}
+
 /**
  * The command walking into (x, y) does: `actor` the actor's tile there (0 none) and `tile` the map's; 0 for none
  * ("Blocked!"), NOT_NOW where foes near keep it from being done (said). Two-step things remember the first bump on
@@ -197,6 +203,15 @@ export function bumpCommand(g: Game, where: BumpPlace, actor: number, tile: numb
   };
   // What lies about, left alone while foes are about (foesAbout).
   const busy = (): boolean => foesAbout(g, where);
+  // A creature on the party's side, its turn: only what it may do (combat.ts playerTurn) - push a barrel or a room's
+  // trigger, climb a fallen gargoyle's rocks; what is a member's to do (search, open, take, jimmy) is "Blocked!", and
+  // nothing begun on it - a chest's search not marked done by the creature's "Can't!", for a member's bump to open
+  // it unsearched, its trap sprung (chestStep).
+  if (where === 'combat' && creatureTurn(g)) {
+    if (actor !== 0) return 0;
+    if (PUSH.has(tile) || SEARCH_PUSH.has(tile) || isTrigger(g, x, y)) return busy() ? notNow(g, 'push') : P;
+    return tile === 0x4c ? K_ : 0;
+  }
   if (actor !== 0) {
     if (actor === CHEST) {
       if (settlement(g)) return L;

@@ -16,7 +16,19 @@
  */
 
 import { actorTileAtRev, treasureLies } from './actors.ts';
-import { arenaFree, autoPlaysTurn, avatarAt, canStrike, combatantAt, distance, keepsLastThrown, onMonsterSide } from './combat.ts';
+import {
+  arenaFree,
+  autoPlaysTurn,
+  avatarAt,
+  canStrike,
+  combatantAt,
+  creatureReach,
+  distance,
+  keepsLastThrown,
+  onMonsterSide,
+  snapTarget,
+  snapTargets,
+} from './combat.ts';
 import { autoTitle } from './frame.ts';
 import { CF, Game } from './game.ts';
 import { K } from './io.ts';
@@ -46,11 +58,6 @@ const MAX_AIMING = 40;
 const reach = (x1: number, y1: number, x2: number, y2: number): number => distance(x1, y1, x2, y2);
 /** Beside: next to it, the diagonals too. */
 const beside = (x1: number, y1: number, x2: number, y2: number): boolean => Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2)) <= 1;
-
-/** How far a creature's own blow reaches (combat.ts attackWith, D_159c): a neighbour, or its missile's range. */
-function creatureReach(g: Game, kind: number): number {
-  return Math.max(1, g.data.bytes(0x159c, 0x30)[kind] ?? 1);
-}
 
 /**
  * Whether member combatant `me` should Switch Weapon now: from a ranged weapon with a foe beside them (where a
@@ -170,15 +177,19 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
       handBack(g);
       return K.Escape;
     }
+    // A creature on the party's side looses at its snap target (combat.ts snapTarget): a foe along a clear line for
+    // what it throws, spits or breathes, not the nearest foe the aim starts on - which may stand behind a rock that
+    // takes the shot, turn after turn.
+    const pick = member ? -1 : snapTarget(g, s.combatTurn);
     // Loosed only at a foe: not at a creature summoned or charmed to the party's side the crosshair lies on or passes.
     const on = combatantAt(g, s.crossX, s.crossY);
-    if (on >= 0 && on !== s.combatTurn && onMonsterSide(g, on) && !spared(on)) return K.Enter;
+    if (on >= 0 && on !== s.combatTurn && onMonsterSide(g, on) && !spared(on) && (pick < 0 || on === pick)) return K.Enter;
     const range = !member
       ? creatureReach(g, me.who)
       : s.weapon === 0xff || s.weapon === 0 || keepsLastThrown(g, s.weapon)
         ? 1
         : Math.max(1, g.data.bytes(0x1664, 0x38)[s.weapon] ?? 1);
-    const f = foes.find((c) => reach(c.x, c.y, me.x, me.y) <= range);
+    const f = pick >= 0 ? g.combat[pick] : foes.find((c) => reach(c.x, c.y, me.x, me.y) <= range);
     if (!f) return K.Escape;
     const dx = Math.sign(f.x - s.crossX);
     const dy = Math.sign(f.y - s.crossY);
@@ -244,9 +255,14 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   }
   // A member strikes where Attack would find a foe for one of their hands (combat.ts canStrike: a shot or a throw
   // only along a clear line) - else, as with a weapon reaching no foe, its aim backed out of again and again; a
-  // creature on the party's side by its reach.
+  // creature on the party's side where it has a snap target (combat.ts snapTargets: a neighbour, or what it throws
+  // within its reach along a clear line), or the nearest foe is one of the party charmed against it (no snap target
+  // ever) within its reach.
   const targets = foes.map((c) => g.combat.indexOf(c));
-  if (member ? canStrike(g, s.combatTurn, targets) : beside(f.x, f.y, me.x, me.y) || d <= creatureReach(g, me.who)) return 0x41;
+  const creatureStrikes = (): boolean =>
+    snapTargets(g, s.combatTurn).length > 0 ||
+    ((f.flags & CF.Player) !== 0 && (beside(f.x, f.y, me.x, me.y) || d <= creatureReach(g, me.who)));
+  if (member ? canStrike(g, s.combatTurn, targets) : creatureStrikes()) return 0x41;
   // The way to the nearest foe that can be reached, round whatever is in between (a ship's rail, a plank, a
   // wall): the first step of it. Where no foe can be reached, the greedy step of old, which at least keeps moving.
   const step = firstStep(g, me.x, me.y, s.actors[me.actor].tile, foes, member);

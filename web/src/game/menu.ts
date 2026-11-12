@@ -21,6 +21,7 @@ import { besideHarpsichord } from './harpsichord.ts';
 import { HARPSICHORD, K, Pad, SAVE_NOW } from './io.ts';
 import { somethingBeside } from './items.ts';
 import { itemCounts, nextHeld, unloaded } from './zstats.ts';
+import { turnMember } from './turn.ts';
 import { holdFullPanel } from './layout.ts';
 import { drawSwitchCard } from './readyCard.ts';
 import { journalTop, type JournalLine } from './journal.ts';
@@ -1136,7 +1137,11 @@ const ENTRANCES: number[] = [
 function readied(g: Game): { name: string; ranged: boolean } | null {
   const s = g.s;
   let who = s.activeMember;
-  if (s.mapId > 0x7f && s.combatTurn < 0x20) who = g.combat[s.combatTurn].who;
+  if (s.mapId > 0x7f && s.combatTurn < 0x20) {
+    // In a fight, the one whose turn it is - a creature on the party's side holds none of the members' arms.
+    who = turnMember(g);
+    if (who < 0) return null;
+  }
   if (who === 0xff || who >= s.partySize) {
     who = 0xff;
     for (let i = 0; i < s.partySize && who === 0xff; i++) {
@@ -1252,7 +1257,7 @@ export function contextual(g: Game): Item[] {
       else out.unshift(push);
     }
     // A caster's last spell, ready to cast again (the ultima3 port's): the fight's fire bolt is one press away.
-    const who = g.combat[s.combatTurn]?.who ?? -1;
+    const who = turnMember(g);
     const last = g.lastSpell.get(who);
     if (last !== undefined && s.mixtures[last] !== 0 && !shortcutCasts(g).some((r) => r.spell === last))
       out.push({ label: `Cast (${SPELL_EFFECTS[last]})`, key: 0x100 + 7 });
@@ -1300,20 +1305,24 @@ function everything(g: Game): Item[] {
   const only = (b: boolean): Offer => (b ? 'show' : 'hide');
   const onFoot = s.partyTile === A.Avatar;
   const under = actorTileAt(g, s.x, s.y, s.level);
+  // A creature's turn on the party's side (combat.ts turnMember): what only a member may do is left out - 1988 answers
+  // each with "Can't!" (playerTurn).
+  const creature = combat && s.combatTurn < 0x20 && turnMember(g) < 0;
+  const member = (o: Offer): Offer => (creature ? 'hide' : o);
   const list: Item[] = [
     ...offered({ label: 'Look', key: c('L') }, only(!combat)),
-    ...offered({ label: 'Search', key: c('S') }, searchOffer(g)),
-    ...offered({ label: 'Get', key: c('G') }, getOffer(g)),
-    ...offered({ label: 'Steal', key: STEAL }, stealOffer(g)),
-    ...offered({ label: 'Cast', key: c('C') }, has(s.mixtures.some((n) => n !== 0))),
-    ...offered({ label: 'Use item', key: c('U') }, only(nextHeld(g, -1, 0x26, itemCounts(g), 0xff) !== -1)),
-    { label: 'Ready', key: c('R') },
+    ...offered({ label: 'Search', key: c('S') }, member(searchOffer(g))),
+    ...offered({ label: 'Get', key: c('G') }, member(getOffer(g))),
+    ...offered({ label: 'Steal', key: STEAL }, member(stealOffer(g))),
+    ...offered({ label: 'Cast', key: c('C') }, member(has(s.mixtures.some((n) => n !== 0)))),
+    ...offered({ label: 'Use item', key: c('U') }, member(only(nextHeld(g, -1, 0x26, itemCounts(g), 0xff) !== -1))),
+    ...offered({ label: 'Ready', key: c('R') }, member('show')),
     { label: 'Ztats', key: c('Z') },
     ...offered({ label: 'Mix reagents', key: c('M') }, combat ? 'hide' : has(s.reagents.some((r) => r !== 0))),
     ...offered({ label: 'Talk', key: c('T') }, talkOffer(g)),
-    ...offered({ label: 'Open', key: c('O') }, openOffer(g)),
-    ...offered({ label: 'Steal from chest', key: STEAL_CHEST }, stealChestOffer(g)),
-    ...offered({ label: 'Jimmy', key: c('J') }, jimmyOffer(g)),
+    ...offered({ label: 'Open', key: c('O') }, member(openOffer(g))),
+    ...offered({ label: 'Steal from chest', key: STEAL_CHEST }, member(stealChestOffer(g))),
+    ...offered({ label: 'Jimmy', key: c('J') }, member(jimmyOffer(g))),
     ...offered({ label: 'Push', key: c('P') }, pushOffer(g)),
     ...offered({ label: 'Klimb', key: c('K') }, klimbOffer(g)),
     ...offered(attackItem(g), attackOffer(g)),
@@ -1536,7 +1545,7 @@ export async function commandMenu(g: Game): Promise<number> {
       return (await lootField(g)) ? K.Escape : 0;
     case 0x107: {
       // The member's last spell again: the Cast command with the caster and the spell given, the aim still asked.
-      const who = g.combat[g.s.combatTurn]?.who ?? -1;
+      const who = turnMember(g);
       const last = g.lastSpell.get(who);
       if (last === undefined) return 0;
       g.castPreset = { caster: who, spell: last };

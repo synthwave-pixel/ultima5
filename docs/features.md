@@ -750,6 +750,7 @@ set Input to Classic and type it.
 | **The mimic's armour** | 3 | 3 | 8 |
 | **A chest, or loot lying, in a fight** | Walked over, as a body is - by either side; walked into to be opened or taken once no foe stands | Walked over, as Story | In the way, until it is dealt with |
 | **Auto combat and one of the party charmed against it** | Lets them be | Lets them be | Strikes them |
+| **Fear and An Corp Xen on the party's own creatures** (summoned, or charmed to its side) | Passed over | Passed over | Put to flight with the foes, as in 1988 |
 | **Sleepers when an ambushed camp's fight is left** | Wake | Wake | Sleep on (out in Britannia, till a towne, a spell or the next camp) |
 | **The old man at an outdoor camp that rested** | Whenever a level is due; else 1 in 4, not within two weeks of his last | As Story | 1 in 4, every camp |
 
@@ -816,8 +817,15 @@ other hurt in the game kills as it always did.
   1988), so X passes over a foe with one of the party's side beside it
   (a dagger, spear or axe at a neighbour, struck from the hand, strays
   nowhere, and reaches a foe over a wall or tree as aiming by hand does);
-  where every foe in reach has, it says "Iolo might hit ally, confirm?" and
-  X again, straight away, shoots. Off, every blow is aimed by hand.
+  where every foe in reach has, X shoots at one press, the friends a miss
+  might strike marked beforehand with a red badge (Snap targets on). Off,
+  every blow is aimed by hand.
+  A creature summoned or charmed to the party's side snaps as a member
+  does, its snap target marked and stepped through the same way: a
+  neighbour for its bite or claws, and for what it throws, spits or
+  breathes (a daemon's fire, a python's spit) a foe within its own reach
+  along a clear line, a foe with a friend beside it passed over as for a
+  shot. Aimed by hand, its crosshair goes as far as that reach and no further.
 - **Auto combat** (Pause menu): Off, Allies or All, a press turning it on
   through them. *All* plays the party, and the creatures summoned or
   charmed to its side, until a key is pressed. *Allies* plays all of them
@@ -1026,6 +1034,15 @@ settled on the original Apple II disks - is told in
   and Modern rules the heavy hitters - a gargoyle, a daemon or a dragon -
   roll half their attack to all of it (a dragon 15 to 30), so that a party
   just begun cannot outlast one; the Classic keep the Apple II's 1 to it.
+- **A creature on the party's side strikes with its own skill.** A daemon
+  summoned or a foe charmed, the player's to command, attacks with no
+  weapon, and for a creature with none the DOS game read no stat at all -
+  its chance to hit whatever lay in a register. The port gives it its own
+  strength or dexterity, as on a turn of its own against the party.
+- **A creature's escape is a flight.** Once every member had left the
+  field, a creature of the party's escaping swept the foes off it too, and
+  the fight ended as a victory - a dungeon's room cleared by it. Now it
+  goes alone, and the fight ends as the members' flight did.
 - **Random numbers are random.** The 1988 game drew them from a 16 bit
   number stepped the same way each time, which ran in loops - a game
   seeded into one of them saw its rolls come round every 40 or 82 - and

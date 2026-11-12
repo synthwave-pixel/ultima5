@@ -104,7 +104,8 @@ describe('auto combat', () => {
     const ours = g.combat[6];
     Object.assign(ours, { flags: CF.Monster | CF.Charmed, who: 0, x: 5, y: 5, hp: 20 });
     const foe = g.combat[7];
-    Object.assign(foe, { flags: CF.Monster, who: 0, x: 5, y: 4, hp: 20 });
+    Object.assign(foe, { flags: CF.Monster, who: 0, x: 5, y: 4, hp: 20, actor: 8 });
+    Object.assign(s.actors[8], { tile: 0x50, anim: 0x50, x: 5, y: 4, z: 0 }); // standing on the field, to be struck
     s.combatTurn = 6;
     s.crosshair = 0;
     expect(await autoKey(g)).toBe(0x41);

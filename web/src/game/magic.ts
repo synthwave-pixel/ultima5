@@ -39,6 +39,7 @@ import {
   stat,
   wake,
 } from './combat.ts';
+import { turnMember } from './turn.ts';
 import { explosion, shakeScreen, sleepTicks, TICK_MS } from './effects.ts';
 import {
   clearBorderChar,
@@ -61,7 +62,7 @@ import { K } from './io.ts';
 import { nightSky, viewGem } from './look.ts';
 import { toMoonstone } from './moongate.ts';
 import { Status } from './save.ts';
-import { effectsOf } from './settings.ts';
+import { eased, effectsOf } from './settings.ts';
 import { resurrect } from './shops.ts';
 import { A, T } from './tiles.ts';
 import { itemCounts, listBox, nextHeld, pickItem } from './zstats.ts';
@@ -589,6 +590,7 @@ async function anCorpXen(g: Game): Promise<void> {
     if (
       !immune(g, i) &&
       (c.flags & (CF.Player | CF.Monster)) === CF.Monster &&
+      !sparedOurs(g, i) &&
       (enemyFlags(g, c.who) & 0xff & EF.Undead) !== 0 &&
       !resists(g, g.s.combatTurn, i)
     ) {
@@ -829,6 +831,16 @@ async function inQuasXen(g: Game): Promise<number> {
   if (slot < 0) return 0;
   g.combat[slot].b.set(g.combat[i].b);
   g.combat[slot].actor = actor;
+  // Whatever the slot's last occupant left is not the clone's (as placeCombatant clears it); a charm comes with it -
+  // a clone of a creature bound to the party bound too, never to shake it off (combat.ts shakeCharm).
+  g.splitLimit.delete(slot);
+  g.splits.delete(slot);
+  g.summoned.delete(slot);
+  g.gone.delete(slot);
+  g.snapMemory = g.snapMemory.map((m) => (m === slot ? -1 : m));
+  const by = g.charmedBy.get(i);
+  if (by !== undefined) g.charmedBy.set(slot, by);
+  else g.charmedBy.delete(slot);
   s.actors[actor].b.set(s.actors[g.combat[i].actor].b);
   // The original tries random squares until one is free.
   for (let n = 0; n < 1000; n++) {
@@ -847,11 +859,20 @@ async function corpInQuas(g: Game): Promise<void> {
   await castEffect(g, 7);
   for (let i = 0; i < 0x20; i++) {
     const c = g.combat[i];
-    if ((c.flags & (CF.Player | CF.Monster)) === CF.Monster && !immune(g, i) && !resists(g, g.s.combatTurn, i)) {
+    if ((c.flags & (CF.Player | CF.Monster)) === CF.Monster && !sparedOurs(g, i) && !immune(g, i) && !resists(g, g.s.combatTurn, i)) {
       c.hp = 1;
       c.flags |= CF.F2;
     }
   }
+}
+
+/**
+ * A creature on the party's side - summoned, or charmed to it - passed over by the party's own Fear and An Corp Xen,
+ * with the eased rules (the port's): 1988's spells struck every creature not a member, the party's daemon brought to
+ * 1 hit point and set to flee. The Classic rules keep that.
+ */
+function sparedOurs(g: Game, i: number): boolean {
+  return eased(g.options) && !onMonsterSide(g, i);
 }
 
 /** CAST_0cf0_PorRelVas: to a buried moonstone's place. */
@@ -1104,9 +1125,9 @@ export function canCast(g: Game, who: number, spell: number): boolean {
 /** Whoever can cast it with the most mana to spare - in a fight, the member whose turn it is, if they can - or -1. */
 function bestCaster(g: Game, spell: number): number {
   const s = g.s;
-  // In a fight only the member whose turn it is acts: another's mana is not theirs to spend.
+  // In a fight only the member whose turn it is acts: another's mana is not theirs to spend, nor a member's a creature's.
   if (s.mapId > 0x7f) {
-    const who = g.combat[s.combatTurn]?.who ?? -1;
+    const who = turnMember(g);
     return who >= 0 && who < s.partySize && canCast(g, who, spell) ? who : -1;
   }
   let best = -1;

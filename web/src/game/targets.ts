@@ -15,6 +15,7 @@ import { tileAt } from './world.ts';
 import { somethingBeside, thingUnderfoot } from './items.ts';
 import { Status } from './save.ts';
 import { K } from './io.ts';
+import { turnMember } from './turn.ts';
 import { counter } from './talk.ts';
 
 /** Offered, offered greyed, or left out. */
@@ -339,7 +340,7 @@ export function whyNotHere(g: Game, item: number): string | null {
   const s = g.s;
   const members = Array.from({ length: s.partySize }, (_, i) => s.members[i]);
   // Whom a potion is for: in a fight, the one whose turn it is; else anyone.
-  const drinkers = inCombat(g) ? members.filter((_, i) => i === g.combat[s.combatTurn]?.who) : members;
+  const drinkers = inCombat(g) ? members.filter((_, i) => i === turnMember(g)) : members;
   const any = (test: (m: (typeof members)[number]) => boolean): boolean => drinkers.some(test);
   const fight = inCombat(g);
   const sky = s.mapId < 0x21; // Britannia, the Underworld or a settlement: not a dungeon, nor a fight
