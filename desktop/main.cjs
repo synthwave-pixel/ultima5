@@ -611,7 +611,8 @@ else if (clash === null) app.quit();
 app.on('second-instance', (_event, _argv, _cwd, data) => {
   if (data?.steam !== steamMode) return;
   const win = BrowserWindow.getAllWindows()[0];
-  if (!win) return;
+  // No window to bring forward: said in the log, as the launch that asked has quit already.
+  if (!win) return void console.warn('second launch: no window to show');
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
@@ -818,6 +819,9 @@ app.whenReady().then(() => {
   // moment at most, and nothing more if it is not answered.
   let closed = false;
   app.on('will-quit', (event) => {
+    // Going: the one-copy lock let go now, so that a launch while this copy finishes quitting - or should it never
+    // finish - starts a copy of its own, rather than being handed to this one and quitting unseen.
+    app.releaseSingleInstanceLock();
     if (closed) return;
     closed = true;
     event.preventDefault();

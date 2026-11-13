@@ -303,7 +303,13 @@ function applyUpdate({ electron, steam = false }) {
         quit();
       });
     else quit();
-  } else if (offer.kind === 'restart') require('electron-updater').autoUpdater.quitAndInstall();
+  } else if (offer.kind === 'restart') {
+    // The new version starts while this copy is still quitting (the AppImage's is started before this one goes): the
+    // one-copy lock (main.cjs requestSingleInstanceLock) let go first, or the new copy is taken for a second one and
+    // quits unseen - and a copy stuck quitting would turn every launch after away the same way.
+    electron.app.releaseSingleInstanceLock?.();
+    require('electron-updater').autoUpdater.quitAndInstall();
+  }
   else return openRelease(electron, offer);
   return true;
 }

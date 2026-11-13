@@ -203,11 +203,21 @@ describe('the desktop app’s updates', () => {
       allowPrerelease: true,
       on: (name: string, fn: typeof downloaded) => name === 'update-downloaded' && (downloaded = fn),
       checkForUpdates: async () => null,
-      quitAndInstall: () => void installs++,
+      quitAndInstall: () => void (installs++, order.push('install')),
     };
+    const order: string[] = [];
     require.cache[path] = { id: path, filename: path, loaded: true, exports: { autoUpdater } } as never;
     try {
-      const electron = { app: { isPackaged: true, getVersion: () => '1.1.10', getPath: () => dir, quit: () => {} }, net: {} };
+      const electron = {
+        app: {
+          isPackaged: true,
+          getVersion: () => '1.1.10',
+          getPath: () => dir,
+          quit: () => {},
+          releaseSingleInstanceLock: () => void order.push('release'),
+        },
+        net: {},
+      };
       await checkForUpdates({ electron, quiet: false, file: join(dir, 'updates.json'), steam: true });
       downloaded({ version: '1.1.12' });
       expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
@@ -220,6 +230,8 @@ describe('the desktop app’s updates', () => {
       expect(currentOffer()?.onQuit).toBeUndefined();
       expect(applyUpdate({ electron })).toBe(true);
       expect(installs).toBe(1);
+      // The one-copy lock let go before the new version starts, so that it isn't turned away as a second copy.
+      expect(order).toEqual(['release', 'install']);
     } finally {
       if (real) require.cache[path] = real;
       else delete require.cache[path];
