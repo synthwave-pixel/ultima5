@@ -33,6 +33,11 @@ describe('lineState', () => {
     expect(lineState(config(line), line, odd, false)).toBe('correct');
   });
 
+  it('is correct with the update flags added after %command%', () => {
+    expect(lineState(config(`${EXPECTED} --no-auto-update`), EXPECTED, EXE, false)).toBe('correct');
+    expect(lineState(config(`${EXPECTED} --no-update-check`), EXPECTED, EXE, false)).toBe('correct');
+  });
+
   it('finds the entry whatever the case of its keys', () => {
     const c = config(EXPECTED, { path: ['userlocalconfigstore', 'software', 'valve', 'STEAM', 'Apps'], opt: 'launchoptions' });
     expect(lineState(c, EXPECTED, EXE, false)).toBe('correct');

@@ -221,6 +221,22 @@ describe('the Linux compatibility tool', () => {
     expect(other.stdout).toBe('');
   });
 
+  it('passes the app its update flags from the launch options, and nothing else of what Steam passes', () => {
+    const home = temp();
+    const link = fakeProgram(join(home, 'Apps', 'ultima5-sp-x86_64.AppImage'));
+    const { written } = setUp({ flatpak: false, appImage: link });
+    const r = spawnSync(
+      '/bin/sh',
+      [join(written[0], 'launch.sh'), 'waitforexitandrun', 'Z:\\DOSBOX\\Ultima V.exe', '--no-auto-update', '-x'],
+      {
+        encoding: 'utf8',
+        env: { PATH: '/usr/bin:/bin', SteamAppId: '3067520' },
+      },
+    );
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe('ran 3067520: --no-sandbox --no-auto-update\n');
+  });
+
   it("starts the engine without Steam's runtime libraries or its overlay, which hung and crashed it", () => {
     const home = temp();
     const app = join(home, 'Apps', 'ultima5-sp-x86_64.AppImage');

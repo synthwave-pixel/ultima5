@@ -98,15 +98,22 @@ esac
 export SteamAppId=${APP_ID}
 # Steam's runtime libraries hang the engine, and its overlay crashes it: the engine brings its own libraries.
 unset LD_LIBRARY_PATH LD_PRELOAD
+# Of what Steam passes on (Ultima V's own DOS command, and the player's launch options), only the app's update flags.
+flags=
+for a in "$@"; do
+  case "$a" in
+    --no-auto-update|--no-update-check) flags="$flags $a" ;;
+  esac
+done
 if [ "$FLATPAK_ID" = "com.valvesoftware.Steam" ]; then
   if ! flatpak-spawn --host true >/dev/null 2>&1; then
     echo "Steam from Flathub needs leave to start Ultima V. Run this once, then restart Steam:" >&2
     echo "  ${OVERRIDE}" >&2
     exit 1
   fi
-  exec flatpak-spawn --host --env="SteamAppId=$SteamAppId" --env="SteamGameId=$SteamGameId" --env="SteamUser=$SteamUser" ${target}
+  exec flatpak-spawn --host --env="SteamAppId=$SteamAppId" --env="SteamGameId=$SteamGameId" --env="SteamUser=$SteamUser" ${target}$flags
 fi
-exec ${target}
+exec ${target}$flags
 `;
 }
 

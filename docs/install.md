@@ -285,6 +285,11 @@ choose Update. If you chose Deny, allow it again from Konsole with
 Where that service can't be had, it tells you of the release instead, and
 Discover updates it with every other Flatpak's
 ([how it works](flatpak-updates.md)).
+To choose when to update, start the game with `--no-auto-update` (on the
+command line, in a shortcut, or after `%command%` in Steam's launch
+options): it still tells you of a newer release and offers its page, but
+downloads and installs nothing, as the portable `.exe` does. It works for
+every desktop build; Discover still updates the Flatpak.
 `--no-update-check` on the command line turns the check off; under
 Steam's Game Mode no page is offered, and a downloaded update is
 installed when the game quits.

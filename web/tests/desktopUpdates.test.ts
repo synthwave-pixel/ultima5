@@ -54,6 +54,17 @@ describe('the desktop app’s updates', () => {
     expect(kind('linux', { container: 'flatpak' })).toBe('flatpak');
   });
 
+  it('are only told of with --no-auto-update, on every desktop build - nothing downloaded or installed', () => {
+    const no = ['--no-auto-update'];
+    expect(kind('linux', { APPIMAGE: '/home/deck/ultima5-sp-x86_64.AppImage' }, true, no)).toBe('notice');
+    expect(kind('win32', {}, true, no)).toBe('notice');
+    expect(kind('darwin', {}, true, no, true, true)).toBe('notice');
+    expect(kind('linux', { FLATPAK_ID: 'com.synthwavepixel.ultima5' }, true, no)).toBe('notice');
+    // --no-update-check still says nothing at all; unpackaged, nothing either way.
+    expect(kind('win32', {}, true, [...no, '--no-update-check'])).toBe('none');
+    expect(kind('win32', {}, false, no)).toBe('none');
+  });
+
   it('are left alone unpackaged, and when told not to look', () => {
     expect(kind('linux', { FLATPAK_ID: 'com.synthwavepixel.ultima5' }, false)).toBe('none');
     expect(kind('win32', {}, false)).toBe('none');

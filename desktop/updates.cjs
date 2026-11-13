@@ -15,6 +15,8 @@
 //              a notice instead: under Game Mode with no page offered, only the way to update - the once-only approval
 //              given in Desktop Mode where that is what failed (flatpakUpdates.cjs reason), else Discover.
 //   'none'   - the app run unpackaged (development); or --no-update-check.
+// --no-auto-update makes any copy a 'notice': a newer release is told of, as for the portable .exe, and nothing is
+// downloaded or installed - for players who would choose when to update (the Flatpak's Discover still updates it).
 // What there is is told to the page (preload.cjs u5native.updates; web/src/ui/updates.ts), which says so in the
 // game's own way - a line in the title menu, and once a version a box over the title - and asks for the restart or
 // the page from here. Under Steam's Game Mode no page is offered (a browser there leaves the game behind); a build
@@ -37,6 +39,7 @@ const LATEST_API = `https://api.github.com/repos/${OWNER}/${REPO}/releases/lates
  */
 function updateKind({ packaged, platform, env, argv, selfUpdate = false, inApplications = false }) {
   if (!packaged || argv.includes('--no-update-check')) return 'none';
+  if (argv.includes('--no-auto-update')) return 'notice';
   if (env.FLATPAK_ID || env.container === 'flatpak') return 'flatpak';
   if (platform === 'win32') return env.PORTABLE_EXECUTABLE_DIR ? 'notice' : 'auto';
   if (platform === 'linux') return env.APPIMAGE ? 'auto' : 'notice';
