@@ -154,3 +154,60 @@ describe('the sleep potion, which in 1988 could put the wrong one to sleep', () 
     expect(g.combat[1].flags & CF.Asleep).toBeFalsy();
   });
 });
+
+describe('a potion not what it seemed', () => {
+  // 1988 (CAST_135a): one potion in sixteen is the sleep potion, whatever its colour, and one in sixteen another of
+  // the eight - about one in fourteen drunk sleeps. The Classic rules keep the surprise and say so; the Story and
+  // Modern rules give every potion what its colour says.
+  /** The Avatar, hurt, drinking a yellow potion in a fight, the potion's roll of sixteen a 0 (the sleep potion). */
+  const drink = async (rules: 'story' | 'modern' | 'classic') => {
+    const { g, p } = newGame();
+    const s = g.s;
+    g.options.rules = rules;
+    s.mapId = 0xff;
+    s.members[0].status = Status.Good;
+    s.members[0].hp = 10;
+    for (const c of g.combat) c.clear();
+    Object.assign(g.combat[0], { flags: CF.Player, who: 0, actor: 0 });
+    s.combatTurn = 0;
+    s.potions[1] = 1;
+    const random = g.random.bind(g);
+    g.random = (low: number, high: number) => (low === 0 && high === 15 ? 0 : random(low, high));
+    await usePotion(g, 1);
+    return { g, p, s };
+  };
+
+  it('is always what it seems with the Story and Modern rules', async () => {
+    for (const rules of ['story', 'modern'] as const) {
+      const { p, s } = await drink(rules);
+      expect(s.members[0].status).toBe(Status.Good);
+      expect(s.members[0].hp).toBeGreaterThan(10);
+      expect(p.log).not.toMatch(/not what it seemed/);
+    }
+  });
+
+  it('may be the sleep potion with the Classic rules, and says it was not what it seemed', async () => {
+    const { g, p, s } = await drink('classic');
+    expect(s.members[0].status).toBe(Status.Sleeping);
+    expect(g.combat[0].flags & CF.Asleep).toBeTruthy();
+    expect(p.log).toMatch(/The potion was not what it seemed!\n[\s\S]*Slept!/); // said before what it did
+  });
+
+  it('says nothing where the colour drawn at random is its own', async () => {
+    const { g, p } = newGame();
+    const s = g.s;
+    g.options.rules = 'classic';
+    s.mapId = 0xff;
+    s.members[0].hp = 10;
+    for (const c of g.combat) c.clear();
+    Object.assign(g.combat[0], { flags: CF.Player, who: 0, actor: 0 });
+    s.combatTurn = 0;
+    s.potions[1] = 1;
+    // Another potion (1 of sixteen), and the one of eight drawn is yellow (1).
+    const random = g.random.bind(g);
+    g.random = (low: number, high: number) => (low === 0 && (high === 15 || high === 7) ? 1 : random(low, high));
+    await usePotion(g, 1);
+    expect(s.members[0].hp).toBeGreaterThan(10);
+    expect(p.log).not.toMatch(/not what it seemed/);
+  });
+});

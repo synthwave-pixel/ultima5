@@ -1808,7 +1808,7 @@ async function useScroll(g: Game, n: number): Promise<number> {
   return ok;
 }
 
-/** CAST_135a_UsePotion: by colour, though now and then a potion is not what it seemed. */
+/** CAST_135a_UsePotion: by colour, though with the Classic rules now and then a potion is not what it seemed. */
 export async function usePotion(g: Game, n: number): Promise<number> {
   const s = g.s;
   let ok = 1;
@@ -1823,9 +1823,16 @@ export async function usePotion(g: Game, n: number): Promise<number> {
     return m;
   }
   await castEffect(g, n);
-  const r = g.random(0, 0xf);
-  if (r === 0) n = 4;
-  else if (r === 1) n = g.random(0, 7);
+  // 1988's surprise, the Classic rules' alone: one potion in sixteen the sleep potion, whatever its colour, and one in
+  // sixteen any of the eight - and said, where 1988 said only what it did ("Slept!"), which read as a fault. The Story
+  // and Modern rules give every potion what its colour says.
+  if (g.options.rules === 'classic') {
+    const drunk = n;
+    const r = g.random(0, 0xf);
+    if (r === 0) n = 4;
+    else if (r === 1) n = g.random(0, 7);
+    if (n !== drunk) g.print('The potion was not what it seemed!\n');
+  }
   const p = s.members[m];
   const me = g.combat[s.combatTurn];
   const noEffect = (): void => g.say(0x474c); // "\nNo noticeable effect now!\n"

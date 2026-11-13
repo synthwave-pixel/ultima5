@@ -243,6 +243,11 @@ export interface Draw {
    */
   warn?(x: number, y: number): void;
   /**
+   * Keep what is drawn from now on out of `boxes` (EGA pixels, inclusive: Game.covers) until masked again or null - a
+   * fight's marks kept off a menu or the townsman's words over the view (combat.ts drawCombatMarks).
+   */
+  mask?(boxes: readonly (readonly [number, number, number, number])[] | null): void;
+  /**
    * One step of drawing `tile` into cell (x, y) a pixel at a time: step 0
    * is the top-left pixel, then an 8-bit LFSR (mask 0xb8) picks the rest
    * (u5d GRAP_BUF_PutTileRevealStep).

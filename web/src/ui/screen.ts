@@ -323,6 +323,7 @@ export class Screen implements Platform {
       },
       aim: (x, y, mark, small) => fb.aim(TILE_X + x * 16, TILE_Y + y * 16, performance.now(), mark, small),
       warn: (x, y) => fb.warn(TILE_X + x * 16, TILE_Y + y * 16),
+      mask: (boxes) => fb.mask(boxes),
       burst: (x, y, frame, magic) => {
         if (this.look === 'standard') fb.burst(x, y, frame, magic);
       },

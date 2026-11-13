@@ -52,6 +52,17 @@ describe('snap targets', () => {
     expect(snapTargets(sword.g, sword.me)).toEqual([sword.at[2], sword.at[1]]);
   });
 
+  it("passes over a foe the field hides - a room's dark, walled off till a trigger opens it", () => {
+    const { g, me, at } = field(BOW, [5, 6, 1], [5, 7, 2], [5, 9, 3]);
+    g.combatMap[6 * 32 + 5] = 0xff; // the dark: whoever stands there is not drawn (world.ts overlayActors)
+    g.combatMap[7 * 32 + 5] = 0x87;
+    expect(snapTargets(g, me)).toEqual([at[2]]);
+    expect(snapTarget(g, me)).toBe(at[2]);
+    // Opened (the trigger lays floor over the dark), it is a target like any other.
+    g.combatMap[6 * 32 + 5] = 0x44;
+    expect(snapTarget(g, me)).toBe(at[0]);
+  });
+
   it('passes over the dead, the charmed and the invisible', () => {
     const { g, me, at } = field(SHORT_SWORD, [6, 5, 1], [4, 5, 2], [5, 4, 3], [5, 6, 4]);
     g.combat[at[0]].flags |= CF.Dead;

@@ -756,6 +756,7 @@ set Input to Classic and type it.
 | **Fear and An Corp Xen on the party's own creatures** (summoned, or charmed to its side) | Passed over | Passed over | Put to flight with the foes, as in 1988 |
 | **Sleepers when an ambushed camp's fight is left** | Wake | Wake | Sleep on (out in Britannia, till a towne, a spell or the next camp) |
 | **The old man at an outdoor camp that rested** | Whenever a level is due; else 1 in 4, not within two weeks of his last | As Story | 1 in 4, every camp |
+| **A potion** | What its colour says | What its colour says | 1 in 16 the sleep potion, whatever its colour, and 1 in 16 any of the eight, as in 1988 - said in the log ("The potion was not what it seemed!") |
 
 The same under all three: armour worn counts (the DOS game's armour did
 nothing); a creature's blow is rolled, never its whole attack every time;

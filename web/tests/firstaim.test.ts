@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aim, placeCombatant } from '../src/game/combat.ts';
 import type { Game } from '../src/game/game.ts';
-import { K } from '../src/game/io.ts';
+import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
 
@@ -42,6 +42,16 @@ describe('where the aim starts', () => {
     const { g, p, me, at } = field([5, 3, 1], [4, 6, 4]);
     g.s.actors[g.combat[me].actor].b7 = at[0];
     expect(await start(g, p, me, 8)).toEqual([5, 3]);
+  });
+
+  it("passes over a foe the field hides (a room's dark), as near as it is", async () => {
+    const { g, p, me } = field([5, 7, 1], [5, 3, 4]);
+    g.combatMap[7 * 32 + 5] = 0xff;
+    expect(await start(g, p, me, 8)).toEqual([5, 3]);
+    // Nor do the shoulders step the crosshair onto it.
+    p.keys.push(Pad.LB, Pad.RB, K.Escape);
+    await aim(g, me, 8);
+    expect([g.s.crossX, g.s.crossY]).toEqual([5, 3]);
   });
 
   it('starts on the member where no foe is in reach', async () => {

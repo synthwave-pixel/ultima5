@@ -1730,11 +1730,25 @@ const HELD = [0x10, 0x15, 0x16];
 /** The morning star and the halberd: a blow two squares off, flying nowhere (missileAt). */
 const REACH = [0x19, 0x22];
 
+/**
+ * Whether the field hides whoever stands at (x, y), as the view draws it (world.ts overlayActors): a room's dark (0xff),
+ * a part walled off until a trigger lays floor over it, or 0x87.
+ */
+const hiddenAt = (g: Game, x: number, y: number): boolean => {
+  const t = g.combatMap[y * 32 + x];
+  return t === 0xff || t === T.T87;
+};
+
+/**
+ * Whether combatant `j` is a foe to strike or aim at: on the field, alive, not invisible, on the foes' side, and in
+ * sight - never one the field hides, which the player cannot see (a snap target, the aim's first square, LB/RB).
+ */
 const standingFoe = (g: Game, j: number): boolean => {
   if (j < 0 || j >= 0x20) return false;
   const c = g.combat[j];
   return (
     inArena(c.x, c.y) &&
+    !hiddenAt(g, c.x, c.y) &&
     combatantAt(g, c.x, c.y) === j &&
     (c.flags & (CF.Invisible | CF.Player)) === 0 &&
     onMonsterSide(g, j) &&
@@ -3569,6 +3583,18 @@ export async function campOutdoors(g: Game, guard: number, hours: number): Promi
  * Standard look marks the turn's square with the ultima3 Standard outline, which stays (nothing blinks).
  */
 export function drawCombatMarks(g: Game): void {
+  // A box over the view (a menu, the townsman's words): the marks keep out of it, as the squares it covers are left
+  // undrawn (world.ts covered) - the snap target's arrows and a friend's warning showed through the command menu.
+  const d = g.draw;
+  d.mask?.(g.covers.size > 0 ? [...g.covers.values()] : null);
+  try {
+    combatMarks(g);
+  } finally {
+    d.mask?.(null);
+  }
+}
+
+function combatMarks(g: Game): void {
   const s = g.s;
   const d = g.draw;
   const marks = g.options.tileSet === 'standard' && d.aim !== undefined;
