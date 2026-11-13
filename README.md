@@ -369,9 +369,14 @@ the player's own copy.
   and its source ([beastie/ultima3](https://github.com/beastie/ultima3)), posted in 2025, the ultima3 port grew from - and so,
   through it, this one. Thank you.
 - **The fonts** in `web/public/fonts/`: IM Fell English (Igino Marini),
-  Sixtyfour (the Sixtyfour Project Authors) and UnifrakturMaguntia
-  (j. 'mach' wust, after Peter Wiegel), each under the SIL Open Font
-  License 1.1, whose text is beside it; and Britannian Runes II, whose
+  Sixtyfour (the Sixtyfour Project Authors), UnifrakturMaguntia
+  (j. 'mach' wust, after Peter Wiegel) and
+  [Atkinson Hyperlegible Mono](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Mono)
+  (the Braille Institute of America, via Google Fonts), each under the
+  SIL Open Font License 1.1, whose text is beside it;
+  [OpenDyslexic](https://opendyslexic.org/) Mono (Abbie Gonzalez), under
+  the Bitstream Vera licence and Creative Commons Attribution 3.0
+  (`LICENSE-opendyslexicmono.txt`); and Britannian Runes II, whose
   maker is not known and which comes with no licence of its own, found
   through [The Almighty Guru's Game Font Database](https://www.thealmightyguru.com/GameFonts/Series-Ultima.html)
   (`SOURCE-britannianrunes.txt`).

@@ -38,7 +38,7 @@ import {
   type Words,
 } from './framebuffer.ts';
 import { type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
-import type { Tiles } from '../game/settings.ts';
+import type { FontChoice, Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
 import { setChoice, setProse, setSteps, type Measure, type Run, type RunFace } from './storyText.ts';
 import { Text, type TextTarget } from './text.ts';
@@ -90,15 +90,22 @@ const GLYPH_SIDE = 8 * HI;
  * the display's own size over its text cell, filling `share` of it; `bold`, the outline thickened by that share of the
  * size (Sixtyfour has the one weight).
  */
-const FACES: Record<Face, { family: string; file: string; share: number; bold: number }> = {
+type FaceSpec = { family: string; file: string; share: number; bold: number };
+const FACES: Record<Face, FaceSpec> = {
   mono: { family: 'U5 Letters', file: 'Sixtyfour.ttf', share: 0.88, bold: 0.054 },
   runes: { family: 'U5 Runes', file: 'BritannianRunesII.ttf', share: 0.86, bold: 0 },
   // Not a font: the game's own symbols, filled from their outlines (symbolPath).
   symbol: { family: '', file: '', share: 1, bold: 0 },
 };
 
-/** The family a run of words is set in: the story's body or initials, or the game's lettering (FACES.mono). */
-const runFamily = (face: RunFace): string => (face === 'body' ? BODY_FACE : face === 'initial' ? INITIAL_FACE : FACES.mono.family); // 'mono' and 'capital' alike
+/**
+ * The fonts the lettering may be set in besides SixtyFour (FACES.mono), for reading (Appearance > Font): Legible,
+ * Atkinson Hyperlegible Mono (the Braille Institute's); Dyslexic, OpenDyslexic Mono. The story pages take them too.
+ */
+const READING: Record<'legible' | 'dyslexic', { family: string; file: string; share: number; bold: number }> = {
+  legible: { family: 'U5 Legible', file: 'AtkinsonHyperlegibleMono.ttf', share: 0.9, bold: 0.02 },
+  dyslexic: { family: 'U5 Dyslexic', file: 'OpenDyslexicMono-Regular.otf', share: 0.92, bold: 0 },
+};
 /** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
 const PANEL = 'rgba(0, 0, 0, 0.72)';
 
@@ -548,7 +555,7 @@ export class Screen implements Platform {
         ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
         continue;
       }
-      ctx.font = `${run.size}px "${runFamily(run.face)}"`;
+      ctx.font = this.runFont(run.size, run.face);
       ctx.fillStyle = `#${run.colour.toString(16).padStart(6, '0')}`;
       ctx.fillText(run.text, run.x, run.y);
     }
@@ -680,7 +687,41 @@ export class Screen implements Platform {
   /** Whether the lettering's faces are to hand; until they are, the glyphs are drawn on the colour page as before. */
   private letterFonts = false;
   /** Each face's width and height to its size (a letter's advance, a capital's height), measured once loaded. */
-  private readonly metrics = new Map<Face, { advance: number; cap: number }>();
+  private readonly metrics = new Map<string, { advance: number; cap: number }>();
+  /** The lettering's font (Appearance > Font, setFont): any of them in either look. */
+  private font: FontChoice = 'sixtyfour';
+
+  /** The font chosen (Options.font): the letters set again in it, the story pages too where it is one for reading. */
+  setFont(font: FontChoice): void {
+    if (font === this.font) return;
+    this.font = font;
+    this.theme();
+  }
+
+  /** The reading font chosen, Legible or Dyslexic, once loaded; else null. */
+  private reading(): FaceSpec | null {
+    return this.letterFonts && (this.font === 'legible' || this.font === 'dyslexic') ? READING[this.font] : null;
+  }
+
+  /** A face as it is set: the lettering's ('mono') in the font chosen - SixtyFour's for DOS, which a font cannot draw. */
+  private spec(face: Face): FaceSpec {
+    return face === 'mono' ? (this.reading() ?? FACES.mono) : FACES[face];
+  }
+
+  /** The CSS font of a face at `size`: SixtyFour after it, for a letter the font chosen has not got (an arrow). */
+  private faceFont(spec: FaceSpec, size: number): string {
+    return spec === FACES.mono ? `${size}px "${spec.family}"` : `${size}px "${spec.family}", "${FACES.mono.family}"`;
+  }
+
+  /**
+   * The CSS font of a run of the story's words: the period's faces (the body's, its initials), the lettering's for the
+   * rest - or, with a font for reading chosen, all of it in that.
+   */
+  private runFont(size: number, face: RunFace): string {
+    const reading = this.reading();
+    if (reading) return this.faceFont(reading, size);
+    return `${size}px "${face === 'body' ? BODY_FACE : face === 'initial' ? INITIAL_FACE : FACES.mono.family}"`;
+  }
 
   /** Settled once the lettering's faces have loaded, or failed to (main.ts waits on it before the game draws). */
   lettersLoaded: Promise<void> = Promise.resolve();
@@ -688,7 +729,7 @@ export class Screen implements Platform {
   private loadLetterFonts(): void {
     if (typeof FontFace === 'undefined' || typeof document === 'undefined') return;
     const base = `${import.meta.env.BASE_URL}fonts/`;
-    const faces = Object.values(FACES)
+    const faces = [...Object.values(FACES), ...Object.values(READING)]
       .filter((f) => f.file)
       .map((f) => new FontFace(f.family, `url(${base}${f.file})`));
     this.lettersLoaded = Promise.all(faces.map((f) => f.load()))
@@ -696,10 +737,13 @@ export class Screen implements Platform {
         for (const f of loaded) document.fonts.add(f);
         const ctx = document.createElement('canvas').getContext('2d');
         if (!ctx) return;
-        for (const [face, f] of Object.entries(FACES) as [Face, (typeof FACES)[Face]][]) {
+        for (const f of [...Object.values(FACES), ...Object.values(READING)]) {
           if (!f.file) continue;
           ctx.font = `100px "${f.family}"`;
-          this.metrics.set(face, { advance: ctx.measureText('M').width / 100, cap: ctx.measureText('H').actualBoundingBoxAscent / 100 });
+          this.metrics.set(f.family, {
+            advance: ctx.measureText('M').width / 100,
+            cap: ctx.measureText('H').actualBoundingBoxAscent / 100,
+          });
         }
         this.letterFonts = true;
         this.theme();
@@ -709,8 +753,9 @@ export class Screen implements Platform {
 
   /** How a face sits in a cell `cell` pixels square. */
   private fit(face: Face, cell: number): Fit {
-    const m = this.metrics.get(face) ?? { advance: 0.6, cap: 0.7 };
-    const share = FACES[face].share;
+    const f = this.spec(face);
+    const m = this.metrics.get(f.family) ?? { advance: 0.6, cap: 0.7 };
+    const share = f.share;
     const size = Math.min((cell * share) / m.advance, (cell * share * 0.78) / m.cap);
     return { size, baseline: cell / 2 + (m.cap * size) / 2 };
   }
@@ -726,7 +771,7 @@ export class Screen implements Platform {
   private readonly masks = new Map<string, Uint8Array>();
 
   private letterMask(face: Face, text: string, side = GLYPH_SIDE): Uint8Array | null {
-    const key = `${face}:${text}:${side}`;
+    const key = `${this.spec(face).family}:${face}:${text}:${side}`;
     const kept = this.masks.get(key);
     if (kept) return kept;
     if (typeof OffscreenCanvas === 'undefined') return null;
@@ -788,8 +833,8 @@ export class Screen implements Platform {
       return;
     }
     const { size, baseline } = this.fit(face, cell);
-    const f = FACES[face];
-    ctx.font = `${size}px "${f.family}"`;
+    const f = this.spec(face);
+    ctx.font = this.faceFont(f, size);
     ctx.fillStyle = css;
     const width = ctx.measureText(text).width;
     // Two letters for one rune (TH, EE...) are drawn narrower, to stand in its one cell.
@@ -809,12 +854,13 @@ export class Screen implements Platform {
 
   /** The canvas the story's words are set on, and how wide a run of them is. */
   private get story(): { ctx: OffscreenCanvasRenderingContext2D; measure: Measure } | null {
-    if (this.look !== 'standard' || !this.storyFonts || typeof OffscreenCanvas === 'undefined') return null;
+    // The PC (1988) look sets its story pages as 1988 did, but in a font for reading where one is chosen.
+    if ((this.look !== 'standard' && !this.reading()) || !this.storyFonts || typeof OffscreenCanvas === 'undefined') return null;
     this.storyCanvas ??= new OffscreenCanvas(HI_WIDTH, HI_HEIGHT).getContext('2d');
     const ctx = this.storyCanvas;
     if (!ctx) return null;
     const measure: Measure = (text, size, face) => {
-      ctx.font = `${size}px "${runFamily(face)}"`;
+      ctx.font = this.runFont(size, face);
       return ctx.measureText(text).width;
     };
     return { ctx, measure };
@@ -1433,25 +1479,36 @@ export class Screen implements Platform {
 
   /** Standard's copper frame and soft flash, while the game's own screen is up. */
   private theme(): void {
-    // The lettering in its faces in the Standard look, once they have loaded; the EGA look draws the game's own. The
-    // letters set before are let go: the game draws the screen again after a change of look.
-    const faces = this.look === 'standard' && this.letterFonts;
+    // Once the faces have loaded: the letters and figures in the font chosen (Appearance > Font), in either look - but
+    // DOS, the game's own glyphs, drawn on the colour page; the Standard look's runes and symbols in theirs, the EGA
+    // look drawing the game's own. The letters set before are let go where none are set now: the game draws the
+    // screen again after a change of look or font.
+    const standard = this.look === 'standard' && this.letterFonts;
+    const lettered = this.letterFonts && this.font !== 'dos';
+    const faces = standard || lettered;
     this.fb.letterOf = faces
       ? (font, code) =>
           font === 0 && code >= 0x21 && code <= 0x7a
-            ? { face: 'mono', text: String.fromCharCode(code) }
+            ? lettered
+              ? { face: 'mono', text: String.fromCharCode(code) }
+              : null
             : font === 0 && code >= 0x18 && code <= 0x1b
-              ? { face: 'mono', text: ARROWS[code - 0x18] } // the lettering's own arrows
-              : font === 1 && code >= 0x41 && code <= 0x5f
-                ? { face: 'runes', text: RUNE_LETTER[code - 0x41] }
-                : // The game's symbols: IBM.CH's but the borders' caps (the copper's) and the frame's corners beyond
-                  // the letters; every one of RUNES.CH's that is not a rune letter and has ink.
-                  (font === 0 && code > 2 && code < 0x20) || (font === 1 && this.inked(1, code))
-                  ? { face: 'symbol', text: `${font}:${code}` }
-                  : null
+              ? lettered
+                ? { face: 'mono', text: ARROWS[code - 0x18] } // the lettering's own arrows
+                : null
+              : !standard
+                ? null
+                : font === 1 && code >= 0x41 && code <= 0x5f
+                  ? { face: 'runes', text: RUNE_LETTER[code - 0x41] }
+                  : // The game's symbols: IBM.CH's but the borders' caps (the copper's) and the frame's corners beyond
+                    // the letters; every one of RUNES.CH's that is not a rune letter and has ink.
+                    (font === 0 && code > 2 && code < 0x20) || (font === 1 && this.inked(1, code))
+                    ? { face: 'symbol', text: `${font}:${code}` }
+                    : null
       : undefined;
-    this.fb.letterMask = faces ? (face, text, side) => this.letterMask(face, text, side) : undefined;
+    this.fb.letterMask = standard ? (face, text, side) => this.letterMask(face, text, side) : undefined;
     if (!faces) for (const m of this.fb.letters) m.clear();
+    this.fb.dosLetters = this.font === 'dos';
     this.fb.chrome = this.look === 'standard' && this.inGame;
     this.fb.softFlash = this.look === 'standard';
     this.fb.dirty = true;

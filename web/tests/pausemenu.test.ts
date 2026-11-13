@@ -236,7 +236,7 @@ describe('Party order, in the Pause menu', () => {
 });
 
 describe('the Pause menu, Gameplay and Settings', () => {
-  it('put Audio, Gameplay and Settings in Pause - the music and sound in Audio, the rules in Gameplay, the look in Settings', async () => {
+  it('put Audio, Gameplay, Appearance and Settings in Pause - the sound in Audio, the rules in Gameplay, the look in Appearance', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
     g.lastSource = 'keyboard';
@@ -246,30 +246,34 @@ describe('the Pause menu, Gameplay and Settings', () => {
       return Pad.B;
     };
     await pauseMenu(g);
-    expect(paused.slice(0, 6)).toEqual(['Resume', 'Auto combat: Off', 'Party order', 'Audio', 'Gameplay', 'Settings']);
+    expect(paused.slice(0, 7)).toEqual(['Resume', 'Auto combat: Off', 'Party order', 'Audio', 'Gameplay', 'Appearance', 'Settings']);
     expect(paused).not.toContain('Journal');
     expect(paused).not.toContain('Map');
-    const { audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');
+    const { appearanceLines, audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');
     const name = (l: { label: string }): string => l.label.replace(/:.*/, '');
     expect(audioLines(g).map((l) => l.label)).toEqual(['Back', 'Sound: Classical', 'Music level: 60%', 'Sound FX level: 80%']);
     expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Snap attacks', 'Max input']);
-    expect(settingLines(g).map(name)).toEqual([
+    expect(appearanceLines(g).map(name)).toEqual([
       'Back',
       'UX',
       'Tiles',
       'Outlines',
       'Status letters',
-      'Snap targets',
-      'Dialog',
+      'Font',
       'Scanlines',
       'Smooth motion',
+    ]);
+    expect(settingLines(g).map(name)).toEqual([
+      'Back',
+      'Snap targets',
+      'Dialog',
       'Battery saver',
       'Export saved game',
       'Import saved game',
       'Ultima V SP',
     ]);
-    // At the title there is no Pause menu: Settings holds Audio and Gameplay.
-    expect(settingLines(g, true).map(name)).toEqual(expect.arrayContaining(['Audio', 'Gameplay']));
+    // At the title there is no Pause menu: Settings holds Audio, Gameplay and Appearance.
+    expect(settingLines(g, true).map(name)).toEqual(expect.arrayContaining(['Audio', 'Gameplay', 'Appearance']));
     // And not the saves', which are Manage Saves' there (characterMenu.ts).
     expect(settingLines(g, true).map(name)).not.toEqual(expect.arrayContaining(['Export saved game']));
     expect(
@@ -374,9 +378,9 @@ describe('the scanlines', () => {
   it('are each UX’s own: off in Modern, on in PC (1988) until turned off', async () => {
     const { DEFAULTS } = await import('../src/game/settings.ts');
     expect([DEFAULTS.scanlines, DEFAULTS.pcScanlines]).toEqual([false, true]);
-    const { settingLines } = await import('../src/game/menu.ts');
+    const { appearanceLines } = await import('../src/game/menu.ts');
     const { g } = newGame();
-    const line = () => settingLines(g).find((l) => l.label.startsWith('Scanlines'))!;
+    const line = () => appearanceLines(g).find((l) => l.label.startsWith('Scanlines'))!;
     expect(line().label).toBe('Scanlines: Off');
     g.options.tileSet = 'original';
     expect(line().label).toBe('Scanlines: On');

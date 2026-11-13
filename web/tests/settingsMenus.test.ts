@@ -12,12 +12,13 @@ const names = (labels: string[]): string[] => labels.map((l) => l.replace(/:.*$/
  * Audio and Gameplay a list each - Settings' at the title, the Pause menu's in play - the music and sound in Audio alone.
  */
 describe('the settings, at the title and in play', () => {
-  it("show the same look in Settings, the title's with Audio and Gameplay, play's with the saved game's carrying", () => {
+  it("show the same lines in Settings, the title's with Audio, Gameplay and Appearance, play's with the saved game's carrying", () => {
     const { g } = newGame();
     const title = names(settingLines(g, true).map((l) => l.label));
     const play = names(settingLines(g, false).map((l) => l.label));
-    expect(title.filter((l) => l !== 'Audio' && l !== 'Gameplay')).toEqual(play.filter((l) => !/saved game/.test(l)));
-    expect(title.slice(-3, -1)).toEqual(['Audio', 'Gameplay']);
+    const opens = ['Audio', 'Gameplay', 'Appearance'];
+    expect(title.filter((l) => !opens.includes(l))).toEqual(play.filter((l) => !/saved game/.test(l)));
+    expect(title.slice(-4, -1)).toEqual(opens);
   });
 
   it('keep the music and sound in Audio: none of it in Settings, nor on the Pause menu, which opens Audio', async () => {

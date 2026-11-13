@@ -284,6 +284,11 @@ export class Framebuffer {
    * every glyph is drawn on the colour page.
    */
   letterOf?: ((font: number, code: number) => { face: Face; text: string } | null) | undefined;
+  /**
+   * The game's own letters and figures, its 8-by-8 glyphs as 1988 drew them (Appearance > Font: DOS): not the tile
+   * set's smoothed lettering (art.glyph), in either look. Its symbols are still drawn as the look draws them.
+   */
+  dosLetters = false;
   /** A letter as a stencil `side` square (32 unless given), nonzero the ink (a sign carved into a wall). */
   letterMask?: ((face: Face, text: string, side?: number) => Uint8Array | null) | undefined;
   /** The tile art the colour pages use (the EGA tiles doubled until one is set). */
@@ -1025,7 +1030,9 @@ export class Framebuffer {
       set && !onWall
         ? null
         : font === 0
-          ? (this.art.glyph?.(c7) ?? (this.art.fineSymbol?.(c7) ? this.smooth(0, c7) : null))
+          ? this.dosLetters && c7 >= 0x20 && c7 <= 0x7a
+            ? null
+            : (this.art.glyph?.(c7) ?? (this.art.fineSymbol?.(c7) ? this.smooth(0, c7) : null))
           : english && again
             ? (this.carved('english', c7) ?? english)
             : font === 1 && this.art.fineRunes
@@ -1105,6 +1112,14 @@ export class Framebuffer {
       bits = this.smoothed[font][code] = epx(epx(plain, 8, 8, true), 16, 16, true);
     }
     return bits;
+  }
+
+  /** A glyph of the game's as it is, 8 by 8 (nonzero the ink): DOS's letters, at its own grain. */
+  private plain(font: number, code: number): Uint8Array {
+    const rows = this.fonts[font].rows;
+    const out = new Uint8Array(64);
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) out[r * 8 + c] = rows[code * 8 + r] & (0x80 >> c) ? 1 : 0;
+    return out;
   }
 
   /** A symbol of the game's at the lettering's grain (32 by 32, nonzero the ink): the shape the screen fills. */
@@ -1905,7 +1920,10 @@ export class Framebuffer {
   private drawMark(out: Uint32Array, m: { column: number; row: number; code: number; colour: number }): void {
     const c7 = m.code & 0x7f;
     if (this.letterOf?.(0, c7)) return; // set by the screen, over the finished picture (marksShown)
-    const ink = this.art.glyph?.(c7) ?? (this.art.fineSymbol?.(c7) ? this.smooth(0, c7) : null);
+    const ink =
+      this.dosLetters && c7 >= 0x20 && c7 <= 0x7a
+        ? this.plain(0, c7)
+        : (this.art.glyph?.(c7) ?? (this.art.fineSymbol?.(c7) ? this.smooth(0, c7) : null));
     const v = colourRGBA(m.colour);
     const [x0, y0] = [m.column * GLYPH_SIZE * HI, m.row * GLYPH_SIZE * HI];
     if (ink) {

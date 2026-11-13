@@ -872,17 +872,22 @@ other hurt in the game kills as it always did.
 
   <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
 
-- **Settings** (Pause menu): the look and its tiles, the dialog (a
-  townsman's words in the view or in the log), Smooth motion (the Modern look's, on to begin with: the map
-  slides under the party and whoever walks glides to the next square - in towns, out of doors, in a fight and on
-  the dungeon's whole-level map - the game itself still moving a square at a time), Battery saver (off to
+- **Appearance** (Pause menu below Gameplay, and Settings at the title): the look (UX) and its tiles, outlines,
+  status letters, the **Font**, scanlines (each look its own: on in the PC (1988) look until turned off), Smooth
+  motion (the Modern look's, on to begin with: the map slides under the party and whoever walks glides to the next
+  square - in towns, out of doors, in a fight and on the dungeon's whole-level map - the game itself still moving a
+  square at a time) and the dungeon map (the PC (1988) look's). The Font is any of four, in either look:
+  **SixtyFour**, the Modern look's own; **Legible**, Atkinson Hyperlegible Mono, made to be easy to read;
+  **Dyslexic**, OpenDyslexic Mono, for dyslexic readers; and **DOS**, the 1988 game's own 8-by-8 letters. Legible
+  and Dyslexic set the story pages too, in either look; SixtyFour and DOS leave them in their period faces. A
+  player already in the PC (1988) look begins on DOS.
+- **Settings** (Pause menu): the dialog (a
+  townsman's words in the view or in the log), Battery saver (off to
   begin with: on, the map stops moving a minute after the last press,
   until the next, and the screen is drawn and a gamepad read only when
   there is something to show or a pad to read - for a phone left with the
-  game open), outlines, status
-  letters, Snap targets, scanlines (each look its own: on in the PC (1988) look until
-  turned off), the dungeon map (the PC (1988) look's), the export and
-  import of the saved game, and forgetting the installed files. In both,
+  game open), Snap targets, the export and
+  import of the saved game, and forgetting the installed files. In each,
   each setting says what it does at the foot of the list while the bar is
   on it.
 
@@ -1236,7 +1241,10 @@ Import's From a file opens Android's picker for a file to read.
 - **The lettering** is set in a real font at the display's own size over
   each text cell, sharp however large the window: Sixtyfour (Jens Kutilek,
   SIL Open Font License 1.1, `public/fonts`), its strokes thickened a
-  little. Each letter is kept while its cell's pixels stay as the game
+  little, or the font chosen in Appearance - Atkinson Hyperlegible Mono
+  (the Braille Institute of America, SIL Open Font License 1.1) or
+  OpenDyslexic Mono (Abbie Gonzalez, opendyslexic.org; Bitstream Vera
+  licence and CC BY 3.0) - or, with DOS, the game's own glyphs. Each letter is kept while its cell's pixels stay as the game
   drew them, and gone once anything is drawn over it (the ultima3 port's
   Standard font, `standard-font.png`, is drawn only until the fonts have
   loaded, or where they cannot be). The game's own symbols - the waiting

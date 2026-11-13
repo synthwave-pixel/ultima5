@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { lzwDecompress } from '../src/data/lzw.ts';
-import { settingLines } from '../src/game/menu.ts';
+import { appearanceLines } from '../src/game/menu.ts';
 import { loadOptions, PC_TILES, SETTINGS_KEY, TILES } from '../src/game/settings.ts';
 import { egaTileArt } from '../src/ui/egaTiles.ts';
 import { EgaArt, HI_WIDTH } from '../src/ui/framebuffer.ts';
@@ -9,7 +9,7 @@ import { gameFiles, newGame } from './helpers.ts';
 
 /**
  * The PC EGA tiles (egaTiles.ts): the 1988 PC game's tiles in the Modern look's screen, and the looks' names in
- * Settings - UX Modern or PC (1988), Tiles three sets under Modern and PC EGA or Apple ][ under PC (1988).
+ * Appearance - UX Modern or PC (1988), Tiles three sets under Modern and PC EGA or Apple ][ under PC (1988).
  */
 describe('the PC EGA tiles', () => {
   const tiles = lzwDecompress(gameFiles().get('TILES.16'));
@@ -38,11 +38,11 @@ describe('the PC EGA tiles', () => {
   });
 });
 
-describe('the looks in Settings', () => {
+describe('the looks in Appearance', () => {
   const lines = (tileSet: 'standard' | 'original', tiles: (typeof TILES)[number]) => {
     const { g } = newGame();
     Object.assign(g.options, { tileSet, tiles });
-    const all = settingLines(g);
+    const all = appearanceLines(g);
     return { g, ux: all.find((l) => l.label.startsWith('UX:'))!, set: all.find((l) => l.label.startsWith('Tiles:'))! };
   };
 
@@ -71,7 +71,7 @@ describe('the looks in Settings', () => {
     expect(set.dim).toBeFalsy();
     await set.act?.();
     expect([g.options.pcTiles, g.options.tiles]).toEqual(['apple2', 'modern-pc']);
-    expect(settingLines(g).find((l) => l.label.startsWith('Tiles:'))!.label).toBe('Tiles: Apple ][');
+    expect(appearanceLines(g).find((l) => l.label.startsWith('Tiles:'))!.label).toBe('Tiles: Apple ][');
     await set.act?.();
     expect(g.options.pcTiles).toBe('pc-ega');
   });

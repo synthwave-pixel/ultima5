@@ -272,6 +272,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     sound.setEffects(effectsOf(o.soundChoice), o.effectsLevel);
     sound.setMusicVoice(soundtrackOf(o.soundChoice));
     sound.setMusic(o.musicLevel);
+    screen.setFont(o.font);
     screen.setTileArt(o.tileSet, o.tileSet === 'standard' ? o.tiles : o.pcTiles, o.outlines);
     g.draw.avatar?.(g.appearance, addressedAsLady(g));
     g.viewDirty = 1;

@@ -72,6 +72,12 @@ export interface Options {
    */
   statusLetters: boolean;
   /**
+   * The lettering of menus, the log, talk and the party panel, whatever the look (Appearance > Font): SixtyFour, the
+   * Modern look's; Legible (Atkinson Hyperlegible Mono) and Dyslexic (OpenDyslexic Mono), set for reading, which the
+   * story pages take too; or DOS, the game's own 8-by-8 letters.
+   */
+  font: FontChoice;
+  /**
    * Where a townsman's words are shown (speech.ts, the port's): Play, a panel in the play area, the party and they in
    * sight between it and the menu; Log, the message log, as 1988 had it.
    */
@@ -244,6 +250,10 @@ function settingsKey(): string {
   return id === null ? SETTINGS_KEY : charKey(id, 'settings');
 }
 
+/** The fonts the lettering may be set in (Options.font). */
+export type FontChoice = 'sixtyfour' | 'legible' | 'dyslexic' | 'dos';
+export const FONTS: FontChoice[] = ['sixtyfour', 'legible', 'dyslexic', 'dos'];
+
 export const DEFAULTS: Options = {
   autoCombat: 'off',
   scanlines: false,
@@ -262,6 +272,7 @@ export const DEFAULTS: Options = {
   input: 'controller',
   autoPause: false,
   statusLetters: false,
+  font: 'sixtyfour',
   dialog: 'play',
   batterySaver: false,
   snapTargets: true,
@@ -333,6 +344,9 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   // Settings from when one Scanlines served both looks: a player already in the PC (1988) look keeps what they
   // see; the rest find them on there the first time they switch.
   if (saved.pcScanlines === undefined && saved.tileSet === 'original') saved.pcScanlines = saved.scanlines ?? DEFAULTS.scanlines;
+  // Settings from before Font: a player in the PC (1988) look keeps its letters, the game's own (DOS).
+  if (saved.font !== undefined && !FONTS.includes(saved.font)) delete saved.font;
+  if (saved.font === undefined && saved.tileSet === 'original') saved.font = 'dos';
   return saved as Partial<Options>;
 }
 

@@ -115,7 +115,7 @@ export default defineConfig(({ mode }) => ({
         // (runtimeCaching below). The XMI files are only the render's source (tools/music). The effects are: the three
         // suites (some 5 MB, tools/sfx/render.ts) are fetched with the page, so an effect never waits on the network and
         // changing the Sound never needs it.
-        globPatterns: ['**/*.{js,css,html,png,gif,jpg,svg,wav,json,webmanifest,ttf}', 'sfx/*.ogg'],
+        globPatterns: ['**/*.{js,css,html,png,gif,jpg,svg,wav,json,webmanifest,ttf,otf}', 'sfx/*.ogg'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         globIgnores: [
           // A shared link's picture (index.html og:image), for the sites that show it, not the game.

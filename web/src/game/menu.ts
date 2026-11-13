@@ -55,6 +55,8 @@ import {
 } from './targets.ts';
 import {
   AUTO_COMBAT,
+  FONTS,
+  type FontChoice,
   RULES,
   LEVELS,
   PC_TILES,
@@ -1667,17 +1669,10 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
         },
         audioLine(g),
         gameplayLine(g),
+        appearanceLine(g, true),
         {
           label: 'Settings',
-          act: async () => {
-            // A new look lays the screen out again: the Standard panel and its borders, or 1988's (layout.ts).
-            const look = g.options.tileSet;
-            await settingsMenu(g);
-            if (g.options.tileSet !== look) {
-              const { relayout } = await import('./layout.ts');
-              await relayout(g);
-            }
-          },
+          act: () => settingsMenu(g).then(() => undefined),
         },
         {
           label: 'Help',
@@ -1895,6 +1890,54 @@ function effectsLevelLine(g: Game): Setting {
  */
 export function settingLines(g: Game, title = false): Setting[] {
   const o = g.options;
+  return [
+    { label: 'Back', note: '' },
+    {
+      // The foe a snap attack would strike, marked in a fight (combat.ts snapMark): of Snap attacks, in Gameplay.
+      label: `Snap targets: ${onOff(o.snapTargets)}`,
+      note: 'In a fight, small arrows round the foe X would strike. LB/RB or [ ] pick another.',
+      enabled: o.autoAim,
+      act: () => void (o.snapTargets = !o.snapTargets),
+    },
+    {
+      // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
+      label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
+      note: 'Play: what is said, in the play area. Log: in the message log.',
+      act: () => void (o.dialog = o.dialog === 'play' ? 'log' : 'play'),
+    },
+    {
+      // The map at rest after a quiet minute, till a press (screen.ts waitKey): for a phone left with the game open.
+      label: `Battery saver: ${onOff(o.batterySaver)}`,
+      note: 'The map stops moving after a minute with nothing pressed, until the next press.',
+      act: () => void (o.batterySaver = !o.batterySaver),
+    },
+    // At the title, with no Pause menu to hold them, Audio, Gameplay and Appearance too: the same lists as the Pause
+    // menu's.
+    ...(title ? [audioLine(g), gameplayLine(g), appearanceLine(g)] : []),
+    // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
+    // Character and Remove game files.
+    ...(title ? [] : transferLines(g)),
+    // Which edition this is and its version, for a tester's report: grey, and the bar steps over it.
+    { label: editionName(g), enabled: false },
+  ];
+}
+
+/** The fonts' names in Appearance (Options.font), and what each is. */
+const FONT_NAMES: Record<FontChoice, string> = { sixtyfour: 'SixtyFour', legible: 'Legible', dyslexic: 'Dyslexic', dos: 'DOS' };
+const FONT_NOTES: Record<FontChoice, string> = {
+  sixtyfour: "SixtyFour: the Modern look's own letters.",
+  legible: 'Legible: Atkinson Hyperlegible Mono. Story pages too.',
+  dyslexic: 'Dyslexic: OpenDyslexic Mono. Story pages too.',
+  dos: "DOS: the 1988 game's own letters, 8 by 8.",
+};
+
+/**
+ * Appearance: how the game looks - the UX and its tiles, the figures' outlines, the party's status letters, the font
+ * (any font in either UX), scanlines, smooth motion and the PC (1988) look's dungeon map. The Pause menu's, and
+ * Settings' at the title.
+ */
+export function appearanceLines(g: Game): Setting[] {
+  const o = g.options;
   const pc = o.tileSet !== 'standard';
   return [
     { label: 'Back', note: '' },
@@ -1934,17 +1977,10 @@ export function settingLines(g: Game, title = false): Setting[] {
       act: () => void (o.statusLetters = !o.statusLetters),
     },
     {
-      // The foe a snap attack would strike, marked in a fight (combat.ts snapMark): of Snap attacks, in Gameplay.
-      label: `Snap targets: ${onOff(o.snapTargets)}`,
-      note: 'In a fight, small arrows round the foe X would strike. LB/RB or [ ] pick another.',
-      enabled: o.autoAim,
-      act: () => void (o.snapTargets = !o.snapTargets),
-    },
-    {
-      // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
-      label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
-      note: 'Play: what is said, in the play area. Log: in the message log.',
-      act: () => void (o.dialog = o.dialog === 'play' ? 'log' : 'play'),
+      // The lettering's font (screen.ts setFont), whatever the UX: SixtyFour, Legible, Dyslexic or DOS.
+      label: `Font: ${FONT_NAMES[o.font]}`,
+      note: FONT_NOTES[o.font],
+      act: () => void (o.font = FONTS[(FONTS.indexOf(o.font) + 1) % FONTS.length]),
     },
     {
       // Each look its own: the PC (1988) look's on until turned off.
@@ -1962,12 +1998,6 @@ export function settingLines(g: Game, title = false): Setting[] {
             act: () => void (o.smoothMotion = !o.smoothMotion),
           },
         ]),
-    {
-      // The map at rest after a quiet minute, till a press (screen.ts waitKey): for a phone left with the game open.
-      label: `Battery saver: ${onOff(o.batterySaver)}`,
-      note: 'The map stops moving after a minute with nothing pressed, until the next press.',
-      act: () => void (o.batterySaver = !o.batterySaver),
-    },
     // The EGA look's map over the dungeon's view; the Standard look's is switched by the Map command in a dungeon.
     ...(o.tileSet === 'standard'
       ? []
@@ -1978,14 +2008,31 @@ export function settingLines(g: Game, title = false): Setting[] {
             act: () => void (o.dungeonMap = o.dungeonMap === 'off' ? 'small' : o.dungeonMap === 'small' ? 'full' : 'off'),
           },
         ]),
-    // At the title, with no Pause menu to hold them, Audio and Gameplay too: the same lists as the Pause menu's.
-    ...(title ? [audioLine(g), gameplayLine(g)] : []),
-    // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
-    // Character and Remove game files.
-    ...(title ? [] : transferLines(g)),
-    // Which edition this is and its version, for a tester's report: grey, and the bar steps over it.
-    { label: editionName(g), enabled: false },
   ];
+}
+
+/** Appearance (appearanceLines). */
+export async function appearanceMenu(g: Game): Promise<number> {
+  return optionsMenu(g, 'Appearance', () => appearanceLines(g));
+}
+
+/**
+ * The line that opens Appearance: on the Pause menu, below Gameplay, and in Settings at the title. In play, a new UX
+ * lays the screen out again: the Standard panel and its borders, or 1988's (layout.ts).
+ */
+function appearanceLine(g: Game, inPlay = false): Setting {
+  return {
+    label: 'Appearance',
+    note: 'How the game looks: UX, tiles, font, scanlines, smooth motion.',
+    act: async () => {
+      const look = g.options.tileSet;
+      await appearanceMenu(g);
+      if (inPlay && g.options.tileSet !== look) {
+        const { relayout } = await import('./layout.ts');
+        await relayout(g);
+      }
+    },
+  };
 }
 
 /** Export and Import saved game (transfer.ts): in play, Settings' lines; at the title, Manage Saves'. */
