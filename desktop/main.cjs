@@ -159,6 +159,11 @@ function steamLaunch() {
  * a pgrep that could not be run or failed says nothing, and Steam's files are not edited on nothing.
  */
 function steamRunning() {
+  // Windows: tasklist's list of steam.exe. One that could not be run says nothing, taken as running.
+  if (process.platform === 'win32') {
+    const r = spawnSync('tasklist', ['/FI', 'IMAGENAME eq steam.exe', '/NH'], { encoding: 'utf8', windowsHide: true });
+    return r.status !== 0 || /steam\.exe/i.test(r.stdout ?? '');
+  }
   const name = { darwin: 'steam_osx', linux: 'steam' }[process.platform];
   return name !== undefined && spawnSync('pgrep', ['-x', name]).status !== 1;
 }
@@ -221,6 +226,116 @@ const linuxWhere = () => ({
   quitSteam: quitSteamLinux,
   openSteam: () => void runSteam([]),
 });
+
+/** Windows' steam.exe, in the first Steam folder that has one (the registry's first), else null. */
+const steamExe = () => steamRootsHere().map((r) => join(r, 'steam.exe')).find((p) => existsSync(p)) ?? null;
+
+/** Windows' Steam run with `args`, left to itself; whether it started. */
+function runSteamWindows(args) {
+  const exe = steamExe();
+  if (!exe) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const child = spawn(exe, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    child.once('error', () => resolve(false));
+    child.once('spawn', () => {
+      child.unref();
+      resolve(true);
+    });
+  });
+}
+
+/** Windows' Steam folders and Steam itself, for its cloud rules (macOS Sync): quit with steam.exe -shutdown. */
+const windowsWhere = () => ({
+  fs,
+  roots: steamRootsHere(),
+  steamRunning,
+  quitSteam: () => runSteamWindows(['-shutdown']).then(steamGone),
+  openSteam: () => void runSteamWindows([]),
+});
+
+/**
+ * Whether Steam's cloud rules may be fixed from here (macOS Sync), which closes Steam: Linux as linuxCloudHere says;
+ * Windows outside a Steam launch, with a steam.exe to quit and start again; never a Mac, whose own Play from Steam
+ * gives its rules MacOS.
+ */
+const cloudHere = () => (SYSTEM === 'linux' ? linuxCloudHere() : SYSTEM === 'windows' ? !steamMode && steamExe() !== null : false);
+const cloudWhere = () => (SYSTEM === 'windows' ? windowsWhere() : linuxWhere());
+
+/** Whether macOS Sync is on here: the option, with Play from Steam on (a Mac: Play from Steam alone, which fixes its own). */
+const syncOn = (o) => (SYSTEM === 'mac' ? o.macPlay : o.macSync && (SYSTEM === 'windows' ? o.playLine : o.compatTool || o.playLine));
+
+/** Steam's cloud rules for the game here (steamSetup.cjs cloudCheck), a failure to look said as unreadable. */
+function rulesHere(roots) {
+  try {
+    return steamSetup.cloudCheck(fs, roots);
+  } catch (e) {
+    return { state: 'unreadable', why: e instanceof Error ? e.message : String(e), rules: [] };
+  }
+}
+
+/**
+ * Whether Cloud saves made here reach a Mac (macOS Sync), only read: Steam's cloud rules for the game (steamSetup.cjs
+ * cloudCheck; a Mac's are its Play from Steam's, so not looked at as a fault), and how many of the account's Cloud
+ * saves Steam marked for Windows alone (stuckSaves; on a Mac, those that can't reach it), whatever the rules say - the
+ * check of what Steam did. The account is the launch's, else the one signed in last. Whether it may be fixed from
+ * here, and then whether Steam is running, which fixing the rules would close.
+ */
+function syncState(options, launch) {
+  const roots = steamRootsHere();
+  const check = rulesHere(roots);
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  const root = steamFind().root ?? roots.find((r) => existsSync(r)) ?? null;
+  const account = launch ? launch.accountId : root === null ? null : accountId(root, process.env, read);
+  let stuck = null;
+  try {
+    stuck = steamSetup.stuckSaves(fs, roots, account, SYSTEM === 'mac');
+  } catch (e) {
+    console.warn('macOS Sync:', e);
+  }
+  const canFix = cloudHere();
+  return {
+    system: SYSTEM,
+    flatpak: asFlatpak,
+    deck: process.env.SteamDeck === '1' || inGamescope,
+    launch: launch !== null,
+    on: syncOn(options),
+    rules: check.state,
+    why: check.why,
+    ruleList: check.rules,
+    stuck,
+    canFix,
+    steamRunning: canFix ? steamRunning() : false,
+  };
+}
+
+/**
+ * macOS Sync's fix, what to say of it: Steam's cloud rules given MacOS where they lack it (closing Steam, so only where
+ * that may be done from here), and the saves Steam sent to Windows alone re-marked, to go up again for a Mac too; where
+ * the rules have MacOS already, only the saves, which needs no Steam closed. A Mac fixes nothing of another's.
+ */
+async function fixSync(options, launch) {
+  const s = syncState(options, launch);
+  if (SYSTEM === 'mac') return "A Mac can't change how another computer's Steam sends its saves: fix it on that computer.";
+  if (s.rules === 'needed') {
+    if (!s.canFix) return cloudRuleMessage(asFlatpak ? 'flatpak' : 'not-here');
+    return cloudRuleMessage(await steamSetup.linuxCloudSetup(cloudWhere()));
+  }
+  if (s.rules === 'unreadable')
+    return `Steam's settings for Ultima V couldn't be read (${s.why}), so this can't be fixed here. Copy report, and report an issue.`;
+  if ((s.stuck ?? 0) > 0) {
+    const n = steamSetup.resendSaves(fs, steamRootsHere());
+    return n > 0
+      ? `Done: ${n} ${n === 1 ? 'save goes' : 'saves go'} to Steam Cloud again, for a Mac too, when Ultima V next closes in Steam.`
+      : "Nothing could be changed: those saves aren't as Steam last synced them here.";
+  }
+  return cloudRuleMessage('done');
+}
 
 // This build, for the launch line: the Flatpak, the AppImage (its name has no version, so updates overwrite it and the line
 // holds), the portable .exe.
@@ -292,9 +407,10 @@ const SYSTEM = { darwin: 'mac', win32: 'windows' }[process.platform] ?? 'linux';
  * What the Steam (beta) menu opens with: this system and build, Steam's folder (the player's home written ~, as the
  * report writes it) or null, Ultima V in its libraries, whether a Steam account is known (a launch's own, else the one
  * signed in most recently), whether Steam launched this run, the launch line this copy would use, and on a Mac whether
- * Steam is running, which turning the option off would quit. Only reads.
+ * Steam is running, which turning the option off would quit; and whether Cloud saves made here reach a Mac (macOS
+ * Sync, syncState). Only reads.
  */
-function steamStatus(launch) {
+function steamStatus(launch, options) {
   const f = steamFind();
   const root = f.root ?? steamRootsHere().find((r) => existsSync(r)) ?? null;
   const read = (path) => {
@@ -315,23 +431,8 @@ function steamStatus(launch) {
     launch: launch !== null,
     line: launchLineHere(),
     ...(SYSTEM === 'mac' ? { steamRunning: root !== null && steamRunning() } : {}),
-    ...(SYSTEM === 'linux' ? linuxCloudStatus() : {}),
+    sync: syncState(options, launch),
   };
-}
-
-/**
- * Linux's cloud rules for the Steam (beta) menu: whether they lack MacOS ('needed'), whether they may be set from
- * here, and then whether Steam is running, which setting them would quit.
- */
-function linuxCloudStatus() {
-  let cloudRule = null;
-  try {
-    cloudRule = steamSetup.linuxCloud(fs, steamRootsHere());
-  } catch {
-    // Unread: no line offered.
-  }
-  const canFixCloud = linuxCloudHere();
-  return { cloudRule, canFixCloud, ...(canFixCloud ? { steamRunning: steamRunning() } : {}) };
 }
 
 // Whether this start had to put Ultima V's cache entry back (null: not looked at yet, or not a Mac), for the report.
@@ -398,6 +499,7 @@ function reportFacts(options, launch, page) {
     macPatched: SYSTEM === 'mac' && root !== null ? steamSetup.macPatched(macWhere()) : null,
     macReapplied: SYSTEM === 'mac' ? macReapplied : null,
     cloudCharacters,
+    sync: syncState(options, launch),
   };
 }
 
@@ -551,12 +653,6 @@ app.whenReady().then(() => {
   // there is one, where the game's files are, and whether an account is known. The game's files are read from the folder
   // Steam gave, the files the page names; none where there is no folder.
   const launch = steamLaunch();
-  // On Linux, whether Steam's cloud rules lack MacOS, for the title's note (boot.ts): read once, on the first ask.
-  let launchCloudRule;
-  const cloudRuleOnce = () => {
-    if (launchCloudRule === undefined) launchCloudRule = SYSTEM === 'linux' ? linuxCloudStatus().cloudRule : null;
-    return launchCloudRule;
-  };
   ipcMain.on('steam-launch', (event) => {
     event.returnValue =
       launch && String(event.senderFrame?.url ?? '').startsWith('app://')
@@ -566,7 +662,6 @@ app.whenReady().then(() => {
             where: launch.where,
             account: launch.account,
             deck: process.env.SteamDeck === '1',
-            cloudRule: cloudRuleOnce(),
           }
         : { steam: false };
   });
@@ -660,17 +755,30 @@ app.whenReady().then(() => {
   );
   // The Steam (beta) menu (web/src/game/steamMenu.ts): what was found, and the launch line to copy. Only the game's own
   // page may ask.
-  ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus(launch) : null));
-  // Linux's cloud rules given MacOS (steamSetup.cjs linuxCloudSetup), from the Steam (beta) menu: what to say. One at a
-  // time with the options, which close Steam too.
+  ipcMain.handle('steam-status', (event) => (fromGame(event) ? steamStatus(launch, readOptions(optionsFile)) : null));
+  // Whether Cloud saves made here reach a Mac (macOS Sync, syncState), for the title's warning (boot.ts): read once a
+  // launch, and again after a fix.
+  let sync = null;
+  ipcMain.on('steam-sync', (event) => {
+    if (!fromGame(event)) return void (event.returnValue = null);
+    try {
+      sync ??= syncState(readOptions(optionsFile), launch);
+    } catch (e) {
+      console.warn('macOS Sync:', e);
+    }
+    event.returnValue = sync;
+  });
+  // macOS Sync's fix (fixSync), from the Steam (beta) menu or the title's warning: what to say. One at a time with the
+  // options, which close Steam too; the state read again after.
   ipcMain.handle('steam-fix-cloud', (event) => {
     if (!fromGame(event)) return null;
     const run = async () => {
-      if (!linuxCloudHere()) return cloudRuleMessage('not-here');
       try {
-        return cloudRuleMessage(await steamSetup.linuxCloudSetup(linuxWhere()));
+        return await fixSync(readOptions(optionsFile), launch);
       } catch (e) {
         return `That didn't work: ${e instanceof Error ? e.message : String(e)}`;
+      } finally {
+        sync = null;
       }
     };
     const fixed = switching.then(run);
@@ -736,12 +844,13 @@ app.whenReady().then(() => {
     } catch (e) {
       console.warn('steam compatibility tool not updated:', e);
     }
-    // Linux with the compatibility tool on, outside Steam: MacOS put back in the game's cloud rules if Steam has replaced
+    // macOS Sync on, on Linux or Windows, outside Steam: MacOS put back in the game's cloud rules if Steam has replaced
     // its entry and is closed.
     try {
-      if (readOptions(optionsFile).compatTool && linuxCloudHere()) {
-        const state = steamSetup.linuxCloudReapply(linuxWhere());
+      if (SYSTEM !== 'mac' && syncOn(readOptions(optionsFile)) && cloudHere()) {
+        const state = steamSetup.linuxCloudReapply(cloudWhere());
         if (state !== 'ready') console.log('steam cloud rules:', state);
+        sync = null;
       }
     } catch (e) {
       console.warn('steam cloud rules not re-applied:', e);

@@ -1,8 +1,9 @@
 /**
  * steamMenu.ts
  *
- * The title's Steam (beta) menu, in the desktop app: the same six lines whatever stands, so that it reads the same each
- * time - Back, Play from Steam, Cloud Saves, Copy report, Report an issue and Paths - each saying at the foot, as the
+ * The title's Steam (beta) menu, in the desktop app: the same seven lines whatever stands, so that it reads the same
+ * each time - Back, Play from Steam, Cloud Saves, macOS Sync, Copy report, Report an issue and Paths (and Fix Cloud for
+ * Mac under macOS Sync while Cloud saves made here don't reach a Mac, macSync.ts) - each saying at the foot, as the
  * bar is on it, what it does and how it stands; one that can't be changed here is grey and says why. Every option is
  * off until turned on and undone when turned off. Play from Steam is the option itself on a Mac (Steam's own settings
  * changed); on Windows and Linux it opens its own menu: on Windows the launch line to paste and its Copy, on Linux the
@@ -14,6 +15,7 @@
 
 import { switchCloud } from './cloudSwitch.ts';
 import type { Game, LineCheck, PlayOption, SteamChoices, SteamHook, SteamStatus } from './game.ts';
+import { fixNote, syncFixable, syncNote, syncProblem } from './macSync.ts';
 import { choose, confirm, restoreView, showText, wrap, type Item } from './menu.ts';
 
 /** The game's issues on GitHub, for Report an issue. */
@@ -29,10 +31,9 @@ const MAC_WARNING =
   "game; then this app puts it back. Turning this off puts Steam's settings back as they were.";
 // Turning a Mac's Play off quits Steam, which in a Steam launch would end this game and cut short its Cloud sync.
 const MAC_QUIT_FIRST = 'Quit the game, then turn this off from outside Steam.';
-// Linux: Steam's cloud rules for the game given MacOS, so that saves uploaded from here reach a Mac (steamSetup.cjs).
+// macOS Sync: Steam's cloud rules for the game given MacOS, so that saves uploaded from here reach a Mac (steamSetup.cjs).
 const LINUX_CLOUD_WARNING =
   "This closes Steam and opens it again, and changes Steam's settings for Ultima V so that Cloud saves made here reach a Mac too.";
-const LINUX_CLOUD_NOTE = "Cloud saves made here don't reach a Mac yet. Fixing it restarts Steam.";
 /** A Linux launch line, kept from an earlier version: what to do instead. */
 const LINUX_LINE = 'Fails in Game Mode. Turn it off, clear Launch Options, and use Compat. tool.';
 const CLOUD_STAYS =
@@ -107,6 +108,10 @@ function menuLines(g: Game, steam: SteamHook, s: SteamStatus | null, o: SteamCho
     { label: 'Back', note: '' },
     playLine(g, steam, s, o, check, say),
     cloudLine(g, steam, s, o, say),
+    syncLine(steam, s, o, say),
+    ...(s?.sync && s.system !== 'mac' && o.macSync && syncProblem(s.sync) && s.sync.rules !== 'unreadable'
+      ? [fixCloudLine(g, steam, s, say)]
+      : []),
     {
       label: 'Copy report',
       note: 'A plain-text report of what was found, to paste into an issue.',
@@ -271,27 +276,36 @@ function playMenu(
         toggler(g, steam, s, o, 'compatTool', say),
       ),
     );
-    if (o.compatTool && s.cloudRule === 'needed') out.push(fixCloudLine(g, steam, s, say));
   }
   return out;
 }
 
 /**
- * Linux, with the tool on and Steam's cloud rules lacking MacOS: the line that sets them, closing Steam. Grey where
- * Steam may not be closed from here, saying where it may.
+ * macOS Sync's line: on a Mac On and grey (a Mac's Play from Steam gives its own rules MacOS), saying of any saves made
+ * elsewhere that can't reach it; elsewhere the option, its note how Cloud saves made here stand (macSync.ts).
+ */
+function syncLine(steam: SteamHook, s: SteamStatus | null, o: SteamChoices, say: (text: string) => Promise<void>): Line {
+  if (s?.system === 'mac') return { label: 'macOS Sync: On', enabled: false, rest: true, note: syncNote(s.sync, true) };
+  return option('macOS Sync', o.macSync, syncNote(s?.sync, o.macSync), null, async () => {
+    const r = await steam.setOption('macSync', !o.macSync).catch(() => null);
+    await say(r?.message ?? "That can't be changed here.");
+  });
+}
+
+/**
+ * macOS Sync on and Cloud saves made here not reaching a Mac: the line that fixes it (Steam's cloud rules given MacOS,
+ * closing Steam, asked first while it runs; the saves sent to Windows alone re-marked). Grey where it can't be done from
+ * here, saying where it can.
  */
 function fixCloudLine(g: Game, steam: SteamHook, s: SteamStatus, say: (text: string) => Promise<void>): Line {
-  if (!s.canFixCloud) {
-    const where = s.flatpak
-      ? 'Use the AppImage to fix this: the Flatpak cannot close Steam.'
-      : 'Open this app outside Steam, from the desktop (on a Steam Deck, Desktop Mode), to fix this.';
-    return { label: 'Fix Cloud for Mac', enabled: false, rest: true, note: `${LINUX_CLOUD_NOTE} ${where}` };
-  }
+  const sync = s.sync!;
+  if (!syncFixable(sync)) return { label: 'Fix Cloud for Mac', enabled: false, rest: true, note: fixNote(sync) };
+  const restarts = sync.rules === 'needed' && sync.steamRunning;
   return {
     label: 'Fix Cloud for Mac',
-    note: LINUX_CLOUD_NOTE,
+    note: fixNote(sync),
     act: async () => {
-      if (s.steamRunning && !(await confirm(g, LINUX_CLOUD_WARNING))) return;
+      if (restarts && !(await confirm(g, LINUX_CLOUD_WARNING))) return;
       await say((await steam.fixCloud()) ?? "That can't be changed here.");
     },
   };
@@ -315,8 +329,9 @@ function toggler(
     if (!on && o.cloudAny && !(await confirm(g, CLOUD_STAYS))) return;
     if (name === 'macPlay' && on && !(await confirm(g, MAC_WARNING))) return;
     if (name === 'macPlay' && !on && s.steamRunning && !(await confirm(g, 'Steam must be closed for this. Quit Steam now?'))) return;
-    // Linux: the tool also gives Steam's cloud rules MacOS where it may, which closes Steam.
-    const closesSteam = name === 'compatTool' && on && s.canFixCloud && s.cloudRule === 'needed' && s.steamRunning;
+    // Linux: the tool also gives Steam's cloud rules MacOS where it may, with macOS Sync on, which closes Steam.
+    const sync = s.sync;
+    const closesSteam = name === 'compatTool' && on && o.macSync && !!sync?.canFix && sync.rules === 'needed' && sync.steamRunning;
     if (closesSteam && !(await confirm(g, LINUX_CLOUD_WARNING))) return;
     let r;
     try {

@@ -17,20 +17,48 @@ The web game and the Android app have no Steam support.
 
 | System | Build | Play from Steam | Cloud saves |
 | --- | --- | --- | --- |
-| Windows | Installer | Paste the launch line the app gives you into Steam's Launch Options | Yes |
+| Windows | Installer | Paste the launch line the app gives you into Steam's Launch Options | Yes, reaching a Mac too (see macOS Sync below) |
 | Windows | Portable `.exe` | Not available (no fixed place for Steam to start) | - |
 | macOS | App in Applications | The app adds a Mac launch to Steam's settings, closing Steam to do it | Yes |
-| SteamOS and Linux | AppImage | The compatibility tool, Ultima V SP, chosen in Steam's Compatibility settings | Yes, reaching a Mac too (see Saves from Linux to a Mac below) |
+| SteamOS and Linux | AppImage | The compatibility tool, Ultima V SP, chosen in Steam's Compatibility settings | Yes, reaching a Mac too (see macOS Sync below) |
 | SteamOS and Linux | Flatpak | Works, but the AppImage is recommended: it reaches SD-card libraries, and its saves reach a Mac | Yes, but saves made here don't reach a Mac |
 
-**Saves from Linux to a Mac.** Steam only sends a game's Cloud saves to the
-systems its cloud rules name, and EA's rules for Ultima V name Windows
-alone. On Linux, Steam runs the game as its Windows version, so without a
-fix, saves uploaded from Linux never reach a Mac. Turning on Compat. tool in
-the AppImage adds macOS to those rules in Steam's settings (with the tool on
-from an earlier version, choose Fix Cloud for Mac). It has to close Steam to
-do it, which the Flatpak can't, so saves made in the Flatpak don't reach a
-Mac.
+## macOS Sync
+
+Steam only sends a game's Cloud saves to the systems its cloud rules name,
+and EA's rules for Ultima V name Windows alone. On Windows and Linux (where
+Steam runs the game as its Windows version), saves uploaded without a fix
+never reach a Mac. A Mac's own Play from Steam fixes its own rules, so a
+Mac's saves reach every system.
+
+**macOS Sync** (Steam (beta) menu) checks this. It is on by default, and
+takes effect once Play from Steam is on. With it on, the app looks at two
+things each time:
+
+- **Steam's settings for Ultima V on this computer:** do the cloud rules
+  include macOS? If Steam's settings can't be read, it says so instead of
+  assuming all is well.
+- **What Steam actually did:** how many of your Cloud saves Steam sent to
+  Windows alone. On a Mac, it counts the saves made elsewhere that can't
+  reach it.
+
+While something is wrong, the title says so **every time you play**, and
+offers **Fix now** where the fix can be made. The Steam (beta) menu shows
+**Fix Cloud for Mac** under macOS Sync. The fix:
+
+- adds macOS to Steam's cloud rules for Ultima V. Steam has to be closed for
+  that, so it only works with the app started outside Steam (on a Steam
+  Deck, in Desktop Mode); the app asks first, then closes and reopens Steam.
+  The Flatpak can't close Steam: use the AppImage.
+- marks the saves Steam already sent to Windows alone so that Steam uploads
+  them again, for a Mac too, when Ultima V next closes in Steam. Where the
+  rules already include macOS, this is all the fix does, and it works
+  anywhere, Game Mode included.
+
+Steam may undo the rules change when it refreshes Ultima V's details; the
+app puts it back the next time it starts outside Steam with Steam closed,
+and warns until then. Turn macOS Sync off to stop the checks and warnings.
+Copy report shows what it found.
 
 ## As a Non-Steam game
 
@@ -58,8 +86,10 @@ until it is on the app writes nothing for Ultima V in Steam's folders and keeps
 its saves in its own store. Cloud Saves comes on by itself the first time Steam
 starts the game (see Cloud saves below). Turning an option off undoes it.
 
-The menu always shows the same six lines: Back, **Play from Steam**,
-**Cloud Saves**, **Copy report**, **Report an issue** and **Paths**. The
+The menu always shows the same seven lines: Back, **Play from Steam**,
+**Cloud Saves**, **macOS Sync**, **Copy report**, **Report an issue** and
+**Paths**, with **Fix Cloud for Mac** under macOS Sync while there is
+something to fix (see [macOS Sync](#macos-sync)). The
 note at the foot says what the line under the bar does and, for an option
 that is on, how it stands. A line that can't be used here is greyed (the
 bar still rests on it, and its note says why). **Paths** shows where the app
@@ -84,7 +114,8 @@ The options differ by system:
 | macOS | Play from Steam | Warns that it closes Steam and asks you to confirm, then edits Steam's settings | Asks to quit Steam if it is running, then puts Steam's settings back |
 | All | Cloud Saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
 
-- **Windows**: Steam's files are never edited, and Steam must have
+- **Windows**: Play from Steam edits none of Steam's files (only macOS
+  Sync's fix does, when you choose it), and Steam must have
   installed Ultima V first. In Play from Steam, turn Launch line on and choose Copy launch
   line, then in Steam open Ultima V → ⚙ → Properties → Launch Options and
   paste. This needs the installed app: the portable `.exe` has no fixed
@@ -114,14 +145,9 @@ The options differ by system:
   slightly, without changing what they hold, so that Steam sends them again
   marked for a Mac too.
 
-  With the tool already on from an earlier version, Play from Steam shows
-  Fix Cloud for Mac until this is done. It works only in a copy started
-  outside Steam, from the desktop (on a Steam Deck, Desktop Mode): Game
-  Mode runs inside Steam, which can't be closed there. It also needs the
-  AppImage, because the Flatpak can't close Steam. Steam may undo the change
-  when it updates Ultima V's details; the app then puts it back the next time
-  it starts with Steam closed. A game Steam starts with Cloud saves on says
-  once when the change is missing.
+  With the tool already on from an earlier version, or if Steam undoes the
+  change, macOS Sync warns and offers Fix Cloud for Mac (see
+  [macOS Sync](#macos-sync)).
 
   On a Steam Deck, Steam's own controller layout for Ultima V is keyboard
   and mouse, made for the DOS game, and the buttons then do nothing here:

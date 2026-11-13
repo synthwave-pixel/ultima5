@@ -278,9 +278,25 @@ function cloudPatch(kv) {
   return { kv: out, changed };
 }
 
+/**
+ * Each cloud save rule of an entry, as the report shows it: its file pattern and the platforms Steam marks what it
+ * uploads under it with ("SAVED.GAM: Windows, MacOS"); a rule with no platforms says "all". Empty where the entry has
+ * no rules; throws where it has no appinfo/ufs at all.
+ */
+function cloudRules(kv) {
+  return mapAt(kv, 'appinfo', 'ufs', 'savefiles')
+    .filter((rule) => rule[0] === MAP)
+    .map((rule) => {
+      const pattern = findNode(rule[2], 'pattern');
+      const platforms = findNode(rule[2], 'platforms');
+      const names = platforms && platforms[0] === MAP ? platforms[2].map((p) => String(p[2])) : [];
+      return `${pattern ? String(pattern[2]) : '?'}: ${names.length ? names.join(', ') : 'all'}`;
+    });
+}
+
 /** Whether the entry already has everything macPatch would add. */
 function isMacPatched(kv, launcherName) {
   return !macPatch(kv, launcherName).changed;
 }
 
-module.exports = { readAppinfo, appEntry, writeAppinfo, macPatch, isMacPatched, cloudPatch };
+module.exports = { readAppinfo, appEntry, writeAppinfo, macPatch, isMacPatched, cloudPatch, cloudRules };

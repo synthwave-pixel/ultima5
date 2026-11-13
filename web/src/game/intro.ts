@@ -834,9 +834,15 @@ export class Intro {
     if (note) {
       note.seen();
       g.p.flushKeys();
-      const { choose, wrap } = await import('./menu.ts');
+      const { choose, showText, wrap } = await import('./menu.ts');
       const lines = [...wrap(note.text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
-      await choose(g, 'Steam', [...lines, { label: 'OK' }], lines.length, true);
+      // A choice beside OK (macOS Sync's Fix now), on the bar first; what came of it said after.
+      const items = [...lines, ...(note.action ? [{ label: note.action.label }] : []), { label: 'OK' }];
+      const i = await choose(g, 'Steam', items, lines.length, true);
+      if (note.action && i === lines.length) {
+        const said = await note.action.run().catch((e: unknown) => `That didn't work: ${e instanceof Error ? e.message : String(e)}`);
+        await showText(g, 'Steam', wrap(said ?? "That can't be changed here."));
+      }
       return true;
     }
     const news = update?.news?.();

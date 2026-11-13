@@ -1,15 +1,17 @@
 // Setting Steam up to play its Ultima V with this engine, and taking that away again, on each system. The player
 // turns it on and off in the title's Steam (beta) menu (steamOptions.cjs switchOption, main.cjs). On Windows there is
-// only the launch line to paste, since Steam's files are never edited there. On Linux a compatibility tool (as Boxtron does for DOS games) is a
+// only the launch line to paste, since Play from Steam edits none of Steam's files there (macOS Sync's fix alone does,
+// below). On Linux a compatibility tool (as Boxtron does for DOS games) is a
 // folder of our own in Steam's compatibilitytools.d, which Steam offers in Ultima V's Properties after a restart. On a
 // Mac, Steam has no macOS launch for the game, so its entry in Steam's app cache is given one (appinfo.cjs) that runs a
 // small launcher .app in the game's folder; that edit, and the manifest that makes Steam download the game, are only
 // made with Steam closed. Files are reached through the `fs` handed in, and Steam's state through steamRunning() and
 // quitSteam(), so all of it can be tried on temporary folders without a Steam. Linux's cache is given only MacOS in the
-// game's cloud save rules, as the Mac's is with its launch, so that saves uploaded from Linux reach a Mac too.
+// game's cloud save rules, as the Mac's is with its launch, so that saves uploaded from Linux reach a Mac too; so is
+// Windows', from 1.1.223 (macOS Sync).
 const { createHash } = require('node:crypto');
 const { dirname, join } = require('node:path');
-const { appEntry, cloudPatch, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs');
+const { appEntry, cloudPatch, cloudRules, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs');
 const { APP_ID, findGame, parseVdf } = require('./steam.cjs');
 
 const FLATPAK_ID = 'com.synthwavepixel.ultima5';
@@ -444,29 +446,64 @@ async function macRestore({ fs, steamRoot, keptOriginal, noteFile, steamRunning,
   return 'done';
 }
 
-// Linux: the cloud rules.
+// Linux and Windows: the cloud rules (macOS Sync). Steam marks each Cloud save it uploads with the platforms of the
+// game's rule it matched, and EA's rules name Windows alone, so without MacOS added here saves uploaded from this
+// machine never reach a Mac.
 
 /** Ultima V's entry in a Steam folder's cache, and that entry with MacOS in its cloud rules (cloudPatch), as ultimaEntry. */
 const cloudEntry = (fs, root) => ultimaEntry(fs, root, cloudPatch);
+
+/**
+ * How Steam's cloud rules for Ultima V stand in this machine's Steam folders (macOS Sync), only read: 'needed' where a
+ * folder has the game without MacOS in its rules, 'unreadable' where a cache or the game's entry in it would not read
+ * (`why` says what), 'ready' where every folder that has the game has MacOS, 'not-owned' where none has it cached.
+ * `rules` is the game's rules as they read (appinfo.cjs cloudRules), for the report. A folder that lacks MacOS is said
+ * first, as that is the one to fix; one that will not read before one that is fine, as a check that could not look
+ * must not say all is well.
+ */
+function cloudCheck(fs, roots) {
+  let state = 'not-owned';
+  let why = null;
+  let rules = [];
+  const unreadable = (text) => {
+    state = 'unreadable';
+    why ??= text;
+  };
+  for (const root of existingRoots(fs, roots)) {
+    let bytes;
+    try {
+      bytes = fs.readFileSync(cacheFile(root));
+    } catch (e) {
+      if (e && e.code !== 'ENOENT') unreadable(`Steam's cache: ${e.message ?? e}`);
+      continue;
+    }
+    let entry;
+    try {
+      entry = appEntry(readAppinfo(bytes), Number(APP_ID));
+    } catch (e) {
+      unreadable(`Steam's cache: ${e instanceof Error ? e.message : e}`);
+      continue;
+    }
+    if (!entry) continue;
+    try {
+      rules = cloudRules(entry.kv);
+      if (cloudPatch(entry.kv).changed) return { state: 'needed', why: null, rules };
+    } catch (e) {
+      unreadable(`Ultima V's entry: ${e instanceof Error ? e.message : e}`);
+      continue;
+    }
+    if (state === 'not-owned') state = 'ready';
+  }
+  return { state, why, rules };
+}
 
 /**
  * Where Linux's Steam folders stand: 'needed' where one has Ultima V without MacOS in its cloud rules, 'ready' where
  * every one that has it has MacOS, null where none has it (or none will read). Only reads.
  */
 function linuxCloud(fs, roots) {
-  let state = null;
-  for (const root of existingRoots(fs, roots)) {
-    let found;
-    try {
-      found = cloudEntry(fs, root);
-    } catch {
-      continue;
-    }
-    if (!found) continue;
-    if (found.patch.changed) return 'needed';
-    state = 'ready';
-  }
-  return state;
+  const { state } = cloudCheck(fs, roots);
+  return state === 'needed' || state === 'ready' ? state : null;
 }
 
 /** The mark Steam gives a file uploaded for a Mac (ERemoteStoragePlatform's OSX). */
@@ -512,6 +549,53 @@ function remarkSaves(fs, root) {
   return changed;
 }
 
+/**
+ * How many of `account`'s saves in Steam Cloud Steam marked for Windows alone, so that a Mac never downloads them, from
+ * the record this machine's Steam keeps of the cloud (remotecache.vdf) - the check that looks at what Steam did rather
+ * than at its settings (macOS Sync). `mac`: on a Mac, every such save, none of which reaches it. Elsewhere, only those
+ * still as Steam last synced them here: one changed since (re-marked by resendSaves, or played since) goes up again
+ * with the rules' marks. Null where Steam keeps no record for the account here.
+ */
+function stuckSaves(fs, roots, account, mac) {
+  if (!account) return null;
+  const read = (p) => readOr(fs, p, null);
+  for (const root of existingRoots(fs, roots)) {
+    const text = read(join(root, 'userdata', account, APP_ID, 'remotecache.vdf'));
+    const files = text === null ? null : parseVdf(text)?.[APP_ID];
+    if (!files || typeof files !== 'object') continue;
+    const game = mac ? null : findGame([root], read, (p) => fs.existsSync(p));
+    let stuck = 0;
+    for (const [name, file] of Object.entries(files)) {
+      if (!name.startsWith(`ultima5-sp/${account}/`) || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
+      if ((Number(file.platformstosync2) & FOR_MAC) !== 0) continue;
+      if (!mac) {
+        if (!game || !('folder' in game)) continue;
+        let bytes;
+        try {
+          bytes = fs.readFileSync(join(game.folder, ...name.split('/')));
+        } catch {
+          continue;
+        }
+        if (createHash('sha1').update(bytes).digest('hex') !== String(file.sha).toLowerCase()) continue;
+      }
+      stuck++;
+    }
+    return stuck;
+  }
+  return null;
+}
+
+/**
+ * The saves Steam last synced here marked for Windows alone, re-marked in every Steam folder (remarkSaves) so that
+ * Steam uploads them again with the rules' marks: the fix where the rules already have MacOS, which needs no Steam
+ * closed (the files are only the game's own). Gives how many were.
+ */
+function resendSaves(fs, roots) {
+  let changed = 0;
+  for (const root of existingRoots(fs, roots)) changed += remarkSaves(fs, root);
+  return changed;
+}
+
 /** MacOS added to the cloud rules of each Steam folder whose cache has not got it, and its saves re-marked. Steam closed. */
 function patchLinuxCloud(fs, roots) {
   for (const root of existingRoots(fs, roots)) {
@@ -528,8 +612,9 @@ function patchLinuxCloud(fs, roots) {
 }
 
 /**
- * Linux's cloud rules given MacOS where a cache has not got it, with Steam closed: quit first, and started again after
- * ('restarted') if it was running. 'done' where there was nothing to do, 'not-owned' where no Steam folder has the game.
+ * Steam's cloud rules given MacOS where a cache has not got it (Linux, and Windows), with Steam closed: quit first,
+ * and started again after ('restarted') if it was running; 'fixed' where it was closed already. 'done' where there was
+ * nothing to do, 'not-owned' where no Steam folder has the game.
  */
 async function linuxCloudSetup({ fs, roots, steamRunning, quitSteam, openSteam }) {
   const state = linuxCloud(fs, roots);
@@ -538,7 +623,7 @@ async function linuxCloudSetup({ fs, roots, steamRunning, quitSteam, openSteam }
   const wasRunning = steamRunning();
   if (!(await steamClosed(steamRunning, quitSteam))) return 'steam-running';
   patchLinuxCloud(fs, roots);
-  if (!wasRunning) return 'done';
+  if (!wasRunning) return 'fixed';
   openSteam();
   return 'restarted';
 }
@@ -553,6 +638,9 @@ function linuxCloudReapply({ fs, roots, steamRunning }) {
 }
 
 module.exports = {
+  cloudCheck,
+  stuckSaves,
+  resendSaves,
   linuxCloud,
   linuxCloudSetup,
   linuxCloudReapply,

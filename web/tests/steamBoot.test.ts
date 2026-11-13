@@ -1,7 +1,7 @@
 // web/tests/steamBoot.test.ts
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FoundCopy } from '../src/install/scan.ts';
-import type { SteamFind, SteamLaunch } from '../src/install/sources.ts';
+import type { SteamFind, SteamLaunch, SyncState } from '../src/install/sources.ts';
 import { gameFiles as checkedIn } from './helpers.ts';
 
 const runInstaller = vi.fn<(notice?: string) => Promise<string>>();
@@ -39,6 +39,7 @@ function bridge(
   saves: Record<string, string> | null = {},
   find?: SteamFind,
   options: { cloud?: Record<string, boolean>; account?: string | null } = {},
+  sync?: SyncState,
 ) {
   const written = new Map<string, string>();
   const found: SteamFind =
@@ -65,6 +66,7 @@ function bridge(
           set: (k: string, v: string) => (written.set(k, v), true),
           remove: (k: string) => written.delete(k),
         },
+        ...(sync && { sync: () => sync, fixCloud: vi.fn(() => Promise.resolve('Fixed.')) }),
       },
     }),
   };
@@ -455,9 +457,7 @@ describe("a Steam Deck's controller, under Steam's keyboard layout", () => {
   });
 });
 
-describe("Linux's cloud rules without MacOS, in a Steam launch", () => {
-  const NOTE =
-    "Cloud saves made here don't reach a Mac yet. To fix it, open this app from the desktop, then Steam (beta) > Play from Steam > Fix Cloud for Mac.";
+describe('macOS Sync at the title', () => {
   let was: PropertyDescriptor | undefined;
   beforeEach(() => {
     was = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -469,30 +469,72 @@ describe("Linux's cloud rules without MacOS, in a Steam launch", () => {
     if (was) Object.defineProperty(globalThis, 'localStorage', was);
     else delete (globalThis as { localStorage?: unknown }).localStorage;
   });
-  const launch = (cloudRule: 'needed' | 'ready' | null): SteamLaunch => ({ steam: true, game: 'ok', where: 'x', account: true, cloudRule });
+  /** macOS Sync's state (desktop/main.cjs syncState): Linux in a Steam launch, on, its rules lacking MacOS, not fixable there. */
+  const SYNC = (over: Partial<SyncState> = {}): SyncState => ({
+    system: 'linux',
+    flatpak: false,
+    deck: true,
+    launch: true,
+    on: true,
+    rules: 'needed',
+    why: null,
+    ruleList: [],
+    stuck: 0,
+    canFix: false,
+    steamRunning: false,
+    ...over,
+  });
+  const IN_STEAM: SteamLaunch = { steam: true, game: 'ok', where: 'x', account: true };
   /** A launch's note, the first-launch Cloud note already seen. */
-  async function noteFor(cloudRule: 'needed' | 'ready' | null, options: { cloud: Record<string, boolean>; account: string } = ON) {
+  async function noteFor(
+    sync: SyncState,
+    launch: SteamLaunch = IN_STEAM,
+    options: { cloud: Record<string, boolean>; account: string } = ON,
+  ) {
     localStorage.setItem(`ultima5.steamNoted.${options.account}`, '1');
     vi.resetModules();
-    bridge(launch(cloudRule), {}, undefined, options);
+    bridge(launch, {}, undefined, options, sync);
     const boot = await import('../src/boot.ts');
     boot.chooseStore();
     return boot.steamNote();
   }
 
-  it('says once, with Cloud saves on, where to fix it; again should Steam undo the fix later', async () => {
-    const note = await noteFor('needed');
-    expect(note?.text).toBe(NOTE);
+  it('says every launch, with Cloud saves on, where to fix it: never once and forgotten', async () => {
+    const note = await noteFor(SYNC());
+    expect(note?.text).toContain("Cloud saves made here don't reach a Mac");
+    expect(note?.text).toContain('Desktop Mode');
+    expect(note?.action).toBeUndefined();
     note?.seen();
-    expect(await noteFor('needed')).toBeNull();
-    // Fixed, then undone by Steam: said again.
-    expect(await noteFor('ready')).toBeNull();
-    expect((await noteFor('needed'))?.text).toBe(NOTE);
+    // The next launch, the same: until it is fixed, or macOS Sync turned off.
+    expect((await noteFor(SYNC()))?.text).toContain("don't reach a Mac");
   });
 
-  it('says nothing with Cloud saves off, or where the rules have MacOS or were not read', async () => {
-    expect(await noteFor('needed', { cloud: {}, account: 'me' })).toBeNull();
-    expect(await noteFor('ready')).toBeNull();
-    expect(await noteFor(null)).toBeNull();
+  it('offers Fix now where the fix can be made: outside Steam, or only saves to send again', async () => {
+    const outside = await noteFor(SYNC({ launch: false, deck: false, canFix: true, steamRunning: true }), { steam: false });
+    expect(outside?.action?.label).toBe('Fix now (restarts Steam)');
+    expect(await outside?.action?.run()).toBe('Fixed.');
+    const resend = await noteFor(SYNC({ rules: 'ready', stuck: 3 }));
+    expect(resend?.text).toContain('3 Cloud saves made here were sent to Windows alone');
+    expect(resend?.action?.label).toBe('Fix now');
+  });
+
+  it("tells a Mac of saves made elsewhere that can't reach it, with nothing to fix there", async () => {
+    const note = await noteFor(SYNC({ system: 'mac', rules: 'ready', stuck: 2, deck: false }));
+    expect(note?.text).toContain("2 Cloud saves can't reach this Mac");
+    expect(note?.action).toBeUndefined();
+  });
+
+  it('says nothing with macOS Sync off, all well, Cloud saves off, or outside Steam where it cannot be fixed', async () => {
+    expect(await noteFor(SYNC({ on: false }))).toBeNull();
+    expect(await noteFor(SYNC({ rules: 'ready' }))).toBeNull();
+    expect(await noteFor(SYNC(), IN_STEAM, { cloud: {}, account: 'me' })).toBeNull();
+    expect(await noteFor(SYNC({ launch: false }), { steam: false })).toBeNull();
+    expect(await noteFor(SYNC({ system: 'mac', stuck: 2, launch: false }), { steam: false })).toBeNull();
+  });
+
+  it("says where the rules can't be read, rather than nothing", async () => {
+    const note = await noteFor(SYNC({ rules: 'unreadable', why: 'odd' }));
+    expect(note?.text).toContain("couldn't be read");
+    expect(note?.action).toBeUndefined();
   });
 });

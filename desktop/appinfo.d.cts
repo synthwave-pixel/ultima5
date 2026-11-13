@@ -13,3 +13,5 @@ export function writeAppinfo(info: Appinfo, appid: number, header: Buffer, kv: K
 export function macPatch(kv: KvNode[], launcherName: string): { kv: KvNode[]; changed: boolean };
 export function cloudPatch(kv: KvNode[]): { kv: KvNode[]; changed: boolean };
 export function isMacPatched(kv: KvNode[], launcherName: string): boolean;
+/** Each cloud save rule as the report shows it: its pattern and platforms ("SAVED.GAM: Windows, MacOS"). */
+export function cloudRules(kv: KvNode[]): string[];

@@ -74,9 +74,29 @@ export type SteamLaunch =
       account: boolean;
       /** On a Steam Deck (SteamDeck=1). */
       deck?: boolean;
-      /** Linux: whether Steam's cloud rules for the game lack MacOS (desktop/steamSetup.cjs linuxCloud). */
-      cloudRule?: 'needed' | 'ready' | null;
     };
+
+/**
+ * macOS Sync (desktop/main.cjs syncState): whether Cloud saves made here reach a Mac. `on`: the option, with Play from
+ * Steam on (a Mac: Play from Steam). `rules`: Steam's cloud rules for the game here - lacking MacOS, having it, not
+ * readable (`why`), or the game not cached. `stuck`: the account's Cloud saves Steam sent to Windows alone (on a Mac,
+ * those it can't get), null where unknown. `canFix`: whether the rules may be fixed from here, which closes Steam.
+ */
+export interface SyncState {
+  system: 'linux' | 'windows' | 'mac';
+  flatpak: boolean;
+  /** On a Steam Deck, or in its Game Mode. */
+  deck: boolean;
+  /** Whether Steam started this run. */
+  launch: boolean;
+  on: boolean;
+  rules: 'needed' | 'ready' | 'unreadable' | 'not-owned';
+  why: string | null;
+  ruleList: string[];
+  stuck: number | null;
+  canFix: boolean;
+  steamRunning: boolean;
+}
 
 /** What the desktop app found of Steam and Ultima V in it, launched by Steam or not (desktop/main.cjs steamFind). */
 export interface SteamFind {
@@ -90,6 +110,8 @@ export interface SteamOptions {
   playLine: boolean;
   compatTool: boolean;
   macPlay: boolean;
+  /** macOS Sync: whether the app checks, and offers to fix, that Cloud saves made here reach a Mac (on unless turned off). */
+  macSync: boolean;
   /** Per Steam account: on, off (turned off), or missing (not yet chosen). */
   cloud: Record<string, boolean>;
   results: Record<string, string>;
@@ -116,11 +138,13 @@ export interface SteamNative {
    * Turns an option on or off with what it does here, and keeps how it went; null where refused. Cloud saves (for
    * this launch's account only) is only recorded, its copy being the page's: `failed` says why it failed.
    */
-  setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
+  setOption(name: 'playLine' | 'compatTool' | 'macPlay' | 'macSync' | 'cloud', on: boolean, failed?: string): Promise<SteamSwitched | null>;
   /** The tester report (desktop/steamReport.cjs), given what only the page knows; null where refused. */
   report(page: ReportArgs): Promise<string | null>;
-  /** Linux: Steam's cloud rules given MacOS (desktop/main.cjs steam-fix-cloud); what to say, null where refused. */
+  /** macOS Sync's fix (desktop/main.cjs fixSync): the rules given MacOS, the saves re-marked; what to say, null where refused. */
   fixCloud(): Promise<string | null>;
+  /** macOS Sync's state, read once a launch (again after a fix); null where refused. Missing from an older app. */
+  sync?(): SyncState | null;
 }
 
 /** Where the kept game files came from: recorded when they are kept, 'unknown' for a copy kept before it was. */

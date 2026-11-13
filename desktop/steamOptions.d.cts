@@ -3,6 +3,8 @@ export interface SteamOptions {
   playLine: boolean;
   compatTool: boolean;
   macPlay: boolean;
+  /** macOS Sync: whether the app checks, and offers to fix, that Cloud saves made here reach a Mac (on unless turned off). */
+  macSync: boolean;
   cloud: Record<string, boolean>;
   results: Record<string, string>;
   lineOnAt: number;
@@ -23,7 +25,7 @@ export interface OptionEffects {
   macSetup(): Promise<'done' | 'steam-running' | 'not-owned' | 'app-not-in-place'>;
   macRestore(): Promise<'done' | 'steam-running' | 'kept-unusable'>;
   /** Linux: the game's cloud rules given MacOS (steamSetup.cjs linuxCloudSetup), or null where Steam may not be closed from here. */
-  linuxCloud?(): Promise<'done' | 'restarted' | 'steam-running' | 'not-owned' | null>;
+  linuxCloud?(): Promise<'done' | 'fixed' | 'restarted' | 'steam-running' | 'not-owned' | null>;
 }
 /** An option switched: the options now (to be written), whether it is on, what to say, and a launch line to show. */
 export interface Switched {

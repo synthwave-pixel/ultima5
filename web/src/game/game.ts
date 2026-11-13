@@ -7,6 +7,7 @@
  * field.
  */
 
+import type { SyncState } from '../install/sources.ts';
 import type { UpdateHook } from '../ui/updates.ts';
 import type { ChromePlace } from './chromeTone.ts';
 import { TileCycles } from '../ui/animate.ts';
@@ -116,8 +117,11 @@ export interface GameHooks {
    * opened - taking it up, and the player told of it (its box at the title, once a version).
    */
   update?: UpdateHook;
-  /** A note for the title to say once, in the news box (a Steam launch's, boot.ts steamNote): its text, and the player told. */
-  note?: () => { text: string; seen: () => void } | null;
+  /**
+   * A note for the title to say, in the news box (a Steam launch's, boot.ts steamNote): its text, the player told, and
+   * a choice to offer beside OK (macOS Sync's Fix now), whose result is said after.
+   */
+  note?: () => TitleNote | null;
   /** Leave the game, where it runs as an app that can (ui/platform.ts appQuit); a browser tab has none. */
   quit?: (() => void) | undefined;
   /** The title's Steam (beta) menu (the desktop app's; web and Android have none): see SteamHook. */
@@ -142,15 +146,10 @@ export interface SteamStatus {
   launch: boolean;
   /** The launch line this copy would use; null where it has none (the portable .exe, a Mac). */
   line: string | null;
-  /** Whether Steam is running, which setting up or taking away would quit: a Mac's, and Linux's where canFixCloud. */
+  /** A Mac's: whether Steam is running, which setting up or taking away would quit. */
   steamRunning?: boolean;
-  /**
-   * Linux's: whether Steam's cloud rules for the game lack MacOS ('needed': saves uploaded from here never reach a
-   * Mac), have it, or were not found; and whether they may be set from here (not from the Flatpak, a Steam launch or
-   * Game Mode).
-   */
-  cloudRule?: 'needed' | 'ready' | null;
-  canFixCloud?: boolean;
+  /** macOS Sync (desktop/main.cjs syncState): whether Cloud saves made here reach a Mac, and whether it may be fixed here. */
+  sync?: SyncState;
 }
 
 /** The options that set Steam's Play up, by system: a launch line (Windows, Linux), the compatibility tool, a Mac's. */
@@ -161,6 +160,8 @@ export interface SteamChoices {
   playLine: boolean;
   compatTool: boolean;
   macPlay: boolean;
+  /** macOS Sync, the option (on unless turned off). */
+  macSync: boolean;
   cloud: boolean;
   /** Whether Cloud saves is on for any Steam account on this machine, this launch's or another's. */
   cloudAny: boolean;
@@ -200,6 +201,13 @@ export interface CloudSaves {
   use(on: boolean): void;
 }
 
+/** A note for the title (Hooks.note): its text, the player told, and a choice to offer beside OK. */
+export interface TitleNote {
+  text: string;
+  seen: () => void;
+  action?: { label: string; run: () => Promise<string | null> };
+}
+
 /** What the Steam (beta) menu asks of the desktop app (steamMenu.ts). */
 export interface SteamHook {
   status(): Promise<SteamStatus>;
@@ -207,10 +215,10 @@ export interface SteamHook {
   launched(): boolean;
   options(): SteamChoices;
   /** Turns an option on or off, with what it does here; null where it was refused. */
-  setOption(name: PlayOption, on: boolean): Promise<SteamSwitched | null>;
+  setOption(name: PlayOption | 'macSync', on: boolean): Promise<SteamSwitched | null>;
   /** Steam's saved launch line read back, or null where there is none to read. */
   lineState(): Promise<LineCheck | null>;
-  /** Linux: Steam's cloud rules given MacOS, closing Steam (desktop/steamSetup.cjs linuxCloudSetup); what to say. */
+  /** macOS Sync's fix (desktop/main.cjs fixSync): the rules given MacOS (closing Steam), the saves re-marked; what to say. */
   fixCloud(): Promise<string | null>;
   /** Puts the launch line on the clipboard; false where this copy has none. */
   copyLine(): Promise<boolean>;

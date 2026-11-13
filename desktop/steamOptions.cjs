@@ -3,12 +3,23 @@
 // touches Steam's folders on a guess. Cloud saves is per Steam account, as the saves are: on, off (kept as false, once
 // turned off), or not yet chosen. On a machine set up since it became the default - no file yet, so cloudDefault - an
 // account not yet chosen for has it turned on at its first Steam launch (the page's cloudSwitch.ts cloudByDefault); a
-// file written by an earlier version has no cloudDefault, and its Cloud saves stay as they were.
+// file written by an earlier version has no cloudDefault, and its Cloud saves stay as they were. macOS Sync - whether
+// the app checks, and offers to fix, that Cloud saves made here reach a Mac - is on unless turned off: it only looks,
+// and changes nothing in Steam's folders until the player says to.
 const { mkdirSync, readFileSync, renameSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
 const { OVERRIDE } = require('./steamSetup.cjs');
 
-const fresh = () => ({ playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0, cloudDefault: false });
+const fresh = () => ({
+  playLine: false,
+  compatTool: false,
+  macPlay: false,
+  macSync: true,
+  cloud: {},
+  results: {},
+  lineOnAt: 0,
+  cloudDefault: false,
+});
 
 const plain = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -25,6 +36,7 @@ function readOptions(file) {
   }
   if (!plain(got)) return o;
   for (const name of ['playLine', 'compatTool', 'macPlay', 'cloudDefault']) o[name] = got[name] === true;
+  o.macSync = got.macSync !== false;
   if (plain(got.cloud)) for (const [account, on] of Object.entries(got.cloud)) if (typeof on === 'boolean') o.cloud[account] = on;
   if (plain(got.results)) for (const [name, text] of Object.entries(got.results)) if (typeof text === 'string') o.results[name] = text;
   if (Number.isFinite(got.lineOnAt) && got.lineOnAt > 0) o.lineOnAt = got.lineOnAt;
@@ -46,8 +58,11 @@ function writeOptions(file, o) {
 }
 
 const STEAM_STILL_RUNNING = "Steam didn't quit. Quit it yourself, then try again.";
-/** Which options each system has: a launch line where one is pasted, the tool on Linux, the cache edit on a Mac. */
-const HAS = { windows: ['playLine'], linux: ['playLine', 'compatTool'], mac: ['macPlay'] };
+/**
+ * Which options each system has: a launch line where one is pasted, the tool on Linux, the cache edit on a Mac, and
+ * macOS Sync where Steam's settings may need fixing for a Mac (a Mac's own Play from Steam fixes its own).
+ */
+const HAS = { windows: ['playLine', 'macSync'], linux: ['playLine', 'compatTool', 'macSync'], mac: ['macPlay'] };
 
 /** The launch line's way into Steam, and on Linux the Proton that makes Steam download a Windows game at all. */
 const pasteLine = (system) =>
@@ -60,7 +75,15 @@ const CLOUD_SAYS = {
   restarted: "Done, and Steam restarted. Steam sends this computer's Cloud saves to a Mac too, from when Ultima V next closes in Steam.",
   'steam-running': "Steam didn't quit, so Cloud saves made here don't reach a Mac yet. Quit Steam, then open this app.",
   'not-owned': "Steam doesn't list Ultima V here.",
+  fixed: "Done. Steam sends this computer's Cloud saves to a Mac too, from when Ultima V next closes in Steam.",
   'not-here': 'Open this app outside Steam, from the desktop (on a Steam Deck, Desktop Mode), to do this.',
+  flatpak: 'Use the AppImage to fix this: the Flatpak cannot close Steam.',
+};
+
+/** What turning macOS Sync on or off means, said as it is switched. */
+const SYNC_SAYS = {
+  on: 'macOS Sync is on: each time you play, the app checks that Cloud saves made here reach a Mac, and offers to fix it if not.',
+  off: "macOS Sync is off: the app doesn't check whether Cloud saves made here reach a Mac.",
 };
 
 /** What to tell the player of giving Linux's cloud rules MacOS (CLOUD_SAYS). */
@@ -107,6 +130,8 @@ async function switchOption({ options, name, on, system, account, now, failed, e
     return { options: o, on: value, message, ...more };
   };
   try {
+    // macOS Sync only checks: switching it changes nothing in Steam's folders.
+    if (name === 'macSync') return done(on, 'done', SYNC_SAYS[word]);
     if (name === 'playLine') {
       if (!on) {
         o.lineOnAt = 0;
@@ -135,10 +160,11 @@ async function switchOption({ options, name, on, system, account, now, failed, e
       if (written === null) return done(false, 'no launcher', "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.");
       if (written.length === 0) return done(false, 'no Steam folder', "Steam isn't here. Install Steam and start it once, then try again.");
       const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
-      // The game's cloud rules given MacOS too, where Steam may be closed from here; the tool is on whatever comes of it.
+      // The game's cloud rules given MacOS too, with macOS Sync on, where Steam may be closed from here; the tool is on
+      // whatever comes of it.
       let cloud = null;
       try {
-        cloud = effects.linuxCloud ? await effects.linuxCloud() : null;
+        cloud = effects.linuxCloud && o.macSync ? await effects.linuxCloud() : null;
       } catch (e) {
         console.warn('steam cloud rules:', e?.message ?? e);
       }

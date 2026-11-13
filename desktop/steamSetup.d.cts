@@ -44,9 +44,18 @@ interface LinuxWhere {
   roots: string[];
   steamRunning(): boolean;
 }
+/** How Steam's cloud rules for Ultima V stand here (macOS Sync): why where they would not read, and the rules as read. */
+export function cloudCheck(
+  fs: Fs,
+  roots: string[],
+): { state: 'needed' | 'ready' | 'unreadable' | 'not-owned'; why: string | null; rules: string[] };
+/** How many of the account's Cloud saves Steam marked for Windows alone (a Mac: all such; elsewhere, those still as synced); null where unknown. */
+export function stuckSaves(fs: Fs, roots: string[], account: string | null, mac: boolean): number | null;
+/** The saves Steam last synced here marked for Windows alone, changed so that Steam uploads them again: how many. */
+export function resendSaves(fs: Fs, roots: string[]): number;
 /** 'needed' where a Steam folder's cache lacks MacOS in Ultima V's cloud rules, 'ready' where none does, null without the game. Only reads. */
 export function linuxCloud(fs: Fs, roots: string[]): 'needed' | 'ready' | null;
 export function linuxCloudSetup(
   where: LinuxWhere & { quitSteam(): Promise<void>; openSteam(): void },
-): Promise<'done' | 'restarted' | 'steam-running' | 'not-owned'>;
+): Promise<'done' | 'fixed' | 'restarted' | 'steam-running' | 'not-owned'>;
 export function linuxCloudReapply(where: LinuxWhere): 'ready' | 'steam-running' | 'not-owned';

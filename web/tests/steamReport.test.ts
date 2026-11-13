@@ -123,4 +123,34 @@ describe('the Steam report', () => {
     expect(text).toContain('SteamUser: set');
     expect(text).not.toContain('alice99');
   });
+
+  it('says how macOS Sync stands: the option, the rules as read, and the saves sent to Windows alone', () => {
+    const sync = {
+      on: true,
+      rules: 'needed' as const,
+      why: null,
+      ruleList: ['SAVED.GAM: Windows', 'PARTY.SAV: Windows'],
+      stuck: 11,
+      canFix: false,
+    };
+    const linux = report({ ...facts, options: { ...facts.options, macSync: true }, sync }).split('\n');
+    expect(linux).toContain('macOS Sync: on');
+    expect(linux).toContain('Steam cloud rules: lack macOS (saves uploaded here reach Windows and Linux only)');
+    expect(linux).toContain('  SAVED.GAM: Windows');
+    expect(linux).toContain('Cloud saves sent to Windows alone, as synced here: 11');
+    expect(linux).toContain('Fix possible from here: no');
+    const unread = report({ ...facts, sync: { ...sync, rules: 'unreadable', why: 'unsupported magic 0x7564430', ruleList: [] } });
+    expect(unread).toContain("Steam cloud rules: couldn't be read (unsupported magic 0x7564430)");
+    const off = report({ ...facts, options: { ...facts.options, macSync: false }, sync: { ...sync, on: false } });
+    expect(off).toContain('macOS Sync: off\n');
+    const mac = report({
+      ...facts,
+      system: 'mac',
+      options: { ...facts.options, macPlay: true },
+      sync: { ...sync, rules: 'ready', stuck: 10 },
+    });
+    expect(mac).toContain('macOS Sync: not needed on a Mac (Play from Steam on)');
+    expect(mac).toContain("Cloud saves this Mac can't get (sent to Windows alone): 10");
+    expect(mac).not.toContain('Fix possible');
+  });
 });

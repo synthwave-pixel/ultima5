@@ -21,6 +21,29 @@ function mask(text, home) {
 const onOff = (on) => (on ? 'on' : 'off');
 const yesNo = (yes) => (yes ? 'yes' : 'no');
 
+/** What the rules' check found (steamSetup.cjs cloudCheck), as the report says it. */
+const RULES = {
+  ready: 'include macOS',
+  needed: 'lack macOS (saves uploaded here reach Windows and Linux only)',
+  unreadable: "couldn't be read",
+  'not-owned': 'not found (Steam has not cached Ultima V here)',
+};
+
+/** macOS Sync's part: whether it is on, Steam's cloud rules for the game, and the saves Steam sent to Windows alone. */
+function syncLines(system, sync, options) {
+  const out = [];
+  if (system === 'mac') out.push(`macOS Sync: not needed on a Mac (Play from Steam ${onOff(options.macPlay)})`);
+  else out.push(`macOS Sync: ${onOff(options.macSync !== false)}${sync.on || options.macSync === false ? '' : ' (waits for Play from Steam)'}`);
+  out.push(`Steam cloud rules: ${RULES[sync.rules] ?? sync.rules}${sync.why ? ` (${sync.why})` : ''}`);
+  for (const rule of sync.ruleList ?? []) out.push(`  ${rule}`);
+  const stuck = sync.stuck === null ? 'unknown (no Steam account or Cloud record here)' : String(sync.stuck);
+  out.push(
+    system === 'mac' ? `Cloud saves this Mac can't get (sent to Windows alone): ${stuck}` : `Cloud saves sent to Windows alone, as synced here: ${stuck}`,
+  );
+  if (system !== 'mac') out.push(`Fix possible from here: ${yesNo(sync.canFix)}`);
+  return out;
+}
+
 /** The plain-text report for `facts` (steamReport.d.cts). */
 function report(f) {
   const lines = ['Ultima V SP report', ''];
@@ -65,6 +88,7 @@ function report(f) {
     lines.push(`Cache entry re-applied at this start: ${f.macReapplied === null ? 'unknown' : yesNo(f.macReapplied)}`);
   }
   if (f.cloud && f.cloudCharacters !== null) lines.push(`Characters in Steam's folder: ${f.cloudCharacters}`);
+  if (f.sync) lines.push('', ...syncLines(f.system, f.sync, f.options));
   return mask(lines.join('\n'), f.home) + '\n';
 }
 

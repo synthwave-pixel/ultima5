@@ -10,13 +10,15 @@ import { runInstaller } from './install/installer.ts';
 import { loadInstalled, saveInstalled } from './install/store.ts';
 import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
-import { noteFilesFrom, steamFound, steamLaunch, steamNative } from './install/sources.ts';
+import { noteFilesFrom, steamFound, steamLaunch, steamNative, type SyncState } from './install/sources.ts';
 import { PAD_SEEN_KEY, STEAM_NOTED_KEY, steamStore, useStore } from './game/keyStore.ts';
+import type { TitleNote } from './game/game.ts';
+import { fixLabel, syncFixable, syncProblem, syncText } from './game/macSync.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
 let told = false;
 /** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
-let settled: { text: string; seen: () => void } | null | undefined;
+let settled: TitleNote | null | undefined;
 const FOUND_KEY = 'ultima5.steamFoundNoted';
 const FOUND = 'Found Ultima V in your Steam library.';
 /** Whether this launch took Steam's copy and has yet to say so. */
@@ -34,13 +36,6 @@ const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turni
  */
 const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
 const PAD_NOTED_KEY = 'ultima5.deckPadNoted';
-/**
- * Linux, Cloud saves on: Steam's cloud rules for the game lack MacOS, so the saves uploaded from here never reach a
- * Mac (desktop/steamSetup.cjs). Said once while they do; said again should Steam later undo the fix.
- */
-const CLOUD_RULE_NOTE =
-  "Cloud saves made here don't reach a Mac yet. To fix it, open this app from the desktop, then Steam (beta) > Play from Steam > Fix Cloud for Mac.";
-const CLOUD_RULE_NOTED_KEY = 'ultima5.cloudRuleNoted';
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
 async function installedCopy(): Promise<{ files: GameFiles | null; notice?: string }> {
@@ -95,14 +90,14 @@ export function chooseStore(): void {
  * saves is on but Steam's saves cannot be reached, that this computer's are in use (each launch it applies), or, the
  * first time on this machine that Cloud saves is on for the account, how the saves are kept. Null otherwise.
  */
-export function steamNote(): { text: string; seen: () => void } | null {
+export function steamNote(): TitleNote | null {
   if (told) return null;
   if (settled === undefined) settled = noteFor();
   return settled;
 }
 
 /** steamNote's note, worked out from the launch and the options. What explains the saves in play goes first. */
-function noteFor(): { text: string; seen: () => void } | null {
+function noteFor(): TitleNote | null {
   if (unreachable) return { text: UNREACHABLE, seen: () => void (told = true) };
   if (foundPending) {
     return {
@@ -117,31 +112,40 @@ function noteFor(): { text: string; seen: () => void } | null {
       },
     };
   }
-  return cloudNote() ?? cloudRuleNote() ?? padNote();
+  return cloudNote() ?? macSyncNote() ?? padNote();
 }
 
-/** Said once in a Linux Steam launch with Cloud saves on while Steam's cloud rules lack MacOS; forgotten once they have it. */
-function cloudRuleNote(): { text: string; seen: () => void } | null {
-  const launch = steamLaunch();
-  if (!launch.steam || cloudAccount === null) return null;
-  if (launch.cloudRule === 'ready') {
-    try {
-      localStorage.removeItem(CLOUD_RULE_NOTED_KEY);
-    } catch {
-      // Nowhere kept: nothing to forget.
-    }
+/**
+ * macOS Sync (game/macSync.ts): said every launch while Cloud saves made here don't reach a Mac - in a Steam launch with
+ * Cloud saves on (on a Mac, those made elsewhere that can't reach it), and outside Steam where the fix can be made
+ * from here - with Fix now beside OK where it can. Nothing with macOS Sync off.
+ */
+function macSyncNote(): TitleNote | null {
+  const steam = steamNative();
+  let s: SyncState | null;
+  try {
+    s = steam?.sync?.() ?? null;
+  } catch {
+    return null;
   }
-  return launch.cloudRule === 'needed' ? once(CLOUD_RULE_NOTED_KEY, CLOUD_RULE_NOTE) : null;
+  if (!steam || !s || !syncProblem(s)) return null;
+  const launched = steamLaunch().steam;
+  if (launched ? cloudAccount === null : s.system === 'mac' || !syncFixable(s)) return null;
+  return {
+    text: syncText(s),
+    seen: () => void (told = true),
+    ...(syncFixable(s) ? { action: { label: fixLabel(s), run: () => steam.fixCloud() } } : {}),
+  };
 }
 
 /** Said once, the first time on this machine that Cloud saves is on for the account. */
-function cloudNote(): { text: string; seen: () => void } | null {
+function cloudNote(): TitleNote | null {
   if (cloudAccount === null) return null;
   return once(`${STEAM_NOTED_KEY}.${cloudAccount}`, FIRST_LAUNCH);
 }
 
 /** Said once, on a Steam Deck that Steam started, where no gamepad has reached the game yet. */
-function padNote(): { text: string; seen: () => void } | null {
+function padNote(): TitleNote | null {
   const launch = steamLaunch();
   if (!launch.steam || launch.deck !== true) return null;
   try {
@@ -153,7 +157,7 @@ function padNote(): { text: string; seen: () => void } | null {
 }
 
 /** `text`, unless the machine keeps under `key` that it was said; seen, it is kept so. */
-function once(key: string, text: string): { text: string; seen: () => void } | null {
+function once(key: string, text: string): TitleNote | null {
   try {
     if (localStorage.getItem(key) !== null) return null;
   } catch {

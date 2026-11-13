@@ -10,9 +10,12 @@ import { parseVdf } from '../../desktop/steam.cjs';
 import {
   installCompatTool,
   launchLine,
+  cloudCheck,
   linuxCloud,
   linuxCloudReapply,
   linuxCloudSetup,
+  resendSaves,
+  stuckSaves,
   refreshCompatTool,
   macPatched,
   macReapply,
@@ -685,7 +688,7 @@ describe("Linux's cloud rules", () => {
     const closed = linux();
     let opened = 0;
     const done = await linuxCloudSetup({ ...closed, steamRunning: () => false, quitSteam: never, openSteam: () => void opened++ });
-    expect(done).toBe('done');
+    expect(done).toBe('fixed');
     expect(opened).toBe(0);
     expect(hasMac(closed.cacheFile)).toBe(true);
   });
@@ -708,6 +711,52 @@ describe("Linux's cloud rules", () => {
     // Read as the page reads them, the same as before.
     expect(JSON.parse(l.save('ultima5.characters'))).toEqual({ version: 1, ids: ['a'] });
     expect(atob(l.save('ultima5.char.a.save').slice(3))).toBe(atob(packed.slice(3)));
+  });
+
+  it('checks the rules, saying why where they will not read, and the rules as they read', () => {
+    const needed = cloudCheck(fs, linux().roots);
+    expect(needed).toMatchObject({ state: 'needed', why: null });
+    expect(needed.rules.length).toBeGreaterThan(0);
+    expect(needed.rules.every((r) => !r.includes('MacOS'))).toBe(true);
+    const ready = cloudCheck(fs, linux(cloudPatch(ultimaKv()).kv).roots);
+    expect(ready.state).toBe('ready');
+    expect(ready.rules.every((r) => r.includes('MacOS'))).toBe(true);
+    expect(cloudCheck(fs, [join(temp(), 'nothing')]).state).toBe('not-owned');
+    // A cache of a format not known: said, never taken for "all is well".
+    const odd = linux();
+    fs.writeFileSync(odd.cacheFile, Buffer.from([0x30, 0x44, 0x56, 0x07, 1, 0, 0, 0]));
+    const unread = cloudCheck(fs, odd.roots);
+    expect(unread.state).toBe('unreadable');
+    expect(unread.why).toContain('unsupported magic');
+    expect(linuxCloud(fs, odd.roots)).toBeNull();
+  });
+
+  it("counts the account's saves Steam sent to Windows alone, as synced here, and on a Mac every one", () => {
+    const l = linux(ultimaKv(), [
+      { key: 'ultima5.characters', text: '{"version":1,"ids":["a"]}', mark: 1 },
+      { key: 'ultima5.char.a.save', text: 'sent for Windows', mark: 1 },
+      { key: 'ultima5.char.b.save', text: 'from a Mac', mark: 3 },
+      { key: 'ultima5.char.c.save', text: 'changed since', mark: 1, synced: false },
+    ]);
+    expect(stuckSaves(fs, l.roots, ACCOUNT, false)).toBe(2);
+    // A Mac downloads none of the three marked for Windows alone, changed here or not.
+    expect(stuckSaves(fs, l.roots, ACCOUNT, true)).toBe(3);
+    expect(stuckSaves(fs, l.roots, 'someone else', false)).toBeNull();
+    expect(stuckSaves(fs, l.roots, null, false)).toBeNull();
+  });
+
+  it('sends the saves marked for Windows alone again, with no Steam closed, so that none is counted after', () => {
+    const l = linux(cloudPatch(ultimaKv()).kv, [
+      { key: 'ultima5.characters', text: '{"version":1,"ids":["a"]}', mark: 1 },
+      { key: 'ultima5.char.a.save', text: 'sent for Windows', mark: 1 },
+      { key: 'ultima5.char.b.save', text: 'from a Mac', mark: 3 },
+    ]);
+    const cache = fs.readFileSync(l.cacheFile);
+    expect(resendSaves(fs, l.roots)).toBe(2);
+    expect(stuckSaves(fs, l.roots, ACCOUNT, false)).toBe(0);
+    expect(l.save('ultima5.char.b.save')).toBe('from a Mac');
+    // Steam's own files untouched.
+    expect(fs.readFileSync(l.cacheFile).equals(cache)).toBe(true);
   });
 
   it('puts MacOS back at a start with Steam closed, and waits while it runs', () => {

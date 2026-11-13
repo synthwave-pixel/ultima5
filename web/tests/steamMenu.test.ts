@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CHARACTERS_KEY, characterIds, chooseCharacter, listText } from '../src/game/characters.ts';
 import type { Game, SteamChoices, SteamHook, SteamStatus } from '../src/game/game.ts';
+import type { SyncState } from '../src/install/sources.ts';
 import { Intro } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { cloudSaves, kept, useStore } from '../src/game/keyStore.ts';
@@ -37,6 +38,7 @@ function fake(status: Partial<SteamStatus> = {}, choices: Partial<SteamChoices> 
     playLine: false,
     compatTool: false,
     macPlay: false,
+    macSync: true,
     cloud: false,
     cloudAny: false,
     cloudOffered: false,
@@ -270,8 +272,8 @@ describe('Steam (beta) on the title', () => {
 });
 
 describe('the Steam (beta) menu', () => {
-  it('shows the same six lines on every system and in every state, with no paths in its body', async () => {
-    const SIX = ['Back', 'Play from Steam: Off', 'Cloud Saves: Off', 'Copy report', 'Report an issue', 'Paths'];
+  it('shows the same seven lines on every system and in every state, with no paths in its body', async () => {
+    const SIX = ['Back', 'Play from Steam: Off', 'Cloud Saves: Off', 'macOS Sync: On', 'Copy report', 'Report an issue', 'Paths'];
     for (const system of ['linux', 'windows', 'mac'] as const)
       for (const status of [{}, { steam: null, game: 'none' as const }, { launch: true }]) {
         const { g, p } = newGame();
@@ -286,6 +288,7 @@ describe('the Steam (beta) menu', () => {
       'Back',
       'Play from Steam: On',
       'Cloud Saves: On',
+      'macOS Sync: On',
       'Copy report',
       'Report an issue',
       'Paths',
@@ -308,13 +311,13 @@ describe('the Steam (beta) menu', () => {
   it('greys the options that need Steam where it is missing, and where what Steam has could not be read', async () => {
     const { g, p } = newGame();
     g.hooks.steam = fake({ steam: null, game: 'none', where: '', account: false }).hook;
-    expect(choosable((await drive(g, p)).menus[0])).toEqual(['Back', 'Copy report', 'Report an issue', 'Paths']);
+    expect(choosable((await drive(g, p)).menus[0])).toEqual(['Back', 'macOS Sync: On', 'Copy report', 'Report an issue', 'Paths']);
     const unread = newGame();
     const f = fake();
     f.hook.status = () => Promise.reject(new Error('no'));
     unread.g.hooks.steam = f.hook;
     const { menus, said } = await drive(unread.g, unread.p, ['Paths']);
-    expect(choosable(menus[0])).toEqual(['Back', 'Copy report', 'Report an issue', 'Paths']);
+    expect(choosable(menus[0])).toEqual(['Back', 'macOS Sync: On', 'Copy report', 'Report an issue', 'Paths']);
     expect(said).toContain(sq('What Steam has could not be read here.'));
   });
 
@@ -411,36 +414,102 @@ describe('the Steam (beta) menu', () => {
     expect(choosable(shown.filter((m) => m.title === 'Play from Steam').at(-1)!)).toContain('Compat. tool: Off');
   });
 
-  it('offers Linux to fix the cloud rules with the tool on, asking first while Steam runs', async () => {
+  /** macOS Sync's state (desktop/main.cjs syncState): Linux, on, its rules lacking MacOS, fixable here with Steam running. */
+  const SYNC = (over: Partial<SyncState> = {}): SyncState => ({
+    system: 'linux',
+    flatpak: false,
+    deck: false,
+    launch: false,
+    on: true,
+    rules: 'needed',
+    why: null,
+    ruleList: [],
+    stuck: 0,
+    canFix: true,
+    steamRunning: true,
+    ...over,
+  });
+
+  it('offers to fix Cloud for Mac where it is broken, asking first where that restarts Steam', async () => {
     const no = newGame();
-    const f = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: true, steamRunning: true }, { compatTool: true });
+    const f = fake({ system: 'linux', sync: SYNC() }, { compatTool: true });
     no.g.hooks.steam = f.hook;
-    const asked = await drive(no.g, no.p, ['Play from Steam', 'Fix Cloud for Mac', 'No']);
+    const asked = await drive(no.g, no.p, ['Fix Cloud for Mac', 'No']);
     expect(asked.said).toContain(sq('This closes Steam and opens it again'));
     expect(f.calls).toEqual([]);
     const yes = newGame();
     yes.g.hooks.steam = f.hook;
-    const done = await drive(yes.g, yes.p, ['Play from Steam', 'Fix Cloud for Mac', 'Yes']);
+    const done = await drive(yes.g, yes.p, ['Fix Cloud for Mac', 'Yes']);
     expect(f.calls).toEqual(['fixCloud']);
     expect(done.said).toContain(sq('Cloud fixed.'));
+    // Only saves to send again, the rules fine: fixed at once, in a Steam launch too, with nothing to ask.
+    const resend = newGame();
+    const r = fake(
+      { system: 'windows', launch: true, sync: SYNC({ system: 'windows', rules: 'ready', stuck: 4, canFix: false }) },
+      { playLine: true },
+    );
+    resend.g.hooks.steam = r.hook;
+    await drive(resend.g, resend.p, ['Fix Cloud for Mac']);
+    expect(r.calls).toEqual(['fixCloud']);
   });
 
-  it('greys Fix Cloud for Mac where Steam may not be closed, and hides it where nothing needs fixing', async () => {
+  it('greys Fix Cloud for Mac where it cannot be done here, and hides it where nothing is wrong or macOS Sync is off', async () => {
     const deck = newGame();
-    deck.g.hooks.steam = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: false, launch: true }, { compatTool: true }).hook;
-    const grey = await drive(deck.g, deck.p, ['Play from Steam']);
-    const play = grey.shown.filter((m) => m.title === 'Play from Steam').at(-1)!;
-    expect(play.labels).toContain('Fix Cloud for Mac');
-    expect(choosable(play)).not.toContain('Fix Cloud for Mac');
-    const fine = newGame();
-    fine.g.hooks.steam = fake({ system: 'linux', cloudRule: 'ready', canFixCloud: true }, { compatTool: true }).hook;
-    const ready = await drive(fine.g, fine.p, ['Play from Steam']);
-    expect(ready.shown.filter((m) => m.title === 'Play from Steam').at(-1)!.labels).not.toContain('Fix Cloud for Mac');
+    deck.g.hooks.steam = fake(
+      { system: 'linux', launch: true, sync: SYNC({ canFix: false, deck: true, launch: true }) },
+      { compatTool: true },
+    ).hook;
+    const grey = await drive(deck.g, deck.p, ['Paths']);
+    expect(grey.menus[0].labels).toContain('Fix Cloud for Mac');
+    expect(choosable(grey.menus[0])).not.toContain('Fix Cloud for Mac');
+    expect(grey.said).toContain(sq('Desktop Mode'));
+    for (const [sync, choices] of [
+      [SYNC({ rules: 'ready' }), { compatTool: true }],
+      [SYNC({ on: false }), {}],
+      [SYNC(), { compatTool: true, macSync: false }],
+      [SYNC({ rules: 'unreadable', why: 'odd' }), { compatTool: true }],
+    ] as const) {
+      const { g, p } = newGame();
+      g.hooks.steam = fake({ system: 'linux', sync }, choices).hook;
+      expect((await drive(g, p)).menus[0].labels).not.toContain('Fix Cloud for Mac');
+    }
+  });
+
+  it('says how macOS Sync stands in its note, and switches it on Windows and Linux but not a Mac', async () => {
+    const notes = async (status: Partial<SteamStatus>, choices: Partial<SteamChoices> = {}) => {
+      const { g, p } = newGame();
+      g.hooks.steam = fake(status, choices).hook;
+      return (await drive(g, p, ['Paths'])).said;
+    };
+    expect(await notes({ sync: SYNC({ rules: 'ready' }) }, { compatTool: true })).toContain(
+      sq('Checked: Cloud saves made here reach a Mac.'),
+    );
+    expect(await notes({ sync: SYNC({ rules: 'unreadable', why: 'odd' }) }, { compatTool: true })).toContain(
+      sq("Steam's settings can't be read"),
+    );
+    expect(await notes({ sync: SYNC({ rules: 'ready', stuck: 2 }) }, { compatTool: true })).toContain(
+      sq('2 saves made here went to Windows alone.'),
+    );
+    expect(await notes({ sync: SYNC() }, { macSync: false })).toContain(sq("Off: Cloud saves made here aren't checked for a Mac."));
+    const mac = await notes(
+      { system: 'mac', line: null, sync: SYNC({ system: 'mac', rules: 'ready', stuck: 3, canFix: false }) },
+      { macPlay: true },
+    );
+    expect(mac).toContain(sq("3 saves can't reach this Mac"));
+    const off = newGame();
+    const f = fake({ system: 'linux', sync: SYNC({ rules: 'ready' }) });
+    off.g.hooks.steam = f.hook;
+    await drive(off.g, off.p, ['macOS Sync: On']);
+    expect(f.calls).toEqual(['macSync off']);
+    const onMac = newGame();
+    const m = fake({ system: 'mac', line: null });
+    onMac.g.hooks.steam = m.hook;
+    expect(choosable((await drive(onMac.g, onMac.p)).menus[0])).not.toContain('macOS Sync: On');
   });
 
   it('asks Linux before turning the tool on where that closes Steam to fix the cloud rules', async () => {
     const { g, p } = newGame();
-    const f = fake({ system: 'linux', cloudRule: 'needed', canFixCloud: true, steamRunning: true });
+    const f = fake({ system: 'linux', sync: SYNC() });
     g.hooks.steam = f.hook;
     const { said } = await drive(g, p, ['Play from Steam', 'Compat. tool: Off', 'No']);
     expect(said).toContain(sq('This closes Steam and opens it again'));

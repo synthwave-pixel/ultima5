@@ -14,7 +14,16 @@ import {
 
 /** The Steam options kept per machine (desktop/steamOptions.cjs). */
 describe('the Steam options', () => {
-  const OFF = { playLine: false, compatTool: false, macPlay: false, cloud: {}, results: {}, lineOnAt: 0, cloudDefault: false };
+  const OFF = {
+    playLine: false,
+    compatTool: false,
+    macPlay: false,
+    macSync: true,
+    cloud: {},
+    results: {},
+    lineOnAt: 0,
+    cloudDefault: false,
+  };
   const withDir = (run: (dir: string, file: string) => void) => {
     const dir = mkdtempSync(join(tmpdir(), 'u5-options-'));
     try {
@@ -43,6 +52,7 @@ describe('the Steam options', () => {
         playLine: true,
         compatTool: false,
         macPlay: true,
+        macSync: false,
         cloud: { '12345': true, '678': false },
         results: { playLine: 'on' },
         lineOnAt: 1_700_000_000_000,
@@ -83,6 +93,7 @@ describe('switching a Steam option', () => {
     playLine: false,
     compatTool: false,
     macPlay: false,
+    macSync: true,
     cloud: {},
     results: {},
     lineOnAt: 0,
@@ -165,8 +176,34 @@ describe('switching a Steam option', () => {
     expect(await said(new Error('EACCES'))).toContain('Restart Steam');
   });
 
+  it('leaves the cloud rules alone with the tool turned on while macOS Sync is off', async () => {
+    const calls: string[] = [];
+    const linuxCloud = async () => (calls.push('linuxCloud'), 'restarted' as const);
+    const r = (await turn('compatTool', true, { options: { ...OFF, macSync: false }, effects: effects(calls, { linuxCloud }) }))!;
+    expect(calls).toEqual(['install']);
+    expect(r.options.compatTool).toBe(true);
+  });
+
+  it('switches macOS Sync on Windows and Linux, changing nothing in Steam, and not on a Mac', async () => {
+    for (const system of ['windows', 'linux']) {
+      const calls: string[] = [];
+      const off = (await turn('macSync', false, { system }, calls))!;
+      expect(off.options).toMatchObject({ macSync: false, results: { macSync: 'off: done' } });
+      expect(off.message).toContain('macOS Sync is off');
+      const on = (await turn('macSync', true, { system, options: off.options }, calls))!;
+      expect(on.options.macSync).toBe(true);
+      expect(on.message).toContain('checks that Cloud saves made here reach a Mac');
+      ascii(on.message);
+      ascii(off.message);
+      expect(calls).toEqual([]);
+    }
+    expect(await turn('macSync', false, { system: 'mac' })).toBeNull();
+  });
+
   it('says what giving the cloud rules MacOS came to', () => {
-    for (const result of ['done', 'restarted', 'steam-running', 'not-owned', 'not-here']) ascii(cloudRuleMessage(result));
+    for (const result of ['done', 'fixed', 'restarted', 'steam-running', 'not-owned', 'not-here', 'flatpak'])
+      ascii(cloudRuleMessage(result));
+    expect(cloudRuleMessage('fixed')).not.toContain('Nothing to do');
     expect(cloudRuleMessage('restarted')).toContain('Steam restarted');
     expect(cloudRuleMessage('not-here')).toContain('Desktop Mode');
     expect(cloudRuleMessage('odd')).toBe("That didn't work: odd");
@@ -270,6 +307,7 @@ describe('keeping a Steam option switched', () => {
     playLine: false,
     compatTool: false,
     macPlay: false,
+    macSync: true,
     cloud: {},
     results: {},
     lineOnAt: 0,

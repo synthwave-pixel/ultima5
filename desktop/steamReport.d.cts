@@ -25,6 +25,7 @@ export interface ReportFacts {
     playLine: boolean;
     compatTool: boolean;
     macPlay: boolean;
+    macSync?: boolean;
     results: Record<string, string>;
   };
   /** Cloud saves for the account of this launch; null where no account is known. */
@@ -37,6 +38,15 @@ export interface ReportFacts {
   macReapplied: boolean | null;
   /** Characters in Steam's folder (null: Cloud saves off or the folder is unreadable). */
   cloudCharacters: number | null;
+  /** macOS Sync (main.cjs syncState): Steam's cloud rules here, and the Cloud saves Steam sent to Windows alone. */
+  sync?: {
+    on: boolean;
+    rules: 'needed' | 'ready' | 'unreadable' | 'not-owned';
+    why: string | null;
+    ruleList: string[];
+    stuck: number | null;
+    canFix: boolean;
+  };
 }
 /** Hides what identifies the player in `text`: `home` becomes ~, user names in paths become <user>. */
 export function mask(text: string, home: string): string;
