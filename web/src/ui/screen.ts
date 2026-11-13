@@ -7,7 +7,7 @@
  */
 
 import { ViewGlide } from './viewGlide.ts';
-import { Holds } from './holds.ts';
+import { Holds, losesKeyUps } from './holds.ts';
 import { signInk, tinted } from './colours.ts';
 import type { Font } from '../data/font.ts';
 import type { Appearance } from '../game/appearance.ts';
@@ -391,6 +391,8 @@ export class Screen implements Platform {
     );
     this.loadStoryFonts();
     this.loadLetterFonts();
+    // Where a key-up may be lost (Android), a key held repeats only while the system's own repeats say it is down.
+    const keyUpsLost = losesKeyUps(navigator.userAgent);
     window.addEventListener('keydown', (e) => {
       if (e.metaKey || e.altKey) return;
       // Typing in a box of the page's own (a name, a pasted save) is the box's.
@@ -403,7 +405,7 @@ export class Screen implements Platform {
       // held.
       if (e.repeat) return this.holds.seen(`key:${e.code}`);
       this.push(k, true);
-      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true), true);
+      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true), keyUpsLost);
     });
     window.addEventListener('keyup', (e) => this.holds.letGo(`key:${e.code}`));
     // Out of the window, its key-ups go elsewhere.

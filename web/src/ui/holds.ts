@@ -10,9 +10,17 @@
  *
  * A keyboard's key is not taken for held on its key-down alone: some key-ups never come (an Android web view loses
  * them for a controller's buttons, which the system sends as keys), and a key held until a key-up that never comes
- * would repeat for ever - a menu opened and shut, a choice made unasked. So a key repeats only once the system's own
- * repeats say it is still down, and stops when they stop, as it did when the system's repeats were the repeats.
+ * would repeat for ever - a menu opened and shut, a choice made unasked. So there a key repeats only once the system's
+ * own repeats say it is still down, and stops when they stop (losesKeyUps). Elsewhere the key-up comes, and a key held
+ * repeats at the game's pace whatever the system's repeat is set to: slow, or off.
  */
+
+/**
+ * Whether the browser may lose a key's key-up, so that a key held must be vouched for by the system's own repeats
+ * (Holds.hold's `seen`): Android's (its web view, the Android app's, loses them for a controller's buttons). Not the
+ * desktop's, where a slow system repeat, or none, would have stopped a key held after its first step.
+ */
+export const losesKeyUps = (userAgent: string): boolean => /Android/i.test(userAgent);
 
 /** Max input's paces: the least time between two repeats of a held key, ms. Separate presses are never held back. */
 export const INPUT_PACES = { verySlow: 250, slow: 200, medium: 150, fast: 130 } as const;

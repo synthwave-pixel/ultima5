@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { K } from '../src/game/io.ts';
 import { noteScene } from '../src/game/input.ts';
 import { GamepadInput } from '../src/ui/gamepad.ts';
-import { HOLD_FIRST_MS, Holds, INPUT_PACES } from '../src/ui/holds.ts';
+import { HOLD_FIRST_MS, Holds, INPUT_PACES, losesKeyUps } from '../src/ui/holds.ts';
 import { DEFAULTS, normaliseOptions } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
 
@@ -184,5 +184,34 @@ describe('the settings', () => {
     expect(DEFAULTS.smoothMotion).toBe(true);
     expect(normaliseOptions({ maxInput: 'warp' as never, smoothMotion: 'yes' as never })).toEqual({});
     expect(normaliseOptions({ maxInput: 'fast', smoothMotion: false })).toEqual({ maxInput: 'fast', smoothMotion: false });
+  });
+});
+
+/** Where a key-up may be lost, a key held is vouched for by the system's repeats; elsewhere it repeats whatever they do. */
+describe('where key-ups may be lost', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("is Android's browser and web view alone", () => {
+    expect(losesKeyUps('Mozilla/5.0 (Linux; Android 14; Pixel 8; wv) AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36')).toBe(true);
+    expect(losesKeyUps('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0 Safari/537.36')).toBe(false);
+    expect(losesKeyUps('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 Electron/38.0')).toBe(
+      false,
+    );
+    expect(losesKeyUps('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36')).toBe(false);
+  });
+
+  it('elsewhere, a key held repeats with the system repeating slowly, or not at all', async () => {
+    const holds = new Holds(
+      () => true,
+      () => undefined,
+      () => Date.now(),
+    );
+    const repeats: number[] = [];
+    // Not vouched for (seen false): no system repeat ever comes, as with key repeat off.
+    holds.hold('key:ArrowRight', () => repeats.push(Date.now()), false);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(repeats.length).toBeGreaterThan(10);
+    holds.letGo('key:ArrowRight');
   });
 });
