@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aim, attackCommand, cycleSnap, placeCombatant, snapMark, snapTarget, snapTargets } from '../src/game/combat.ts';
+import { aim, attackCommand, cycleSnap, placeCombatant, rememberFoe, snapMark, snapTarget, snapTargets } from '../src/game/combat.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { asPad } from '../src/game/input.ts';
@@ -35,6 +35,7 @@ describe('snap targets', () => {
     });
     g.s.combatTurn = me;
     g.snapMemory.fill(-1);
+    g.snapByHand.fill(false);
     return { g, p, me, at };
   };
   const prompt = (g: Game): void => {
@@ -61,6 +62,42 @@ describe('snap targets', () => {
     // Opened (the trigger lays floor over the dark), it is a target like any other.
     g.combatMap[6 * 32 + 5] = 0x44;
     expect(snapTarget(g, me)).toBe(at[0]);
+  });
+
+  it('keeps a foe in the dark chosen with the crosshair as the snap target, till LB/RB step off it', () => {
+    const { g, me, at } = field(BOW, [5, 6, 1], [5, 9, 3]);
+    g.combatMap[6 * 32 + 5] = 0xff;
+    expect(snapTarget(g, me)).toBe(at[1]);
+    // Remembered, but not chosen by hand (a snap attack's): still passed over.
+    g.snapMemory[me] = at[0];
+    expect(snapTarget(g, me)).toBe(at[1]);
+    // Chosen by hand: theirs in the dark, and a snap attack striking it again keeps it so.
+    rememberFoe(g, me, at[0], true);
+    expect(snapTargets(g, me)).toEqual([at[0], at[1]]);
+    expect(snapTarget(g, me)).toBe(at[0]);
+    rememberFoe(g, me, at[0]);
+    expect(snapTarget(g, me)).toBe(at[0]);
+    // Stepped off with the shoulders, it is let go: they step only between foes in sight.
+    cycleSnap(g, 1);
+    expect(snapTarget(g, me)).toBe(at[1]);
+    cycleSnap(g, 1);
+    expect(snapTarget(g, me)).toBe(at[1]);
+  });
+
+  it('makes the foe in the dark aimed at by hand with Attack the snap target after', async () => {
+    const { g, p, me, at } = field(BOW, [5, 2, 200], [5, 9, 200]);
+    g.combatMap[2 * 32 + 5] = 0xff;
+    g.autoAim = false;
+    // The aim starts on the foe in sight (5, 9), and is moved up to the one in the dark.
+    p.keys.push(...Array<number>(7).fill(K.Up), K.Enter);
+    await attackCommand(g, me, 1);
+    expect(g.snapMemory[me]).toBe(at[0]);
+    expect(g.snapByHand[me]).toBe(true);
+    expect(snapTarget(g, me)).toBe(at[0]);
+    // And the next aim starts on it.
+    p.keys.push(K.Escape);
+    await aim(g, me, 8);
+    expect([g.s.crossX, g.s.crossY]).toEqual([5, 2]);
   });
 
   it('passes over the dead, the charmed and the invisible', () => {

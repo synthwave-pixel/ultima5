@@ -1455,11 +1455,13 @@ export async function aim(g: Game, i: number, range: number, friend = false): Pr
   const s = g.s;
   s.crosshair = 1;
   let target = s.actors[g.combat[i].actor].b7;
+  // A foe chosen with the crosshair - by Attack, or a spell aimed at one - is where the next aim starts, in the dark too.
+  if (!friend && g.snapByHand[i] && g.snapMemory[i] >= 0) target = g.snapMemory[i];
   const tc = g.combat[target];
   if (friend) target = nearestFriend(g, i, range);
   else if (
     target > 0x1f ||
-    !standingFoe(g, target) || // the last one struck, charmed to the party's side since
+    !standingFoe(g, target, i) || // the last one struck, charmed to the party's side since
     (tc.flags & (CF.Dead | CF.Invisible)) !== 0 ||
     tc.flags === 0 ||
     s.actors[tc.actor].tile === 0 ||
@@ -1741,14 +1743,15 @@ const hiddenAt = (g: Game, x: number, y: number): boolean => {
 
 /**
  * Whether combatant `j` is a foe to strike or aim at: on the field, alive, not invisible, on the foes' side, and in
- * sight - never one the field hides, which the player cannot see (a snap target, the aim's first square, LB/RB).
+ * sight - never one the field hides, which the player cannot see (a snap target, the aim's first square, LB/RB) -
+ * unless it is the one `by` chose with the crosshair (Game.snapByHand), which stays theirs in the dark.
  */
-const standingFoe = (g: Game, j: number): boolean => {
+const standingFoe = (g: Game, j: number, by = -1): boolean => {
   if (j < 0 || j >= 0x20) return false;
   const c = g.combat[j];
   return (
     inArena(c.x, c.y) &&
-    !hiddenAt(g, c.x, c.y) &&
+    (!hiddenAt(g, c.x, c.y) || (by >= 0 && g.snapByHand[by] && g.snapMemory[by] === j)) &&
     combatantAt(g, c.x, c.y) === j &&
     (c.flags & (CF.Invisible | CF.Player)) === 0 &&
     onMonsterSide(g, j) &&
@@ -1771,10 +1774,10 @@ export function followUpFoe(g: Game, i: number, weapon: number, walkedInto: Bump
   const reaches = (j: number, pointed = false): boolean => reachesFoe(g, i, weapon, j, pointed);
   const risky = careful && strays(g, weapon);
   const there = walkedInto ? combatantAt(g, walkedInto.x, walkedInto.y) : -1;
-  if (walkedInto && standingFoe(g, there) && reaches(there, walkedInto.pointed === true)) return walkedInto;
+  if (walkedInto && standingFoe(g, there, i) && reaches(there, walkedInto.pointed === true)) return walkedInto;
   let best = -1;
   for (let j = 0; j < 0x20; j++) {
-    if (j === i || !standingFoe(g, j) || !reaches(j) || (risky && strayRisk(g, i, j))) continue;
+    if (j === i || !standingFoe(g, j, i) || !reaches(j) || (risky && strayRisk(g, i, j))) continue;
     if (
       best < 0 ||
       between(g, i, j) < between(g, i, best) ||
@@ -1836,7 +1839,7 @@ function reachesFoe(g: Game, i: number, weapon: number, j: number, pointed: bool
 
 /** Whether any foe still standing is within reach of combatant `i`'s `weapon`, aimed by the player. */
 function foeInReach(g: Game, i: number, weapon: number): boolean {
-  for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j) && reachesFoe(g, i, weapon, j, true)) return true;
+  for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j, i) && reachesFoe(g, i, weapon, j, true)) return true;
   return false;
 }
 
@@ -1872,7 +1875,7 @@ export function foePast(g: Game, i: number, dx: number, dy: number): Bumped | nu
     const y = c.y + dy * k;
     if (!inArena(x, y)) return null;
     const j = combatantAt(g, x, y);
-    if (standingFoe(g, j)) {
+    if (standingFoe(g, j, i)) {
       const past = { x, y, pointed: true };
       return hands.some((w) => followUpFoe(g, i, w, past) === past) ? past : null;
     }
@@ -1990,7 +1993,7 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
       const foe = followUpFoe(g, i, weapon, walkedInto ?? snap, true);
       if (!foe) continue;
       g.bumpFoe = foe;
-    } else if (on && aimedAt >= 0 && strikes(g, weapon) && standingFoe(g, aimedAt) && reachesFoe(g, i, weapon, aimedAt, true)) {
+    } else if (on && aimedAt >= 0 && strikes(g, weapon) && standingFoe(g, aimedAt, i) && reachesFoe(g, i, weapon, aimedAt, true)) {
       g.bumpFoe = { x: g.combat[aimedAt].x, y: g.combat[aimedAt].y, pointed: true };
     }
     const byHand = g.bumpFoe === null;
@@ -1998,7 +2001,7 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
     const at = g.bumpFoe ? combatantAt(g, g.bumpFoe.x, g.bumpFoe.y) : -1;
     const attacked = await attackHand(g, weapon, weapons);
     // The first blow's foe is the member's to strike again (snapTarget) - walked into, snapped at or aimed at by hand.
-    if (attacked && !struck && !g.cancelled) rememberFoe(g, i, at);
+    if (attacked && !struck && !g.cancelled) rememberFoe(g, i, at, byHand);
     if (g.cancelled) {
       if (struck) g.cancelled = false;
       return;
@@ -2026,7 +2029,7 @@ export function snapTargets(g: Game, i: number): number[] {
   const c = g.combat[i];
   if (!c || c.flags === 0 || c.flags & CF.Dead || onMonsterSide(g, i)) return [];
   const foes: number[] = [];
-  for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j)) foes.push(j);
+  for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j, i)) foes.push(j);
   if (!(c.flags & CF.Player)) {
     // A creature on the party's side: a neighbour for its blow; for what it throws, spits or breathes, within its
     // reach along a clear line (attackWith, rangedAttack).
@@ -2075,10 +2078,17 @@ export function snapTarget(g: Game, i: number): number {
   return list.find((j) => !snapRisks(g, i, j).length) ?? list[0];
 }
 
-/** The foe combatant `i` (a member, or a creature on the party's side) has struck - `at`, or where the crosshair was - theirs to open on again (snapTarget). */
-function rememberFoe(g: Game, i: number, at = -1): void {
+/**
+ * The foe combatant `i` (a member, or a creature on the party's side) has struck - `at`, or where the crosshair was - theirs
+ * to open on again (snapTarget); `byHand`, chosen with the crosshair, it stays theirs in the dark (standingFoe).
+ */
+export function rememberFoe(g: Game, i: number, at = -1, byHand = false): void {
   const j = at >= 0 ? at : combatantAt(g, g.s.crossX, g.s.crossY);
-  if (j >= 0 && j !== i && onMonsterSide(g, j)) g.snapMemory[i] = j;
+  if (j >= 0 && j !== i && onMonsterSide(g, j)) {
+    // Struck again by a snap attack, a foe chosen by hand stays so.
+    g.snapByHand[i] = byHand || (g.snapByHand[i] && g.snapMemory[i] === j);
+    g.snapMemory[i] = j;
+  }
 }
 
 /**
@@ -2090,7 +2100,10 @@ export function cycleSnap(g: Game, step: number): void {
   const list = snapTargets(g, i);
   if (!list.length) return;
   const at = list.indexOf(snapTarget(g, i));
-  g.snapMemory[i] = list[(at + step + list.length) % list.length];
+  const next = list[(at + step + list.length) % list.length];
+  // Stepped off, a foe chosen by hand in the dark is let go (the shoulders step only between foes in sight).
+  g.snapByHand[i] &&= g.snapMemory[i] === next;
+  g.snapMemory[i] = next;
   updateFrame(g);
 }
 
@@ -2128,7 +2141,7 @@ function stepAim(g: Game, i: number, range: number, friend: boolean, step: numbe
     const c = g.combat[j];
     if (friend) {
       if (c.flags && !(c.flags & (CF.Dead | CF.Invisible)) && !onMonsterSide(g, j) && combatantAt(g, c.x, c.y) === j) list.push(j);
-    } else if (standingFoe(g, j)) list.push(j);
+    } else if (standingFoe(g, j, i)) list.push(j);
   }
   if (!list.length) return;
   nearestFirst(g, i, list);
@@ -3054,6 +3067,7 @@ export async function combatLoop(g: Game): Promise<boolean> {
   g.fightOdds = { foes: s.dx, party: s.dy }; // the sides as it begins (modernKarma.ts battleOutcome)
   // A fight's own: no snap target yet, and a tip to come (combatTip).
   g.snapMemory.fill(-1);
+  g.snapByHand.fill(false);
   g.fightTipped = false;
   musicForMap(g);
   for (;;) {

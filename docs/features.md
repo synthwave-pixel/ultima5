@@ -809,7 +809,11 @@ other hurt in the game kills as it always did.
   for X the snap target, else the nearest foe it reaches. The snap target
   is the foe the first hand that reaches one would strike: the one the
   member last struck or chose while it is still in reach, else the
-  nearest, the weaker of two as near. With **Snap targets** on (Settings;
+  nearest, the weaker of two as near. A foe hidden in a room's dark (walled
+  off until a trigger opens it) is never chosen for the player, but one
+  aimed at there by hand - with Attack, or a spell at one foe (Flam Por,
+  Corp Por, a field, An Ex Xen, Bet Rel Xen) - stays the snap target, and
+  where the next aim starts, until LB/RB step off it. With **Snap targets** on (Settings;
   on to begin with) it is marked on the member's turn - the crosshair's
   four arrows, small, round the foe - only when an X would strike it. LB
   and RB (or [ and ]) step it to the next foe in reach or the one before,

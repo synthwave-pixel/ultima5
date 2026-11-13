@@ -181,6 +181,30 @@ describe('spells cast in a fight', () => {
     expect(foe.hp).toBeLessThan(hp);
   });
 
+  it("keeps the foe a point spell was aimed at, in the dark too, the caster's to open on next (snapByHand)", async () => {
+    // An Ex Xen at a foe the room's dark hides: never picked for the player, so aimed at by hand.
+    const { g, p } = fight(RAT);
+    g.combatMap[5 * 32 + 6] = 0xff;
+    g.combat[6].hp = 200;
+    p.keys.push(K.Right, K.Enter);
+    await cast(g, 0x22);
+    expect(g.snapMemory[0]).toBe(6);
+    expect(g.snapByHand[0]).toBe(true);
+    // Corp Por, a bolt flown like a weapon's shot, the same.
+    const bolt = fight(RAT);
+    bolt.g.combatMap[5 * 32 + 6] = 0xff;
+    bolt.g.combat[6].hp = 200;
+    bolt.p.keys.push(K.Right, K.Enter);
+    await cast(bolt.g, 0x25);
+    expect(bolt.g.snapMemory[0]).toBe(6);
+    expect(bolt.g.snapByHand[0]).toBe(true);
+    // Backed out of, nothing is kept.
+    const off = fight(RAT);
+    off.p.keys.push(K.Escape);
+    await cast(off.g, 0x25);
+    expect(off.g.snapMemory[0]).toBe(-1);
+  });
+
   it('An Ex Xen charms a foe who fails to resist it, and frees a member the foe had charmed', async () => {
     const { g, p, s } = fight(RAT);
     s.members[0].int = 99;

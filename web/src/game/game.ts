@@ -339,6 +339,11 @@ export class Game {
    * with LB/RB, theirs again while it stands in reach; -1 none. Not saved: a fight's own.
    */
   snapMemory: number[] = new Array<number>(0x20).fill(-1);
+  /**
+   * Whether each member's snap target (snapMemory) was chosen with the crosshair - aimed at by hand with Attack, or
+   * with a spell aimed at one foe - and so stays theirs though it stands in the dark (combat.ts standingFoe). Not saved.
+   */
+  snapByHand: boolean[] = new Array<boolean>(0x20).fill(false);
   /** The day (time.ts gameDay) the old man last came to camp (combat.ts apparitionComes); -1, not yet. Saved. */
   oldManDay = -1;
   /** The arrows and quarrels held above the save's 99, by item (ammo.ts: the Modern rules carry 999). Saved. */

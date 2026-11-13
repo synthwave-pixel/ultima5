@@ -28,6 +28,7 @@ import {
   passable,
   placeCombatant,
   released,
+  rememberFoe,
   spawned,
   poison,
   putToSleep,
@@ -457,7 +458,17 @@ function resists(g: Game, caster: number, target: number): boolean {
 /** CAST_0032: a spell that attacks like a weapon (magic missile, fire bolt...). */
 async function attackSpell(g: Game, weapon: number): Promise<void> {
   g.s.weapon = weapon;
+  await aimedSpell(g, weapon);
+}
+
+/**
+ * A spell flown at one foe like a weapon's shot (a bolt, a field): the foe aimed at is the caster's to open on next, as
+ * one aimed at with Attack is - in the dark too (combat.ts rememberFoe).
+ */
+async function aimedSpell(g: Game, weapon: number): Promise<void> {
+  g.cancelled = false;
   await attackWith(g, g.s.combatTurn, weapon);
+  if (!g.cancelled) rememberFoe(g, g.s.combatTurn, -1, true);
 }
 
 /** CAST_004c: a field: in a dungeon one before the party; in combat thrown like a missile. */
@@ -474,7 +485,7 @@ async function fieldSpell(g: Game, n: number): Promise<number> {
     return -1;
   }
   s.weapon = g.data.bytes(0x4592, 4)[n];
-  await attackWith(g, s.combatTurn, s.weapon);
+  await aimedSpell(g, s.weapon);
   return -1;
 }
 
@@ -773,6 +784,7 @@ async function anExXen(g: Game): Promise<number> {
   const s = g.s;
   g.say(0x45bb); // "Creature: "
   if ((await aim(g, s.combatTurn, 0xf)) === 0) return -1;
+  rememberFoe(g, s.combatTurn, -1, true); // the caster's to open on next, in the dark too
   await castEffect(g, 6);
   if ((tileAt(g, s.crossX, s.crossY) & 0xfe) === T.T84) return 0;
   const i = combatantAt(g, s.crossX, s.crossY);
@@ -798,6 +810,7 @@ async function betRelXen(g: Game): Promise<number> {
   const s = g.s;
   g.say(0x45d1); // "Creature: "
   if ((await aim(g, s.combatTurn, 0xf)) === 0) return -1;
+  rememberFoe(g, s.combatTurn, -1, true); // the caster's to open on next, in the dark too
   await castEffect(g, 6);
   const i = combatantAt(g, s.crossX, s.crossY);
   if (i < 0 || immune(g, i) || resists(g, s.combatTurn, i)) return 0;
