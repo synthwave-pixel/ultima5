@@ -15,9 +15,8 @@
 # the release's version ("### v1.0.37", or "### v1.0.37, <date>"), through
 # desktop/release-notes.cjs, and puts it above them; the README has no
 # such section, so a release says so in a warning and goes out with the
-# generated notes alone. Desktop builds are unsigned: see "Desktop app,
-# and the Steam Deck" in docs/install.md for what that means on each
-# platform. A run started by hand with "prerelease" on publishes the release
+# generated notes alone. The Windows builds are unsigned: see "The desktop
+# app" in docs/advanced.md for what that means on each platform. A run started by hand with "prerelease" on publishes the release
 # as a GitHub pre-release, for testers: the updater and the update notice
 # look only at the latest full release, so nothing updates to it, and the
 # site is not deployed. The APK is signed with the committed sideload key unless the

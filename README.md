@@ -16,106 +16,112 @@ the Apple ][ tile set, and the box's painting, for the key art.
 
 ![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
 
-- [Installation](#installation) The browser, the Steam Deck, Windows,
-  macOS, Linux and Android.
+- [Installation](#installation) The web, iPhone and iPad, Windows,
+  macOS, the Steam Deck, Linux and Android.
 - [New to Ultima V?](#new-to-ultima-v) Get it running and find your feet.
 - [Played it in 1988?](#played-it-in-1988) What is the same and what
   is new.
 - [Design notes](#design-notes) The thinking behind the changes, for the
   curious and for game designers.
+- [Advanced](docs/advanced.md) Command-line options and how updates
+  work, for players who want more control.
 - [Developer notes](docs/developer-notes.md) Building, testing and
   finding your way round the code.
 - [Credits](#credits) Whose work the port is built on.
 
 ## Installation
 
-Every build asks, the first time, for your own copy of the game: its
-folder, its files or a `.zip` (GOG sells it in
-[Ultima 4+5+6](https://www.gog.com/en/game/ultima_456), and the Internet
-Archive has it). The files are checked and kept on your device, and never
-leave it. The desktop app's Scan for game files... finds the copy itself:
-beside the app, at home, and where GOG and the Linux launchers install
-games.
+Every version needs your own copy of the 1988 game, from GOG's
+[Ultima 4+5+6](https://www.gog.com/en/game/ultima_456),
+[Ultima V on Steam](https://store.steampowered.com/app/3067520/), or the
+Internet Archive. The first time, it asks for the game's folder, its files
+or a `.zip`, and the files stay on your device. On the desktop, Scan for
+game files... finds them for you, and Steam's copy is found by itself.
 
-- **Browser**: <https://synthwave-pixel.github.io/ultima5/>. Nothing to
-  install. Chrome, Edge and Android offer to add it as an app, and it
-  works offline after the first visit. On iOS use Share, then Add to Home
-  Screen.
-- **Steam Deck**: the game installs as a Flatpak from Desktop Mode, in a
-  few minutes, and then lives in your Game Mode library.
-  1. Switch to Desktop Mode: press the Steam button, choose Power, then
-     Switch to Desktop.
-  2. If the Deck has never had a password, give it one: open Konsole and
-     run `passwd`, choosing any password you like. Discover needs it once,
-     when it registers the game's repository, and it is also what `sudo`
-     asks for; nothing else changes.
-  3. Open this page in a browser there (if the Deck has none yet,
-     Discover, its app store, installs Firefox) and tap
-     [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref).
-     The browser saves a small file; open it from the browser's downloads
-     and Discover shows Ultima V with an Install button, and asks for the
-     password that first time. Updates also arrive in Discover with every
-     other Flatpak's, with no prompt.
-  4. Start Ultima V once, still in Desktop Mode (Discover's Launch
-     button, or the application menu). Flatpak asks "Update Ultima V?";
-     choose Update. That lets the game update itself from then on, Game
-     Mode included, where the question can't be asked. You can quit
-     straight away.
-  5. Open Steam, still in Desktop Mode. Click Add a Game at the bottom
-     left, then Add a Non-Steam Game, tick Ultima V in the list, and click
-     Add Selected Programs.
-  6. Return to Game Mode with the icon on the desktop, or restart. The
-     game is in your library under Non-Steam. If the controls do not
-     respond, open the shortcut's controller settings and pick a Gamepad
-     template.
-  7. The first time you play it from Steam, the game gives its library
-     entry its own artwork (cover, banner and logo); Steam shows it the
-     next time Steam starts. Artwork you have set yourself is never
-     replaced.
+### Web
 
-  The same link works on any Linux desktop with Flatpak, and the
-  terminal line below installs per user with no password at all.
-- **Windows and macOS**: the installers on the
-  [Releases page](https://github.com/synthwave-pixel/ultima5/releases/latest),
-  a Windows installer or portable `.exe` and an Apple Silicon `.dmg`
-  (macOS 13 or later; Intel Macs: use the browser). The Windows installer
-  keeps itself up to date, and so does the macOS app once dragged into
-  Applications; the portable `.exe`, and the macOS app run from anywhere
-  else, say when a newer version is out.
-  - Windows: the builds are unsigned, so SmartScreen asks once; choose
-    More info, then Run anyway.
-  - macOS: the app is signed and notarized by Apple, and opens like any
-    other. If macOS asks to let Ultima V use the microphone (it can when
-    the sound plays through a USB microphone or headset), choose Don't
-    Allow: the game never uses it, and the sound plays on.
+[**Play now**](https://synthwave-pixel.github.io/ultima5/) in any modern browser. Nothing to install, and it
+works offline after the first visit.
 
-- **Android**: the APK (`Ultima-V-<version>-android.apk`) on the Releases
-  page, for handhelds like the AYN Odin or the Retroid Pocket and for
-  phones and tablets. Copy it to the device and open it; Android asks once
-  to allow installs from that source. Or let
-  [Obtainium](https://github.com/ImranR98/Obtainium) install it and keep
-  it updated:
-  [add Ultima V to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.synthwavepixel.ultima5%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsynthwave-pixel%2Fultima5%22%2C%22author%22%3A%22synthwave-pixel%22%2C%22name%22%3A%22Ultima%20V%22%7D)
-  on the device, or add `https://github.com/synthwave-pixel/ultima5` in
-  Obtainium by hand. iOS has no app on purpose: use the browser.
-- **Linux without Flatpak**: the AppImage,
-  [`ultima5-sp-x86_64.AppImage`](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage),
-  from the Releases page; also the build to use for Steam. Make it
-  executable and run it; it keeps itself up to date. On Ubuntu 22.04 or
-  newer (and Mint, Pop!_OS...), if it won't start, install libfuse2 first:
-  `sudo apt install libfuse2t64` (`libfuse2` before Ubuntu 24.04).
+### iPhone and iPad
 
-### Installing from a terminal
+1. Open [the game](https://synthwave-pixel.github.io/ultima5/) in Safari.
+2. Tap Share, then Add to Home Screen.
+3. Play from the new icon. It keeps your save; a Safari tab loses it after
+   seven days without a visit.
 
-On a Steam Deck (Konsole, in Desktop Mode) or any Linux with Flatpak, the
-same as the link above, in one line:
+### Windows
+
+1. Download the installer (`...-win-x64-setup.exe`) from
+   [Releases](https://github.com/synthwave-pixel/ultima5/releases/latest).
+2. Run it. SmartScreen asks once: choose More info, then Run anyway.
+3. It updates itself. To update by hand instead, use the portable `.exe`.
+
+### macOS
+
+Apple Silicon, macOS 13 or later. On an Intel Mac, play on the web.
+
+1. Download the `.dmg` from [Releases](https://github.com/synthwave-pixel/ultima5/releases/latest).
+2. Drag Ultima V to Applications.
+3. Launch it. If run from Applications, updates install automatically. If
+   run from another folder you will get update notifications but you will
+   have to install updates manually.
+4. If macOS asks to let Ultima V use the microphone (it can when the sound
+   plays through a headset or USB microphone), choose Don't Allow. The game
+   never uses it, and the sound plays on.
+
+### SteamOS (Steam Deck)
+
+**If you own Ultima V on Steam**, use the AppImage:
+
+1. Switch to Desktop Mode: Steam button → Power → Switch to Desktop.
+2. Download [`ultima5-sp-x86_64.AppImage`](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage) and move it to your
+   home folder or `~/Applications`, where it's easy to find and won't be
+   deleted by accident.
+3. Right-click it → Properties → Permissions → Is executable.
+4. Run it. On the title screen choose Steam (beta) → Play from Steam →
+   Compat. tool, and let it restart Steam.
+5. In Steam: Ultima V → ⚙ → Properties → Compatibility → Ultima V SP.
+6. Return to Game Mode and press Play. If the controls don't respond, pick
+   a Gamepad template in the game's controller settings. It updates itself.
+
+**If your copy is from GOG or elsewhere**, use the Flatpak:
+
+1. Switch to Desktop Mode.
+2. If the Deck has no password yet, open Konsole and run `passwd`.
+3. Open [install Ultima V](https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref), open the downloaded file, and choose
+   Install in Discover.
+4. Start Ultima V once and choose Update when Flatpak asks. That lets it
+   update itself in Game Mode.
+5. In Steam: Add a Game → Add a Non-Steam Game → Ultima V.
+6. Return to Game Mode. If the controls don't respond, pick a Gamepad
+   template in the shortcut's controller settings.
+
+### Linux
+
+1. Download [`ultima5-sp-x86_64.AppImage`](https://github.com/synthwave-pixel/ultima5/releases/latest/download/ultima5-sp-x86_64.AppImage) and keep it in your
+   home folder or `~/Applications`.
+2. Make it executable (`chmod +x ultima5-sp-x86_64.AppImage`) and run it.
+   It updates itself.
+3. On Ubuntu 22.04 or newer (Mint, Pop!_OS...), if it won't start:
+   `sudo apt install libfuse2t64` (`libfuse2` before 24.04).
+
+Prefer Flatpak? One line installs it, and it updates with your other
+Flatpaks:
 
     flatpak install --user https://synthwave-pixel.github.io/ultima5/flatpak/ultima5.flatpakref
 
-It registers the game's repository, so `flatpak update` then updates the
-game with everything else. To remove the game and its saved data:
+To remove it and its saved data:
+`flatpak uninstall --user --delete-data com.synthwavepixel.ultima5`.
 
-    flatpak uninstall --user --delete-data com.synthwavepixel.ultima5
+### Android
+
+1. Download the `.apk` from [Releases](https://github.com/synthwave-pixel/ultima5/releases/latest) and open it on the device.
+2. Allow installs from that source when Android asks.
+
+Or let [Obtainium](https://github.com/ImranR98/Obtainium) install it and
+keep it updated:
+[add Ultima V to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.synthwavepixel.ultima5%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsynthwave-pixel%2Fultima5%22%2C%22author%22%3A%22synthwave-pixel%22%2C%22name%22%3A%22Ultima%20V%22%7D).
 
 ### Your saved game
 
@@ -123,9 +129,7 @@ The game saves itself in the browser's storage (the desktop and Android
 apps each keep their own), and resumes on the next visit. Export saved
 game and Import saved game (Manage Saves on the title menu, or Settings
 in play) carry a game between browsers,
-devices and the apps, as text on the clipboard or in a file. To jump
-straight to one of the game's sights - Britain, a frigate at sea, the
-Underworld, Doom - import one of the [showcase saves](showcase/README.md).
+devices and the apps, as text on the clipboard or in a file.
 
 **Back up your saved game.** Browsers can clear a site's storage on their
 own: Safari and every other iOS browser delete it after seven days without
@@ -134,18 +138,14 @@ end of a private window. Export the game now and then. On iOS, add the
 game to the Home Screen, which keeps its storage; in a browser tab the
 game warns of this once a day.
 
-More on each build - the desktop app under Steam's Game Mode, Android's
-full screen, how the installer checks your files, and hosting the web
-game yourself - is in [Installing Ultima V](docs/install.md).
+### More
 
-### Releases
-
-Every release, with the desktop and Android downloads, is on the
-[Releases page](https://github.com/synthwave-pixel/ultima5/releases). The
-browser version always runs the newest, and offers to restart when an
-update has downloaded. The desktop and Android apps say in the game when
-a newer version is out, and offer it - the restart into it, or its
-release's page to read and download from.
+- [Steam](docs/steam.md): playing from Steam, Steam Cloud saves, and
+  adding the game to Steam, for each system.
+- [Advanced](docs/advanced.md): command-line options, how each build
+  updates, showcase saves, and hosting the web game yourself.
+- Every release is on the
+  [Releases page](https://github.com/synthwave-pixel/ultima5/releases).
 
 ## New to Ultima V?
 
@@ -166,8 +166,11 @@ is in it.
 browser. The first time, it asks for the game's folder, its files or a
 `.zip` (the desktop app can find them itself: Scan for game files...);
 they are checked and kept in your browser, and never leave your device.
-There are also builds for Windows, macOS, Linux, the Steam Deck and
-Android handhelds: see [Installation](#installation).
+
+**Own it on Steam?** [Ultima V on Steam](https://store.steampowered.com/app/3067520/)
+works too: the desktop app can now be what Steam's Play starts, using
+Steam's copy of the game, with your saves in Steam Cloud. See
+[Steam](docs/steam.md).
 
 **Controls.** A controller, the touch pad or the keyboard all work, and
 the d-pad, A and B are enough to play with: A opens a menu of what you can

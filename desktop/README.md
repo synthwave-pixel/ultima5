@@ -2,7 +2,7 @@
 
 A thin Electron shell around the built game in `../web`. See
 [Developer notes](../docs/developer-notes.md) for how it
-fits together, and [Desktop app, and the Steam Deck](../docs/install.md#desktop-app-and-the-steam-deck)
+fits together, and [The desktop app](../docs/advanced.md#the-desktop-app)
 for how to install the builds on Windows, macOS, Linux and the Steam Deck.
 
 ```sh
@@ -32,7 +32,7 @@ games (folders named like `u5`, `Ultima 5` or `Ultima V™.app`, a few levels
 down), and `preload.cjs` is the page's one bridge to it.
 
 Playing Steam's Ultima V with this engine (see
-[Steam's Ultima V](../docs/install.md#steams-ultima-v)) is a few modules:
+[Steam](../docs/steam.md)) is a few modules:
 `steam.cjs` finds Steam, the game's folder in its libraries and the
 account that launched it; `appinfo.cjs` reads and writes Steam's app cache,
 to give the game a Mac launch entry; `steamSaves.cjs` keeps a Steam

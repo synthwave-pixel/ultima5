@@ -199,7 +199,7 @@ platform:
   - The dev server makes that index itself from `gamedata/ultima5/`
     (`devGameData` in `web/vite.config.ts`).
   - A site hosted elsewhere has one only if whoever hosts it puts the files
-    and the index there ([Hosting it yourself](install.md#hosting-it-yourself)).
+    and the index there ([Hosting it yourself](advanced.md#hosting-it-yourself)).
 - **Android**: Choose folder..., the system's own picker, instead.
 
 A copy whose every file is a known one is installed at once; anything

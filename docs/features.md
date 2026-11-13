@@ -37,7 +37,7 @@ describes how the Modern look is drawn.
   out of Desktop, Documents and Downloads, so the system asks nothing. The
   web game reads the site's `gamedata/index.json`, a list of the files'
   names in `gamedata/` beside the page, and fetches each: a copy put
-  there by whoever hosts it ([Hosting it yourself](install.md#hosting-it-yourself)),
+  there by whoever hosts it ([Hosting it yourself](advanced.md#hosting-it-yourself)),
   or, on the dev server, which makes the index itself, the developer's
   own. A copy whose every file is one of the known
   releases' is installed at once and the game starts; a modified or
@@ -1145,7 +1145,7 @@ different characters are nothing to each other.
 
 **Steam's Ultima V.** The desktop app can be what Steam's Play starts for
 a copy of Ultima V bought there (the title's Steam (beta) menu, every option off until turned on; see
-[Steam's Ultima V](install.md#steams-ultima-v)). With Cloud saves on, its
+[Steam's Ultima V](steam.md#play-from-steam)). With Cloud saves on, its
 saves are kept with Steam, in the game's folder per account and synced by
 Steam Cloud, apart from any other launch's; Export and Import carry a game
 across. The window title, the title screen and Settings' last line say
