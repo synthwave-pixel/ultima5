@@ -106,7 +106,8 @@ function findGame(roots, read, exists) {
 /**
  * The account that launched the game, as the 32-bit number Steam names its userdata folders with: the low 32 bits
  * of the 64-bit SteamID that keys loginusers.vdf. It is the user Steam says launched (SteamUser), else the one
- * signed in most recently, else none.
+ * signed in most recently - marked MostRecent, or, where Steam writes no MostRecent (a Steam Deck's client, 2026),
+ * the newest timestamp, or the file's only account - else none.
  */
 function accountId(root, env, read) {
   const text = read(joinFor(root, 'config', 'loginusers.vdf'));
@@ -116,8 +117,19 @@ function accountId(root, env, read) {
   // Older files write their keys in lower case (mostrecent), so a key is matched whatever its case.
   const field = (u, name) => Object.entries(u).find(([k]) => k.toLowerCase() === name)?.[1];
   const named = env.SteamUser ? entries.find(([, u]) => field(u, 'accountname') === env.SteamUser) : undefined;
-  const found = named ?? entries.find(([, u]) => field(u, 'mostrecent') === '1');
+  const found = named ?? entries.find(([, u]) => field(u, 'mostrecent') === '1') ?? latest(entries, field);
   return found ? (BigInt(found[0]) & 0xffffffffn).toString() : null;
+}
+
+/** The only account, else the one with the newest timestamp; none where that is a tie or no account has one. */
+function latest(entries, field) {
+  if (entries.length === 1) return entries[0];
+  const timed = entries
+    .map((e) => [e, Number(field(e[1], 'timestamp'))])
+    .filter(([, t]) => Number.isFinite(t) && t > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (timed.length === 0 || (timed.length > 1 && timed[0][1] === timed[1][1])) return undefined;
+  return timed[0][0];
 }
 
 /** Where a Steam launch keeps its saves: the game's folder, then ultima5-sp, then the account that launched it. */

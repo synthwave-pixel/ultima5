@@ -148,6 +148,60 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     expect(accountId(MAC_ROOT, {}, read)).toBe('39734273');
   });
 
+  // A Steam Deck's file (2026): no MostRecent, but AutoLogin and a timestamp written in lower case.
+  const DECK = `"users"
+{
+\t"76561197992819951"
+\t{
+\t\t"AccountName"\t\t"wiverson"
+\t\t"PersonaName"\t\t"GainfulSage"
+\t\t"RememberPassword"\t\t"1"
+\t\t"WantsOfflineMode"\t\t"0"
+\t\t"SkipOfflineModeWarning"\t\t"0"
+\t\t"AutoLogin"\t\t"1"
+\t\t"timestamp"\t\t"1794553958"
+\t}
+}
+`;
+
+  it('names the one account a Steam Deck lists, though it writes no MostRecent', () => {
+    const { read } = disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: DECK });
+    expect(accountId(MAC_ROOT, {}, read)).toBe('32554223');
+    const noTime = disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: DECK.replace(/\t\t"timestamp".*\n/, '') });
+    expect(accountId(MAC_ROOT, {}, noTime.read)).toBe('32554223');
+  });
+
+  it('without MostRecent, names the account signed in last by its timestamp', () => {
+    const two = (a: string, b: string) => `"users"
+{
+\t"76561197992819951"
+\t{
+\t\t"AccountName"\t\t"wiverson"
+\t\t"timestamp"\t\t"${a}"
+\t}
+\t"76561198000000001"
+\t{
+\t\t"AccountName"\t\t"someone else"
+\t\t"Timestamp"\t\t"${b}"
+\t}
+}
+`;
+    expect(accountId(MAC_ROOT, {}, disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: two('1794553958', '1700000000') }).read)).toBe('32554223');
+    expect(accountId(MAC_ROOT, {}, disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: two('1700000000', '1794553958') }).read)).toBe('39734273');
+    // A tie says nothing of which: no account.
+    expect(accountId(MAC_ROOT, {}, disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: two('1700000000', '1700000000') }).read)).toBeNull();
+    // SteamUser and MostRecent still come first.
+    const marked = two('1794553958', '1700000000').replace('"Timestamp"', '"MostRecent"\t\t"1"\n\t\t"Timestamp"');
+    expect(accountId(MAC_ROOT, {}, disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: marked }).read)).toBe('39734273');
+    expect(
+      accountId(
+        MAC_ROOT,
+        { SteamUser: 'someone else' },
+        disk({ [`${MAC_ROOT}/config/loginusers.vdf`]: two('1794553958', '1700000000') }).read,
+      ),
+    ).toBe('39734273');
+  });
+
   it('asks the Flatpak for no new permission to reach a library: /run/media is not in its permissions', () => {
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
       build: { flatpak: { finishArgs: string[] } };
