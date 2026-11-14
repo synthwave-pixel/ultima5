@@ -6,7 +6,8 @@
  * EGA tiles.
  */
 
-import { appleArt } from './appleArt.ts';
+import { appleArt, appleMono, GREEN_SCREEN, WHITE_SCREEN } from './appleArt.ts';
+import { C64_SHEET, CGA_SHEET, sheetArt, X68K_SHEET } from './sheetArt.ts';
 import { StandardArt, type Manifest } from './standardArt.ts';
 
 /**
@@ -34,26 +35,53 @@ export async function loadStandardArt(font?: Promise<Uint8Array | null>): Promis
 }
 
 /**
- * The Apple ][ tiles (appleArt.ts): Ultima V's own Apple II tiles (apple2-u5-tiles.png), or the player's own `tiles` in
+ * The Apple Color tiles (appleArt.ts): Ultima V's own Apple II tiles (apple2-u5-tiles.png), or the player's own `tiles` in
  * the Apple's colours if the sheet cannot be had - lettered as `lettering` is.
  */
 export async function loadAppleArt(tiles: Uint8Array, lettering: StandardArt | null): Promise<StandardArt> {
-  let sheet: Uint32Array | null = null;
-  let width = 0;
+  const got = await loadSheet('apple2-u5-tiles.png');
+  return appleArt(tiles, got?.sheet ?? null, got?.width ?? 0, lettering);
+}
+
+/** A sheet in public/graphics/, in memory order, and its width; null where it cannot be had (not fetched, offline). */
+async function loadSheet(file: string): Promise<{ sheet: Uint32Array; width: number } | null> {
   try {
-    const res = await fetch(`${import.meta.env.BASE_URL}graphics/apple2-u5-tiles.png`);
-    if (res.ok) {
-      const bitmap = await createImageBitmap(await res.blob());
-      const c = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const x = c.getContext('2d')!;
-      x.drawImage(bitmap, 0, 0);
-      sheet = new Uint32Array(x.getImageData(0, 0, bitmap.width, bitmap.height).data.buffer.slice(0));
-      width = bitmap.width;
-    }
+    const res = await fetch(`${import.meta.env.BASE_URL}graphics/${file}`);
+    if (!res.ok) return null;
+    const bitmap = await createImageBitmap(await res.blob());
+    const c = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const x = c.getContext('2d')!;
+    x.drawImage(bitmap, 0, 0);
+    return { sheet: new Uint32Array(x.getImageData(0, 0, bitmap.width, bitmap.height).data.buffer.slice(0)), width: bitmap.width };
   } catch {
-    // The player's own tiles, every one.
+    return null;
   }
-  return appleArt(tiles, sheet, width, lettering);
+}
+
+/**
+ * The sets drawn from sheets (sheetArt.ts): the PC's own CGA tiles, the Apple //e's and //c's (the Apple's tiles on a green and a white
+ * monitor, apple2-u5-mono.png, their fire found from the colour sheet), the C64's and the Sharp X68k's - lettered as
+ * `lettering` is. Null where the sheet cannot be had: the set chosen is then drawn as the one before it was.
+ */
+export async function loadSheetArt(
+  kind: 'pc-cga' | 'apple2e' | 'apple2c' | 'c64' | 'x68k',
+  tiles: Uint8Array,
+  lettering: StandardArt | null,
+): Promise<StandardArt | null> {
+  const sheets = {
+    'pc-cga': ['cga-u5-tiles.png', CGA_SHEET],
+    c64: ['c64-u5-tiles.png', C64_SHEET],
+    x68k: ['x68k-u5-tiles.png', X68K_SHEET],
+  } as const;
+  if (kind === 'pc-cga' || kind === 'c64' || kind === 'x68k') {
+    const [file, spec] = sheets[kind];
+    const got = await loadSheet(file);
+    return got && sheetArt(spec, tiles, got.sheet, got.width, lettering);
+  }
+  const [mono, colour] = await Promise.all([loadSheet('apple2-u5-mono.png'), loadSheet('apple2-u5-tiles.png')]);
+  if (!mono) return null;
+  const spec = appleMono(kind === 'apple2e' ? GREEN_SCREEN : WHITE_SCREEN, colour?.sheet ?? null, colour?.width ?? 0);
+  return sheetArt(spec, tiles, mono.sheet, mono.width, lettering);
 }
 
 /**

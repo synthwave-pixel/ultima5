@@ -19,6 +19,9 @@
     "pictures": "node --import ./tools/node-ts.mjs tools/art/picture-sheet.ts",
     "runes": "node --import ./tools/node-ts.mjs tools/art/runes.ts",
     "apple2": "node tools/art/apple2.ts",
+    "c64": "node tools/art/c64.ts",
+    "cga": "node tools/art/cga.ts",
+    "x68k": "node tools/art/x68k.ts",
     "known": "node --import ./tools/node-ts.mjs tools/install/known.ts",
     "music": "node --import ./tools/node-ts.mjs tools/music/render.ts",
     "sfx": "node --import ./tools/node-ts.mjs tools/sfx/render.ts"

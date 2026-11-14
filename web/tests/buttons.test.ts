@@ -66,6 +66,24 @@ describe('Start and Select, wherever the game waits', () => {
     expect(await getCommandKey(g, 'outdoors')).toBe(0x43);
     expect(save).toBe(true);
   });
+
+  it('pause in a dungeon with Save game and Save and quit both there, as 1988 saved there', async () => {
+    const { g, p } = controller();
+    let lines: { save?: boolean; quit?: boolean } = {};
+    p.keys.push(Pad.Start);
+    p.next = () => {
+      const m = g.menuShown;
+      if (m?.title === 'Paused') {
+        lines = { save: m.enabled[m.labels.indexOf('Save game')], quit: m.enabled[m.labels.indexOf('Save and quit')] };
+        return Pad.B;
+      }
+      return Pad.Y;
+    };
+    g.s.mapId = 0x21;
+    expect(g.inDungeon).toBe(true);
+    await getCommandKey(g, 'dungeon');
+    expect(lines).toEqual({ save: true, quit: true });
+  });
 });
 
 describe('X and Y inside a command', () => {

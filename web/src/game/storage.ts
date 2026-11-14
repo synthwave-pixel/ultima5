@@ -173,8 +173,8 @@ export function restore(g: Game, d: SaveData, fresh = false): void {
  * keep, hut or dungeon - or comes out of one (the doors within a place
  * save nothing), and says so. What is saved is always the party
  * outside, on the place's square: a town is as it will be found again, a
- * dungeon is never saved from within by itself (Save game keeps it there,
- * as 1988's Q did; Save and quit does not, menu.ts pauseMenu), and the
+ * dungeon is never saved from within by itself (Save game and Save and quit
+ * keep it there, as 1988's Q did, menu.ts pauseMenu), and the
  * open country between places is left to Quit. Not while the party lies
  * dead, waiting on Lord British. True if it was saved: where it could not
  * be, the log says "Not saved!" in the place of "(saved)".

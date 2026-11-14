@@ -29,9 +29,9 @@ export interface Options {
   pcScanlines: boolean;
   /** The look: Modern ('standard', the port's screen) or PC (1988) ('original', the EGA game's screen and tiles). */
   tileSet: TileSet;
-  /** The Modern look's tiles (Tiles): Modern PC, Apple ][ or PC EGA. */
+  /** The Modern look's tiles (Tiles): Modern PC, PC EGA, PC CGA, or another computer's (Apple Color, //e, //c, Sharp X68k, C64). */
   tiles: Tiles;
-  /** The PC (1988) look's tiles (Tiles, under that look): PC EGA or Apple ][. */
+  /** The PC (1988) look's tiles (Tiles, under that look): PC EGA, PC CGA, or another computer's. */
   pcTiles: PcTiles;
   /** Modern PC's people and creatures drawn with a fine black line round them, to be seen on busy ground. */
   outlines: boolean;
@@ -224,21 +224,28 @@ export type TileSet = 'standard' | 'original';
 /**
  * The Standard look's tiles, as the ultima3 port offers its sets. Modern PC: the original land out in the world, its
  * shores and edges still drawn from the map, and the original actors and furniture lifted onto it (originals.ts); the
- * towns' floors and walls and the buildings the Standard look's. Apple ][: Ultima V's own Apple II tiles, in the Apple
- * II's six colours, tile by tile on black (appleArt.ts). PC EGA: the player's own tiles as the
- * 1988 PC game drew them, each whole on black, in the Modern look's screen (egaTiles.ts). The PC (1988) look (tileSet
- * 'original') has a choice of its own (PcTiles).
+ * towns' floors and walls and the buildings the Standard look's. PC EGA: the player's own tiles as the 1988 PC game
+ * drew them, each whole on black, in the Modern look's screen (egaTiles.ts). PC CGA: the 1988 PC game's tiles for a
+ * CGA card, from its TILES.4, shipped as a sheet (sheetArt.ts CGA_SHEET). And Ultima V's own tiles from the other
+ * computers it was made for, tile by tile on black: Apple Color, the Apple II's in its six colours (appleArt.ts);
+ * Apple //e and Apple //c, the same on a green and a white monitor; Sharp X68k, the Japanese X68000 release's; C64,
+ * the Commodore 64's (sheetArt.ts). The PC (1988) look (tileSet 'original') has a choice of its own (PcTiles).
  */
-export type Tiles = 'modern-pc' | 'apple2' | 'pc-ega';
-export const TILES: readonly Tiles[] = ['modern-pc', 'apple2', 'pc-ega'];
-/** The PC (1988) look's tiles: the EGA tiles as the game drew them, or the Apple ][ set's in their place. */
-export type PcTiles = Extract<Tiles, 'pc-ega' | 'apple2'>;
-export const PC_TILES: readonly PcTiles[] = ['pc-ega', 'apple2'];
+export type Tiles = 'modern-pc' | 'pc-ega' | 'pc-cga' | 'apple2' | 'apple2e' | 'apple2c' | 'x68k' | 'c64';
+export const TILES: readonly Tiles[] = ['modern-pc', 'pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
+/** The PC (1988) look's tiles: the EGA tiles as the game drew them, or another computer's set in their place. */
+export type PcTiles = Exclude<Tiles, 'modern-pc'>;
+export const PC_TILES: readonly PcTiles[] = ['pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
 
 export const TILES_NAMES: Record<Tiles, string> = {
   'modern-pc': 'Modern PC',
-  apple2: 'Apple ][',
   'pc-ega': 'PC EGA',
+  'pc-cga': 'PC CGA',
+  apple2: 'Apple Color',
+  apple2e: 'Apple //e',
+  apple2c: 'Apple //c',
+  x68k: 'Sharp X68k',
+  c64: 'C64',
 };
 
 /** The settings in use with no character: a fresh machine's, or the last character's once they are deleted. */

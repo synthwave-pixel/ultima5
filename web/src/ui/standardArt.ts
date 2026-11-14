@@ -223,10 +223,17 @@ export class StandardArt implements TileArt {
   private readonly woods: Woods | null;
 
   /**
-   * Every tile drawn whole on black, as the 8-bit machines drew them (the Apple ][ set): nothing beneath what stands,
+   * Every tile drawn whole on black, as the 8-bit machines drew them (the Apple and C64 sets): nothing beneath what stands,
    * no ground drawn from the map (shores, worn earth, the soils' edges), the land below the world as it is above.
    */
   squares = false;
+
+  /**
+   * Whether the land is drawn from the map (shores, worn earth, the soils' edges, the ranges and the woods), as the
+   * Modern look's sheets are; else each square from its own tile, a figure over its ground's, as another computer's
+   * sheet drew it (the X68000's, sheetArt.ts).
+   */
+  landFromMap = true;
 
   /** Every tile a whole square where they are drawn on black (`squares`): Smooth motion glides them so (viewGlide.ts). */
   get wholeSquares(): boolean {
@@ -892,7 +899,7 @@ export class StandardArt implements TileArt {
    * coast or river some milliseconds each, which came all at once as a step brought a row of them into view.
    */
   warm(place: Place): void {
-    if (!this.squares) this.shores.prepare(place);
+    if (this.landFromMap && !this.squares) this.shores.prepare(place);
   }
 
   /** The square `draw` draws (CELL by CELL, RGBA in memory order), or null for a tile the art has not. */
@@ -902,7 +909,8 @@ export class StandardArt implements TileArt {
     // The whole square is drawn for its place: a piece standing there (the rubble) is chosen by it as its land is.
     return this.placed(
       place ?? null,
-      () => (place && !this.squares && this.fromMap(tile, ground, place, tint)) || this.compose(tile, ground, tint, floor),
+      () =>
+        (place && this.landFromMap && !this.squares && this.fromMap(tile, ground, place, tint)) || this.compose(tile, ground, tint, floor),
     );
   }
 
@@ -914,7 +922,8 @@ export class StandardArt implements TileArt {
   party(page: Uint32Array, figures: Figure[], x: number, y: number, terrain: number, floor?: number, place?: Place): void {
     this.freshFor(terrain, undefined, floor, place);
     const out =
-      (place && !this.squares && (this.standing(terrain, floor, place) ?? this.terrainFromMap(place))) || this.compose(terrain, floor);
+      (place && this.landFromMap && !this.squares && (this.standing(terrain, floor, place) ?? this.terrainFromMap(place))) ||
+      this.compose(terrain, floor);
     const q = CELL / 2;
     figures.slice(0, 4).forEach((f, k) => {
       if (f.tile >= this.cells) return;

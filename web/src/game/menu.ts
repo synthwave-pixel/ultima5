@@ -63,6 +63,7 @@ import {
   saveOptions,
   TILES,
   TILES_NAMES,
+  type Tiles,
   type AutoCombat,
   type DungeonMap,
   type InputMode,
@@ -1587,19 +1588,12 @@ const AUTO_COMBAT_NOTES: Record<AutoCombat, string> = {
  */
 export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
   /**
-   * A saving line greyed says why, the bar resting on it (Item.rest): in a fight, inside a command (Start pressed at
-   * its prompt), or - to save and leave - in a dungeon, which keeps no game from within it (storage.ts autosave).
+   * A saving line greyed says why, the bar resting on it (Item.rest): in a fight, or inside a command (Start pressed
+   * at its prompt). A dungeon is saved in, and left from, as anywhere else: 1988's Q saved there too.
    */
-  const noSave = (able: boolean, what: string): Partial<Item> => {
+  const noSave = (able: boolean): Partial<Item> => {
     if (able) return {};
-    const why =
-      g.s.mapId === 0xff
-        ? 'Not in a fight.'
-        : midCommand
-          ? 'Not in the middle of a command: finish it, then pause.'
-          : what === 'Save and quit'
-            ? 'Not in a dungeon: the game is kept outside, at its door. Save game keeps it here.'
-            : 'Not now.';
+    const why = g.s.mapId === 0xff ? 'Not in a fight.' : midCommand ? 'Not in the middle of a command: finish it, then pause.' : 'Not now.';
     return { rest: true, note: why };
   };
   /**
@@ -1700,7 +1694,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           label: 'Save game',
           key: SAVE_NOW,
           enabled: g.s.mapId !== 0xff && !midCommand,
-          ...noSave(g.s.mapId !== 0xff && !midCommand, 'Save game'),
+          ...noSave(g.s.mapId !== 0xff && !midCommand),
           act: async () => {
             await restoreView(g);
             return SAVE_NOW;
@@ -1712,7 +1706,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           // inside a command.
           label: 'Load a save',
           enabled: !midCommand,
-          ...noSave(!midCommand, 'Load a save'),
+          ...noSave(!midCommand),
           act: async () => {
             const { chooseSave, localSave, savedWhen, takeUp } = await import('./storage.ts');
             const kept = localSave.all();
@@ -1731,8 +1725,8 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
         },
         {
           label: 'Save and quit',
-          enabled: g.s.mapId !== 0xff && !g.inDungeon && !midCommand,
-          ...noSave(g.s.mapId !== 0xff && !g.inDungeon && !midCommand, 'Save and quit'),
+          enabled: g.s.mapId !== 0xff && !midCommand,
+          ...noSave(g.s.mapId !== 0xff && !midCommand),
           act: async () => {
             if (!(await confirm(g, 'Save the game and leave off playing?'))) return;
             const { localSave } = await import('./storage.ts');
@@ -1922,6 +1916,18 @@ export function settingLines(g: Game, title = false): Setting[] {
   ];
 }
 
+/** What each set of tiles is, as Appearance's Tiles line says it (three rows at most). */
+const TILES_NOTES: Record<Tiles, string> = {
+  'modern-pc': "Modern PC: 1988's art redone for the Modern screen.",
+  'pc-ega': "PC EGA: the 1988 PC game's own tiles.",
+  'pc-cga': "PC CGA: the 1988 PC game's four-colour tiles.",
+  apple2: "Apple Color: the Apple II's own tiles, in colour.",
+  apple2e: "Apple //e: the Apple II's, on a green monitor.",
+  apple2c: "Apple //c: the Apple II's, on a white monitor.",
+  x68k: "Sharp X68k: the Japanese X68000 release's.",
+  c64: "C64: the Commodore 64's own tiles.",
+};
+
 /** The fonts' names in Appearance (Options.font), and what each is. */
 const FONT_NAMES: Record<FontChoice, string> = { sixtyfour: 'SixtyFour', legible: 'Legible', dyslexic: 'Dyslexic', dos: 'DOS' };
 const FONT_NOTES: Record<FontChoice, string> = {
@@ -1952,10 +1958,7 @@ export function appearanceLines(g: Game): Setting[] {
       // The look's tiles, one set after another: the Modern look's (settings.ts Tiles) or the PC (1988) look's
       // (PcTiles), each look keeping its own choice.
       label: `Tiles: ${TILES_NAMES[o.tileSet === 'standard' ? o.tiles : o.pcTiles]}`,
-      note:
-        o.tileSet === 'standard'
-          ? "Modern PC: 1988's art redone. Apple ][ and PC EGA: as first drawn."
-          : "PC EGA: the 1988 game's tiles. Apple ][: the Apple II's, as first drawn.",
+      note: TILES_NOTES[o.tileSet === 'standard' ? o.tiles : o.pcTiles],
       act: () => {
         if (o.tileSet === 'standard') o.tiles = TILES[(TILES.indexOf(o.tiles) + 1) % TILES.length];
         else o.pcTiles = PC_TILES[(PC_TILES.indexOf(o.pcTiles) + 1) % PC_TILES.length];

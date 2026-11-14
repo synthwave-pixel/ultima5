@@ -9,12 +9,13 @@ ships none of the PC game: it plays your own copy.*
 **Play it:** <https://synthwave-pixel.github.io/ultima5/>
 
 The page itself carries three things of the game's: the Ultima V
-Upgrade's music in `web/public/music/`, the Apple II version's tiles, for
-the Apple ][ tile set, and the box's painting, for the key art.
+Upgrade's music in `web/public/music/`, the PC version's CGA tiles, the
+Apple II version's tiles, for the Apple tile sets, the C64's and the Sharp
+X68k's tiles, and the box's painting, for the key art.
 
 ![The Modern look: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
-![The two looks and their tile sets - Modern with Modern PC, Apple ][ or PC EGA tiles, PC 1988 with PC EGA or Apple ][ - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
+![The two looks and their tile sets - Modern with Modern PC, Apple Color or PC EGA tiles, PC 1988 with PC EGA or Apple Color - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
 
 - [Installation](#installation) The web, iPhone and iPad, Windows,
   macOS, the Steam Deck, Linux and Android.
@@ -246,10 +247,13 @@ fixes. Everything new is optional. [What is new, in full](docs/features.md)
 has the whole list; the highlights:
 
 - **Two looks.** *Modern* (the default) redraws the screen at four times
-  the EGA's size, with three sets of tiles: *Modern PC* (1988's own art,
-  taken from your files, cleaned up and toned), *Apple ][* and *PC EGA*
-  (1988's tiles exactly). *PC (1988)* is the 1988
-  screen as it was, with its own tiles or the Apple ][ set. The
+  the EGA's size, with eight sets of tiles: *Modern PC* (1988's own art,
+  taken from your files, cleaned up and toned), *PC EGA* (1988's tiles
+  exactly), *PC CGA* (1988's four-colour tiles for a CGA card), and
+  Ultima V's own tiles from the other computers it was made
+  for - *Apple Color*, *Apple //e* and *Apple //c* (the Apple II's, in
+  colour and on a green or white monitor), *Sharp X68k* and *C64*.
+  *PC (1988)* is the 1988 screen as it was, with any of them but Modern PC. The
   Ultima V Upgrade's music plays where the Upgrade played it, and one
   Sound setting chooses it with its effects: Classical, Electronic or
   Ambient, each with effects in the same instruments and its magic made
@@ -316,7 +320,7 @@ things:
   repainted through small per-figure rules, so the Avatar's skin, hair and
   clothes can be recoloured without redrawing a pixel. The tile-by-tile
   record is in [standard-originals.md](docs/standard-originals.md). The
-  Apple ][ tile set is the exception: the Apple II version's own tiles,
+  other computers' sets are the exception: their versions' own tiles,
   which a player of the PC game would not otherwise have.
 - **A controller is enough.** Every choice can be made with the d-pad, A
   and B. A prompt is always a menu, never a wait for a button you would
@@ -360,11 +364,27 @@ the player's own copy.
 - **The box's painting**, by Denis Loubet for Origin Systems (1988): the
   key art - Steam's library artwork, the boot screen, the banner above
   (`art/`, `web/art/cover/`). It remains its owners'.
-- **The Apple II tiles** of the Apple ][ tile set
-  (`web/public/graphics/apple2-u5-tiles.png`): Ultima V's own, drawn by
-  Origin Systems for the Apple II version (1988), read off its Program
-  disk by `npm run apple2` (`web/tools/art/apple2.ts`). They remain their
+- **The PC CGA tiles** of the PC CGA tile set
+  (`web/public/graphics/cga-u5-tiles.png`): Ultima V's own, drawn by
+  Origin Systems for the MS-DOS version's CGA mode (1988), read from its
+  `TILES.4` by `npm run cga` (`web/tools/art/cga.ts`). They remain their
   owners'.
+- **The Apple II tiles** of the Apple Color, Apple //e and Apple //c tile
+  sets (`web/public/graphics/apple2-u5-tiles.png`, `apple2-u5-mono.png`):
+  Ultima V's own, drawn by Origin Systems for the Apple II version (1988),
+  read off its Program disk by `npm run apple2` (`web/tools/art/apple2.ts`).
+  They remain their owners'.
+- **The Commodore 64 tiles** of the C64 tile set
+  (`web/public/graphics/c64-u5-tiles.png`): Ultima V's own, drawn by
+  Origin Systems for the Commodore 64 version (1988), read off its first
+  disk by `npm run c64` (`web/tools/art/c64.ts`). They remain their
+  owners'.
+- **The Sharp X68000 tiles** of the Sharp X68k tile set
+  (`web/public/graphics/x68k-u5-tiles.png`): Ultima V's own, drawn by
+  Infinity Co., Ltd. for Pony Canyon's Japanese Sharp X68000 release
+  (1990), from the [Ultima Codex](https://wiki.ultimacodex.com/wiki/Ultima_V_internal_formats)'s
+  images of them, by `npm run x68k` (`web/tools/art/x68k.ts`); thanks to
+  devonsoft, who first put them in the game. They remain their owners'.
 - **LairWare**, and Leon McNeill, whose Macintosh port of Ultima III,
   and its source ([beastie/ultima3](https://github.com/beastie/ultima3)), posted in 2025, the ultima3 port grew from - and so,
   through it, this one. Thank you.

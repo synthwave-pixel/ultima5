@@ -658,8 +658,8 @@ function partyOnFoot(g: Game): 'grid' | 'line' | 'one' | null {
   const s = g.s;
   if (g.options.tileSet !== 'standard' || s.partyTile !== A.Avatar) return null;
   // Out in the world the party is one figure, its leader (the first member alive), walking; or, with PARTY_GRID, the
-  // first four in a grid of two by two (the ultima3 port's). The Apple ][ tiles show the Avatar, as the Apple did.
-  if (s.mapId === 0) return g.options.tiles === 'apple2' || g.options.tiles === 'pc-ega' ? null : PARTY_GRID ? 'grid' : 'one';
+  // first four in a grid of two by two (the ultima3 port's). Every other set shows the Avatar, as its computer did.
+  if (s.mapId === 0) return g.options.tiles !== 'modern-pc' ? null : PARTY_GRID ? 'grid' : 'one';
   if (g.inTown) return 'line';
   return null;
 }

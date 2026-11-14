@@ -28,7 +28,8 @@ import { TILE_NAMES } from '../data/tileNames.ts';
 import { TileAnimator, TileCycles } from '../ui/animate.ts';
 import { EgaArt, HI_WIDTH, type TileArt } from '../ui/framebuffer.ts';
 import { egaTileArt } from '../ui/egaTiles.ts';
-import { loadAppleArt, loadStandardArt } from '../ui/loadArt.ts';
+import { loadAppleArt, loadSheetArt, loadStandardArt } from '../ui/loadArt.ts';
+import { TILES, TILES_NAMES } from '../game/settings.ts';
 import { CELL, LAND, type StandardArt, variantOf } from '../ui/standardArt.ts';
 import { DataOvl } from '../data/dataOvl.ts';
 import { readBritannia, readLocations, readTownLevel, readUnderworld, tileAt, type TileMap } from '../data/maps.ts';
@@ -45,14 +46,26 @@ async function start(): Promise<void> {
   const ega = new EgaArt(tiles);
   const animator = new TileAnimator(tiles);
   const cycles = new TileCycles();
-  // The Standard look's sets (settings.ts Tiles): Modern PC, its actors and furniture from the game's own tiles
-  // (originals.ts); Apple ][, the Apple II's colours (appleArt.ts).
+  // The sets (settings.ts Tiles): Modern PC, its actors and furniture from the game's own tiles (originals.ts); PC
+  // EGA; and the sheets (appleArt.ts, sheetArt.ts) - PC CGA, Apple Color, Apple //e, Apple //c, Sharp X68k, C64.
   const modern = await loadStandardArt();
   modern?.useOriginals(tiles);
+  const [apple2, apple2e, apple2c, x68k, c64] = await Promise.all([
+    loadAppleArt(tiles, modern),
+    loadSheetArt('apple2e', tiles, modern),
+    loadSheetArt('apple2c', tiles, modern),
+    loadSheetArt('x68k', tiles, modern),
+    loadSheetArt('c64', tiles, modern),
+  ]);
   const sets: Record<string, StandardArt | null> = {
     'modern-pc': modern,
-    apple2: await loadAppleArt(tiles, modern),
     'pc-ega': egaTileArt(tiles, modern),
+    'pc-cga': await loadSheetArt('pc-cga', tiles, modern),
+    apple2,
+    apple2e,
+    apple2c,
+    x68k,
+    c64,
   };
   const set = $<HTMLSelectElement>('tiles');
   // Modern PC's people and creatures outlined (Settings' Outlines).
@@ -100,9 +113,9 @@ async function start(): Promise<void> {
 
   const build = (): void => {
     const standard = sets[set.value];
-    // Tiles is the Standard UX's, and Outlines Modern PC's, as in Settings.
-    set.disabled = show.value === 'original';
-    outlines.disabled = show.value === 'original' || set.value !== 'modern-pc';
+    // Every set side by side has no one set; Outlines is Modern PC's, as in Settings.
+    set.disabled = show.value === 'all';
+    outlines.disabled = show.value === 'original' || (show.value !== 'all' && set.value !== 'modern-pc');
     if (modern) modern.outlined = outlines.value === 'on';
     const q = new URLSearchParams({ ux: show.value, tiles: set.value, ground: ground.value, size: size.value });
     if (outlines.value === 'off') q.set('outlines', 'off');
@@ -115,8 +128,16 @@ async function start(): Promise<void> {
     main.textContent = '';
     drawn.length = 0;
     const arts: TileArt[] = [];
-    if (show.value !== 'standard') arts.push(ega);
-    if (show.value !== 'original' && standard) arts.push(standard);
+    if (show.value === 'all') {
+      // Every set, a column each in Settings' order, to see that each tile is the same thing in all of them.
+      const shown = TILES.filter((k) => sets[k]);
+      for (const k of shown) arts.push(sets[k]!);
+      main.insertAdjacentHTML('beforeend', `<p class="columns">Columns: ${shown.map((k) => TILES_NAMES[k]).join(', ')}</p>`);
+    } else {
+      if (show.value !== 'standard')
+        arts.push(show.value === 'original' && set.value !== 'pc-ega' && set.value !== 'modern-pc' && standard ? standard : ega);
+      if (show.value !== 'original' && standard) arts.push(standard);
+    }
     const px = (CELL / 2) * Number(size.value);
     const f = filter.value.trim().toLowerCase();
     for (const [title, from, to] of [
@@ -164,9 +185,9 @@ async function start(): Promise<void> {
       }
       main.appendChild(grid);
     }
-    if (!standard && show.value !== 'original')
+    if (!standard && show.value !== 'original' && show.value !== 'all')
       main.insertAdjacentHTML('afterbegin', '<p>No Standard sheet yet (public/graphics/standard-tiles.png).</p>');
-    if (standard && show.value !== 'original' && !f) land(main, standard, files, px / (CELL / 2));
+    if (standard && show.value !== 'original' && show.value !== 'all' && !f) land(main, standard, files, px / (CELL / 2));
     view.look();
   };
   for (const el of [show, set, outlines, ground, size]) el.addEventListener('change', build);

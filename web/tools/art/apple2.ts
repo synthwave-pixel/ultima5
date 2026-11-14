@@ -6,7 +6,8 @@
  * same 512 as the PC's TILES.16 and in the same order, each sixteen rows of two hi-res bytes (fourteen pixels), the
  * file in two banks of 256 tiles, each bank byte by byte: byte k of every tile in turn, a column's sixteen rows before
  * the next column's. Drawn in the Apple's six colours as its screen showed them, fourteen pixels to a tile across and
- * sixteen down, 32 tiles to a row.
+ * sixteen down, 32 tiles to a row - and again as a monochrome monitor showed them (apple2-u5-mono.png), each lit bit
+ * a white pixel and nothing else, which the Apple //e and //c sets tint green and white.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -114,6 +115,29 @@ export function sheet(shapes: Uint8Array): ReturnType<typeof newImage> {
   return img;
 }
 
+/** Tile `t` of SHAPES as a monochrome monitor showed it: rows of fourteen, each pixel lit (1) or not (0). */
+export function monoTile(shapes: Uint8Array, t: number): number[][] {
+  const base = Math.floor(t / 256) * 8192 + (t % 256);
+  return Array.from({ length: TILE_H }, (_, r) => {
+    const [b0, b1] = [shapes[base + r * 256], shapes[base + (16 + r) * 256]];
+    return Array.from({ length: TILE_W }, (_, x) => (x < 7 ? b0 >> x : b1 >> (x - 7)) & 1);
+  });
+}
+
+/** The monochrome sheet: every tile of SHAPES, its lit bits white on black, opaque. */
+export function monoSheet(shapes: Uint8Array): ReturnType<typeof newImage> {
+  if (shapes.length !== TILES * 32) throw new Error(`SHAPES is ${shapes.length} bytes, not ${TILES * 32}`);
+  const img = newImage(SHEET_COLUMNS * TILE_W, (TILES / SHEET_COLUMNS) * TILE_H);
+  for (let t = 0; t < TILES; t++)
+    monoTile(shapes, t).forEach((cols, y) =>
+      cols.forEach((on, x) => {
+        const i = (((Math.floor(t / SHEET_COLUMNS) * TILE_H + y) * img.width + (t % SHEET_COLUMNS) * TILE_W + x) * 4) | 0;
+        img.data.set(on ? [0xff, 0xff, 0xff, 0xff] : [0, 0, 0, 0xff], i);
+      }),
+    );
+  return img;
+}
+
 /** The disk image, out of its .zip if it is in one. */
 function diskImage(path: string): Uint8Array {
   const file = new Uint8Array(readFileSync(path));
@@ -134,4 +158,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = new URL('../../public/graphics/apple2-u5-tiles.png', import.meta.url);
   writeFileSync(out, encodePng(sheet(shapes)));
   console.log(`${out.pathname}: ${TILES} tiles`);
+  const mono = new URL('../../public/graphics/apple2-u5-mono.png', import.meta.url);
+  writeFileSync(mono, encodePng(monoSheet(shapes)));
+  console.log(`${mono.pathname}: ${TILES} tiles`);
 }

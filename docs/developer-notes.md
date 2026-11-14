@@ -131,7 +131,10 @@ Run in `web/` unless the path says otherwise.
 | `npm run tiles` | Redraws the Standard tile sheet from code (`web/tools/art/`). |
 | `npm run pictures` | Makes the sheet of the game's pictures. |
 | `npm run runes` | Makes the runes sheet. |
-| `npm run apple2 -- <disk>` | Reads the Apple ][ tiles off the Apple II version's Program disk (disk 1 of 8: a `.dsk`, `.po` or its `.zip`). |
+| `npm run apple2 -- <disk>` | Reads the Apple tiles off the Apple II version's Program disk (disk 1 of 8: a `.dsk`, `.po` or its `.zip`): the colour sheet (Apple Color) and the monochrome one (Apple //e, //c). |
+| `npm run cga -- <TILES.4>` | Draws the PC CGA tiles from the MS-DOS game's `TILES.4` into `cga-u5-tiles.png`. |
+| `npm run c64 -- <disk>` | Reads the C64 tiles off the Commodore 64 version's disk 1 (a `.d64`, or the `.zip` of the six). |
+| `npm run x68k -- <world> <npc>` | Makes the Sharp X68k sheet from the Ultima Codex's two X68000 tile images (`Ultima_V_Sharp_X68000_World_Tiles.png`, `..._NPC_Tiles.png`). |
 | `npm run music` | Renders the soundtracks (`web/tools/music/`). |
 | `npm run sfx` | Renders the effects suites and checks them (`web/tools/sfx/`). |
 | `npm run saves` | Writes the showcase saves to [`showcase/`](../showcase/README.md): a dozen exported games at the game's interesting places (Britain, the harpsichord, a shrine, the carpet, a frigate, Deceit, the Underworld, Blackthorn's palace, Doom...), each with a party of the level and gear for it. Import them from Settings; they all share one Avatar, Showcase, so each replaces the last. The places and parties are listed in `web/tools/saves/showcase.ts`. |

@@ -13,7 +13,7 @@
  * whoever walks. A figure is its square as drawn less its square bare: so a companion's colours, a fight's marks on
  * them and their tint go with them. Less only the ground round it, though (figureMask): a pixel of the figure that
  * happens to match its ground there - a black outline on black ground - is the figure's still. Where the tile art
- * draws every tile as a whole square (the PC EGA and Apple ][ tiles, black round their figures), the figure is its
+ * draws every tile as a whole square (the PC EGA, Apple and C64 tiles, black round their figures), the figure is its
  * whole square, as it is at rest (issue #17).
  */
 

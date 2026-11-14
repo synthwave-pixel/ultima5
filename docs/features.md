@@ -140,18 +140,35 @@ describes how the Modern look is drawn.
     dirt edges keep the original's specks; the shores are drawn from the
     map on the EGA's grid, with a fringe of sand along every grass coast,
     lake and river bank. The towns and buildings are the Modern look's own.
-  - *Apple ][*: Ultima V's own Apple II tiles, all 512 of them, in the
-    Apple II's six colours, each tile whole on black as the Apple drew
-    it. The game was drawn for the Apple II first and its PC tiles after;
-    the tiles come off the Apple version's Program disk (`npm run apple2`)
-    and are shipped with the page, so the PC game is all a player needs.
   - *PC EGA*: the 1988 PC game's tiles exactly, from the player's own
     files, each whole on black as the EGA drew them, with the party out in
     the world as 1988's single icon - inside the Modern screen, with its
     lettering, its runes read and its panels.
-- **Tiles for the PC (1988) look**: *PC EGA* (1988's own) or *Apple ][*
-  (the set above), in the 1988 screen with its own lettering. Each look
-  keeps its own choice of tiles.
+  - *PC CGA*: the 1988 PC game's tiles for a CGA card, in the CGA's cyan,
+    magenta and white on black: the EGA's drawings recoloured by hand, tile
+    by tile. They come from the game's `TILES.4` (`npm run cga`) and are
+    shipped with the page, so no copy needs that file.
+  - *Apple Color*: Ultima V's own Apple II tiles, all 512 of them, in the
+    Apple II's six colours, each tile whole on black as the Apple drew
+    it. The game was drawn for the Apple II first and its PC tiles after;
+    the tiles come off the Apple version's Program disk (`npm run apple2`)
+    and are shipped with the page, so the PC game is all a player needs.
+  - *Apple //e* and *Apple //c*: the same tiles on a monochrome monitor,
+    each lit dot sharp and alone, green (the //e's) or white (the //c's).
+  - *Sharp X68k*: the Japanese Sharp X68000 release's tiles (1990), at
+    twice the PC's detail, its people and creatures standing on the land
+    as the X68000 drew them (`npm run x68k`, from the Ultima Codex's
+    images of them).
+  - *C64*: the Commodore 64 version's tiles, in its colours, each whole on
+    black (`npm run c64`, from its first disk).
+
+  Every set is the PC's 512 tiles in the PC's order; the tiles page's
+  *Every set, side by side* shows each tile in all eight. The water
+  flows, the flames flicker and (in the Apple and PC CGA sets) the flags
+  flap as the PC's do.
+- **Tiles for the PC (1988) look**: *PC EGA* (1988's own), *PC CGA*, or
+  any of the other computers' sets above, in the 1988 screen with its own lettering.
+  Each look keeps its own choice of tiles.
 - **Outlines** (Settings): a fine black line round every person and
   creature in Modern PC, to see them on busy ground.
 - **Effects don't stop the game.** An effect plays and the game goes on,
@@ -163,7 +180,7 @@ describes how the Modern look is drawn.
   tune played note by note, the whirlpool, the earthquake) is waited out.
 - **The party on foot** is drawn as its members, tinted by their state:
   out in Britannia and the Underworld, the first living member alone,
-  walking (with the Apple ][ and PC EGA tiles, 1988's single party icon);
+  walking (with every set but Modern PC, 1988's single party icon);
   in a towne, the first living member with the others after it in a line,
   on the squares it walked. In the Modern look the figures move at the
   pace of a 1988 XT, half that of the PC (1988) look, which keeps an AT's.
@@ -877,7 +894,7 @@ other hurt in the game kills as it always did.
   motion (the Modern look's, on to begin with: the map slides under the party and whoever walks glides to the next
   square - in towns, out of doors, in a fight and on the dungeon's whole-level map - the game itself still moving a
   square at a time) and the dungeon map (the PC (1988) look's). The Font is any of four, in either look:
-  **SixtyFour**, the Modern look's own; **Legible**, Atkinson Hyperlegible Mono, made to be easy to read;
+  **SixtyFour**, the Modern look's own; **Legible**, Atkinson Hyperlegible Mono, made to be easy to read, in its ExtraBold;
   **Dyslexic**, OpenDyslexic Mono, for dyslexic readers; and **DOS**, the 1988 game's own 8-by-8 letters. Legible
   and Dyslexic set the story pages too, in either look; SixtyFour and DOS leave them in their period faces. A
   player already in the PC (1988) look begins on DOS.

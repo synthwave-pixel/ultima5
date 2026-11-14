@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { lzwDecompress } from '../src/data/lzw.ts';
-import { appearanceLines } from '../src/game/menu.ts';
+import { appearanceLines, wrap } from '../src/game/menu.ts';
 import { loadOptions, PC_TILES, SETTINGS_KEY, TILES } from '../src/game/settings.ts';
 import { egaTileArt } from '../src/ui/egaTiles.ts';
 import { EgaArt, HI_WIDTH } from '../src/ui/framebuffer.ts';
@@ -51,28 +51,44 @@ describe('the looks in Appearance', () => {
     expect(lines('original', 'modern-pc').ux.label).toBe('UX: PC (1988)');
   });
 
-  it('offer three sets of tiles under Modern, PC EGA after Apple ][ and Modern PC after it', async () => {
-    expect(TILES).toEqual(['modern-pc', 'apple2', 'pc-ega']);
-    const { g, set } = lines('standard', 'apple2');
-    expect(set.dim).toBeFalsy();
-    await set.act?.();
-    expect(g.options.tiles).toBe('pc-ega');
-    const next = lines('standard', 'pc-ega');
-    expect(next.set.label).toBe('Tiles: PC EGA');
-    await next.set.act?.();
-    expect(next.g.options.tiles).toBe('modern-pc');
+  it('offer eight sets under Modern, in turn and round again, each saying what it is', async () => {
+    expect(TILES).toEqual(['modern-pc', 'pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64']);
+    const { g, set } = lines('standard', 'modern-pc');
+    const seen: string[] = [];
+    let line = set;
+    for (let i = 0; i < TILES.length; i++) {
+      seen.push(line.label);
+      expect(line.dim).toBeFalsy();
+      expect(wrap(line.note!).length, line.note).toBeLessThanOrEqual(3);
+      await line.act?.();
+      line = appearanceLines(g).find((l) => l.label.startsWith('Tiles:'))!;
+    }
+    expect(seen).toEqual([
+      'Tiles: Modern PC',
+      'Tiles: PC EGA',
+      'Tiles: PC CGA',
+      'Tiles: Apple Color',
+      'Tiles: Apple //e',
+      'Tiles: Apple //c',
+      'Tiles: Sharp X68k',
+      'Tiles: C64',
+    ]);
+    expect(g.options.tiles).toBe('modern-pc');
   });
 
-  it('offer PC EGA and Apple ][ under PC (1988), a choice of its own, the Modern choice kept', async () => {
-    expect(PC_TILES).toEqual(['pc-ega', 'apple2']);
+  it('offer every set but Modern PC under PC (1988), a choice of its own, the Modern choice kept', async () => {
+    expect(PC_TILES).toEqual(['pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64']);
     const { g, set } = lines('original', 'modern-pc');
     expect(g.options.pcTiles).toBe('pc-ega');
     expect(set.label).toBe('Tiles: PC EGA');
     expect(set.dim).toBeFalsy();
     await set.act?.();
-    expect([g.options.pcTiles, g.options.tiles]).toEqual(['apple2', 'modern-pc']);
-    expect(appearanceLines(g).find((l) => l.label.startsWith('Tiles:'))!.label).toBe('Tiles: Apple ][');
-    await set.act?.();
+    expect([g.options.pcTiles, g.options.tiles]).toEqual(['pc-cga', 'modern-pc']);
+    expect(appearanceLines(g).find((l) => l.label.startsWith('Tiles:'))!.label).toBe('Tiles: PC CGA');
+    for (let i = 1; i < PC_TILES.length; i++)
+      await appearanceLines(g)
+        .find((l) => l.label.startsWith('Tiles:'))!
+        .act?.();
     expect(g.options.pcTiles).toBe('pc-ega');
   });
 

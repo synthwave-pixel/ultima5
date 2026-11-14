@@ -1,7 +1,7 @@
 # Standard look: the original actors and furniture
 
-*This is the Modern PC tile set (Settings' Tiles). Apple ][ is
-`web/src/ui/appleArt.ts`.*
+*This is the Modern PC tile set (Settings' Tiles). The other computers'
+sets are `web/src/ui/appleArt.ts` and `web/src/ui/sheetArt.ts`.*
 
 The Standard look draws the original EGA actors and town furniture, their
 ground knocked out so the Standard floor or grass shows through, toned to

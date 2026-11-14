@@ -148,7 +148,7 @@ export interface TileArt {
    */
   draw(page: Uint32Array, tile: number, x: number, y: number, ground?: number, place?: Place, tint?: number, floor?: number): void;
   /**
-   * Whether every tile is drawn as a whole square, a figure's ground and all (the PC EGA and Apple ][ tiles, black
+   * Whether every tile is drawn as a whole square, a figure's ground and all (the PC EGA, Apple and C64 tiles, black
    * round their figures), and never over the `ground` it is given: Smooth motion then glides a figure's square whole
    * (viewGlide.ts). Absent: figures are drawn over their ground.
    */
@@ -2695,7 +2695,7 @@ function epx(src: Uint8Array, w: number, h: number, clamp = false): Uint8Array {
 }
 
 /**
- * A set's tiles without its lettering - the Apple ][ set in the PC (1988) look, whose letters, runes and window
+ * A set's tiles without its lettering - another computer's set in the PC (1988) look, whose letters, runes and window
  * corners are the game's own: the tiles drawn by `art`, nothing else of it.
  */
 export class TilesAlone implements TileArt {

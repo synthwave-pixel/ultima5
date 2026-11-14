@@ -88,9 +88,10 @@ const GLYPH_SIDE = 8 * HI;
  * figures - and a rune's English as it is read - and Britannian Runes II for the runes (its maker unknown; from The
  * Almighty Guru's Game Font Database, https://www.thealmightyguru.com/GameFonts/Series-Ultima.html); each set at
  * the display's own size over its text cell, filling `share` of it; `bold`, the outline thickened by that share of the
- * size (Sixtyfour has the one weight).
+ * size (Sixtyfour has the one weight); `weight`, the weight a font of several is set in, `weights` the range its file
+ * holds.
  */
-type FaceSpec = { family: string; file: string; share: number; bold: number };
+type FaceSpec = { family: string; file: string; share: number; bold: number; weight?: number; weights?: string };
 const FACES: Record<Face, FaceSpec> = {
   mono: { family: 'U5 Letters', file: 'Sixtyfour.ttf', share: 0.88, bold: 0.054 },
   runes: { family: 'U5 Runes', file: 'BritannianRunesII.ttf', share: 0.86, bold: 0 },
@@ -100,10 +101,11 @@ const FACES: Record<Face, FaceSpec> = {
 
 /**
  * The fonts the lettering may be set in besides SixtyFour (FACES.mono), for reading (Appearance > Font): Legible,
- * Atkinson Hyperlegible Mono (the Braille Institute's); Dyslexic, OpenDyslexic Mono. The story pages take them too.
+ * Atkinson Hyperlegible Mono (the Braille Institute's), in its ExtraBold - the file holds every weight, ExtraLight its
+ * own - to stand as heavy as Sixtyfour; Dyslexic, OpenDyslexic Mono. The story pages take them too.
  */
-const READING: Record<'legible' | 'dyslexic', { family: string; file: string; share: number; bold: number }> = {
-  legible: { family: 'U5 Legible', file: 'AtkinsonHyperlegibleMono.ttf', share: 0.9, bold: 0.02 },
+const READING: Record<'legible' | 'dyslexic', FaceSpec> = {
+  legible: { family: 'U5 Legible', file: 'AtkinsonHyperlegibleMono.ttf', share: 0.9, bold: 0, weight: 800, weights: '200 800' },
   dyslexic: { family: 'U5 Dyslexic', file: 'OpenDyslexicMono-Regular.otf', share: 0.92, bold: 0 },
 };
 /** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
@@ -710,7 +712,8 @@ export class Screen implements Platform {
 
   /** The CSS font of a face at `size`: SixtyFour after it, for a letter the font chosen has not got (an arrow). */
   private faceFont(spec: FaceSpec, size: number): string {
-    return spec === FACES.mono ? `${size}px "${spec.family}"` : `${size}px "${spec.family}", "${FACES.mono.family}"`;
+    const w = spec.weight ? `${spec.weight} ` : '';
+    return spec === FACES.mono ? `${size}px "${spec.family}"` : `${w}${size}px "${spec.family}", "${FACES.mono.family}"`;
   }
 
   /**
@@ -731,7 +734,7 @@ export class Screen implements Platform {
     const base = `${import.meta.env.BASE_URL}fonts/`;
     const faces = [...Object.values(FACES), ...Object.values(READING)]
       .filter((f) => f.file)
-      .map((f) => new FontFace(f.family, `url(${base}${f.file})`));
+      .map((f) => new FontFace(f.family, `url(${base}${f.file})`, f.weights ? { weight: f.weights } : {}));
     this.lettersLoaded = Promise.all(faces.map((f) => f.load()))
       .then((loaded) => {
         for (const f of loaded) document.fonts.add(f);
@@ -739,7 +742,7 @@ export class Screen implements Platform {
         if (!ctx) return;
         for (const f of [...Object.values(FACES), ...Object.values(READING)]) {
           if (!f.file) continue;
-          ctx.font = `100px "${f.family}"`;
+          ctx.font = `${f.weight ? `${f.weight} ` : ''}100px "${f.family}"`;
           this.metrics.set(f.family, {
             advance: ctx.measureText('M').width / 100,
             cap: ctx.measureText('H').actualBoundingBoxAscent / 100,
@@ -1370,13 +1373,15 @@ export class Screen implements Platform {
 
   /**
    * Which tile art the screen draws with: in the Modern look ('standard') set `tiles` (when loaded); in the PC (1988)
-   * look the EGA tiles, or with `tiles` Apple ][ that set's tiles, its lettering left out. The game redraws after. A
+   * look the EGA tiles, or with `tiles` PC CGA or another computer's set (Apple Color, Apple //e, Apple //c, Sharp X68k, C64)
+   * that set's tiles, its lettering left out. The game redraws after. A
    * set not made yet is made now, and taken up when it is ready (the EGA's or the last set's until then).
    */
   setTileArt(set: 'standard' | 'original', tiles: Tiles = this.tiles, outlines = this.outlines): void {
     this.tiles = tiles;
     this.outlines = outlines;
-    const ega = set === 'original' && tiles !== 'apple2';
+    // The PC (1988) look's own tiles: PC EGA, or Modern PC, which it has not (a debug page's).
+    const ega = set === 'original' && (tiles === 'pc-ega' || tiles === 'modern-pc');
     const made = this.sets.get(tiles);
     if (ega) {
       // The EGA tiles themselves: no set to take up.
@@ -1400,8 +1405,8 @@ export class Screen implements Platform {
         },
       );
     }
-    const apple = !ega && set === 'original' && this.standard && this.standard === this.sets.get('apple2') ? this.standard : null;
-    this.fb.art = set === 'standard' && this.standard ? this.standard : apple ? new TilesAlone(apple) : new EgaArt(this.fb.tiles);
+    const other = !ega && set === 'original' && this.standard && this.standard === this.sets.get(tiles) ? this.standard : null;
+    this.fb.art = set === 'standard' && this.standard ? this.standard : other ? new TilesAlone(other) : new EgaArt(this.fb.tiles);
     this.look = set;
     this.theme();
   }
