@@ -28,6 +28,8 @@ import type { BitPicture, Picture } from '../data/images.ts';
 import type { Figure, Mark, Place } from '../game/io.ts';
 import { EXTRA_RGB } from './colours.ts';
 import { DISSOLVE_MS, DISSOLVE_ORDER, HOLD_MS, RuneReveal, STAGGER_MS, type RuneCell } from './runeReveal.ts';
+import { dosLetterMask } from './dosLetter.ts';
+import { evenStrokes } from './runeStrokes.ts';
 import { SIGN_WALL, WALLS, signLayout } from './signLayout.ts';
 import type { Run } from './storyText.ts';
 
@@ -1195,9 +1197,7 @@ export class Framebuffer {
     // pixels, a letter `side` of them across, each on that grid, as the plate is drawn.
     const side = Math.round((cell * HI) / GRAIN);
     const shapes = letters.map((l) =>
-      l.code >= 0x41 && l.code <= 0x5f
-        ? [mask('runes', RUNE_LETTER[l.code - 0x41], side), mask('mono', RUNE_ENGLISH[l.code - 0x41], side)]
-        : [null, null],
+      l.code >= 0x41 && l.code <= 0x5f ? [this.runeShape(l.code, side), this.englishShape(l.code, side)] : [null, null],
     );
     if (shapes.some(([r, e], n) => letters[n].code >= 0x41 && letters[n].code <= 0x5f && (!r || !e))) return false;
     if (read && key !== this.sign.key) this.sign = { key, since: performance.now() };
@@ -1258,6 +1258,33 @@ export class Framebuffer {
     });
   }
 
+  /** The runes' shapes on a sign, by rune and size, made once each (runeShape). */
+  private readonly runeShapes = new Map<string, Uint8Array | null>();
+
+  /**
+   * Rune `code` (RUNES.CH's, 0x41 to 0x5f) as a sign draws it, `side` of its dots a side: the rune font's letter set
+   * four times as fine and drawn again in even strokes, two dots wide (runeStrokes.ts) - its shape the font's, none of
+   * its strokes clumped. Null where the font is not to hand.
+   */
+  private runeShape(code: number, side: number): Uint8Array | null {
+    const key = `${code}:${side}`;
+    if (this.runeShapes.has(key)) return this.runeShapes.get(key) ?? null;
+    const fine = this.letterMask?.('runes', RUNE_LETTER[code - 0x41], side * 4) ?? null;
+    const shape = fine && evenStrokes(fine, side * 4, side);
+    // A font not loaded yet is not kept as none: asked again, it is made once it is.
+    if (shape) this.runeShapes.set(key, shape);
+    return shape;
+  }
+
+  /**
+   * Rune `code`'s English as a sign read shows it, `side` of its dots a side: in the font chosen (Appearance > Font) -
+   * the game's own 8x8 letters for DOS (dosLetter.ts), else the face the screen sets (SixtyFour, Legible or Dyslexic).
+   */
+  private englishShape(code: number, side: number): Uint8Array | null {
+    const text = RUNE_ENGLISH[code - 0x41];
+    return this.dosLetters ? dosLetterMask(this.fonts[0], text, side) : (this.letterMask?.('mono', text, side) ?? null);
+  }
+
   /** Signs as seen from further off (farSign, sideSign): each drawn flat once, its runes on its plate, and kept. */
   private flats = new Map<string, Flat | null>();
 
@@ -1274,7 +1301,7 @@ export class Framebuffer {
     if (mask && this.signPlate) {
       const layout = signLayout(text, left, top, this.signScale);
       const side = Math.round((layout.cell * HI) / GRAIN);
-      const runes = layout.letters.map((l) => (l.code >= 0x41 && l.code <= 0x5f ? mask('runes', RUNE_LETTER[l.code - 0x41], side) : null));
+      const runes = layout.letters.map((l) => (l.code >= 0x41 && l.code <= 0x5f ? this.runeShape(l.code, side) : null));
       if (layout.letters.length && runes.every((r, n) => r || layout.letters[n].code < 0x41 || layout.letters[n].code > 0x5f)) {
         const [w, h] = [(SIGN_WALL.x2 - SIGN_WALL.x1) * HI, (SIGN_WALL.y2 - SIGN_WALL.y1) * HI];
         const [px, ink] = [new Uint32Array(w * h), new Uint8Array(w * h)];
@@ -1479,8 +1506,9 @@ export class Framebuffer {
 
   /**
    * Pixels (x1, y1)-(x2, y2) of page `from` shrunk into the box (dx, dy, dw, dh) of page `to`, both layers: the colour
-   * page's each pixel the average of those it covers, the EGA page's the nearest (the dungeon's view made small, or
-   * grown to the map's square). `clip`, the box's columns alone to be drawn (EGA pixels, inclusive): where only they
+   * page's each pixel the average of those it covers, the EGA page's the nearest (the dungeon's view made small beside
+   * the whole-level map); grown, each pixel the nearest of the source's (the Enhanced view is no longer grown: it is
+   * shown at its own size in the map's square, dungeon.ts showView). `clip`, the box's columns alone to be drawn (EGA pixels, inclusive): where only they
    * were drawn anew at the source.
    */
   transferScaled(from: number, to: number, [x1, y1, x2, y2]: number[], [dx, dy, dw, dh]: number[], clip?: number[]): void {

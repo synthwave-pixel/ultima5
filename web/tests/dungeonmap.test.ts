@@ -3,7 +3,7 @@ import { dungeonSight } from '../src/game/dungeon.ts';
 import { drawDungeonMap, DUNGEON_CREATURES, liftDungeonMap, mapCell, unrolled } from '../src/game/dungeonMap.ts';
 import { creatureSeen, revealCells } from '../src/game/fog.ts';
 import { Win } from '../src/game/frame.ts';
-import { K } from '../src/game/io.ts';
+import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { partyFigures } from '../src/game/world.ts';
 import { T } from '../src/game/tiles.ts';
@@ -536,5 +536,63 @@ describe('walking the whole map', () => {
     g.options.dungeonView = 'mini';
     expect(await step(K.Right)).toBe(0); // a turn, and no step
     expect([g.s.x, g.s.y, g.s.facing]).toEqual([1, 1, 1]);
+  });
+});
+
+/** The small map beside the view, a look chosen in Appearance while it is up (the Pause menu over a dungeon). */
+describe('the small dungeon map, the look changed', () => {
+  it('is drawn again in the new look at once, while the menu is still up, not on the next step', async () => {
+    const { appearanceMenu } = await import('../src/game/menu.ts');
+    const { fly, Landed, pick } = await import('./pilot.ts');
+    const { g, p } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 0x21, level: 0, x: 1, y: 1, facing: 1, d58a7: 0xff });
+    g.s.dungeon.fill(0xb0);
+    g.s.dungeon[9] = 0x00;
+    revealCells(g);
+    Object.assign(g.options, { tileSet: 'standard', tiles: 'modern-pc', dungeonView: 'mini' });
+    let drawn = 0;
+    g.draw.icon = () => {
+      drawn++;
+      return true;
+    };
+    let during = -1;
+    fly(g, p, [
+      pick('Appearance', 'Look: Remastered'),
+      (game) => {
+        if (during >= 0) return undefined;
+        during = drawn;
+        expect(game.options.tiles).toBe('pc-ega');
+        return Pad.B;
+      },
+    ]);
+    await appearanceMenu(g).catch((e: unknown) => {
+      if (!(e instanceof Landed)) throw e;
+    });
+    expect(during).toBeGreaterThan(0);
+  });
+});
+
+/** The first-person view in the Enhanced interface's square: at the colour page's own four times, not grown. */
+describe("the dungeon's view in the map's square", () => {
+  it('is copied whole into the square, a black border round it, never grown (no beat in a dither)', async () => {
+    const { refresh } = await import('../src/game/dungeon.ts');
+    const { g } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 0x21, level: 0, x: 1, y: 1, facing: 1, d58a7: 0xff });
+    g.s.dungeon.fill(0xb0);
+    g.s.dungeon[9] = 0x00;
+    Object.assign(g.options, { tileSet: 'standard', dungeonView: 'mini' });
+    const grown: number[][] = [];
+    const copied: number[][] = [];
+    g.p.fx.transferScaled = (...a: number[]) => void grown.push(a);
+    const transfer = g.p.fx.transfer.bind(g.p.fx);
+    g.p.fx.transfer = (...a: Parameters<typeof transfer>) => {
+      copied.push([...a] as number[]);
+      transfer(...a);
+    };
+    refresh(g);
+    expect(grown.filter((a) => a[0] === 1 && a[1] === 0)).toEqual([]);
+    expect(copied).toContainEqual([1, 0, 8, 8, 0xb7, 0xb7]);
   });
 });

@@ -424,8 +424,10 @@ function drawDungeon(g: Game, sides: boolean): void {
   // 1988 clears the view's right half alone, its left always drawn over whole. The Standard look's walls, drawn at
   // twice the grain, leave a pixel or two of the page's edge rows as they were - what else page 1 last held, white
   // dots along the top and bottom of the view - so it clears the whole of it; and so does a machine's skin, whose
-  // pieces are clear where 1988's are not.
-  d.fill(g.options.tileSet === 'standard' || skinned ? 0x10 : 0x60, 0xe, 0xaf, 0xb2);
+  // pieces are clear where 1988's are not. The Enhanced interface clears the whole of the map's square round it, the
+  // view shown in it as it is drawn, a black border round it (showView).
+  if (g.options.tileSet === 'standard') d.fill(8, 8, 0xb7, 0xb7);
+  else d.fill(skinned ? 0x10 : 0x60, 0xe, 0xaf, 0xb2);
   state.clip = false;
   // The Standard look's dark: what gives a light of its own - a skeleton's eyes, a field - is seen without
   // the party's; the view drawn as if lit, and all but that put out (framebuffer.ts darkenUnlit).
@@ -497,15 +499,11 @@ function showView(g: Game, whole: boolean): void {
   // once by drawDungeonMap, which always follows.
   if (g.options.tileSet === 'standard' && g.options.dungeonView === 'full') g.draw.viewBegin?.();
   const [from, to] = whole ? [0x10, 0xaf] : [0x28, 0x96];
-  if (g.options.tileSet === 'standard' && fx.transferScaled) {
-    // The square's columns that come from the middle alone: those whose every pixel is drawn from it.
-    const k = SQUARE / (0xaf - 0x10 + 1);
-    const [c1, c2] = whole ? [8, 8 + SQUARE - 1] : [Math.ceil(8 + (from - 0x10) * k), Math.floor(8 + (to + 1 - 0x10) * k) - 1];
-    fx.transferScaled(1, 0, 0x10, 0xe, 0xaf, 0xb2, 8, 8, SQUARE, SQUARE, c1, c2);
-    fx.page(0);
-    return;
-  }
-  fx.transfer(1, 0, from, 0xe, to, 0xb2);
+  // The Enhanced interface shows the view in the map's square as it is drawn, at the colour page's own four times, in
+  // a black border (8 pixels at either side, 6 above and 5 below): grown to fill it, each pixel four or five, a
+  // dither's dots beat in bands (November 2026, the player's choice).
+  if (g.options.tileSet === 'standard' && whole) fx.transfer(1, 0, 8, 8, 0xb7, 0xb7);
+  else fx.transfer(1, 0, from, 0xe, to, 0xb2);
   fx.page(0);
 }
 
@@ -1631,11 +1629,6 @@ export async function searchInDungeon(g: Game): Promise<void> {
       return;
     }
     drawDungeon(g, true);
-    if (g.options.tileSet === 'standard' && fx.transferScaled) {
-      // The Standard look's view is grown to the map's square: grown so on page 1 itself, where the dissolve takes
-      // it from.
-      fx.transferScaled(1, 1, 0x10, 0xe, 0xaf, 0xb2, 8, 8, SQUARE, SQUARE);
-    }
     await fx.reveal(8, 8, 0xb7, 0xb7, undefined, SEARCH_REVEAL_MS);
     fx.page(0);
   };

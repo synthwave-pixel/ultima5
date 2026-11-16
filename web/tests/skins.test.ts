@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { RUNE_RED } from '../src/ui/colours.ts';
+import { describe, expect, it, vi } from 'vitest';
 import { loadResource, picture, type Picture } from '../src/data/images.ts';
 import { DataOvl } from '../src/data/dataOvl.ts';
 import { refresh } from '../src/game/dungeon.ts';
@@ -9,6 +10,7 @@ import {
   pieceAt,
   pieceFileOf,
   recolouredPiece,
+  SKIN_SHEET_H,
   SKIN_SHEET_W,
   SkinOvers,
   SKIN_SPECS,
@@ -40,7 +42,7 @@ import { CGA_DOORS, cgaPicture, sheet as cgaDungeonSheet } from '../tools/art/cg
 import { appleRow } from '../tools/art/apple2Dungeon.ts';
 import { GREEN as APPLE_GREEN_HUE, VIOLET as APPLE_VIOLET, WHITE as APPLE_LIT } from '../tools/art/apple2.ts';
 import { Colour } from '../src/ui/colours.ts';
-import { x68kSheet } from '../tools/art/recolourDungeon.ts';
+import { dimFiles, sheet as x68kDungeonSheet, X68K_SCALE, x68kDungeon } from '../tools/art/x68kDungeon.ts';
 import { C64 } from '../tools/art/c64.ts';
 import { C64_RECOLOURED_WALLS, c64Dungeon, sheet as c64DungeonSheet } from '../tools/art/c64Dungeon.ts';
 import { APPLE_COLOURS, APPLE_RECOLOURED_WALLS, appleDungeon, sheet as appleDungeonSheet } from '../tools/art/apple2Dungeon.ts';
@@ -261,9 +263,13 @@ describe('the PC CGA skin', () => {
   });
 });
 
+const PRIVATE = new URL('../../../ultima5-private/', import.meta.url);
+const hasPrivate = existsSync(PRIVATE);
+
 /**
- * The Sharp X68k skin (tools/art/recolourDungeon.ts): no dungeon of its own to be had, so the PC's own pictures, the
- * walls inverted; and the dither the Apple's fallback pieces take.
+ * The Sharp X68k skin (tools/art/x68kDungeon.ts): its own dungeon off its disk 1 - each piece three bitplanes of its
+ * text palette's first eight colours (a thing's and creature's a fourth, its mask), at twice the PC's size - its
+ * things the left halves of its whole pictures; the narrow doorways recoloured and dithered.
  */
 describe('the Sharp X68k skin', () => {
   const x68k = new Set(X68K_PALETTE.map((c) => (0xff000000 | ((c & 0xff) << 16) | (c & 0xff00) | (c >> 16)) >>> 0));
@@ -280,10 +286,52 @@ describe('the Sharp X68k skin', () => {
     for (const v of ink) expect(x68k.has(v)).toBe(true);
     for (const c of [sign.plate, sign.edge, sign.ink, frame.blue, frame.white]) expect(X68K_PALETTE).toContain(c);
   });
-});
 
-const PRIVATE = new URL('../../../ultima5-private/', import.meta.url);
-const hasPrivate = existsSync(PRIVATE);
+  const png = decodePng(readFileSync(new URL('../public/graphics/x68k-u5-dungeon.png', import.meta.url)));
+
+  it('ship its own dungeon in its eight colours, twice the layout, every piece drawn at its own size', () => {
+    expect([png.width, png.height]).toEqual([SKIN_SHEET_W * X68K_SCALE, SKIN_SHEET_H * X68K_SCALE]);
+    for (let i = 0; i < png.data.length; i += 4)
+      if (png.data[i + 3]) expect(x68k.has((0xff000000 | (png.data[i + 2] << 16) | (png.data[i + 1] << 8) | png.data[i]) >>> 0)).toBe(true);
+    const skin = skinFromSheet('x68k', sheetWords(png), png.width, SKIN_SPECS.x68k!.colours);
+    for (const p of PIECES) {
+      const piece = skin.piece(p.file, p.i)!;
+      expect([piece.w, piece.h], `${p.file} ${p.i}`).toEqual(nativeSize('x68k', p.file, p.i));
+      expect(
+        piece.px.some((v) => v >>> 24 !== 0),
+        `${p.file} ${p.i}`,
+      ).toBe(true);
+    }
+  });
+
+  it("stand its things against the middle, on their foot, the right half the left's mirror as the PC draws it", () => {
+    const skin = skinFromSheet('x68k', sheetWords(png), png.width, SKIN_SPECS.x68k!.colours);
+    for (let i = 0; i < 20; i++) {
+      const { px, w, h } = skin.piece('ITEMS', i)!;
+      // Something of it in its right-hand column, against the middle, and in its foot row.
+      expect(
+        Array.from({ length: h }, (_, y) => px[y * w + w - 1]).some((v) => v >>> 24 !== 0),
+        `ITEMS ${i} at the middle`,
+      ).toBe(true);
+      expect(
+        px.subarray((h - 1) * w).some((v) => v >>> 24 !== 0),
+        `ITEMS ${i} on its foot`,
+      ).toBe(true);
+    }
+  });
+
+  it.skipIf(!hasPrivate)("be exactly its disk's: its files read off the Human68k disk, its creatures unpacked", () => {
+    const dim = new Uint8Array(readFileSync(new URL('x68k/Ultima V Warriors of Destiny (1989)(Pony Canyon)(Disk 1 of 2).dim', PRIVATE)));
+    const files = dimFiles(dim);
+    for (const f of ['DNG1.DAT', 'DNG2.DAT', 'DNG3.DAT', 'ITEMS.DAT', 'MON0.DAT', 'U5.X']) expect(files.has(f), f).toBe(true);
+    const d = x68kDungeon(dim);
+    expect(d.DNG1.map((p) => p === null)).toEqual(Array.from({ length: 28 }, (_, i) => i === 8 || i === 24));
+    expect([d.ITEMS.length, d.MON7.length]).toEqual([20, 6]);
+    expect([d.MON0[0]!.w, d.MON0[0]!.h]).toEqual([48, 132]);
+    const want = x68kDungeonSheet(d, Object.fromEntries(FILES.map((f) => [f, res(`${f}.16`)])) as Record<PieceFile, Uint8Array>);
+    expect(Buffer.from(png.data).equals(Buffer.from(want.data))).toBe(true);
+  });
+});
 
 /**
  * The C64 skin (tools/art/c64Dungeon.ts): its own dungeon off its disk 2 - the walls packed as the Apple's, the things
@@ -422,7 +470,9 @@ describe("a skin's frame", () => {
 describe("each skin's own pieces", () => {
   it("say which are the machine's own and which the PC's recoloured, as the tools make them", () => {
     expect(PIECES.every((p) => ownPiece('pc-cga', p.file, p.i))).toBe(true);
-    expect(PIECES.some((p) => ownPiece('x68k', p.file, p.i))).toBe(false);
+    expect(PIECES.filter((p) => !ownPiece('x68k', p.file, p.i)).map((p) => `${p.file} ${p.i}`)).toEqual([
+      'DNG1 8', 'DNG1 24', 'DNG2 8', 'DNG2 24', 'DNG3 8', 'DNG3 24',
+    ]); // prettier-ignore
     const c64 = PIECES.filter((p) => !ownPiece('c64', p.file, p.i));
     expect(c64.filter((p) => !p.file.startsWith('MON')).map((p) => `${p.file} ${p.i}`)).toEqual([
       'DNG1 8', 'DNG1 24', 'DNG2 8', 'DNG2 24', 'DNG3 8', 'DNG3 24',
@@ -509,37 +559,6 @@ describe('the machine sheets, as reviewed', () => {
           }
       expect(lit * 2, `${f}: mostly dark`).toBeLessThan(all);
       expect([0, all], `${f}: each pixel the colours' or its opposite`).toContain(agree);
-    }
-  });
-
-  it("ship the X68k as the PC's own pictures, the walls dark in light lines in each dungeon's own colours", () => {
-    const sixteens = Object.fromEntries(FILES.map((f) => [f, res(`${f}.16`)])) as Record<PieceFile, Uint8Array>;
-    const png = decodePng(readFileSync(new URL('../public/graphics/x68k-u5-dungeon.png', import.meta.url)));
-    expect(Buffer.from(png.data).equals(Buffer.from(x68kSheet(sixteens).data))).toBe(true);
-    const words = sheetWords(png);
-    const luma = (v: number): number => 0.299 * (v & 0xff) + 0.587 * ((v >> 8) & 0xff) + 0.114 * ((v >> 16) & 0xff);
-    for (const file of ['DNG1', 'DNG2', 'DNG3', 'ITEMS', 'MON0'] as const) {
-      let [voids, lines] = [0, 0];
-      for (const p of PIECES.filter((q) => q.file === file)) {
-        const v = picture(sixteens[file], p.i)!;
-        for (let y = 0; y < p.h; y++)
-          for (let x = 0; x < p.w; x++) {
-            const got = words[(p.y + y) * png.width + p.x + x];
-            if (!(got >>> 24)) continue;
-            const b = v.pixels[y * v.stride + (x >> 1)];
-            const ega = EGA_RGBA[x & 1 ? b & 15 : b >> 4];
-            if (file === 'ITEMS' || file === 'MON0') expect(got).toBe(ega);
-            else if ((ega & 0xffffff) === 0) {
-              // Black: a line or a dither's dot drawn light; an opening, thick, left black.
-              if ((got & 0xffffff) === 0) voids++;
-              else {
-                expect(luma(got)).toBeGreaterThan(180);
-                lines++;
-              }
-            } else expect(luma(got), `${file} ${p.i} ${x},${y}`).toBeLessThan(Math.max(luma(ega) * 0.6, 1));
-          }
-      }
-      if (file.startsWith('DNG')) expect([voids > 0, lines > 0], file).toEqual([true, true]);
     }
   });
 
@@ -736,7 +755,12 @@ describe('the machines at their own resolution', () => {
     expect(nativeSize('apple2', 'ITEMS', 19)).toEqual([16, 16]); // none of its own
     expect(nativeSize('c64', 'ITEMS', 19)).toEqual([8, 7]);
     expect(nativeSize('c64', 'MON0', 0)).toEqual([24, 66]); // sprites, recoloured
-    for (const t of ['pc-cga', 'x68k'] as const) for (const p of PIECES) expect(nativeSize(t, p.file, p.i)).toEqual([p.w, p.h]);
+    for (const p of PIECES) expect(nativeSize('pc-cga', p.file, p.i)).toEqual([p.w, p.h]);
+    // The X68000's twice the PC's across, its walls 316 rows, the rest twice down; a doorway, recoloured, the PC's.
+    expect(nativeSize('x68k', 'DNG1', 9)).toEqual([112, 316]);
+    expect(nativeSize('x68k', 'ITEMS', 0)).toEqual([80, 160]);
+    expect(nativeSize('x68k', 'MON0', 0)).toEqual([48, 132]);
+    expect(nativeSize('x68k', 'DNG3', 24)).toEqual([28, 114]);
     // Each fits in its piece's place on the sheet.
     for (const t of ['apple2', 'c64'] as const)
       for (const p of PIECES) {
@@ -811,8 +835,10 @@ describe("the Enhanced sign in each look's colours", () => {
     apple2: [...APPLE_COLOURS],
   };
 
-  it("give each look's sign its machine's colours alone, and Remastered's its carved stone", () => {
-    expect(signStyleFor('modern-pc', null)).toBeNull();
+  it("give each look's sign its machine's colours alone, and Remastered's flat: red runes on black in a dark grey border", () => {
+    // As PC EGA's sign is drawn, in the runes' red, the //c's dark grey round it (2026-11-16, the player's choice).
+    expect(signStyleFor('modern-pc', null)).toEqual({ plate: 0x000000, edge: 0x787874, ink: RUNE_RED });
+    expect(signStyleFor('apple2c', { ...flatSkin('apple2c', {}), sign: SKIN_SPECS.apple2c!.colours.sign })!.edge).toBe(0x787874);
     expect(signStyleFor('pc-ega', null)).toEqual({ plate: 0x000000, edge: 0x5555ff, ink: 0xffffff });
     for (const t of ['pc-cga', 'x68k', 'c64', 'apple2'] as const) {
       const style = signStyleFor(t, { ...flatSkin(t, {}), sign: SKIN_SPECS[t]!.colours.sign })!;
@@ -841,6 +867,62 @@ describe("the Enhanced sign in each look's colours", () => {
     seen.delete(grey);
     const rgbaOf = (c: number): number => (0xff000000 | ((c & 0xff) << 16) | (c & 0xff00) | (c >> 16)) >>> 0;
     expect([...seen].sort()).toEqual([0x000000, 0x00aaaa, 0xffffff].map(rgbaOf).sort());
+  });
+});
+
+/** The sign's runes in even strokes (runeStrokes.ts, 2026-11-16): the font's letter, each stroke two of the sign's dots. */
+describe("a dungeon sign's runes", () => {
+  it('are drawn in strokes two dots wide (four colour pixels), however heavy the font sets them', () => {
+    const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
+    // The rune font's letter a heavy upright bar, a fifth of it wide; the English whole.
+    fb.letterMask = (face, _text, side = 32) =>
+      Uint8Array.from({ length: side * side }, (_, i) => (face !== 'runes' || Math.abs((i % side) - side / 2) < side / 10 ? 1 : 0));
+    fb.page = 1;
+    fb.fill(0x10, 0xe, 0xaf, 0xb2, 7);
+    fb.signStyle = { plate: 0x000000, edge: 0x787874, ink: 0xc8201f };
+    expect(fb.carveSign('A', 11, 11, 'here', false)).toBe(true);
+    const red = (0xff000000 | (0x1f << 16) | (0x20 << 8) | 0xc8) >>> 0;
+    const widths = new Set<number>();
+    for (let y = 0; y < HI_HEIGHT; y++) {
+      let n = 0;
+      for (let x = 0; x < HI_WIDTH; x++) if (fb.hi[1][y * HI_WIDTH + x] === red) n++;
+      if (n) widths.add(n);
+    }
+    expect([...widths]).toEqual([4]);
+  });
+});
+
+/** A sign read: its English in the font chosen (Appearance > Font), DOS's the game's own letters. */
+describe("a dungeon sign's English, read", () => {
+  /** The faces asked for as sign `text` is read through to its English, the DOS font chosen or not. */
+  const asked = (dos: boolean): string[] => {
+    const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
+    const faces: string[] = [];
+    fb.letterMask = (face, _text, side = 32) => {
+      faces.push(face);
+      return new Uint8Array(side * side).fill(1);
+    };
+    fb.dosLetters = dos;
+    fb.signStyle = { plate: 0x000000, edge: 0x787874, ink: 0xc8201f };
+    let now = 1000;
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+    try {
+      fb.carveSign('A', 11, 11, 'here', true);
+      now += 60_000; // long since read: all English
+      faces.length = 0;
+      fb.carveSign('A', 11, 11, 'here', true);
+    } finally {
+      clock.mockRestore();
+    }
+    return faces;
+  };
+
+  it("is set in the chosen font's letters ('mono', SixtyFour, Legible or Dyslexic as chosen)", () => {
+    expect(asked(false)).toContain('mono');
+  });
+
+  it("is set in the game's own 8x8 letters with DOS chosen, the font's not asked for", () => {
+    expect(asked(true)).not.toContain('mono');
   });
 });
 

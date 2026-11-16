@@ -7,6 +7,7 @@
  * shown. And the controllers: a gamepad, and the touch pad on a touch.
  */
 
+import { redrawSideMap } from '../game/dungeonMap.ts';
 import { INPUT_PACES } from './holds.ts';
 import type { Game } from '../game/game.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
@@ -277,8 +278,12 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     g.draw.avatar?.(g.appearance, addressedAsLady(g));
     g.viewDirty = 1;
   };
-  // A tile set made after it was chosen (the first time it is): the map drawn again in it.
-  screen.onTilesReady = () => void (g.viewDirty = 1);
+  // A tile set made after it was chosen (the first time it is): the map drawn again in it - the small one beside the
+  // dungeon's view at once, a menu up over it or not.
+  screen.onTilesReady = () => {
+    g.viewDirty = 1;
+    redrawSideMap(g);
+  };
   apply(g.options);
   // A press on a gamepad or the touch pad is a controller's: the game is put in controller mode if it was not,
   // since the letter commands would ignore every button (the ultima3 port's).

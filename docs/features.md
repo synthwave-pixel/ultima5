@@ -172,9 +172,11 @@ describes how the Enhanced interface and the Remastered look are drawn.
   - *Sharp X68k*: the Japanese Sharp X68000 release's tiles (1990), at
     twice the PC's detail, its people and creatures standing on the land
     as the X68000 drew them (`npm run x68k`, from the Ultima Codex's
-    images of them). None of its dungeon is to be had: the dungeon is the
-    PC's pictures recoloured, dark walls in light lines in each dungeon's
-    colours (`npm run recolour-dungeon`).
+    images of them), and its own dungeon, redrawn for it: rock caves, a
+    timbered mine and grey brick, its things and creatures in colour, at
+    twice the PC's size (`npm run x68k-dungeon`, from its first disk). It
+    has no pictures of two narrow doorways: those are the PC's, recoloured
+    in its colours.
   - *C64*: the Commodore 64 version's tiles, in its colours, each whole on
     black (`npm run c64`, from its first disk), and its dungeon's walls
     and things, light blue lines on black, at its own size
@@ -718,8 +720,9 @@ set Input to Classic and type it.
 
 - **The corridor** in the Remastered look is the PC game's own pictures,
   pixel for pixel, their stipple and dithers as 1988 drew them, recoloured
-  and each pixel a sharp square block - the view enlarged to fill its
-  square by whole pixels, none blended. Each dungeon is told apart by the
+  and each pixel a sharp square block - the view shown in its square at
+  exactly four times, in a black border, so that no dither's dots come out
+  uneven. Each dungeon is told apart by the
   light in it - Deceit and Wrong cold and violet, Despise, Covetous and
   Shame green with damp, Destard and Doom red with what burns below - and
   Hythloth is its own red rock, no light laid on it. A door, a chest or a
@@ -1333,11 +1336,12 @@ Import's From a file opens Android's picker for a file to read.
   each pixel a square block, the stipple and dithers as drawn; a skeleton
   or a fall of rock is found where its picture differs from the plain
   wall's, a door by its own colours. The corridor's creatures (MON0-7.16)
-  keep their pixels in Remastered's toned colours, a diagonal followed
-  rather than squared off (EPX). The dungeon view is grown to the map's
-  square by whole pixels, each of the view's four or five of the
-  square's, none blended; shrunk beside the whole-level map, each pixel
-  the view's it covers, weighed by how much of it each covers.
+  keep their pixels in Remastered's toned colours, each a square block
+  too, as PC EGA draws them. The dungeon view is shown in the map's
+  square as it is drawn, at the colour page's own four times, in a black
+  border: grown to fill it, each pixel four or five of the square's, a
+  dither's dots beat in bands. Shrunk beside the whole-level map, each
+  pixel the view's it covers, weighed by how much of it each covers.
 - **The Remastered tiles** are derived at run time from the player's
   TILES.16: lifted off the ground they were drawn on, toned to the Standard
   palette, recoloured where a colour read wrongly, redrawn where they were

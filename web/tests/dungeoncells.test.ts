@@ -218,8 +218,9 @@ describe("a dungeon's cells", () => {
       return dissolve(...a);
     };
     await searchInDungeon(g);
-    // In a second: the intro's pace (512 pixels a tick) would take the view some three.
-    expect(calls).toEqual(['scale 1>1', 'reveal in 1000 ms']);
+    // In a second: the intro's pace (512 pixels a tick) would take the view some three. The view dissolved in as drawn,
+    // never grown (it is shown at the colour page's own four times, in a border, in the map's square).
+    expect(calls).toEqual(['reveal in 1000 ms']);
     expect(p.log).toContain('Ahead');
     expect(p.log.replace(/\s+/g, ' ')).toContain('It crumbles away.');
   });

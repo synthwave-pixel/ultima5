@@ -10,10 +10,10 @@ ships none of the PC game: it plays your own copy.*
 
 The page itself carries three things of the game's: the Ultima V
 Upgrade's music in `web/public/music/`; the other machines' looks - the
-PC version's CGA tiles and dungeon pictures, the Apple II's and the
-C64's tiles and dungeon pictures, and the Sharp X68k's tiles, with the
-PC's dungeon pictures recoloured where a machine has none of its own to
-be had; and the box's painting, for the key art.
+PC version's CGA tiles and dungeon pictures, and the Apple II's, the
+C64's and the Sharp X68k's tiles and dungeon pictures, with the PC's
+dungeon pictures recoloured where a machine has none of its own to be
+had; and the box's painting, for the key art.
 
 ![The Enhanced interface: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
@@ -398,15 +398,16 @@ the player's own copy.
   by `npm run c64-dungeon` (`web/tools/art/c64Dungeon.ts`). Its wandering
   creatures are hardware sprites not yet decoded, so those and its two
   narrow doorways are the PC's, recoloured. They remain their owners'.
-- **The Sharp X68000 tiles** of the Sharp X68k look
-  (`web/public/graphics/x68k-u5-tiles.png`): Ultima V's own, drawn by
-  Infinity Co., Ltd. for Pony Canyon's Japanese Sharp X68000 release
-  (1990), from the [Ultima Codex](https://wiki.ultimacodex.com/wiki/Ultima_V_internal_formats)'s
+- **The Sharp X68000 tiles and dungeon pictures** of the Sharp X68k look
+  (`web/public/graphics/x68k-u5-tiles.png`, `x68k-u5-dungeon.png`):
+  Ultima V's own, drawn by Infinity Co., Ltd. for Pony Canyon's Japanese
+  Sharp X68000 release (1990). The tiles are from the
+  [Ultima Codex](https://wiki.ultimacodex.com/wiki/Ultima_V_internal_formats)'s
   images of them, by `npm run x68k` (`web/tools/art/x68k.ts`); thanks to
-  devonsoft, who first put them in the game. Its dungeon
-  (`x68k-u5-dungeon.png`) is not its own, none of it to be had: the PC's
-  pictures, recoloured in its colours by `npm run recolour-dungeon`
-  (`web/tools/art/recolourDungeon.ts`). They remain their owners'.
+  devonsoft, who first put them in the game. The dungeon's walls, things
+  and creatures are read off its first disk by `npm run x68k-dungeon`
+  (`web/tools/art/x68kDungeon.ts`); it has no pictures of two narrow
+  doorways, so those are the PC's, recoloured. They remain their owners'.
 - **LairWare**, and Leon McNeill, whose Macintosh port of Ultima III,
   and its source ([beastie/ultima3](https://github.com/beastie/ultima3)), posted in 2025, the ultima3 port grew from - and so,
   through it, this one. Thank you.

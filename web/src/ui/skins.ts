@@ -15,7 +15,7 @@
 import type { Picture } from '../data/images.ts';
 import { EGA_PALETTE } from '../data/tiles.ts';
 import type { Tiles } from '../game/settings.ts';
-import { Colour } from './colours.ts';
+import { Colour, RUNE_RED } from './colours.ts';
 
 /** The files the dungeon's pictures come from, by their names less the extension. */
 export type PieceFile = 'DNG1' | 'DNG2' | 'DNG3' | 'ITEMS' | 'MON0' | 'MON1' | 'MON2' | 'MON3' | 'MON4' | 'MON5' | 'MON6' | 'MON7';
@@ -109,13 +109,18 @@ export const NATIVE_ITEMS: readonly (readonly [number, number])[] = [
   [2, 14], [1, 7], [5, 21], [3, 28], [2, 14], [1, 7], [5, 21], [3, 28], [2, 14], [1, 7],
 ]; // prettier-ignore
 
+/** The Sharp X68000's walls' height, in its text screen's rows (twice the PC's pixels across, near twice down). */
+export const X68K_WALL_ROWS = 316;
+
 /**
- * Piece `i` of `file`'s size in set `kind`'s sheet, [w, h]: the Apple's and the C64's own pieces at their own size, as
- * their machine drew them (drawn into the PC piece's place on the colour page's finer grid, Framebuffer.image); every
+ * Piece `i` of `file`'s size in set `kind`'s sheet, [w, h]: the Apple's, the C64's and the X68000's own pieces at their
+ * own size, as their machine drew them (drawn into the PC piece's place on the colour page's finer grid,
+ * Framebuffer.image) - the X68000's twice the PC's across, its walls 316 rows and the rest twice the PC's down; every
  * other, and a piece recoloured from the PC's, the PC piece's.
  */
 export function nativeSize(kind: Tiles, file: PieceFile, i: number): [number, number] {
   const p = pieceAt(file, i)!;
+  if (kind === 'x68k' && ownPiece(kind, file, i)) return [p.w * 2, file.startsWith('DNG') ? X68K_WALL_ROWS : p.h * 2];
   const perByte = kind === 'c64' ? 8 : kind === 'apple2' || kind === 'apple2e' || kind === 'apple2c' ? 7 : 0;
   const own = perByte && ownPiece(kind, file, i);
   const table = file === 'ITEMS' ? NATIVE_ITEMS : file.startsWith('DNG') ? NATIVE_WALLS : null;
@@ -146,21 +151,26 @@ export interface Skin {
   frame: FrameSkin;
 }
 
-/** A skin from its sheet (RGBA in memory order, `width` wide, laid out as PIECES) and its colours. */
+/**
+ * A skin from its sheet (RGBA in memory order, `width` wide, laid out as PIECES - at a whole multiple of the layout's
+ * size, the X68000's twice it, each piece's place as many times larger) and its colours.
+ */
 export function skinFromSheet(name: Tiles, sheet: Uint32Array, width: number, colours: Pick<Skin, 'ink' | 'sign' | 'frame'>): Skin {
   const cut = new Map<string, Uint32Array>();
+  const k = Math.max(1, Math.round(width / SKIN_SHEET_W));
   return {
     name,
     ...colours,
     piece(file, i) {
       const p = pieceAt(file, i);
-      if (!p || (p.y + p.h) * width > sheet.length) return null;
+      if (!p || (p.y + p.h) * k * width > sheet.length) return null;
       const [w, h] = nativeSize(name, file, i);
+      const [x0, y0] = [p.x * k, p.y * k];
       const key = `${file}:${i}`;
       let px = cut.get(key);
       if (!px) {
         px = new Uint32Array(w * h);
-        for (let y = 0; y < h; y++) px.set(sheet.subarray((p.y + y) * width + p.x, (p.y + y) * width + p.x + w), y * w);
+        for (let y = 0; y < h; y++) px.set(sheet.subarray((y0 + y) * width + x0, (y0 + y) * width + x0 + w), y * w);
         cut.set(key, px);
       }
       return { px, w, h };
@@ -327,7 +337,7 @@ export const SKIN_SPECS: Partial<Record<Tiles, { sheet: string; tint?: number; c
   },
   apple2e: monoSkin(APPLE_GREEN),
   apple2c: monoSkin(APPLE_WHITE),
-  // No dungeon of its own to be had (only its tiles are, from the Ultima Codex): the PC's, in its eight colours.
+  // Its own dungeon off its disk 1 (tools/art/x68kDungeon.ts), in its text palette's colours.
   x68k: {
     sheet: 'x68k-u5-dungeon.png',
     colours: {
@@ -358,7 +368,7 @@ export function tintSheet(sheet: Uint32Array, tint: number): Uint32Array {
 /**
  * Whether piece `i` of `file` is set `kind`'s own picture, or the PC's recoloured for it (the tools' headers say why):
  * the PC CGA's are all its own; the C64's but the narrow doorways (walls 8 and 24) and its creatures; the Apple's but
- * those, its last thing (19) and its creatures; the Sharp X68k's none.
+ * those, its last thing (19) and its creatures; the Sharp X68k's but the doorways.
  */
 export function ownPiece(kind: Tiles, file: PieceFile, i: number): boolean {
   const wall = file === 'DNG1' || file === 'DNG2' || file === 'DNG3';
@@ -371,6 +381,8 @@ export function ownPiece(kind: Tiles, file: PieceFile, i: number): boolean {
     case 'apple2e':
     case 'apple2c':
       return wall ? i !== 8 && i !== 24 : file === 'ITEMS' && i !== 19;
+    case 'x68k':
+      return wall ? i !== 8 && i !== 24 : true;
     default:
       return false;
   }
@@ -402,11 +414,17 @@ export function frameFor(t: Tiles, skin: Skin | null, enhanced: boolean): FrameS
 const EGA_SIGN: SignStyle = { plate: 0x000000, edge: 0x5555ff, ink: 0xffffff };
 
 /**
- * The Enhanced sign's colours in look `t`, its `skin` as loaded: each machine's own, flat - PC EGA's, a skin's - or
- * null for Remastered's, the port's carved stone in the dungeon's colours (and for a skin not yet loaded).
+ * Remastered's sign, flat as PC EGA's is (2026-11-16, the player's choice over the carved stone): its runes in the runes'
+ * red on black, in the dark grey border the Apple //c's has.
+ */
+const REMASTERED_SIGN: SignStyle = { plate: 0x000000, edge: 0x787874, ink: RUNE_RED };
+
+/**
+ * The Enhanced sign's colours in look `t`, its `skin` as loaded: each flat - Remastered's (REMASTERED_SIGN), PC EGA's,
+ * a skin's - or null for a skin not yet loaded (the carved stone, a moment).
  */
 export function signStyleFor(t: Tiles, skin: Skin | null): SignStyle | null {
-  if (t === 'modern-pc') return null;
+  if (t === 'modern-pc') return REMASTERED_SIGN;
   if (t === 'pc-ega') return EGA_SIGN;
   return skin?.sign ?? null;
 }

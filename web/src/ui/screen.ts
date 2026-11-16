@@ -37,7 +37,7 @@ import {
   type Snapshot,
   type Words,
 } from './framebuffer.ts';
-import { doubled, type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
+import { doubled, type PictureKind, restyle, type WallOf } from './standardPictures.ts';
 import { frameFor, mapArtFor, pieceFileOf, portDungeon, signRunes, signStyleFor, type Skin, SkinOvers } from './skins.ts';
 import type { FontChoice, Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
@@ -1510,8 +1510,7 @@ export class Screen implements Platform {
     // A wall is the colour of the dungeon it stands in, so what is kept is kept by both.
     const tint = style === 'dungeon' ? this.tint : 0;
     const at = i * 16 + tint;
-    const grow = style === 'creature' ? twice : doubled;
-    const px = m.get(at) ?? grow(restyle(v, style, tint, style === 'dungeon' ? wallOf(res, i) : undefined), v.width * 2, v.height * 2);
+    const px = m.get(at) ?? doubled(restyle(v, style, tint, style === 'dungeon' ? wallOf(res, i) : undefined), v.width * 2, v.height * 2);
     m.set(at, px);
     return { kind: 'rgba', px, width: v.width * HI, scale: HI };
   }

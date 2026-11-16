@@ -88,6 +88,22 @@ describe('a wandering creature in the corridor (MON0-7.16)', () => {
       expect(new Set(out).size).toBeGreaterThan(3);
     }
   });
+
+  it('draws its pixels as square blocks, nothing of its outline rounded (as PC EGA draws them, in the toned colours)', () => {
+    const { g } = newGame();
+    for (let m = 0; m < 8; m++) {
+      const v = picture(loadResource(g.data.files, g.data.ovl, `MON${m}.16`), 0)!;
+      const out = restyle(v, 'creature');
+      const W = v.width * 2;
+      let rounded = 0;
+      for (let y = 0; y < v.height; y++)
+        for (let x = 0; x < v.width; x++) {
+          const o = y * 2 * W + x * 2;
+          if (new Set([out[o], out[o + 1], out[o + W], out[o + W + 1]]).size !== 1) rounded++;
+        }
+      expect(rounded, `MON${m}`).toBe(0);
+    }
+  });
 });
 
 /** The corridor's own colours as the restyled pictures hold them (RGBA in memory order), and its lines' and openings'. */

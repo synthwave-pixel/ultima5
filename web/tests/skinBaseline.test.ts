@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadResource, picture } from '../src/data/images.ts';
 import { DataOvl } from '../src/data/dataOvl.ts';
 import { Framebuffer, HI, HI_HEIGHT, HI_WIDTH } from '../src/ui/framebuffer.ts';
-import { restyle, twice, type PictureKind } from '../src/ui/standardPictures.ts';
+import { restyle, doubled, type PictureKind } from '../src/ui/standardPictures.ts';
 import { gameFiles } from './helpers.ts';
 
 const fonts = [{ rows: new Uint8Array(128 * 8) }, { rows: new Uint8Array(128 * 8) }];
@@ -32,7 +32,7 @@ function drawn(name: string, kind: PictureKind | null): string {
     for (const flags of [0, 1, 2, 3]) {
       fb.fill(0, 0, 319, 199, 8);
       const over = kind
-        ? { kind: 'rgba' as const, px: twice(restyle(v, kind), v.width * 2, v.height * 2), width: v.width * HI, scale: HI }
+        ? { kind: 'rgba' as const, px: doubled(restyle(v, kind), v.width * 2, v.height * 2), width: v.width * HI, scale: HI }
         : undefined;
       fb.image(v, 8, 8, flags, over);
       hashes.push(hash(fb));

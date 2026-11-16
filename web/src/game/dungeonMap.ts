@@ -596,6 +596,15 @@ export function drawDungeonMap(g: Game): void {
   });
 }
 
+/**
+ * The small map beside the first-person view drawn again at once, where it is up (the Enhanced interface, in a dungeon,
+ * the view the large one, the panel its own height): a look chosen in a menu over it, or its tiles come, show on it then,
+ * not only at the party's next step.
+ */
+export function redrawSideMap(g: Game): void {
+  if (g.inDungeon && g.options.tileSet === 'standard' && g.options.dungeonView === 'mini' && compactPanel(g)) drawDungeonMap(g);
+}
+
 /** drawDungeonMap's drawing: the whole-level map's squares, as the Standard look draws them, for Smooth motion. */
 function drawMap(g: Game, seen: Uint8Array, standard: boolean, full: boolean): ViewCell[] {
   const s = g.s;

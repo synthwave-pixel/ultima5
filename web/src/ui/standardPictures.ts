@@ -9,8 +9,9 @@
  * pixels, recoloured only - the corridor's colours, a wall in its
  * dungeon's light - each a square block at the colour page's size, the
  * stipple and dithers as drawn. And its wandering creatures (MON0-7.16),
- * their pixels kept in Modern PC's toned colours, drawn larger by EPX,
- * which follows a diagonal rather than squaring it off.
+ * their pixels kept in Remastered's toned colours, square blocks too, as
+ * PC EGA draws them (November 2026, the player's choice: no longer EPX's
+ * rounded corners).
  * Everything else - the title, the introduction, the gypsy's cards, the
  * ending - is shown in both looks as the game drew it: its own pixels in its
  * own colours (screen.ts).
@@ -292,67 +293,10 @@ export function restyle(v: Picture, kind: PictureKind, tint = 0, wall?: WallOf):
       flat[y * w + x] = TONED[c];
     }
   }
-  if (kind !== 'creature') {
-    return doubled(
-      Uint32Array.from(flat, (rgb, k) => (clear[k] ? 0 : abgr(rgb))),
-      w,
-      h,
-    );
-  }
-  // EPX: each pixel becomes four, a corner taking its neighbours' colour where two of them agree and the
-  // diagonal does not, so a stair-step reads as a slope.
-  const out = new Uint32Array(w * 2 * h * 2);
-  const W = w * 2;
-  const px = (x: number, y: number): number => (x < 0 || y < 0 || x >= w || y >= h ? -1 : flat[y * w + x]);
-  const see = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && clear[y * w + x] === 1;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const p = flat[y * w + x];
-      const up = px(x, y - 1);
-      const down = px(x, y + 1);
-      const left = px(x - 1, y);
-      const right = px(x + 1, y);
-      let e0 = p;
-      let e1 = p;
-      let e2 = p;
-      let e3 = p;
-      // Two neighbours off the picture's edge agree (-1 both) at its corners, and are no colour to take: left alone,
-      // a corner pixel was white - a white dot at each corner of every wall, along the view's top and bottom.
-      if (left === up && up >= 0 && left !== down && up !== right && !see(x - 1, y) && !see(x, y - 1)) e0 = up;
-      if (up === right && up >= 0 && up !== left && right !== down && !see(x + 1, y) && !see(x, y - 1)) e1 = right;
-      if (down === left && down >= 0 && down !== right && left !== up && !see(x - 1, y) && !see(x, y + 1)) e2 = left;
-      if (right === down && right >= 0 && right !== up && down !== left && !see(x + 1, y) && !see(x, y + 1)) e3 = down;
-      const o = y * 2 * W + x * 2;
-      const a = clear[y * w + x] === 1 ? 0 : 0xff000000;
-      out[o] = a ? abgr(e0) : 0;
-      out[o + 1] = a ? abgr(e1) : 0;
-      out[o + W] = a ? abgr(e2) : 0;
-      out[o + W + 1] = a ? abgr(e3) : 0;
-    }
-  }
-  return out;
-}
-
-/**
- * A picture at twice its size, its edges followed rather than squared
- * (EPX): a pixel's corner takes the colour of the two neighbours beside
- * it where they agree with each other and with nothing else. The colour
- * page is four times the EGA's size and a restyled picture twice, so
- * this carries one to the other.
- */
-export function twice(px: Uint32Array, w: number, h: number): Uint32Array {
-  const out = new Uint32Array(w * 2 * h * 2);
-  const at = (x: number, y: number): number => px[Math.max(0, Math.min(h - 1, y)) * w + Math.max(0, Math.min(w - 1, x))];
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const p = px[y * w + x];
-      const [a, b, c, d] = [at(x, y - 1), at(x + 1, y), at(x - 1, y), at(x, y + 1)];
-      const o = y * 2 * w * 2 + x * 2;
-      out[o] = c === a && c !== d && a !== b ? a : p;
-      out[o + 1] = a === b && a !== c && b !== d ? b : p;
-      out[o + w * 2] = d === c && d !== b && c !== a ? c : p;
-      out[o + w * 2 + 1] = b === d && b !== a && d !== c ? d : p;
-    }
-  }
-  return out;
+  // Each pixel a square of four, as PC EGA draws them: nothing rounded, nothing blended.
+  return doubled(
+    Uint32Array.from(flat, (rgb, k) => (clear[k] ? 0 : abgr(rgb))),
+    w,
+    h,
+  );
 }

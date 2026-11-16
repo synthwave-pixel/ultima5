@@ -23,6 +23,7 @@ import { somethingBeside } from './items.ts';
 import { itemCounts, nextHeld, unloaded } from './zstats.ts';
 import { turnMember } from './turn.ts';
 import { holdFullPanel } from './layout.ts';
+import { redrawSideMap } from './dungeonMap.ts';
 import { drawSwitchCard } from './readyCard.ts';
 import { journalTop, type JournalLine } from './journal.ts';
 import { lootField, lootOffer } from './loot.ts';
@@ -2165,6 +2166,8 @@ async function optionsMenu(g: Game, title: string, lines: () => Setting[]): Prom
       if (typeof done === 'number') return done;
       saveOptions(o);
       g.hooks.applyOptions?.(o);
+      // The map beside the dungeon's view, under the menu, in the look as it now is.
+      redrawSideMap(g);
     }
   } finally {
     if (--settingsDepth === 0) {
