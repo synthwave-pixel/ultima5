@@ -273,7 +273,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     sound.setMusicVoice(soundtrackOf(o.soundChoice));
     sound.setMusic(o.musicLevel);
     screen.setFont(o.font);
-    screen.setTileArt(o.tileSet, o.tileSet === 'standard' ? o.tiles : o.pcTiles, o.outlines);
+    screen.setTileArt(o.tileSet, o.tiles);
     g.draw.avatar?.(g.appearance, addressedAsLady(g));
     g.viewDirty = 1;
   };

@@ -12,6 +12,9 @@ import { loadResource, picture, type Picture } from '../data/images.ts';
 import { GameData } from '../game/data.ts';
 import { EGA_PALETTE } from '../data/tiles.ts';
 import { restyle } from '../ui/standardPictures.ts';
+import { loadSkin } from '../ui/loadArt.ts';
+import { ownPiece, pieceFileOf, type Skin } from '../ui/skins.ts';
+import { TILES_NAMES, type Tiles } from '../game/settings.ts';
 
 const params = new URLSearchParams(location.search);
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -60,6 +63,10 @@ async function start(): Promise<void> {
   for (const n of ['every file', ...names]) file.append(new Option(n, n));
   for (const el of [file, show, size]) el.value = params.get(el.id) ?? el.value;
   const main = $('pictures');
+  /** The sets with a skin of their own (skins.ts), each made once, when first shown. */
+  const SKINNED: Tiles[] = ['pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
+  const skins = new Map<Tiles, Skin | null>();
+  for (const t of SKINNED) skins.set(t, await loadSkin(t));
 
   const build = (): void => {
     const q = new URLSearchParams({ file: file.value, show: show.value, size: size.value });
@@ -67,7 +74,9 @@ async function start(): Promise<void> {
     history.replaceState(null, '', `?${q.toString().replace('dev=&', 'dev&').replace(/dev=$/, 'dev')}`);
     main.textContent = '';
     const scale = Number(size.value);
-    for (const name of file.value === 'every file' ? names : [file.value]) {
+    const skinsShown = show.value === 'skins';
+    const listed = file.value === 'every file' ? names : [file.value];
+    for (const name of skinsShown ? listed.filter((n) => pieceFileOf(n)) : listed) {
       const res = loadResource(files, data.ovl, name);
       const count = res[0] | (res[1] << 8);
       const kind = /^(DNG|ITEMS)/.test(name) ? 'dungeon' : 'scene';
@@ -81,6 +90,28 @@ async function start(): Promise<void> {
         const cap = document.createElement('figcaption');
         cap.textContent = `${i}: ${v.width} by ${v.height}${v.mask ? ', masked' : ''}`;
         const row = document.createElement('div');
+        if (skinsShown) {
+          // The PC's own, then each set's, its name beside it; a piece the PC's recoloured for that set, outlined.
+          const file = pieceFileOf(name)!;
+          row.appendChild(canvasOf(doubled(v), v.width * 2, v.height * 2, scale));
+          for (const t of SKINNED) {
+            const piece = skins.get(t)?.piece(file, i);
+            if (!piece) continue;
+            // At its own size, drawn into twice the PC piece's (nearest), as the game draws it into the PC's place.
+            const [bw, bh] = [v.width * 2, v.height * 2];
+            const big = new Uint32Array(bw * bh);
+            for (let y = 0; y < bh; y++)
+              for (let x = 0; x < bw; x++)
+                big[y * bw + x] = piece.px[Math.floor(((y + 0.5) * piece.h) / bh) * piece.w + Math.floor(((x + 0.5) * piece.w) / bw)];
+            const canvas = canvasOf(big, v.width * 2, v.height * 2, scale);
+            canvas.title = `${TILES_NAMES[t]}${ownPiece(t, file, i) ? '' : ", the PC's recoloured"}`;
+            if (!ownPiece(t, file, i)) canvas.style.outline = '2px dashed #c86';
+            row.appendChild(canvas);
+          }
+          fig.append(cap, row);
+          main.appendChild(fig);
+          continue;
+        }
         if (show.value !== 'standard') row.appendChild(canvasOf(doubled(v), v.width * 2, v.height * 2, scale));
         // A scene is the game's own in both looks; only the corridor's are the Standard look's own.
         if (show.value !== 'original')

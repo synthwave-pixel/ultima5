@@ -20,7 +20,7 @@ The web game and the Android app have no Steam support.
 | Windows | Installer | Paste the launch line the app gives you into Steam's Launch Options | Yes, reaching a Mac too (see macOS Sync below) |
 | Windows | Portable `.exe` | Not available (no fixed place for Steam to start) | - |
 | macOS | App in Applications | The app adds a Mac launch to Steam's settings, closing Steam to do it | Yes |
-| SteamOS and Linux | AppImage | The compatibility tool, Ultima V SP, chosen in Steam's Compatibility settings | Yes, reaching a Mac too (see macOS Sync below) |
+| SteamOS and Linux | AppImage | The compatibility tool, Ultima V Enhanced Edition, chosen in Steam's Compatibility settings | Yes, reaching a Mac too (see macOS Sync below) |
 | SteamOS and Linux | Flatpak | Works, but the AppImage is recommended: it reaches SD-card libraries, and its saves reach a Mac | Yes, but saves made here don't reach a Mac |
 
 ## macOS Sync
@@ -110,7 +110,7 @@ The options differ by system:
 | --- | --- | --- | --- |
 | Windows | Play from Steam → Launch line | Shows the launch line to copy | Tells you to clear the line in Steam |
 | Linux | Play from Steam → Launch line, kept from 1.1.196–1.1.198 | No longer offered | Tells you to clear the line in Steam |
-| Linux | Play from Steam → Compat. tool | Installs the compatibility tool, Ultima V SP | Removes it |
+| Linux | Play from Steam → Compat. tool | Installs the compatibility tool, Ultima V Enhanced Edition | Removes it |
 | macOS | Play from Steam | Warns that it closes Steam and asks you to confirm, then edits Steam's settings | Asks to quit Steam if it is running, then puts Steam's settings back |
 | All | Cloud Saves | Copies this computer's saves into Steam's folder | Copies Steam's saves back |
 
@@ -123,7 +123,7 @@ The options differ by system:
 - **Linux and SteamOS**: the AppImage is the build to use (see [The AppImage](#the-appimage-for-steam-on-linux-and-the-deck)); the
   Flatpak works less well with Steam, and its Steam (beta) menu says so and
   links the AppImage's download. Compat. tool installs a compatibility tool
-  named Ultima V SP. Restart Steam, then in Ultima V → ⚙ → Properties →
+  named Ultima V Enhanced Edition. Restart Steam, then in Ultima V → ⚙ → Properties →
   Compatibility, choose it, and leave Launch Options empty: Steam downloads
   the game if it has not yet, and Play starts this engine, in Desktop Mode
   and in a Steam Deck's Game Mode. The tool runs the engine as Steam's own
@@ -179,9 +179,15 @@ The options differ by system:
 
 Steam names the game "Ultima V" wherever the app cannot rename it, which is
 the Windows launch line. The app says which edition it is itself:
-the window title and the title screen show **Ultima V SP** and its version,
-and Settings ends with the same, greyed. The Mac launch entry and the Linux
-compatibility tool are named Ultima V SP in Steam.
+the window title and the title screen show **Ultima V Enhanced Edition** and
+its version, and Settings ends with the same, greyed, a line each. The Linux
+compatibility tool is named Ultima V Enhanced Edition in Steam, and so is the
+Mac launch entry made from now on (one made before keeps its old name, Ultima V
+SP, as rewriting it would mean quitting Steam). On a Mac, Play starts a small
+launcher app in the game's folder (`Ultima V SP.app`, its file name kept so an
+earlier setup is found again), which carries the app's own icon, so the Dock
+shows Ultima V's while Steam plays it. Saves and the app's own folders keep
+their names (`ultima5-sp`).
 
 **Checking the launch line.** Where Play uses a pasted line (Windows), the
 menu reads back what Steam has saved for Ultima V

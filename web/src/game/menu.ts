@@ -1090,6 +1090,8 @@ const STEAL = 0x10a;
 const STEAL_CHEST = 0x10b;
 /** Wait in a towne (cmds.ts waitInTown): the hours passed off a bed. */
 const WAIT = 0x10c;
+/** The Enhanced dungeon's Change View: its first-person view large, the map beside it, or the other way round. */
+const DUNGEON_VIEW = 0x10d;
 
 /** The four squares around the party. */
 function around(g: Game): [number, number][] {
@@ -1314,6 +1316,8 @@ function everything(g: Game): Item[] {
   const member = (o: Offer): Offer => (creature ? 'hide' : o);
   const list: Item[] = [
     ...offered({ label: 'Look', key: c('L') }, only(!combat)),
+    // The Enhanced dungeon's two layouts, the first-person view large and the map beside it or the other way round.
+    ...offered({ label: 'Change View', key: DUNGEON_VIEW }, only(!combat && dungeonViews(g))),
     ...offered({ label: 'Search', key: c('S') }, member(searchOffer(g))),
     ...offered({ label: 'Get', key: c('G') }, member(getOffer(g))),
     ...offered({ label: 'Steal', key: STEAL }, member(stealOffer(g))),
@@ -1347,7 +1351,9 @@ function everything(g: Game): Item[] {
   // the Pause menu, and saving, quitting, Auto combat and the party's order (New order) are there. The journal and the
   // map are here alone.
   list.push({ label: 'Journal', key: 0x100 + 2 });
-  if (!combat) list.push({ label: 'Map', key: 0x100 + 3 });
+  // Map: the maps' page; in the Enhanced dungeon a look at the whole level, while the first-person view is the large
+  // one (with the map large already, there is nothing for it to show).
+  if (!combat && !(dungeonViews(g) && g.options.dungeonView === 'full')) list.push({ label: 'Map', key: 0x100 + 3 });
   return list;
 }
 
@@ -1367,14 +1373,35 @@ export function menuSound(g: Game, what: 'move' | 'back'): void {
   else void cue(g, 'Back', () => g.sound.pulse(2300, 1, 18000, 1, 2)); // the Original's: the low note of the shop counter
 }
 
-/** Whether the Map command switches the dungeon's view (the Standard look, in a dungeon) rather than showing the world's map. */
+/** Whether the dungeon has two layouts to switch between (the Enhanced interface's): Change View's, and Map's look. */
 function dungeonViews(g: Game): boolean {
   return g.inDungeon && g.options.tileSet === 'standard';
 }
 
 /**
- * The Standard look's dungeon, its Map command: the first-person view with the map round the party beside it, or the
- * whole level's map with the first-person view small beside it (dungeonMap.ts), the choice kept.
+ * The Enhanced dungeon's Map: the whole level's map, large, as Change View's layout draws it (dungeonMap.ts) - to look
+ * at, not to walk by - until A or B (Enter, Escape, Space), then the first-person view large again. Not kept: the
+ * layout chosen is Change View's, and is saved again after, in case the settings were saved (the Pause menu's) while
+ * the level was looked at.
+ */
+async function peekAtLevel(g: Game): Promise<void> {
+  g.options.dungeonView = 'full';
+  try {
+    await restoreView(g);
+    for (;;) {
+      const k = await key(g);
+      if (k === Pad.A || k === Pad.B || k === K.Enter || k === K.Escape || k === K.Space) break;
+    }
+  } finally {
+    g.options.dungeonView = 'mini';
+    saveOptions(g.options);
+    await restoreView(g);
+  }
+}
+
+/**
+ * The Enhanced dungeon's Change View command: the first-person view with the map round the party beside it, or the whole
+ * level's map with the first-person view small beside it (dungeonMap.ts), the choice kept.
  */
 function switchDungeonView(g: Game): void {
   g.options.dungeonView = g.options.dungeonView === 'full' ? 'mini' : 'full';
@@ -1515,10 +1542,13 @@ export async function commandMenu(g: Game): Promise<number> {
   switch (k) {
     case 0x102:
       return journalScreen(g);
+    case DUNGEON_VIEW:
+      switchDungeonView(g);
+      await restoreView(g);
+      return 0;
     case 0x103:
       if (dungeonViews(g)) {
-        switchDungeonView(g);
-        await restoreView(g);
+        await peekAtLevel(g);
         return 0;
       }
       await g.hooks.showMap?.(g.s.level === 0xff);
@@ -1662,8 +1692,8 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           },
         },
         audioLine(g),
-        gameplayLine(g),
-        appearanceLine(g, true),
+        gameplayLine(g, true),
+        appearanceLine(g),
         {
           label: 'Settings',
           act: () => settingsMenu(g).then(() => undefined),
@@ -1770,10 +1800,16 @@ const RULES_NOTES: Record<Rules, string> = {
 };
 const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller: 'Controller' };
 
-/** The edition's name with the app's version, where the page has one (the web has none): Settings' last line, the title's. */
+/** The edition and the app's version as Settings' last lines, greyed: the version where the page has one. */
+function editionLines(g: Game): Setting[] {
+  const version = g.hooks.version?.();
+  return [{ label: 'Enhanced Edition', enabled: false }, ...(version ? [{ label: `Version ${version}`, enabled: false }] : [])];
+}
+
+/** The edition's name with the app's version, where the page has one (the web has none): the title's. */
 export function editionName(g: Game): string {
   const version = g.hooks.version?.();
-  return version ? `Ultima V SP ${version}` : 'Ultima V SP';
+  return version ? `Ultima V Enhanced Edition ${version}` : 'Ultima V Enhanced Edition';
 }
 
 /** One line of the Settings menu: what it says, and what choosing it does. */
@@ -1878,7 +1914,7 @@ function effectsLevelLine(g: Game): Setting {
 }
 
 /**
- * Settings: how the game looks - the UX, its tiles and what goes over them - and in play the keeping of the saved game.
+ * Settings: what is left over - the battery saver - and in play the keeping of the saved game.
  * At the title, with no Pause menu to hold them, Audio and Gameplay too. Each line carries what it does, so lines may
  * be added or moved without any numbering to keep in step.
  */
@@ -1886,19 +1922,6 @@ export function settingLines(g: Game, title = false): Setting[] {
   const o = g.options;
   return [
     { label: 'Back', note: '' },
-    {
-      // The foe a snap attack would strike, marked in a fight (combat.ts snapMark): of Snap attacks, in Gameplay.
-      label: `Snap targets: ${onOff(o.snapTargets)}`,
-      note: 'In a fight, small arrows round the foe X would strike. LB/RB or [ ] pick another.',
-      enabled: o.autoAim,
-      act: () => void (o.snapTargets = !o.snapTargets),
-    },
-    {
-      // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
-      label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
-      note: 'Play: what is said, in the play area. Log: in the message log.',
-      act: () => void (o.dialog = o.dialog === 'play' ? 'log' : 'play'),
-    },
     {
       // The map at rest after a quiet minute, till a press (screen.ts waitKey): for a phone left with the game open.
       label: `Battery saver: ${onOff(o.batterySaver)}`,
@@ -1911,14 +1934,15 @@ export function settingLines(g: Game, title = false): Setting[] {
     // A game carried in and out (transfer.ts): at the title these are Manage Saves' (characterMenu.ts), with Delete
     // Character and Remove game files.
     ...(title ? [] : transferLines(g)),
-    // Which edition this is and its version, for a tester's report: grey, and the bar steps over it.
-    { label: editionName(g), enabled: false },
+    // Which edition this is and its version, for a tester's report: grey, and the bar steps over them - a line each,
+    // as the whole name and version are wider than the menu.
+    ...editionLines(g),
   ];
 }
 
-/** What each set of tiles is, as Appearance's Tiles line says it (three rows at most). */
+/** What each look is, as Appearance's Look line says it (three rows at most). */
 const TILES_NOTES: Record<Tiles, string> = {
-  'modern-pc': "Modern PC: 1988's art redone for the Modern screen.",
+  'modern-pc': "Remastered: 1988's art redrawn for the Enhanced interface.",
   'pc-ega': "PC EGA: the 1988 PC game's own tiles.",
   'pc-cga': "PC CGA: the 1988 PC game's four-colour tiles.",
   apple2: "Apple Color: the Apple II's own tiles, in colour.",
@@ -1938,9 +1962,9 @@ const FONT_NOTES: Record<FontChoice, string> = {
 };
 
 /**
- * Appearance: how the game looks - the UX and its tiles, the figures' outlines, the party's status letters, the font
- * (any font in either UX), scanlines, smooth motion and the PC (1988) look's dungeon map. The Pause menu's, and
- * Settings' at the title.
+ * Appearance: how the game looks - its look (the tiles, the frame and the dungeon), the party's status letters, the
+ * font (any font in either interface), where dialog is shown, scanlines, smooth motion and the Retro interface's
+ * dungeon map. The Pause menu's, and Settings' at the title.
  */
 export function appearanceLines(g: Game): Setting[] {
   const o = g.options;
@@ -1948,28 +1972,14 @@ export function appearanceLines(g: Game): Setting[] {
   return [
     { label: 'Back', note: '' },
     {
-      // The look: the port's own screen (Modern), or the 1988 PC release's EGA tiles and screen (the setting's values are
-      // still 'standard' and 'original').
-      label: `UX: ${o.tileSet === 'standard' ? 'Modern' : 'PC (1988)'}`,
-      note: "Modern: the port's screen, with a choice of tiles. PC (1988): the 1988 game's.",
-      act: () => void (o.tileSet = o.tileSet === 'standard' ? 'original' : 'standard'),
-    },
-    {
-      // The look's tiles, one set after another: the Modern look's (settings.ts Tiles) or the PC (1988) look's
-      // (PcTiles), each look keeping its own choice.
-      label: `Tiles: ${TILES_NAMES[o.tileSet === 'standard' ? o.tiles : o.pcTiles]}`,
-      note: TILES_NOTES[o.tileSet === 'standard' ? o.tiles : o.pcTiles],
+      // The look, one set after another - its tiles, its frame and its dungeon (skins.ts): every set under Enhanced
+      // (settings.ts Tiles), all but Remastered under Retro (PcTiles); one choice for either interface.
+      label: `Look: ${TILES_NAMES[o.tiles]}`,
+      note: TILES_NOTES[o.tiles],
       act: () => {
-        if (o.tileSet === 'standard') o.tiles = TILES[(TILES.indexOf(o.tiles) + 1) % TILES.length];
-        else o.pcTiles = PC_TILES[(PC_TILES.indexOf(o.pcTiles) + 1) % PC_TILES.length];
+        const offered: readonly Tiles[] = o.tileSet === 'standard' ? TILES : PC_TILES;
+        o.tiles = offered[(offered.indexOf(o.tiles) + 1) % offered.length];
       },
-    },
-    {
-      // A fine black line round Modern PC's people and creatures (standardArt.ts OUTLINE_WIDTH), not round what stands.
-      label: `Outlines: ${onOff(o.outlines)}`,
-      note: 'A fine black line round every person and creature, to see them on busy ground.',
-      enabled: o.tileSet === 'standard' && o.tiles === 'modern-pc',
-      act: () => void (o.outlines = !o.outlines),
     },
     {
       // The state's letter on the frame beside a member (P, S, D, C), as well as their name's colour: the Standard
@@ -1986,9 +1996,15 @@ export function appearanceLines(g: Game): Setting[] {
       act: () => void (o.font = FONTS[(FONTS.indexOf(o.font) + 1) % FONTS.length]),
     },
     {
+      // Where a townsman's words are shown (speech.ts): in the play area, or the log as 1988 had it.
+      label: `Dialog: ${o.dialog === 'play' ? 'Play' : 'Log'}`,
+      note: 'Play: what is said, in the play area. Log: in the message log.',
+      act: () => void (o.dialog = o.dialog === 'play' ? 'log' : 'play'),
+    },
+    {
       // Each look its own: the PC (1988) look's on until turned off.
       label: `Scanlines: ${onOff(pc ? o.pcScanlines : o.scanlines)}`,
-      note: 'Dark bands over the picture, as an old monitor had. Each UX keeps its own.',
+      note: 'Dark bands over the picture, as an old monitor had. Each interface keeps its own.',
       act: () => void (pc ? (o.pcScanlines = !o.pcScanlines) : (o.scanlines = !o.scanlines)),
     },
     // The Modern look's alone: the PC (1988) look steps from square to square, as 1988 did.
@@ -2019,22 +2035,12 @@ export async function appearanceMenu(g: Game): Promise<number> {
   return optionsMenu(g, 'Appearance', () => appearanceLines(g));
 }
 
-/**
- * The line that opens Appearance: on the Pause menu, below Gameplay, and in Settings at the title. In play, a new UX
- * lays the screen out again: the Standard panel and its borders, or 1988's (layout.ts).
- */
-function appearanceLine(g: Game, inPlay = false): Setting {
+/** The line that opens Appearance: on the Pause menu, below Gameplay, and in Settings at the title. */
+function appearanceLine(g: Game): Setting {
   return {
     label: 'Appearance',
-    note: 'How the game looks: UX, tiles, font, scanlines, smooth motion.',
-    act: async () => {
-      const look = g.options.tileSet;
-      await appearanceMenu(g);
-      if (inPlay && g.options.tileSet !== look) {
-        const { relayout } = await import('./layout.ts');
-        await relayout(g);
-      }
-    },
+    note: 'How the game looks: the look, font, dialog, scanlines, smooth motion.',
+    act: () => appearanceMenu(g).then(() => undefined),
   };
 }
 
@@ -2067,11 +2073,34 @@ export function transferLines(g: Game): Setting[] {
   ];
 }
 
-/** Gameplay: how the game plays - its input, and the rules the port lets the player soften or keep as 1988's. */
+/**
+ * Gameplay: how the game plays - the interface, its input, and the rules the port lets the player soften or keep as
+ * 1988's.
+ */
 export function gameplayLines(g: Game): Setting[] {
   const o = g.options;
   return [
     { label: 'Back', note: '' },
+    {
+      // The interface (settings.ts tileSet, its values the looks' old names): the port's screen and conveniences, or
+      // 1988's. Remastered is Enhanced's alone: Retro asks first, then takes PC EGA, the set it is drawn from.
+      label: `Interface: ${o.tileSet === 'standard' ? 'Enhanced' : 'Retro'}`,
+      note:
+        o.tileSet === 'standard'
+          ? "Enhanced: smooth motion, combat aids. Retro: 1988's."
+          : "Retro: 1988's. Enhanced: smooth motion, combat aids.",
+      act: async () => {
+        if (o.tileSet === 'original') {
+          o.tileSet = 'standard';
+          return;
+        }
+        if (o.tiles === 'modern-pc') {
+          if (!(await confirm(g, 'Retro has no Remastered look: it changes to PC EGA, the look it is drawn from.'))) return;
+          o.tiles = 'pc-ega';
+        }
+        o.tileSet = 'original';
+      },
+    },
     // Letters want a keyboard: the choice is a keyboard's to make (game.ts lastSource; the ultima3 port's).
     ...(g.lastSource === 'keyboard'
       ? [
@@ -2097,6 +2126,13 @@ export function gameplayLines(g: Game): Setting[] {
       label: `Snap attacks: ${onOff(o.autoAim)}`,
       note: 'X (keyboard Q or C), or walking into a foe, strikes it, no crosshair.',
       act: () => void (o.autoAim = !o.autoAim),
+    },
+    {
+      // The foe a snap attack would strike, marked in a fight (combat.ts snapMark): Snap attacks' own.
+      label: `Snap targets: ${onOff(o.snapTargets)}`,
+      note: 'In a fight, small arrows round the foe X would strike. LB/RB or [ ] pick another.',
+      enabled: o.autoAim,
+      act: () => void (o.snapTargets = !o.snapTargets),
     },
     {
       label: `Max input: ${INPUT_PACE_LABELS[o.maxInput]}`,
@@ -2167,12 +2203,22 @@ function audioLine(g: Game): Setting {
   };
 }
 
-/** The line that opens Gameplay: on the Pause menu, and in Settings at the title. */
-function gameplayLine(g: Game): Setting {
+/**
+ * The line that opens Gameplay: on the Pause menu, and in Settings at the title. In play, a new interface lays the
+ * screen out again: the Enhanced panel and its borders, or 1988's (layout.ts).
+ */
+function gameplayLine(g: Game, inPlay = false): Setting {
   return {
     label: 'Gameplay',
-    note: 'How the game plays: input, auto pause, the rules, snap attacks, max input.',
-    act: () => gameplayMenu(g).then(() => undefined),
+    note: 'How the game plays: interface, input, rules and more.',
+    act: async () => {
+      const look = g.options.tileSet;
+      await gameplayMenu(g);
+      if (inPlay && g.options.tileSet !== look) {
+        const { relayout } = await import('./layout.ts');
+        await relayout(g);
+      }
+    },
   };
 }
 

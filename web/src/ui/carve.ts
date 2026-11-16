@@ -136,11 +136,10 @@ function vcut(mask: Uint8Array, wall: Uint32Array, side: number, out: Uint32Arra
  * stone (0x323852), its bevel their lightest (0x48506a) and darkest (0x24283a), its outline and bolts their joint
  * (0x181a26).
  */
-const PLATE = 0xff523832;
-const PLATE_LIT = 0xff6a5048;
-const PLATE_SHADE = 0xff3a2824;
-const BOLT = 0xff261a18;
-const OUTLINE = BOLT;
+const PLATE_FACE = 0xff523832;
+const PLATE_LIGHT = 0xff6a5048;
+const PLATE_DARK = 0xff3a2824;
+const PLATE_BOLT = 0xff261a18;
 
 /**
  * A bolted plate over the wall on `page` (RGBA, `stride` pixels to a row), its top left (x, y), `w` by `h` pixels,
@@ -150,7 +149,24 @@ const OUTLINE = BOLT;
  * Drawn at the grain of the corridor's pictures round it, in squares of half one of 1988's pixels (they are shown at
  * twice 1988's size), as the sign's letters are cut.
  */
-export function plate(page: Uint32Array, stride: number, x: number, y: number, w: number, h: number, unit: number, scale = 1): void {
+export function plate(
+  page: Uint32Array,
+  stride: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  unit: number,
+  scale = 1,
+  flat?: { plate: number; edge: number },
+): void {
+  // In a look's own colours (`flat`, 0xRRGGBB), flat: its face the plate's, its edge, bevel and bolts the edge's;
+  // else the cobbles' plate, lit, shaded and bolted.
+  const own = (c: number): number => (0xff000000 | ((c & 0xff) << 16) | (c & 0xff00) | (c >> 16)) >>> 0;
+  const [PLATE, PLATE_LIT, PLATE_SHADE, BOLT] = flat
+    ? [own(flat.plate), own(flat.edge), own(flat.edge), own(flat.edge)]
+    : [PLATE_FACE, PLATE_LIGHT, PLATE_DARK, PLATE_BOLT];
+  const OUTLINE = BOLT;
   const t = Math.max(1, Math.round(unit / 2));
   const [tw, th] = [Math.ceil(w / t), Math.ceil(h / t)];
   const img = new Uint32Array(tw * th);

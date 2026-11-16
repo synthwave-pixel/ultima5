@@ -4,7 +4,8 @@
  * The PC CGA tile sheet (public/graphics/cga-u5-tiles.png) from the 1988 PC game's own CGA tiles: `npm run cga --
  * <TILES.4>`, the file from the MS-DOS game (any copy: GOG's, Steam's, the original disks'). TILES.4 is the EGA's
  * TILES.16 for a CGA card - the same 512 tiles in the same order, the EGA's drawings recoloured by hand, tile by tile,
- * in the CGA's four colours (palette 1, bright: black, cyan, magenta, white). LZW-compressed as TILES.16 is; each tile
+ * in the CGA's four colours (palette 1 at low intensity: black, cyan, magenta, light grey - its CGA.DRV sets mode 4,
+ * then palette 1, then the background black with the intensity bit clear). LZW-compressed as TILES.16 is; each tile
  * 16 by 16, two bits a pixel, the high bits the leftmost, 64 bytes a tile. Drawn 32 tiles to a row.
  */
 
@@ -19,8 +20,8 @@ export const SHEET_COLUMNS = 32;
 /** A tile's bytes, decompressed: 16 rows of four. */
 const BYTES = (TILE * TILE) / 4;
 
-/** The CGA's colours as Ultima V uses them (palette 1, bright), by a pixel's two bits (0xRRGGBB). */
-export const CGA_COLOURS = [0x000000, 0x55ffff, 0xff55ff, 0xffffff] as const;
+/** The CGA's colours as Ultima V sets them (palette 1, low intensity), by a pixel's two bits (0xRRGGBB). */
+export const CGA_COLOURS = [0x000000, 0x00aaaa, 0xaa00aa, 0xaaaaaa] as const;
 
 /** Tile `t`'s pixel at (x, y), 0-3, of TILES.4 decompressed (`raw`). */
 export const cgaPixel = (raw: Uint8Array, t: number, x: number, y: number): number =>

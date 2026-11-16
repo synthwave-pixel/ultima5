@@ -246,7 +246,7 @@ function macPatch(kv, launcherName) {
   if (!ours) {
     launch.push(
       map(nextKey(launch), [
-        str('description', 'Ultima V SP'),
+        str('description', 'Ultima V Enhanced Edition'),
         str('executable', launcherName),
         str('type', 'default'),
         map('config', [str('oslist', 'macos')]),

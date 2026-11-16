@@ -38,23 +38,26 @@ describe('the settings, at the title and in play', () => {
   });
 });
 
-/** The edition's name and version, as Settings' last line (menu.ts): grey and not to be chosen. */
-describe('the SP edition in Settings', () => {
-  it('ends with its name and the version the page gives, greyed and unselectable', () => {
+/** The edition's name and version, as Settings' last lines (menu.ts): grey and not to be chosen, each fitting the menu. */
+describe('the Enhanced Edition in Settings', () => {
+  it('ends with its name and then the version the page gives, greyed and unselectable, each within the menu', () => {
     for (const title of [true, false]) {
       const { g } = newGame();
       g.hooks.version = () => '1.1.200';
-      const last = settingLines(g, title).at(-1);
-      expect(last?.label).toBe('Ultima V SP 1.1.200');
-      expect(last?.enabled).toBe(false);
-      expect(last?.rest).not.toBe(true);
+      const [name, version] = settingLines(g, title).slice(-2);
+      expect([name?.label, version?.label]).toEqual(['Enhanced Edition', 'Version 1.1.200']);
+      for (const line of [name, version]) {
+        expect(line?.enabled).toBe(false);
+        expect(line?.rest).not.toBe(true);
+        expect(line.label.length).toBeLessThanOrEqual(21);
+      }
     }
   });
 
   it('says the name alone where the page has no version (the web)', () => {
     const { g } = newGame();
-    expect(settingLines(g).at(-1)?.label).toBe('Ultima V SP');
+    expect(settingLines(g).at(-1)?.label).toBe('Enhanced Edition');
     g.hooks.version = () => undefined;
-    expect(settingLines(g).at(-1)?.label).toBe('Ultima V SP');
+    expect(settingLines(g).at(-1)?.label).toBe('Enhanced Edition');
   });
 });

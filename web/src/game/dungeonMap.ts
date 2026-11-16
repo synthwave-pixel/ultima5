@@ -18,7 +18,7 @@
  * going on beneath it unseen until the map is lifted.
  */
 
-import { Colour, DUNGEON_TINTS } from '../ui/colours.ts';
+import { Colour, DUNGEON_TINTS, OWN_COLOURS, OWN_ROCK_LIGHT } from '../ui/colours.ts';
 import { creatureSeen, feltCells, inTheDark } from './fog.ts';
 import { creatureFrame, partyFigures } from './world.ts';
 import { compactPanel, Win } from './frame.ts';
@@ -123,34 +123,43 @@ const passable = (kind: Kind): boolean => kind !== 'rock' && kind !== 'rubble';
 /** A field's colour, by its kind (the low bits): as the view's crackle has it (dungeon.ts field). */
 const FIELD_COLOURS = [Colour.magenta, Colour.green, Colour.red, Colour.blue];
 
-/** A cell in the Standard look's tiles (STANDS); false where the look draws no tiles, and nothing is drawn. */
+/**
+ * How a cell of `kind` (a field's colour its cell's low bits, `field`) is drawn in the look's tiles (STANDS), one over another - each with its tint, the rock's Remastered's
+ * dungeon light - and a box of an EGA colour over its middle where the original drew one (a pit, a field): the Enhanced
+ * map's and the maps' page's alike (interiorMap.ts dungeonPicture).
+ */
+export function cellLook(g: Game, kind: Kind, field = 0): { tiles: { tile: number; tint?: number }[]; box?: number } {
+  const dungeon = g.s.mapId - 0x20;
+  // The dungeon's light, Remastered's own: every other look's wall as its look draws it.
+  // Hythloth's (OWN_COLOURS) its own red rock's.
+  const lit = OWN_COLOURS.includes(dungeon) ? OWN_ROCK_LIGHT : DUNGEON_TINTS[dungeon >= 1 && dungeon <= 8 ? dungeon : 0];
+  const light = g.options.tiles === 'modern-pc' ? lit : undefined;
+  if (kind === 'rock' || kind === 'rubble') {
+    const wall = light === undefined ? { tile: T.Wall } : { tile: T.Wall, tint: light };
+    // Rubble: remains or a caved in passage over the rock, as the dungeon has them (Save.dungeonLook); a stalactite,
+    // the rock alone.
+    const look = g.s.dungeonLook & 0xf;
+    return { tiles: kind === 'rubble' && look !== 1 ? [wall, { tile: look === 2 ? COLLAPSED : BONES }] : [wall] };
+  }
+  // The passage: cobbles, and what stands in it over them - a pit the original's black box, a field its colour.
+  const tiles = [{ tile: COBBLES }];
+  if (kind === 'fountain') return { tiles: [...tiles, { tile: g.cycles.shown[T.Fountain] }] };
+  if (kind === 'pit') return { tiles, box: Colour.black };
+  if (kind === 'field') return { tiles, box: FIELD_COLOURS[field & 3] + 8 };
+  return { tiles: [...tiles, ...(STANDS[kind] ?? []).map((tile) => ({ tile }))] };
+}
+
+/** A cell in the look's tiles (cellLook); false where the look draws no tiles, and nothing is drawn. */
 function tiled(g: Game, kind: Kind, px: number, py: number, n: number, field: number): boolean {
   const d = g.draw;
-  const dungeon = g.s.mapId - 0x20;
-  const light = DUNGEON_TINTS[dungeon >= 1 && dungeon <= 8 ? dungeon : 0];
-  const tile = (t: number, tint?: number): boolean => !!d.icon?.(t, px, py, n, false, tint);
-  if (kind === 'rock' || kind === 'rubble') {
-    // The rock: the wall in the dungeon's light.
-    if (!tile(T.Wall, light)) return false;
-    // Rubble: remains or a caved in passage over it, as the dungeon has them (Save.dungeonLook); a stalactite, the
-    // rock alone.
-    const look = g.s.dungeonLook & 0xf;
-    if (kind === 'rubble' && look !== 1) tile(look === 2 ? COLLAPSED : BONES);
-    return true;
+  const { tiles, box } = cellLook(g, kind, field);
+  for (const [k, t] of tiles.entries()) if (!d.icon?.(t.tile, px, py, n, false, t.tint) && k === 0) return false;
+  if (box !== undefined) {
+    const r = Math.max(1, Math.round(n / 5));
+    const [cx, cy] = [px + Math.round(n / 2), py + Math.round(n / 2)];
+    d.pen = box;
+    d.fill(cx - r, cy - r, cx + r - 1, cy + r - 1);
   }
-  // The passage: cobbles, and what stands in it over them.
-  if (!tile(COBBLES)) return false;
-  const r = Math.max(1, Math.round(n / 5));
-  const [cx, cy] = [px + Math.round(n / 2), py + Math.round(n / 2)];
-  if (kind === 'fountain') tile(g.cycles.shown[T.Fountain]);
-  else if (kind === 'pit') {
-    // A pit: the original's black box.
-    d.pen = Colour.black;
-    d.fill(cx - r, cy - r, cx + r - 1, cy + r - 1);
-  } else if (kind === 'field') {
-    d.pen = FIELD_COLOURS[field & 3] + 8;
-    d.fill(cx - r, cy - r, cx + r - 1, cy + r - 1);
-  } else for (const t of STANDS[kind] ?? []) tile(t);
   return true;
 }
 
@@ -415,6 +424,44 @@ export function unrolled(g: Game): Map<number, [number, number]> | null {
   return placed;
 }
 
+/** A cell of the level round the party as the maps show it: (i, j) from the party, (x, y) its own on the level. */
+export interface LevelCell {
+  i: number;
+  j: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * The cells of the party's level the maps show round it, `r` cells out each way, seen (`seen`, the level's eight by
+ * eight): where the party's passages unroll (unrolled) each cell where it lies from the party and nowhere else - a
+ * passage where it was walked out to, the rock beside such a passage - the level's other pieces (reached by other
+ * ladders) not at all; where they loop round the level, every cell wherever it comes round.
+ */
+export function levelCells(g: Game, seen: Uint8Array, r: number): LevelCell[] {
+  const s = g.s;
+  const places = unrolled(g);
+  const cellAt = (x: number, y: number): number => s.dungeon[s.level * 0x40 + at8(x, y)];
+  const placedAt = (i: number, j: number): boolean => {
+    const p = places?.get(at8(s.x + i, s.y + j));
+    return !!p && p[0] === i && p[1] === j;
+  };
+  const shownAt = (i: number, j: number): boolean => {
+    if (!places || placedAt(i, j)) return true;
+    // Rock beside a passage where it lies (a corner's too); a passage anywhere else is another place.
+    if (joins(cellAt(s.x + i, s.y + j))) return false;
+    for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) if (placedAt(i + ex, j + ey)) return true;
+    return false;
+  };
+  const out: LevelCell[] = [];
+  for (let j = -r; j <= r; j++)
+    for (let i = -r; i <= r; i++) {
+      const [x, y] = [(s.x + i) & 7, (s.y + j) & 7];
+      if (seen[at8(x, y)] && shownAt(i, j)) out.push({ i, j, x, y });
+    }
+  return out;
+}
+
 /**
  * The Standard look's whole-level map: the party in the middle and the level round it, eleven cells a side filling the
  * map's square, moving with the party. Where the party's passages unroll (unrolled) each cell is drawn where it lies
@@ -431,30 +478,16 @@ function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): ViewCel
   const places = unrolled(g);
   const cellAt = (x: number, y: number): number => s.dungeon[s.level * 0x40 + at8(x, y)];
   const open = (x: number, y: number): boolean => seen[at8(x, y)] !== 0 && passable(kindOf(cellAt(x, y)));
-  const placedAt = (i: number, j: number): boolean => {
-    const p = places?.get(at8(s.x + i, s.y + j));
-    return !!p && p[0] === i && p[1] === j;
-  };
-  const shownAt = (i: number, j: number): boolean => {
-    if (!places || placedAt(i, j)) return true;
-    // Rock beside a passage where it lies (a corner's too); a passage anywhere else is another place.
-    if (joins(cellAt(s.x + i, s.y + j))) return false;
-    for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) if (placedAt(i + ex, j + ey)) return true;
-    return false;
-  };
-  for (let j = -r; j <= r; j++)
-    for (let i = -r; i <= r; i++) {
-      const [x, y] = [(s.x + i) & 7, (s.y + j) & 7];
-      if (!seen[at8(x, y)] || !shownAt(i, j)) continue;
-      let links = 0;
-      if (open(x, y - 1)) links |= 1;
-      if (open(x + 1, y)) links |= 2;
-      if (open(x, y + 1)) links |= 4;
-      if (open(x - 1, y)) links |= 8;
-      const square = (): void => cell(g, kindOf(cellAt(x, y)), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, cellAt(x, y));
-      square();
-      squares.set((j + r) * ACROSS + i + r, square);
-    }
+  for (const { i, j, x, y } of levelCells(g, seen, r)) {
+    let links = 0;
+    if (open(x, y - 1)) links |= 1;
+    if (open(x + 1, y)) links |= 2;
+    if (open(x, y + 1)) links |= 4;
+    if (open(x - 1, y)) links |= 8;
+    const square = (): void => cell(g, kindOf(cellAt(x, y)), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, cellAt(x, y));
+    square();
+    squares.set((j + r) * ACROSS + i + r, square);
+  }
   const cells: ViewCell[] = [];
   /** Square (i, j) from the party as it is with no one on it: black where nothing of it is shown. */
   const bare = (i: number, j: number): NonNullable<ViewCell['bare']> => ({

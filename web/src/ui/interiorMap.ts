@@ -3,22 +3,23 @@
  *
  * The maps of the places the party goes inside: a level of a town, keep
  * or castle drawn square by square from the tiles standing there, and a
- * dungeon's level drawn as the eight by eight grid of cells the original
- * keeps it in - a passage, a ladder, a door, a fountain, a pit, a room -
- * each in its own mark. Only what has been seen is drawn; the rest is
- * the dark it was before the party walked in.
+ * dungeon's level as the Enhanced map draws it (dungeonMap.ts): in the
+ * look's own tiles, its passages unrolled from where the party stands, a
+ * level that loops going on round it. Only what has been seen is drawn;
+ * the rest is the dark it was before the party walked in.
  */
 
 import { readTownLevel, TOWN_SIZE, type Location } from '../data/maps.ts';
 import { EGA_PALETTE as EGA } from '../data/tiles.ts';
 import type { Game } from '../game/game.ts';
+import { cellLook, kindOf, levelCells, unrolled } from '../game/dungeonMap.ts';
+import { tinted } from './colours.ts';
 import type { StandardArt } from './standardArt.ts';
 
 /** Both maps are drawn this many pixels square, as the world's are. */
 export const INTERIOR_PIXELS = 512;
 const TOWN_CELL = INTERIOR_PIXELS / TOWN_SIZE; // 16
 const DUNGEON_CELLS = 8;
-const DUNGEON_CELL = INTERIOR_PIXELS / DUNGEON_CELLS; // 64
 
 const DARK = 0xff0a0a0a;
 
@@ -126,21 +127,53 @@ export const CELL_NAMES: Record<CellKind, string> = {
   rubble: 'A caved in passage',
 };
 
-const COLOURS: Record<CellKind, [number, number]> = {
-  // fill, mark
-  wall: [0xff181818, 0xff181818],
-  floor: [0xff4a4238, 0xff8a7c6a],
-  up: [0xff4a4238, 0xfff0e0a0],
-  down: [0xff4a4238, 0xfff0e0a0],
-  updown: [0xff4a4238, 0xfff0e0a0],
-  trap: [0xff4a4238, 0xff8a7c6a],
-  fountain: [0xff4a4238, 0xff70c8f0],
-  pit: [0xff332c26, 0xff101010],
-  treasure: [0xff4a4238, 0xff60d8f8],
-  room: [0xff56463a, 0xffc09050],
-  door: [0xff4a4238, 0xff9a7040],
-  rubble: [0xff3a332c, 0xff6a6460],
-};
+/**
+ * Tile `tile` drawn `size` pixels square at (ox, oy) of `out` (INTERIOR_PIXELS wide): the look's own (`art`), else the
+ * game's own (`tiles`), nearest - in `tint` where given (Remastered's dungeon light), clear pixels left as they were.
+ */
+function drawTile(
+  tiles: Uint8Array,
+  art: StandardArt | null,
+  tile: number,
+  out: Uint32Array,
+  ox: number,
+  oy: number,
+  size: number,
+  tint?: number,
+): void {
+  const figure = art?.figure(tile);
+  const side = figure ? Math.round(Math.sqrt(figure.length)) : 16;
+  for (let y = 0; y < size; y++) {
+    const ty = oy + y;
+    if (ty < 0 || ty >= INTERIOR_PIXELS) continue;
+    const sy = Math.floor(((y + 0.5) * side) / size);
+    for (let x = 0; x < size; x++) {
+      const tx = ox + x;
+      if (tx < 0 || tx >= INTERIOR_PIXELS) continue;
+      const sx = Math.floor(((x + 0.5) * side) / size);
+      let v: number;
+      if (figure) {
+        v = figure[sy * side + sx];
+        if (v >>> 24 < 128) continue;
+      } else {
+        const byte = tiles[tile * 128 + sy * 8 + (sx >> 1)];
+        const rgb = EGA[sx & 1 ? byte & 15 : byte >> 4];
+        v = (0xff000000 | ((rgb & 0xff) << 16) | (rgb & 0xff00) | (rgb >> 16)) >>> 0;
+      }
+      if (tint !== undefined) {
+        const rgb = tinted(((v & 0xff) << 16) | (v & 0xff00) | ((v >> 16) & 0xff), tint);
+        v = (0xff000000 | ((rgb & 0xff) << 16) | (rgb & 0xff00) | ((rgb >> 16) & 0xff)) >>> 0;
+      }
+      out[ty * INTERIOR_PIXELS + tx] = v;
+    }
+  }
+}
+
+/** A box of EGA colour `c` (0-15) `size` pixels square, centred on (cx, cy). */
+function box(out: Uint32Array, cx: number, cy: number, size: number, c: number): void {
+  const rgb = EGA[c & 15];
+  fillRect(out, cx - (size >> 1), cy - (size >> 1), size, size, (0xff000000 | ((rgb & 0xff) << 16) | (rgb & 0xff00) | (rgb >> 16)) >>> 0);
+}
 
 function fillRect(px: Uint32Array, x0: number, y0: number, w: number, h: number, v: number): void {
   for (let y = y0; y < y0 + h; y++) {
@@ -149,109 +182,48 @@ function fillRect(px: Uint32Array, x0: number, y0: number, w: number, h: number,
   }
 }
 
-/** A triangle pointing up or down, for a ladder. */
-function triangle(px: Uint32Array, cx: number, cy: number, size: number, up: boolean, v: number): void {
-  for (let i = 0; i < size; i++) {
-    const w = up ? i * 2 + 1 : (size - i) * 2 - 1;
-    fillRect(px, cx - (w >> 1), cy - (size >> 1) + i, w, 1, v);
-  }
-}
-
 /**
- * One cell of a dungeon level: the floor it stands on, arms reaching to
- * the cells a party can walk to from it (so a corridor reads as a
- * corridor and not a row of boxes), and the mark that says what it is.
- * `links` has a bit a side, north, east, south, west.
+ * A dungeon level, as the Enhanced map draws it (dungeonMap.ts cellLook, levelCells): the cells the party has seen in
+ * the look's tiles (`art`, else the game's own `tiles`) - where the party is on it, its passages unrolled from where
+ * it stands and the party's mark in the middle, steady, as many cells out as they reach (seven, on a level that loops,
+ * round and round); else the level's own eight by eight.
  */
-function drawCell(px: Uint32Array, kind: CellKind, cx: number, cy: number, links: number): void {
-  const [ground, mark] = COLOURS[kind];
-  const x0 = cx * DUNGEON_CELL;
-  const y0 = cy * DUNGEON_CELL;
-  if (kind === 'wall') {
-    fillRect(px, x0, y0, DUNGEON_CELL, DUNGEON_CELL, ground);
-    return;
-  }
-  const inset = 8;
-  const arm = 22;
-  const mid = DUNGEON_CELL / 2;
-  fillRect(px, x0 + inset, y0 + inset, DUNGEON_CELL - inset * 2, DUNGEON_CELL - inset * 2, ground);
-  if (links & 1) fillRect(px, x0 + mid - arm / 2, y0, arm, inset + 1, ground);
-  if (links & 2) fillRect(px, x0 + DUNGEON_CELL - inset - 1, y0 + mid - arm / 2, inset + 1, arm, ground);
-  if (links & 4) fillRect(px, x0 + mid - arm / 2, y0 + DUNGEON_CELL - inset - 1, arm, inset + 1, ground);
-  if (links & 8) fillRect(px, x0, y0 + mid - arm / 2, inset + 1, arm, ground);
-  const mx = x0 + DUNGEON_CELL / 2;
-  const my = y0 + DUNGEON_CELL / 2;
-  switch (kind) {
-    case 'up':
-      triangle(px, mx, my, 18, true, mark);
-      break;
-    case 'down':
-      triangle(px, mx, my, 18, false, mark);
-      break;
-    case 'updown':
-      triangle(px, mx, my - 10, 12, true, mark);
-      triangle(px, mx, my + 10, 12, false, mark);
-      break;
-    case 'fountain':
-      fillRect(px, mx - 12, my - 4, 24, 10, mark);
-      fillRect(px, mx - 8, my + 6, 16, 4, mark);
-      fillRect(px, mx - 2, my - 14, 4, 10, mark);
-      break;
-    case 'pit':
-      for (let r = 0; r < 12; r++) fillRect(px, mx - 12 + r, my - 12 + r, 24 - r * 2, 1, mark);
-      break;
-    case 'treasure':
-      fillRect(px, mx - 12, my - 8, 24, 16, mark);
-      fillRect(px, mx - 12, my - 1, 24, 2, 0xff1e1a16);
-      break;
-    case 'room':
-      fillRect(px, x0 + 8, y0 + 8, DUNGEON_CELL - 16, DUNGEON_CELL - 16, mark);
-      fillRect(px, x0 + 14, y0 + 14, DUNGEON_CELL - 28, DUNGEON_CELL - 28, ground);
-      break;
-    case 'door':
-      fillRect(px, mx - 10, my - 14, 20, 28, mark);
-      fillRect(px, mx + 4, my - 2, 3, 4, 0xff1e1a16);
-      break;
-    case 'rubble':
-      for (let i = 0; i < 5; i++) fillRect(px, mx - 14 + i * 6, my - 6 + ((i * 5) % 9), 5, 5, mark);
-      break;
-    case 'floor':
-    case 'trap':
-      fillRect(px, mx - 3, my - 3, 6, 6, mark);
-      break;
-  }
-}
-
-/** A dungeon level: the cells the party has seen of its eight by eight grid, and where the party stands, steady. */
-export function dungeonPicture(g: Game, mapId: number, level: number): Uint32Array {
+export function dungeonPicture(g: Game, mapId: number, level: number, tiles: Uint8Array, art: StandardArt | null): Uint32Array {
   const px = new Uint32Array(INTERIOR_PIXELS * INTERIOR_PIXELS).fill(DARK);
   const seen = g.fog.placeSeen(mapId, level);
   if (!seen) return px;
-  const kindAt = (x: number, y: number): CellKind => cellKind(g.s.dungeon[level * 0x40 + (y & 7) * 8 + (x & 7)]);
-  const open = (x: number, y: number): boolean => seen[(y & 7) * DUNGEON_CELLS + (x & 7)] !== 0 && kindAt(x, y) !== 'wall';
-  for (let y = 0; y < DUNGEON_CELLS; y++) {
-    for (let x = 0; x < DUNGEON_CELLS; x++) {
-      if (!seen[y * DUNGEON_CELLS + x]) continue;
-      let links = 0;
-      if (open(x, y - 1)) links |= 1;
-      if (open(x + 1, y)) links |= 2;
-      if (open(x, y + 1)) links |= 4;
-      if (open(x - 1, y)) links |= 8;
-      drawCell(px, kindAt(x, y), x, y, links);
-    }
+  const here = g.s.mapId === mapId && g.s.level === level;
+  const cellAt = (x: number, y: number): number => g.s.dungeon[level * 0x40 + (y & 7) * 8 + (x & 7)];
+  let cells: { i: number; j: number; x: number; y: number }[];
+  let r: number;
+  if (here) {
+    cells = levelCells(g, seen, 12);
+    r = unrolled(g) ? Math.max(4, ...cells.map((c) => Math.max(Math.abs(c.i), Math.abs(c.j)))) : 7;
+    cells = cells.filter((c) => Math.abs(c.i) <= r && Math.abs(c.j) <= r);
+  } else {
+    // Another level, or the party elsewhere: the level's grid as it lies.
+    r = 4;
+    cells = [];
+    for (let y = 0; y < DUNGEON_CELLS; y++)
+      for (let x = 0; x < DUNGEON_CELLS; x++) if (seen[y * DUNGEON_CELLS + x]) cells.push({ i: x - 4, j: y - 4, x, y });
   }
-  markParty(
-    px,
-    (g.s.x & 7) * DUNGEON_CELL + DUNGEON_CELL / 2,
-    (g.s.y & 7) * DUNGEON_CELL + DUNGEON_CELL / 2,
-    g.s.mapId === mapId && g.s.level === level,
-  );
+  const size = Math.floor(INTERIOR_PIXELS / (r * 2 + 1));
+  const at = (INTERIOR_PIXELS - size * (r * 2 + 1)) >> 1;
+  for (const { i, j, x, y } of cells) {
+    const [ox, oy] = [at + (i + r) * size, at + (j + r) * size];
+    const cell = cellAt(x, y);
+    const look = cellLook(g, kindOf(cell), cell);
+    for (const t of look.tiles) drawTile(tiles, art, t.tile, px, ox, oy, size, t.tint);
+    if (look.box !== undefined) box(px, ox + (size >> 1), oy + (size >> 1), Math.max(2, Math.round((size * 2) / 5)), look.box);
+  }
+  if (here) markParty(px, at + r * size + (size >> 1), at + r * size + (size >> 1), true, size);
   return px;
 }
 
-/** Where the party stands, if it is on this map: a white square about a red heart. */
-function markParty(px: Uint32Array, cx: number, cy: number, here: boolean): void {
+/** Where the party stands, if it is on this map: a white square about a red heart, a quarter of `cell` across. */
+function markParty(px: Uint32Array, cx: number, cy: number, here: boolean, cell = 32): void {
   if (!here) return;
-  fillRect(px, cx - 4, cy - 4, 8, 8, 0xfffefefe);
-  fillRect(px, cx - 2, cy - 2, 4, 4, 0xff5050ff);
+  const [outer, inner] = [Math.max(8, cell >> 2), Math.max(4, cell >> 3)];
+  fillRect(px, cx - (outer >> 1), cy - (outer >> 1), outer, outer, 0xfffefefe);
+  fillRect(px, cx - (inner >> 1), cy - (inner >> 1), inner, inner, 0xff5050ff);
 }

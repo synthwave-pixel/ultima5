@@ -60,6 +60,21 @@ describe('the dungeon map', () => {
     expect(icons).toContainEqual(expect.objectContaining({ tile: T.Wall, x: px + 16, y: py + 16 }));
   });
 
+  it("lights the rock in its dungeon's colour for Remastered alone: every other look's wall as its look draws it", () => {
+    for (const tiles of ['c64', 'apple2', 'pc-ega', 'pc-cga', 'x68k'] as const) {
+      const { g, icons } = level();
+      g.options.tiles = tiles;
+      g.options.dungeonView = 'full';
+      drawDungeonMap(g);
+      const walls = icons.filter((i) => i.tile === T.Wall);
+      expect(walls.length, tiles).toBeGreaterThan(0);
+      expect(
+        walls.every((i) => i.tint === undefined),
+        tiles,
+      ).toBe(true);
+    }
+  });
+
   it('draws rubble as the dungeon has it - bones, a caved in passage, or for a stalactite the rock alone - and both ladders the up over the down', () => {
     const { g, icons } = level();
     g.s.dungeon[1 * 8 + 2] = 0xc0; // the ladder's cell, rubble now

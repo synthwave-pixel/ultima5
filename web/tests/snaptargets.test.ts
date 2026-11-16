@@ -3,7 +3,7 @@ import { aim, attackCommand, cycleSnap, placeCombatant, rememberFoe, snapMark, s
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { asPad } from '../src/game/input.ts';
-import { gameplayLines, settingLines } from '../src/game/menu.ts';
+import { gameplayLines } from '../src/game/menu.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 
@@ -205,14 +205,14 @@ describe('snap targets', () => {
     expect(g.combat[at[0]].hp).toBe(1); // the nearest untouched
     expect(g.snapMemory[me]).toBe(at[1]);
   });
-  it('has Snap targets in Settings, on to begin with, and Snap attacks in Gameplay - each line within the menu', async () => {
+  it('has Snap targets beside Snap attacks in Gameplay, on to begin with - each line within the menu', async () => {
     const { DEFAULTS } = await import('../src/game/settings.ts');
     expect(DEFAULTS.snapTargets).toBe(true);
     const { g } = newGame();
     const line = (lines: { label: string }[], name: string) => lines.find((l) => l.label.startsWith(name))!;
     for (const on of [true, false]) {
       g.options.snapTargets = g.options.autoAim = on;
-      for (const label of [line(settingLines(g), 'Snap targets').label, line(gameplayLines(g), 'Snap attacks').label]) {
+      for (const label of [line(gameplayLines(g), 'Snap targets').label, line(gameplayLines(g), 'Snap attacks').label]) {
         expect(label).toMatch(on ? /: On$/ : /: Off$/);
         expect(label.length + 2, label).toBeLessThanOrEqual(21); // after the row's letter and its space (menu.ts row)
       }

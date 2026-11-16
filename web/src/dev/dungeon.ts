@@ -21,12 +21,17 @@ import { loadStandardArt } from '../ui/loadArt.ts';
 import { refresh } from '../game/dungeon.ts';
 import { DUNGEON_CREATURES } from '../game/dungeonMap.ts';
 import { TILE_NAMES } from '../data/tileNames.ts';
+import { DosRandom } from '../game/rng.ts';
+import { PC_TILES, TILES, TILES_NAMES, type Tiles } from '../game/settings.ts';
+import { loadSkin } from '../ui/loadArt.ts';
 
 const params = new URLSearchParams(location.search);
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
 /** The corridor's rectangle on the screen, in DOS pixels (dungeon.ts fills it). */
-const VIEW = { x: 0x10, y: 0x0e, w: 0xa0, h: 0xa5 };
+const RETRO_VIEW = { x: 0x10, y: 0x0e, w: 0xa0, h: 0xa5 };
+/** The square the Enhanced interface grows the view to (dungeon.ts showView), out to the frame. */
+const SQUARE = { x: 8, y: 8, w: 0xb0, h: 0xb0 };
 
 /**
  * What a cell is, by the high nibble the original keeps it in. A cell
@@ -45,7 +50,7 @@ const CELLS: [string, number, string][] = [
   ['Room', 0x80, 'the mouth of a room'],
   ['Door', 0xa0, ''],
   ['Wall', 0xb0, 'a dead end'],
-  ['Caved in', 0xc0, ''],
+  ['Rubble', 0xc0, 'remains (Deceit, Wrong, Covetous), a caved in passage (Shame, Hythloth) or a stalactite'],
   ['Hidden door', 0xd0, 'a wall until it is searched out'],
   ['Open door', 0xe0, ''],
 ];
@@ -84,6 +89,8 @@ async function start(): Promise<void> {
   const g = new Game(data, screen, new Save(files.get('INIT.GAM')));
   screen.standard = await loadStandardArt();
   screen.standard?.useOriginals(tiles);
+  // Every set's skin (skins.ts), made now, so a set's corridor is drawn in it at once.
+  for (const kind of TILES) screen.addSkin(kind, await loadSkin(kind));
   g.s.members[0].name = 'Tester';
 
   // A dungeon, lit, with the party at the middle of a level of solid rock.
@@ -107,9 +114,11 @@ async function start(): Promise<void> {
   const size = $<HTMLSelectElement>('size');
   const shape = $<HTMLSelectElement>('shape');
   const walls = $<HTMLSelectElement>('walls');
+  const sets = $<HTMLSelectElement>('sets');
+  const light = $<HTMLSelectElement>('light');
   for (const [name, why] of SHAPES) shape.append(new Option(why ? `${name} — ${why}` : name, name));
   for (const [name, value] of WALLS) walls.append(new Option(name, value));
-  for (const el of [look, size, shape, walls]) el.value = params.get(el.id) ?? el.value;
+  for (const el of [look, size, shape, walls, sets, light]) el.value = params.get(el.id) ?? el.value;
 
   /** Which dungeon's walls to draw, as dungeonLoop chooses them by the dungeon's number. */
   const setWalls = (): void => {
@@ -126,8 +135,12 @@ async function start(): Promise<void> {
     }
   };
 
-  /** The screen as it stands, with the corridor cut out of it. */
-  const corridor = (scale: number): HTMLCanvasElement => {
+  /**
+   * The screen as it stands, with the corridor cut out of it: where 1988 drew it in the Retro interface, the square it
+   * is grown to in the Enhanced.
+   */
+  const corridor = (scale: number, set: 'original' | 'standard'): HTMLCanvasElement => {
+    const VIEW = set === 'standard' ? SQUARE : RETRO_VIEW;
     const img = new ImageData(HI_WIDTH, HI_HEIGHT);
     screen.fb.present(img);
     const whole = document.createElement('canvas');
@@ -163,27 +176,66 @@ async function start(): Promise<void> {
   };
 
   const build = (): void => {
-    const q = new URLSearchParams({ look: look.value, size: size.value, shape: shape.value, walls: walls.value });
+    const q = new URLSearchParams({
+      look: look.value,
+      size: size.value,
+      shape: shape.value,
+      walls: walls.value,
+      sets: sets.value,
+      light: light.value,
+    });
     if (params.has('dev')) q.set('dev', '');
     history.replaceState(null, '', `?${q.toString().replace('dev=&', 'dev&').replace(/dev=$/, 'dev')}`);
     out.textContent = '';
     setWalls();
     g.s.actors[1].x = 0xff; // no creature in the cells' views
+    // Lit, or the party without light (the Modern look's dark shows what gives its own).
+    g.s.d58a6 = light.value === 'lit' ? 100 : 0;
+    g.s.d58a7 = 0;
     const scale = Number(size.value);
-    for (const [name, kind, why] of CELLS) {
+    /** Each view to draw: its interface and its set, in order - Retro first, then Enhanced. */
+    const views: ['original' | 'standard', Tiles][] = (['original', 'standard'] as const)
+      .filter((set) => look.value === 'both' || look.value === set)
+      .flatMap((set) =>
+        (sets.value === 'all' ? (set === 'original' ? PC_TILES : TILES) : ([set === 'original' ? 'pc-ega' : 'modern-pc'] as Tiles[])).map(
+          (t): ['original' | 'standard', Tiles] => [set, t],
+        ),
+      );
+    /** The views of the case as it stands, a row of them, each named where every set is shown. */
+    const row = (): HTMLDivElement => {
+      const div = document.createElement('div');
+      // Each view from the same moment: a drawing moves the drips on (the cell keeps their step), so each starts afresh.
+      const cells = g.s.dungeon.slice();
+      for (const [set, t] of views) {
+        screen.setTileArt(set, t);
+        // The game in the look drawn, as the game sets it: 1988's sign is printed on its plate only in its own look.
+        g.options.tileSet = set;
+        g.s.dungeon.set(cells);
+        g.rng = new DosRandom(1);
+        refresh(g);
+        const cut = corridor(scale, set);
+        if (sets.value !== 'all') div.appendChild(cut);
+        else {
+          const span = document.createElement('span');
+          span.append(cut, `${set === 'original' ? 'Retro' : 'Enhanced'} · ${TILES_NAMES[t]}`);
+          div.appendChild(span);
+        }
+      }
+      return div;
+    };
+    const across = (n: number): string => `${SQUARE.w * scale * views.length * n + 8 * views.length * n}px`;
+    const cases: [string, number, string][] = [
+      ...CELLS,
+      ['Sign', 0xb1, "a wall's sign, carved in the Enhanced interface"],
+      ...[0, 1, 2, 3].map((k): [string, number, string] => [`Field ${k}`, 0x80 + k, "its crackle in the set's ink"]),
+    ];
+    for (const [name, kind, why] of cases) {
       arrange(kind);
       const fig = document.createElement('figure');
       const cap = document.createElement('figcaption');
       cap.innerHTML = `<b>${name}</b> ${why}`;
-      const row = document.createElement('div');
-      for (const set of ['original', 'standard'] as const) {
-        if (look.value !== 'both' && look.value !== set) continue;
-        screen.setTileArt(set);
-        refresh(g);
-        row.appendChild(corridor(scale));
-      }
-      fig.append(cap, row);
-      fig.style.setProperty('--w', `${VIEW.w * scale * (look.value === 'both' ? 2 : 1) + 8}px`);
+      fig.append(cap, row());
+      fig.style.setProperty('--w', across(1));
       out.appendChild(fig);
     }
     // The creatures, down an open corridor: each at one, two and three squares off, in each look.
@@ -191,26 +243,91 @@ async function start(): Promise<void> {
     for (let t = 0; t < 8; t++) {
       const fig = document.createElement('figure');
       const cap = document.createElement('figcaption');
-      cap.innerHTML = `<b>${TILE_NAMES[DUNGEON_CREATURES[t]].replace(/ 1$/, '')}</b> MON${t}.16, one to three squares off`;
-      const row = document.createElement('div');
+      cap.innerHTML = `<b>${TILE_NAMES[DUNGEON_CREATURES[t]].replace(/ 1$/, '')}</b> MON${t}, one to three squares off`;
+      fig.appendChild(cap);
       for (let depth = 1; depth <= 3; depth++) {
         g.s.dungeon.fill(0xb0, level * 0x40, level * 0x40 + 0x40);
         for (let y = 1; y <= 4; y++) put(4, y, 0x00);
         Object.assign(a, { tile: t, x: 4, y: 4 - depth, b5: 1, b6: g.data.bytes(0x1744, 8)[t], b7: 0 });
-        for (const set of ['original', 'standard'] as const) {
-          if (look.value !== 'both' && look.value !== set) continue;
-          screen.setTileArt(set);
-          refresh(g);
-          row.appendChild(corridor(scale));
-        }
+        fig.appendChild(row());
       }
-      fig.append(cap, row);
-      fig.style.setProperty('--w', `${VIEW.w * scale * 3 * (look.value === 'both' ? 2 : 1) + 24}px`);
+      a.x = 0xff;
+      fig.style.setProperty('--w', across(1));
       out.appendChild(fig);
     }
   };
-  for (const el of [look, size, shape, walls]) el.addEventListener('change', build);
-  build();
+  for (const el of [look, size, shape, walls, sets, light]) el.addEventListener('change', build);
+  if (params.has('hashes')) hashes();
+  else build();
+
+  /** The corridor's colour pixels as shown, hashed (FNV-1a, 32 bits): a fingerprint to compare a look before and after. */
+  function corridorHash(): string {
+    const img = new ImageData(HI_WIDTH, HI_HEIGHT);
+    screen.fb.present(img);
+    const px = new Uint32Array(img.data.buffer);
+    let h = 0x811c9dc5;
+    for (let y = RETRO_VIEW.y * HI; y < (RETRO_VIEW.y + RETRO_VIEW.h) * HI; y++)
+      for (let x = RETRO_VIEW.x * HI; x < (RETRO_VIEW.x + RETRO_VIEW.w) * HI; x++) {
+        h ^= px[y * HI_WIDTH + x];
+        h = Math.imul(h, 0x01000193) >>> 0;
+      }
+    return h.toString(16).padStart(8, '0');
+  }
+
+  /**
+   * ?hashes: every case - each cell, a sign, the fields, in each shape and each set of walls, dark and lit, and the
+   * eight creatures one to three squares off - in each look with its own 1988 tiles, as fingerprints, one a line.
+   */
+  function hashes(): void {
+    const lines: string[] = [];
+    const extra: [string, number][] = [
+      ['Sign', 0xb1],
+      ['Field 0', 0x80],
+      ['Field 1', 0x81],
+      ['Field 2', 0x82],
+      ['Field 3', 0x83],
+    ];
+    const cases = [...CELLS.map(([name, kind]): [string, number] => [name, kind]), ...extra];
+    for (const set of ['standard', 'original'] as const) {
+      screen.setTileArt(set, set === 'standard' ? 'modern-pc' : 'pc-ega');
+      for (const [wallsName, wallsValue] of WALLS.filter(([, v]) => ['1', '2', '6'].includes(v))) {
+        walls.value = wallsValue;
+        setWalls();
+        g.s.actors[1].x = 0xff;
+        for (const [shapeName] of SHAPES) {
+          shape.value = shapeName;
+          for (const lit of [0x32, 0]) {
+            g.s.light = lit;
+            for (const [name, kind] of cases) {
+              arrange(kind);
+              g.rng = new DosRandom(1);
+              refresh(g);
+              lines.push(`${set} ${wallsName.split(' ')[1]} ${shapeName} ${lit ? 'lit' : 'dark'} ${name}: ${corridorHash()}`);
+            }
+          }
+        }
+      }
+      g.s.light = 0x32;
+      walls.value = '2';
+      setWalls();
+      const a = g.s.actors[1];
+      for (let t = 0; t < 8; t++)
+        for (let depth = 1; depth <= 3; depth++) {
+          g.s.dungeon.fill(0xb0, level * 0x40, level * 0x40 + 0x40);
+          for (let y = 1; y <= 4; y++) put(4, y, 0x00);
+          Object.assign(a, { tile: t, x: 4, y: 4 - depth, b5: 1, b6: g.data.bytes(0x1744, 8)[t], b7: 0 });
+          g.rng = new DosRandom(1);
+          refresh(g);
+          lines.push(`${set} creature ${t} at ${depth}: ${corridorHash()}`);
+        }
+      a.x = 0xff;
+    }
+    const pre = document.createElement('pre');
+    pre.id = 'hashes';
+    pre.textContent = lines.join('\n');
+    out.textContent = '';
+    out.appendChild(pre);
+  }
 }
 
 start().catch((err: unknown) => {

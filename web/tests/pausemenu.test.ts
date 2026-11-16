@@ -5,6 +5,7 @@ import { pauseMenu } from '../src/game/menu.ts';
 import { appQuit } from '../src/ui/platform.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { Win } from '../src/game/frame.ts';
 
 /** The Pause menu (the ultima3 port's): what opens it, what it holds, and what left the command menu for it. */
 describe('the Pause menu', () => {
@@ -236,7 +237,35 @@ describe('Party order, in the Pause menu', () => {
 });
 
 describe('the Pause menu, Gameplay and Settings', () => {
-  it('put Audio, Gameplay, Appearance and Settings in Pause - the sound in Audio, the rules in Gameplay, the look in Appearance', async () => {
+  it("lay the screen out again when Gameplay's Interface is changed in play: Retro's log two rows lower", async () => {
+    const { g, p } = newGame();
+    Object.assign(g.options, { input: 'controller', tileSet: 'standard', tiles: 'c64' });
+    g.inPlay = true;
+    const { relayout } = await import('../src/game/layout.ts');
+    await relayout(g); // Enhanced's windows to begin from
+    const top = (): number => (g.text as unknown as { windows: { top: number }[] }).windows[Win.messages].top;
+    expect(top()).toBe(9);
+    let switched = false;
+    p.next = () => {
+      const m = g.menuShown;
+      if (!m) return Pad.B;
+      if (m.title === 'Paused') return switched ? Pad.B : m.labels[m.at] === 'Gameplay' ? Pad.A : K.Down;
+      if (m.title === 'Gameplay') {
+        if (switched) return Pad.B;
+        if (m.labels[m.at].startsWith('Interface:')) {
+          switched = true;
+          return Pad.A;
+        }
+        return K.Down;
+      }
+      return Pad.B;
+    };
+    await pauseMenu(g);
+    expect(g.options.tileSet).toBe('original');
+    expect(top()).toBe(0xb);
+  });
+
+  it('put Audio, Gameplay, Appearance and Settings in Pause - the sound in Audio, the interface and rules in Gameplay, the look in Appearance', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
     g.lastSource = 'keyboard';
@@ -252,26 +281,18 @@ describe('the Pause menu, Gameplay and Settings', () => {
     const { appearanceLines, audioLines, gameplayLines, settingLines } = await import('../src/game/menu.ts');
     const name = (l: { label: string }): string => l.label.replace(/:.*/, '');
     expect(audioLines(g).map((l) => l.label)).toEqual(['Back', 'Sound: Classical', 'Music level: 60%', 'Sound FX level: 80%']);
-    expect(gameplayLines(g).map(name)).toEqual(['Back', 'Input', 'Auto Pause', 'Rules', 'Snap attacks', 'Max input']);
-    expect(appearanceLines(g).map(name)).toEqual([
+    expect(gameplayLines(g).map(name)).toEqual([
       'Back',
-      'UX',
-      'Tiles',
-      'Outlines',
-      'Status letters',
-      'Font',
-      'Scanlines',
-      'Smooth motion',
-    ]);
-    expect(settingLines(g).map(name)).toEqual([
-      'Back',
+      'Interface',
+      'Input',
+      'Auto Pause',
+      'Rules',
+      'Snap attacks',
       'Snap targets',
-      'Dialog',
-      'Battery saver',
-      'Export saved game',
-      'Import saved game',
-      'Ultima V SP',
+      'Max input',
     ]);
+    expect(appearanceLines(g).map(name)).toEqual(['Back', 'Look', 'Status letters', 'Font', 'Dialog', 'Scanlines', 'Smooth motion']);
+    expect(settingLines(g).map(name)).toEqual(['Back', 'Battery saver', 'Export saved game', 'Import saved game', 'Enhanced Edition']);
     // At the title there is no Pause menu: Settings holds Audio, Gameplay and Appearance.
     expect(settingLines(g, true).map(name)).toEqual(expect.arrayContaining(['Audio', 'Gameplay', 'Appearance']));
     // And not the saves', which are Manage Saves' there (characterMenu.ts).

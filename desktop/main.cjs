@@ -534,11 +534,11 @@ function createWindow() {
     // macOS altogether (the green button, Window > Enter Full Screen, F11), so it is left unsaid otherwise.
     fullscreenable: true,
     ...(startsFullScreen(process.argv, process.env, saved) ? { fullscreen: true } : {}),
-    title: `Ultima V SP ${app.getVersion()}`,
+    title: `Ultima V Enhanced Edition ${app.getVersion()}`,
     icon: join(__dirname, 'build', 'icons', '256x256.png'), // the window's (packaged: package.json build.files)
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
   });
-  // The page's own <title> (Ultima V SP) must not replace the window's, which carries the version.
+  // The page's own <title> (Ultima V Enhanced Edition) must not replace the window's, which carries the version.
   win.on('page-title-updated', (event) => event.preventDefault());
   win.setMenuBarVisibility(false);
   win.removeMenu();

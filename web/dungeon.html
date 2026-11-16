@@ -78,7 +78,15 @@
       }
       figure div {
         display: flex;
+        flex-wrap: wrap;
         gap: 4px;
+      }
+      figure div span {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        color: #888;
+        font-size: 10px;
       }
       figcaption {
         color: #aaa;
@@ -117,6 +125,20 @@
         </select>
       </div>
       <div>
+        <label for="sets">Sets</label>
+        <select id="sets">
+          <option value="own" selected>Remastered and PC EGA</option>
+          <option value="all">Every set, side by side</option>
+        </select>
+      </div>
+      <div>
+        <label for="light">Light</label>
+        <select id="light">
+          <option value="lit" selected>Lit</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div>
         <label for="size">Size</label>
         <select id="size">
           <option value="1">1x</option>
@@ -127,7 +149,8 @@
       <p class="legend">
         The first-person view as the game composes it, cut out of a real screen. <b>Original</b> is the EGA corridor; <b>Standard</b> is the
         same pictures in the port's palette. The party stands lit, facing north, in a level of solid rock with one cell arranged in front of
-        it.
+        it. <b>Every set</b> draws each case in every tile set's skin (its own dungeon pictures, lines and sign), Retro then Enhanced, a
+        sign and the four fields among the cases.
       </p>
     </header>
     <main>

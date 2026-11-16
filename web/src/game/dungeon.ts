@@ -68,9 +68,12 @@ function resource(g: Game, name: string): Uint8Array {
 
 /** D_25ea: the resource names: ITEMS.16 at 4, DNG1-3.16 at 5-7, MON0-7.16 at 8-15. */
 const resourceName = (g: Game, i: number): string => g.data.ovl.strings(0x25ea, 30)[i];
-const wallsRes = (g: Game): Uint8Array => resource(g, resourceName(g, 4 + g.s.dungeonLook));
-const itemsRes = (g: Game): Uint8Array => resource(g, resourceName(g, 4));
-const monsterRes = (g: Game): Uint8Array => resource(g, resourceName(g, g.s.actors[1].tile + 8));
+const wallsName = (g: Game): string => resourceName(g, 4 + g.s.dungeonLook);
+const itemsName = (g: Game): string => resourceName(g, 4);
+const monsterName = (g: Game): string => resourceName(g, g.s.actors[1].tile + 8);
+const wallsRes = (g: Game): Uint8Array => resource(g, wallsName(g));
+const itemsRes = (g: Game): Uint8Array => resource(g, itemsName(g));
+const monsterRes = (g: Game): Uint8Array => resource(g, monsterName(g));
 
 // --- Clipped drawing (ULTIMA_0c64, 0c9c, 0cf2) --------------------------------------------------------
 
@@ -112,14 +115,14 @@ function piece(g: Game, n: number, ceiling: number, mirror: number): void {
     const xs = g.data.swords(0x2e62, 8);
     let x = xs[mirror * 4 + (n & 3)];
     if (mirror !== 0 && ((n & 0xf8) === 8 || (n & 0xfc) === 0x18)) x = 0x60;
-    fx.image(wallsRes(g), n, x, 0xe, mirror ? 2 : 0, 'dungeon');
+    fx.image(wallsRes(g), n, x, 0xe, mirror ? 2 : 0, 'dungeon', wallsName(g));
   } else {
     const i = ((n + 1) >> 1) - 0x10;
     const depth = ((n + 1) & 6) >> 1;
     const x = mirror !== 0 ? 0x60 : g.data.swords(0x2e72, 4)[depth];
     const ys = g.data.swords(0x2e7a, 8);
     const y = i < 8 ? (ceiling ? ys[4 + depth] : 0x60) : ys[ceiling * 4 + depth];
-    fx.image(itemsRes(g), i, x, y, ceiling | (mirror ? 2 : 0), 'thing');
+    fx.image(itemsRes(g), i, x, y, ceiling | (mirror ? 2 : 0), 'thing', itemsName(g));
   }
 }
 
@@ -154,8 +157,9 @@ function drawMonster(g: Game, depth: number): void {
   const res = monsterRes(g);
   // 1988's own picture in both looks: the Standard look restyles it as it does the corridor (standardPictures.ts), the
   // maps drawing the creature's figure instead (dungeonMap.ts).
-  g.p.fx.image(res, left * 3 + depth - 1, g.data.swords(0x2e2a, 4)[depth], ys[ceiling * 4 + depth], ceiling, 'creature');
-  g.p.fx.image(res, right * 3 + depth - 1, 0x60, ys[ceiling * 4 + depth], ceiling | 2, 'creature');
+  const name = monsterName(g);
+  g.p.fx.image(res, left * 3 + depth - 1, g.data.swords(0x2e2a, 4)[depth], ys[ceiling * 4 + depth], ceiling, 'creature', name);
+  g.p.fx.image(res, right * 3 + depth - 1, 0x60, ys[ceiling * 4 + depth], ceiling | 2, 'creature', name);
   a.b6 = kind + mirrorMode + frame;
 }
 
@@ -218,6 +222,9 @@ export function readSignAhead(g: Game): void {
   t.font = 0;
 }
 
+/** How many pixels the Retro sign's black box stands out from its letters, all round. */
+const SIGN_PAD = 3;
+
 /** DUNGEON_104c: a sign's runes, shown over the wall ahead. */
 function sign(g: Game, n: number): void {
   const i = signIndex(g, n);
@@ -235,12 +242,20 @@ function sign(g: Game, n: number): void {
   t.font = 1;
   t.moveTo(0, 0);
   g.p.fx.readSign?.(key, read);
-  // 1988's sign is its runes in inverse, dark on a white plate; the Standard look paints them on the wall itself, in
-  // the plate's white (framebuffer.ts glyph).
+  // The Retro interface's sign: its runes light on black (white, or the set's own: the //e's green), in a black box a
+  // few pixels larger than its letters all round, so they do not touch its edge (1988's were dark on a white plate,
+  // edge to edge); the Enhanced interface paints them on the wall itself (framebuffer.ts glyph).
   const plate = g.options.tileSet !== 'standard';
-  if (plate) g.printChar(0xfd); // inverse
+  const fg = t.win.fg;
+  if (plate) {
+    const lines = text.split('\n');
+    const columns = Math.max(...lines.map((l) => Math.max(...l.split('\r').map((s) => s.length))));
+    g.draw.pen = Colour.black;
+    g.draw.fill(left * 8 - SIGN_PAD, top * 8 - SIGN_PAD, (left + columns) * 8 - 1 + SIGN_PAD, (top + lines.length) * 8 - 1 + SIGN_PAD);
+    t.win.fg = g.p.fx.signRunes?.() ?? Colour.brightWhite;
+  }
   g.print(text);
-  if (plate) g.printChar(0xfd);
+  t.win.fg = fg;
   g.p.fx.readSign?.(null);
   t.font = 0;
   t.select(2);
@@ -403,11 +418,14 @@ function drawDungeon(g: Game, sides: boolean): void {
   if (state.sparkle < 0) state.sparkle = g.data.bytes(0x2f26, 1)[0];
   g.d545e = 0xff;
   g.p.fx.page(1);
+  // A machine's skin draws the view's lines in its own ink (skins.ts).
+  const skinned = g.p.fx.viewInk?.(true) ?? false;
   d.pen = 0;
   // 1988 clears the view's right half alone, its left always drawn over whole. The Standard look's walls, drawn at
   // twice the grain, leave a pixel or two of the page's edge rows as they were - what else page 1 last held, white
-  // dots along the top and bottom of the view - so it clears the whole of it.
-  d.fill(g.options.tileSet === 'standard' ? 0x10 : 0x60, 0xe, 0xaf, 0xb2);
+  // dots along the top and bottom of the view - so it clears the whole of it; and so does a machine's skin, whose
+  // pieces are clear where 1988's are not.
+  d.fill(g.options.tileSet === 'standard' || skinned ? 0x10 : 0x60, 0xe, 0xaf, 0xb2);
   state.clip = false;
   // The Standard look's dark: what gives a light of its own - a skeleton's eyes, a field - is seen without
   // the party's; the view drawn as if lit, and all but that put out (framebuffer.ts darkenUnlit).
@@ -438,6 +456,7 @@ function drawDungeon(g: Game, sides: boolean): void {
   } else {
     d.fill(8, 8, 0xb7, 0xb7);
   }
+  g.p.fx.viewInk?.(false);
   g.p.fx.page(0);
   state.clip = false;
 }
@@ -1158,6 +1177,14 @@ async function dungeonKey(g: Game): Promise<number> {
     if (g.options.tileSet !== 'standard' || (pass++ & 1) === 0) {
       g.cycles.step();
       animateParty(); // the leader's walk, for the Standard look's map
+    }
+    // A look chosen anew, or its tiles or skin come (pageHooks.ts: the view dirty): the whole view drawn again in it,
+    // its near walls too, as at first - and the map beside it, drawn every tick, follows.
+    if (g.viewDirty !== 0) {
+      first = true;
+      g.viewDirty = 0;
+      // Its sign's colours and its light, the new look's.
+      g.p.fx.dungeonTint?.(g.s.mapId > 0x20 && g.s.mapId < 0x80 ? g.s.mapId - 0x20 : 0);
     }
     // With the whole-level map up the view is shown small, all of it copied at every tick (dungeonMap.ts): its near
     // walls drawn every time too, which the view in its own place draws only at first, never animating.

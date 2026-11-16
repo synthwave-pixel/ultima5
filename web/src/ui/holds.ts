@@ -28,8 +28,11 @@ export type InputPace = keyof typeof INPUT_PACES;
 export const INPUT_PACE_NAMES = Object.keys(INPUT_PACES) as InputPace[];
 /** How the Gameplay menu names each pace: "V slow" fits its width where "Very slow" would not. */
 export const INPUT_PACE_LABELS: Record<InputPace, string> = { verySlow: 'V slow', slow: 'Slow', medium: 'Medium', fast: 'Fast' };
-/** A held key's first repeat comes after this long (a gamepad's and the touch pad's too). */
-export const HOLD_FIRST_MS = 250;
+/**
+ * A held key's first repeat comes after this long (a gamepad's and the touch pad's too): about as long as a system's
+ * own key repeat waits, so a key held takes a moment before it walks on, as it did when the system's repeat led.
+ */
+export const HOLD_FIRST_MS = 400;
 /** How soon a held key looks again when the game was busy at its repeat: it repeats once the game waits. */
 const HOLD_RECHECK_MS = 16;
 /** How long after the system's last repeat of a key it is still taken for held (the slowest a system repeats). */

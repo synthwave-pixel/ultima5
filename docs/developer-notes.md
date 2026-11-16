@@ -41,7 +41,7 @@ npm run build
 |---|---|
 | `web/src/data/` | Reads the game's files: maps, tiles, images, DATA.OVL. |
 | `web/src/game/` | The rules, ported routine by routine from [u5d](https://github.com/wonst719/u5d). Comments name the original routine (e.g. `ULTIMA_5910_UpdateFrame`). |
-| `web/src/ui/` | Drawing: the framebuffer, the Modern look's art (`standardArt.ts`), the Modern PC tiles (`originals.ts`), the shores, the text layer. |
+| `web/src/ui/` | Drawing: the framebuffer, the Enhanced interface's art (`standardArt.ts`), the Remastered tiles (`originals.ts`) and dungeon (`standardPictures.ts`), each look's dungeon and frame (`skins.ts`), the shores, the text layer. |
 | `web/src/install/` | The installer and the known copies' fingerprints. |
 | `web/src/dev/` | The development pages. |
 | `web/tests/` | The tests (vitest, in Node). |
@@ -76,8 +76,8 @@ files... (the dev server serves `gamedata/ultima5/` to it) or with
 | `&new` | With `&play`, start a new game whatever is saved. |
 | `&peek` | Save nothing. |
 | `&at=...` | Start somewhere (see below). |
-| `&ux=standard` / `&ux=original` | The Modern or the PC (1988) look, for this page alone. |
-| `&tiles=...` | The tile set, for this page alone: `modern-pc`, `apple2` or `pc-ega` in the Modern look; `pc-ega` or `apple2` in the PC (1988) look. |
+| `&ux=standard` / `&ux=original` | The Enhanced or the Retro interface, for this page alone. |
+| `&tiles=...` | The look, for this page alone: `modern-pc` (Remastered, Enhanced only), `pc-ega`, `pc-cga`, `apple2` (Apple Color), `apple2e`, `apple2c`, `x68k` or `c64`. |
 | `&autoscan=true` | Scan for game files as the installer opens. |
 
 **Where `&at=` starts:**
@@ -92,7 +92,8 @@ files... (the dev server serves `gamedata/ultima5/` to it) or with
 | `room:D:R` / `room:D:R:L` | Dungeon D's room R (on level L), entered from its door. |
 | `ending` | The ending. |
 
-For example, `?play&peek&at=dungeon:1&ux=original&tiles=apple2`.
+For example, `?play&peek&at=dungeon:1&ux=original&tiles=apple2`, or Hythloth in
+the Remastered look, `?play&peek&ux=standard&tiles=modern-pc&at=dungeon:7`.
 
 **For comparing styles:**
 
@@ -113,11 +114,12 @@ The dev server also puts the game on `window.u5`, for the console.
 |---|---|
 | `tiles.html` | Every tile in every set, and the game at any place, arena or room. |
 | `appearance.html` | The Avatar's regions and colours. |
-| `grass.html` | Modern PC's grass colours, tuned by hue, saturation and value, with everything grass is in redrawn as they change. |
-| `deltas.html` | Every tile Modern PC still draws from the Standard art, beside the original and the original as Modern PC would draw it, with a choice for each. |
+| `grass.html` | Remastered's grass colours, tuned by hue, saturation and value, with everything grass is in redrawn as they change. |
+| `deltas.html` | Every tile Remastered still draws from the Standard art, beside the original and the original as Remastered would draw it, with a choice for each. |
 | `sounds.html` | Every sound the game makes, by name: what it is, when and how often it plays, and where in the code. |
-| `pictures.html` | Every picture in the game's picture files, Original and Standard side by side. |
-| `dungeon.html` | The first-person corridor for every sort of cell a party may face, Original and Standard side by side. |
+| `pictures.html` | Every picture in the game's picture files, Original and Standard side by side; `?show=skins`, each look's dungeon pieces, its recoloured ones outlined. |
+| `dungeon.html` | The first-person corridor for every sort of cell a party may face, each dungeon's walls, in the Retro and the Enhanced interface (the Enhanced one the whole square the view fills), Remastered and PC EGA or every look side by side. |
+| `frames.html` | Each look's frame at a place, in the Retro and the Enhanced interface, side by side: the game itself, in a frame of the page. |
 | `mapcells.html` | Every dungeon cell as each dungeon map draws it, and what Look says of it. |
 | `runes.html` | Every dungeon sign carved and read, and printed in the log, with the carve style and face to compare; and every other place runes are printed (the signs Look reads, the words spoken in runes, the Codex, a position, ALAKAZAM, the ending), in either look. |
 
@@ -135,6 +137,10 @@ Run in `web/` unless the path says otherwise.
 | `npm run cga -- <TILES.4>` | Draws the PC CGA tiles from the MS-DOS game's `TILES.4` into `cga-u5-tiles.png`. |
 | `npm run c64 -- <disk>` | Reads the C64 tiles off the Commodore 64 version's disk 1 (a `.d64`, or the `.zip` of the six). |
 | `npm run x68k -- <world> <npc>` | Makes the Sharp X68k sheet from the Ultima Codex's two X68000 tile images (`Ultima_V_Sharp_X68000_World_Tiles.png`, `..._NPC_Tiles.png`). |
+| `npm run cga-dungeon -- <game folder>` | Draws the PC CGA look's dungeon (`pc-cga-u5-dungeon.png`) from the MS-DOS game's `DNG1-3.4`, `ITEMS.4` and `MON0-7.4`. |
+| `npm run apple2-dungeon -- <disk> <game folder>` | Reads the Apple looks' dungeon (`apple2-u5-dungeon.png`, `apple2-u5-dungeon-mono.png`) off the Apple II version's Dungeon disk (disk 7 of 8: a `.dsk`, `.po` or its `.zip`); the PC game's folder for the pieces the Apple has none of. |
+| `npm run c64-dungeon -- <disk 2> <game folder>` | Reads the C64 look's dungeon (`c64-u5-dungeon.png`) off the Commodore 64 version's disk 2 (a `.d64`); the PC game's folder for its colours and the pieces it has none of. |
+| `npm run recolour-dungeon -- x68k <game folder>` | Draws the Sharp X68k look's dungeon (`x68k-u5-dungeon.png`) from the PC game's pictures, recoloured: none of its own is to be had. |
 | `npm run music` | Renders the soundtracks (`web/tools/music/`). |
 | `npm run sfx` | Renders the effects suites and checks them (`web/tools/sfx/`). |
 | `npm run saves` | Writes the showcase saves to [`showcase/`](../showcase/README.md): a dozen exported games at the game's interesting places (Britain, the harpsichord, a shrine, the carpet, a frigate, Deceit, the Underworld, Blackthorn's palace, Doom...), each with a party of the level and gear for it. Import them from Settings; they all share one Avatar, Showcase, so each replaces the last. The places and parties are listed in `web/tools/saves/showcase.ts`. |
@@ -226,14 +232,14 @@ The workflows in `.github/workflows/`:
 ## More reading
 
 - [features.md](features.md): everything new, in full, including how the
-  Modern look is drawn.
+  Enhanced interface is drawn.
 - [fixing-1988.md](fixing-1988.md): how the 1988 game's bugs were found and
   fixed.
 - [text-overlays.md](text-overlays.md): the text layer's overlays.
 - [flatpak-updates.md](flatpak-updates.md): how the Flatpak updates itself
   through Flatpak's update portal (Game Mode included), as a pattern for
   other Electron apps shipped as Flatpaks.
-- [standard-originals.md](standard-originals.md): the Modern PC tiles,
+- [standard-originals.md](standard-originals.md): the Remastered tiles,
   tile by tile.
 - [art-brief.md](art-brief.md) and [key-art-brief.md](key-art-brief.md):
   briefs for the art.

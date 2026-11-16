@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appEntry, cloudPatch, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
 import { parseVdf } from '../../desktop/steam.cjs';
@@ -191,7 +191,7 @@ describe('the Linux compatibility tool', () => {
     expect(compat).toEqual({
       compatibilitytools: {
         compat_tools: {
-          ultima5_sp: { install_path: '.', display_name: 'Ultima V SP', from_oslist: 'windows', to_oslist: 'linux' },
+          ultima5_sp: { install_path: '.', display_name: 'Ultima V Enhanced Edition', from_oslist: 'windows', to_oslist: 'linux' },
         },
       },
     });
@@ -450,6 +450,19 @@ describe("the Mac's cache entry", () => {
     const files = [m.cacheFile, m.keptOriginal, m.manifest, script].map((f) => fs.readFileSync(f));
     expect(await macSetup({ ...m, ...closed })).toBe('done');
     expect([m.cacheFile, m.keptOriginal, m.manifest, script].map((f) => fs.readFileSync(f))).toEqual(files);
+  });
+
+  it("gives the launcher the app's own icon and the edition's name, so the Dock shows Ultima V's while Steam plays it", async () => {
+    const m = mac();
+    const icon = Buffer.from([0x69, 0x63, 0x6e, 0x73, 1, 2, 3, 4]);
+    const resources = join(dirname(dirname(m.appExe)), 'Resources');
+    fs.mkdirSync(resources, { recursive: true });
+    fs.writeFileSync(join(resources, 'icon.icns'), icon);
+    expect(await macSetup({ ...m, ...closed })).toBe('done');
+    const plist = fs.readFileSync(join(m.launcher, 'Contents', 'Info.plist'), 'utf8');
+    expect(plist).toMatch(/<key>CFBundleIconFile<\/key>\s*<string>icon<\/string>/);
+    expect(plist).toMatch(/<key>CFBundleDisplayName<\/key>\s*<string>Ultima V Enhanced Edition<\/string>/);
+    expect(fs.readFileSync(join(m.launcher, 'Contents', 'Resources', 'icon.icns')).equals(icon)).toBe(true);
   });
 
   it("leaves a manifest Steam wrote alone, and puts the launcher in the game's folder", async () => {

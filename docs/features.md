@@ -7,8 +7,8 @@ and the Codex, Blackthorn, the Shadowlords, death and the end.
 
 Everything below is new, and all of it is optional. The
 [README](../README.md) gives the short version; this is the whole list.
-The last section, [Under the hood](#under-the-hood-how-the-modern-look-is-drawn),
-describes how the Modern look is drawn.
+The last section, [Under the hood](#under-the-hood-how-the-enhanced-interface-is-drawn),
+describes how the Enhanced interface and the Remastered look are drawn.
 
 - [Your game files](#your-game-files)
 - [Looks and sound](#looks-and-sound)
@@ -83,10 +83,12 @@ describes how the Modern look is drawn.
 
 ## Looks and sound
 
-- **Two looks**, chosen in Settings (UX). *Modern* (the default) is the
-  port's own screen, at the ultima3 port's scale: every one of the 512
-  tiles redrawn, creatures standing on the ground rather than in black
-  squares. *PC (1988)* is the 1988 PC release's EGA tiles and screen.
+- **Two interfaces**, chosen in Gameplay (Interface). *Enhanced* (the
+  default) is the port's own screen, at the ultima3 port's scale, with its
+  conveniences: smooth motion, the combat aids, the full-screen dungeon
+  and its map, carved signs, the compact panel. *Retro* is the 1988 PC
+  release's screen and its square-by-square play. Settings from before
+  carry over: the old Modern look is Enhanced, PC (1988) is Retro.
 - **One Sound**, chosen in Audio: the music and its effects together.
   *Classical* (the default), *Electronic* and *Ambient* are each a
   soundtrack (below) and a suite of effects in its sound: an effect with
@@ -131,46 +133,65 @@ describes how the Modern look is drawn.
   where it is - it goes on from there after - but for the Sound and Music
   level lines, where it plays while the bar is on them, each Sound heard
   as it is chosen; the menus' own clicks are heard as they are made.
-- **Three sets of tiles** for the Modern look (Settings' Tiles), as the
-  ultima3 port has its sets:
-  - *Modern PC* (the default): the 1988 game's own land, figures and
-    furniture, taken from the player's own tiles as the game runs, lifted
-    off their ground, toned to the Standard palette, and redrawn where
-    the original was a blob (rubble, bones, a ship's rail). Paths and
-    dirt edges keep the original's specks; the shores are drawn from the
-    map on the EGA's grid, with a fringe of sand along every grass coast,
-    lake and river bank. The towns and buildings are the Modern look's own.
-  - *PC EGA*: the 1988 PC game's tiles exactly, from the player's own
-    files, each whole on black as the EGA drew them, with the party out in
-    the world as 1988's single icon - inside the Modern screen, with its
-    lettering, its runes read and its panels.
-  - *PC CGA*: the 1988 PC game's tiles for a CGA card, in the CGA's cyan,
-    magenta and white on black: the EGA's drawings recoloured by hand, tile
-    by tile. They come from the game's `TILES.4` (`npm run cga`) and are
-    shipped with the page, so no copy needs that file.
+- **Eight looks** (Appearance's Look), one choice for either interface,
+  as the ultima3 port has its sets. A look is a machine's Ultima V as it
+  was played: its tiles, its dungeon's first-person pictures and its
+  screen's frame together.
+  - *Remastered* (the default; Enhanced only): the 1988 game's own land,
+    figures and furniture, taken from the player's own tiles as the game
+    runs, lifted off their ground, toned to the Standard palette, and
+    redrawn where the original was a blob (rubble, bones, a ship's rail),
+    every person and creature with a fine dark line round them to be seen
+    on busy ground. Paths and dirt edges keep the original's specks; the
+    shores are drawn from the map on the EGA's grid, with a fringe of sand
+    along every grass coast, lake and river bank. The towns and buildings
+    are the Enhanced screen's own. Its dungeon is the PC's own pictures in
+    the corridor's colours (below), and its frame the copper one, toned by
+    where the party is.
+  - *PC EGA*: the 1988 PC game exactly, from the player's own files: its
+    tiles, each whole on black as the EGA drew them, with the party out in
+    the world as 1988's single icon; its dungeon; its blue frame.
+  - *PC CGA*: the 1988 PC game for a CGA card, in the CGA's cyan, magenta
+    and white on black: the EGA's drawings recoloured by hand, tile by tile
+    and picture by picture. The tiles come from the game's `TILES.4`
+    (`npm run cga`), the dungeon from its `DNG1-3.4`, `ITEMS.4` and
+    `MON0-7.4` (`npm run cga-dungeon`), every piece its own; both are
+    shipped with the page, so no copy needs those files.
   - *Apple Color*: Ultima V's own Apple II tiles, all 512 of them, in the
     Apple II's six colours, each tile whole on black as the Apple drew
     it. The game was drawn for the Apple II first and its PC tiles after;
-    the tiles come off the Apple version's Program disk (`npm run apple2`)
-    and are shipped with the page, so the PC game is all a player needs.
-  - *Apple //e* and *Apple //c*: the same tiles on a monochrome monitor,
-    each lit dot sharp and alone, green (the //e's) or white (the //c's).
+    the tiles come off the Apple version's Program disk (`npm run apple2`),
+    the dungeon's walls and things off its Dungeon disk
+    (`npm run apple2-dungeon`), each at the Apple's own size, and all are
+    shipped with the page, so the PC game is all a player needs. Its disks
+    have no pictures of the dungeon's wandering creatures: those, its two
+    narrow doorways and one small thing are the PC's, recoloured in the
+    Apple's colours.
+  - *Apple //e* and *Apple //c*: the same on a monochrome monitor, each
+    lit dot sharp and alone, green (the //e's) or white (the //c's).
   - *Sharp X68k*: the Japanese Sharp X68000 release's tiles (1990), at
     twice the PC's detail, its people and creatures standing on the land
     as the X68000 drew them (`npm run x68k`, from the Ultima Codex's
-    images of them).
+    images of them). None of its dungeon is to be had: the dungeon is the
+    PC's pictures recoloured, dark walls in light lines in each dungeon's
+    colours (`npm run recolour-dungeon`).
   - *C64*: the Commodore 64 version's tiles, in its colours, each whole on
-    black (`npm run c64`, from its first disk).
+    black (`npm run c64`, from its first disk), and its dungeon's walls
+    and things, light blue lines on black, at its own size
+    (`npm run c64-dungeon`, from its second). Its wandering creatures are
+    hardware sprites not yet decoded: those and its two narrow doorways
+    are the PC's, recoloured.
 
   Every set is the PC's 512 tiles in the PC's order; the tiles page's
-  *Every set, side by side* shows each tile in all eight. The water
-  flows, the flames flicker and (in the Apple and PC CGA sets) the flags
-  flap as the PC's do.
-- **Tiles for the PC (1988) look**: *PC EGA* (1988's own), *PC CGA*, or
-  any of the other computers' sets above, in the 1988 screen with its own lettering.
-  Each look keeps its own choice of tiles.
-- **Outlines** (Settings): a fine black line round every person and
-  creature in Modern PC, to see them on busy ground.
+  *Every set, side by side* shows each tile in all eight, and the dungeon
+  page each set's corridor. The water flows, the flames flicker and (in
+  the Apple and PC CGA sets) the flags flap as the PC's do. Every look but
+  Remastered has its machine's own flat frame, in either interface;
+  Retro has every look but Remastered, which is drawn for the Enhanced
+  screen alone - switching to Retro on Remastered asks first, then takes
+  PC EGA, the look it is drawn from. Settings from before carry over: a
+  player on the PC (1988) look keeps the tiles they had, and the old
+  Outlines setting is gone, Remastered's figures always outlined.
 - **Effects don't stop the game.** An effect plays and the game goes on,
   as the ultima3 port's do. The DOS game stood still as long as its
   speaker sounded (a first-circle spell held the view flashed for nearly
@@ -180,10 +201,10 @@ describes how the Modern look is drawn.
   tune played note by note, the whirlpool, the earthquake) is waited out.
 - **The party on foot** is drawn as its members, tinted by their state:
   out in Britannia and the Underworld, the first living member alone,
-  walking (with every set but Modern PC, 1988's single party icon);
+  walking (with every look but Remastered, 1988's single party icon);
   in a towne, the first living member with the others after it in a line,
-  on the squares it walked. In the Modern look the figures move at the
-  pace of a 1988 XT, half that of the PC (1988) look, which keeps an AT's.
+  on the squares it walked. In the Enhanced interface the figures move at
+  the pace of a 1988 XT, half that of Retro, which keeps an AT's.
 - **The runes are read for you.** A sign, the runic speech, the sextant's
   reading and the rest are printed in runes, and after a second each rune
   gives way to its English, in a wave across what was printed; a key
@@ -192,13 +213,16 @@ describes how the Modern look is drawn.
   dungeon's Word or name) and grey otherwise. A sign on a
   dungeon's wall is grooved in dark red into a bolted plate on
   the stone, rather than printed on 1988's white plate, and its English
-  is cut in the Modern look's own lettering, bold enough to read against
+  is cut in the Enhanced interface's own lettering, bold enough to read against
   the plate, half as large again
   as 1988 printed it, its lines broken between words where they would run
   off the wall. It stays in its runes until the party reads it - walking
   into it, or Read sign - then gives way to its English in the same wave,
   a key held against it letting it run on, and is runes again once the
   party has stepped away. Without the party's light, a sign is not seen.
+  In the Retro interface a sign's runes are light on a black box a few
+  pixels larger than they are all round (1988's were dark on a white
+  plate, edge to edge), in the look's own light - the //e's green.
 - **The story pages** (the introduction, the gypsy, the ending) are read a
   paragraph at a time, in the game's own lettering at a size meant for
   reading, their words still read from the player's files. Each paragraph
@@ -210,7 +234,7 @@ describes how the Modern look is drawn.
   tale, where 1988 moved it corner to corner, and the Shadowlord's bolt
   strikes Shamino as that sentence is read. Where a page's words will not
   go a paragraph at a time, they are set in one block in a book face
-  instead. The PC (1988) look keeps 1988's pages as they were.
+  instead. The Retro interface keeps 1988's pages as they were.
 - **Music.** The DOS game had none; the Ultima V Upgrade (The Exodus
   Project, 2001) gave it the Apple II and Commodore 128 versions' songs as
   MIDI, and they play where the Upgrade plays them, read from its driver
@@ -262,7 +286,7 @@ describes how the Modern look is drawn.
   spoken to with (plus a death cue and the stats screen's symbol), so the
   question now says what it does. It is a box of its own: nothing is
   chosen until left or right is pressed, and B goes back to the name.
-- **Make your own Avatar** (Modern look, Modern PC tiles): five figures
+- **Make your own Avatar** (Enhanced interface, Remastered look): five figures
   (fighter, mage, bard, jester, shepherd), eight skin tones, eight hair
   colours and twelve hues, white, grey and black for the clothes and their
   trim, chosen in the
@@ -279,13 +303,13 @@ describes how the Modern look is drawn.
   cannot copy). B goes back to the address. Change it later at any
   mirror in a town or castle: look at it or walk into it (with more than
   the Avatar in the party, it asks whose reflection first). Other looks
-  and tile sets draw the original Avatar
+  and the Retro interface draw the original Avatar
   and keep your choice for when you switch back. The people of Sosaria
-  share one light brown skin in both Modern sets. With the Modern PC
-  tiles the title's scenes show the saved game's Avatar as made, waking
+  share one light brown skin in Remastered. With the Remastered look the
+  title's scenes show the saved game's Avatar as made, waking
   in the first scene's bedroom where 1988 had a shepherd, the mirror
   giving it back.
-- **The companions' looks** (Modern look, Modern PC tiles): each of the
+- **The companions' looks** (Enhanced interface, Remastered look): each of the
   fourteen who may join has colours of their own, where 1988 drew every
   bard alike - the eight of Ultima IV in the colour of the virtue each
   stood for (Mariah's Honesty blue, Iolo's Compassion yellow, Geoffrey's
@@ -307,7 +331,7 @@ describes how the Modern look is drawn.
   answers; each answer centred under its virtue's brazier, on as many lines
   as it needs; the d-pad walks the Avatar from between the bowls to one,
   its fire stirring and its answer turning white, and A (or Return, or Z)
-  takes it. The PC (1988) look keeps 1988's pages and its A and B.
+  takes it. The Retro interface keeps 1988's pages and its A and B.
 
 ## Controls and menus
 
@@ -593,7 +617,7 @@ line grey), Take leave comes first, the bar on it.
 
 <img src="screens/talk.jpg" alt="Talking to the busboy in Britain: his reply, &quot;I am the busboy.&quot;, in a framed box at the top of the view; the words to say framed at its foot, Dishes chosen, a grey arrow at its corner where more lie below; the party's words and the prompts in the log" width="640">
 
-What the townsman says is shown across the top of the view (Settings,
+What the townsman says is shown across the top of the view (Appearance,
 Dialog: Play, the default): in the same frame, only as big as its lines,
 centred, and a row clear of them where they stand to the north (else of
 the party's own row), so the party and they are in sight between the two
@@ -646,17 +670,17 @@ set Input to Classic and type it.
 
 ## The party panel
 
-- **In the Modern look** the party's box holds the party and, straight
+- **In the Enhanced interface** the party's box holds the party and, straight
   under it, food and gold, and the log below runs two lines longer. The
   date is on the map's bottom border - at sea with the wind, in a dungeon
   with the way the party faces. The lasting spell in force is named under
   the party with its turns left ("Protection 17"), and the regalia worn on
-  the box's top border ("Crown"). The PC (1988) look keeps the 1988 screen.
+  the box's top border ("Crown"). The Retro interface keeps the 1988 screen.
 - **Names take the colour of their state**: green poisoned, lavender
   asleep, pink charmed in a fight, grey dead, blue when the camp's
   apparition would grant a level. Hit points show as current over maximum
   ("5/240", the current yellow when low and red when nearly gone). The
-  state's letter (P, S, D, C) appears on the frame where Settings' Status
+  state's letter (P, S, D, C) appears on the frame where Appearance's Status
   letters asks for it; off by default, the colour telling.
 - **The turn's marker** in a fight, the outline round the member whose
   turn it is, takes the same colour as their bar in the panel: their
@@ -692,13 +716,19 @@ set Input to Classic and type it.
 
 ## Dungeons
 
-- **The corridor** is one set of walls in grey stone, and each of the eight
-  dungeons is told apart by the light in it - Deceit, Wrong and Hythloth
-  cold and violet, Despise, Covetous and Shame green with damp, Destard
-  and Doom red with what burns below. A creature in a corridor is 1988's own
+- **The corridor** in the Remastered look is the PC game's own pictures,
+  pixel for pixel, their stipple and dithers as 1988 drew them, recoloured
+  and each pixel a sharp square block - the view enlarged to fill its
+  square by whole pixels, none blended. Each dungeon is told apart by the
+  light in it - Deceit and Wrong cold and violet, Despise, Covetous and
+  Shame green with damp, Destard and Doom red with what burns below - and
+  Hythloth is its own red rock, no light laid on it. A door, a chest or a
+  skeleton keeps its own colours; the wall round a skeleton or a fall of
+  rock is the plain wall's, so that only it changes when it goes. Every
+  other look draws its machine's own corridor (see Eight looks), in its
+  colours and at its own size. A creature in a corridor is 1988's own
   picture of it, drawn anew for each distance and twitching and flapping
-  as 1988's did, in the Modern colours and under the dungeon's light; on
-  the maps it is its figure. In the dark, with no light carried, what
+  as 1988's did, in the Remastered colours; on the maps it is its figure. In the dark, with no light carried, what
   gives a light of its own - a skeleton's eyes flashing red, a field's
   crackle - is all there is to see. A pit trap drops the party out of the view: it slides up
   and away over half a second, faster as it falls, black behind it,
@@ -710,14 +740,14 @@ set Input to Classic and type it.
   none of them), with the mark of what each cell is and which way the
   party faces, and the level's creature where the party can see it (down
   a lit passage or round a corner beside it - never through rock or a
-  closed door - or next to it in the dark, felt for). In the Modern look it is
+  closed door - or next to it in the dark, felt for). In the Enhanced interface it is
   drawn in the look's own tiles, edge to edge a pixel to a pixel:
-  cobbled passages, the rock the wall in the dungeon's light, ladders,
+  cobbled passages, the rock the wall (in the dungeon's light, with Remastered's tiles), ladders,
   chests, fountains (turning), doors and treasure on them, a pit the
   original's black box, and rubble the dungeon's own - bones, or a caved
   in passage. It sits under the party panel, five cells a side round the
-  party, over the top nine rows of the log (six go on below); the Map
-  command switches to the whole level, where the d-pad walks by the
+  party, over the top nine rows of the log (six go on below); the Change
+  View command (below Look) switches to the whole level, where the d-pad walks by the
   compass (a press the way of something to act on - a ladder, a chest, a
   fountain, the creature, rock to search - only turns to face it, and
   the next acts): the party in the middle and the level round it, moving
@@ -725,11 +755,13 @@ set Input to Classic and type it.
   eight, but only two truly loop round (Shame's seventh, Doom's fifth):
   on the rest the map unrolls the passages from where the party stands,
   each cell drawn once where it really lies, and on those two the level
-  repeats round the party as it goes on for ever. The PC (1988) look
+  repeats round the party as it goes on for ever. While the first-person
+  view is the large one, Map shows the whole level the same way, just to
+  look at, until A or B brings the view back. The Retro interface
   keeps its map over the first-person view - Off, in the Corner, or the
-  Whole view, chosen in Settings.
+  Whole view, chosen in Appearance.
 
-  <img src="screens/dungeon-map.jpg" alt="The first level of a dungeon in the Modern look's own tiles: the party in a lit passage of purple stone, a ladder below them, with the corridor's first-person view beside the map under the party panel" width="640">
+  <img src="screens/dungeon-map.jpg" alt="The first level of a dungeon in the Remastered look's own tiles: the party in a lit passage of purple stone, a ladder below them, with the corridor's first-person view beside the map under the party panel" width="640">
 
 - **The menu names what is here or ahead**, its way already chosen: Klimb a
   ladder or a pit, Open or Jimmy a chest, Get its treasure, Drink at a
@@ -830,7 +862,7 @@ other hurt in the game kills as it always did.
   off until a trigger opens it) is never chosen for the player, but one
   aimed at there by hand - with Attack, or a spell at one foe (Flam Por,
   Corp Por, a field, An Ex Xen, Bet Rel Xen) - stays the snap target, and
-  where the next aim starts, until LB/RB step off it. With **Snap targets** on (Settings;
+  where the next aim starts, until LB/RB step off it. With **Snap targets** on (Gameplay;
   on to begin with) it is marked on the member's turn - the crosshair's
   four arrows, small, round the foe - only when an X would strike it. LB
   and RB (or [ and ]) step it to the next foe in reach or the one before,
@@ -881,7 +913,8 @@ other hurt in the game kills as it always did.
   spiked helm swung before the axe at a charmed friend), else it closes
   in. Fights it goes nowhere in for thirty turns are handed back: All is
   turned off, and Allies held for the rest of that fight alone.
-- **Gameplay** (Pause menu, and Settings at the title): input, Auto Pause, the rules, Snap attacks and Max input
+- **Gameplay** (Pause menu, and Settings at the title): the Interface (Enhanced or Retro), input, Auto Pause, the
+  rules, Snap attacks, Snap targets (small arrows round the foe X would strike) and Max input
   (how fast a held key, button or direction repeats - Very slow, Slow, Medium or Fast, the same on a keyboard, a
   gamepad and the touch pad, and only while the game is waiting, so no steps pile up to walk on after the key is let
   go; a fight beginning or ending, a place or level entered or left, or a moongate stops a held key until it is
@@ -889,21 +922,20 @@ other hurt in the game kills as it always did.
 
   <img src="screens/gameplay.jpg" alt="The Gameplay menu, the bar on Rules: Modern and its note at the foot - Poison, hunger never kill; XP shared; fights eased; a deeper Path." width="640">
 
-- **Appearance** (Pause menu below Gameplay, and Settings at the title): the look (UX) and its tiles, outlines,
-  status letters, the **Font**, scanlines (each look its own: on in the PC (1988) look until turned off), Smooth
-  motion (the Modern look's, on to begin with: the map slides under the party and whoever walks glides to the next
-  square - in towns, out of doors, in a fight and on the dungeon's whole-level map - the game itself still moving a
-  square at a time) and the dungeon map (the PC (1988) look's). The Font is any of four, in either look:
-  **SixtyFour**, the Modern look's own; **Legible**, Atkinson Hyperlegible Mono, made to be easy to read, in its ExtraBold;
+- **Appearance** (Pause menu below Gameplay, and Settings at the title): the **Look** (its tiles, dungeon and
+  frame), status letters, the **Font**, the dialog (a townsman's words in the view or in the log), scanlines (each
+  interface its own: on in Retro until turned off), Smooth motion (the Enhanced interface's, on to begin with: the
+  map slides under the party and whoever walks glides to the next square - in towns, out of doors, in a fight and on
+  the dungeon's whole-level map - the game itself still moving a square at a time) and the dungeon map (Retro's).
+  The Font is any of four, in either interface: **SixtyFour**, the Enhanced interface's own; **Legible**, Atkinson Hyperlegible Mono, made to be easy to read, in its ExtraBold;
   **Dyslexic**, OpenDyslexic Mono, for dyslexic readers; and **DOS**, the 1988 game's own 8-by-8 letters. Legible
-  and Dyslexic set the story pages too, in either look; SixtyFour and DOS leave them in their period faces. A
-  player already in the PC (1988) look begins on DOS.
-- **Settings** (Pause menu): the dialog (a
-  townsman's words in the view or in the log), Battery saver (off to
+  and Dyslexic set the story pages too, in either interface; SixtyFour and DOS leave them in their period faces. A
+  player already in the Retro interface begins on DOS.
+- **Settings** (Pause menu): Battery saver (off to
   begin with: on, the map stops moving a minute after the last press,
   until the next, and the screen is drawn and a gamepad read only when
   there is something to show or a pad to read - for a phone left with the
-  game open), Snap targets, the export and
+  game open), the export and
   import of the saved game, and forgetting the installed files. In each,
   each setting says what it does at the foot of the list while the bar is
   on it.
@@ -938,7 +970,7 @@ other hurt in the game kills as it always did.
   milestones - Untried, Wayfarer, Proven, Champion, Legend - adding up to 10
   to the whole. Nothing of it is said: where a deed moved it, the game's own
   words for the deed are tinted in the log, faintly blue for a rise and
-  faintly red for a fall (the Modern look only). The design is
+  faintly red for a fall (the Enhanced interface only). The design is
   docs/superpowers/specs/2026-10-17-modern-karma-design.md.
 
   <img src="screens/journal-path.jpg" alt="The journal's The Path: in word, in deed and in battle Wise, in the quest Untried, with the card for In word over the party" width="640">
@@ -1170,8 +1202,8 @@ a copy of Ultima V bought there (the title's Steam (beta) menu, every option off
 [Steam's Ultima V](steam.md#play-from-steam)). With Cloud saves on, its
 saves are kept with Steam, in the game's folder per account and synced by
 Steam Cloud, apart from any other launch's; Export and Import carry a game
-across. The window title, the title screen and Settings' last line say
-Ultima V SP and the version.
+across. The window title and the title screen say Ultima V Enhanced
+Edition and the version, and Settings ends with the two, a line each.
 
 Saving is checked: each save is read back before the game says "(saved)"
 or "Done.", and where it cannot be kept (the storage full or shut, as in
@@ -1230,14 +1262,15 @@ name; the name can be changed there, and the game says the name it was
 saved by. Cancelling the picker saves nothing.
 Import's From a file opens Android's picker for a file to read.
 
-## Under the hood: how the Modern look is drawn
+## Under the hood: how the Enhanced interface is drawn
 
 - **The screen** is 1280 by 800, four times the EGA's each way, a tile 64
   pixels. The canvas has the display's own pixels: the picture is enlarged
   to them by the nearest pixel, every edge hard (`?scale=smooth` shows the
   alternative: grown square-edged to the whole number past them and shrunk
   smoothed), and made smaller, on a small phone, smoothed.
-- **The frame and menus** are the ultima3 Standard copper, cut at the
+- **The frame and menus** (the Remastered look's; every other look has
+  its machine's own flat frame) are the ultima3 Standard copper, cut at the
   screen's own size rather than coloured in EGA blocks: the frame's shape
   (and its dark rim) followed along every curve and slanted end, and
   bevelled as that port's frame is, a ridge of light along an edge facing
@@ -1292,16 +1325,20 @@ Import's From a file opens Android's picker for a file to read.
   whichever clear space of the page lets it be largest, its first letter in
   UnifrakturMaguntia (SIL OFL 1.1), where 1988 ran it justified round the
   picture.
-- **Every picture** the game draws - the first-person dungeon, the
-  introduction, the gypsy's cards, the ending - is restyled from the
-  player's own copy as it is shown: the sixteen EGA colours as the Standard
-  set's, the dithers blended, and the whole drawn at the screen's own size,
-  a diagonal followed rather than squared off. The dungeon view is grown to
-  the map's square, each pixel the view's pixels it covers weighed by how
-  much of it each covers, so its walls and letters come out even. The
-  corridor's creatures (MON0-7.16) keep their pixels - their dithers are
-  fur and scales, not a wall's stipple - in Modern PC's toned colours.
-- **The Modern PC tiles** are derived at run time from the player's
+- **The pictures** the game draws are the player's own copy's, as it is
+  shown. The introduction, the gypsy's cards and the ending are its own
+  pixels in its own colours, each a square block. In the Remastered look
+  the first-person dungeon's walls and things (DNG1-3.16, ITEMS.16) are
+  recoloured only - the corridor's colours, a wall in its dungeon's light,
+  each pixel a square block, the stipple and dithers as drawn; a skeleton
+  or a fall of rock is found where its picture differs from the plain
+  wall's, a door by its own colours. The corridor's creatures (MON0-7.16)
+  keep their pixels in Remastered's toned colours, a diagonal followed
+  rather than squared off (EPX). The dungeon view is grown to the map's
+  square by whole pixels, each of the view's four or five of the
+  square's, none blended; shrunk beside the whole-level map, each pixel
+  the view's it covers, weighed by how much of it each covers.
+- **The Remastered tiles** are derived at run time from the player's
   TILES.16: lifted off the ground they were drawn on, toned to the Standard
   palette, recoloured where a colour read wrongly, redrawn where they were
   blobs, and re-derived whenever the EGA animator changes a tile. The
@@ -1321,5 +1358,5 @@ Import's From a file opens Android's picker for a file to read.
   (`sounds.html`) plays every one, and every tune in every arrangement
   under it.
 - **The text layer** keeps a record of what it drew, so an overlay (the
-  Modern look's full-height party panel is one) can cover part of a text
+  Enhanced interface's full-height party panel is one) can cover part of a text
   window while the window goes on underneath: see `docs/text-overlays.md`.

@@ -4,9 +4,9 @@
  * The maps over the game, two pixels a square.
  *
  * Inside a town, keep or castle the map opens on that level, drawn from
- * the tiles standing there; in a dungeon, on that level's eight by eight
- * grid of cells, each with the mark of what it is. Either shows only
- * what the party has seen (interiorMap.ts).
+ * the tiles standing there; in a dungeon, on that level as the Enhanced
+ * map draws it, in the look's tiles, its passages unrolled from where the
+ * party stands. Either shows only what the party has seen (interiorMap.ts).
  *
  * Britannia opens on the map the party set out with: coasts drawn in ink
  * on paper (parchment.ts), the places the mapmaker knew marked in brown,
@@ -569,7 +569,7 @@ export function showMap(
       return;
     }
     if (page === 'here') {
-      const px = dungeon ? dungeonPicture(g, g.s.mapId, g.s.level) : townPicture(g, where!, g.s.level, tiles, art, lit);
+      const px = dungeon ? dungeonPicture(g, g.s.mapId, g.s.level, tiles, art) : townPicture(g, where!, g.s.level, tiles, art, lit);
       const img = new ImageData(INTERIOR_PIXELS, INTERIOR_PIXELS);
       new Uint32Array(img.data.buffer).set(px);
       inner.width = inner.height = INTERIOR_PIXELS;

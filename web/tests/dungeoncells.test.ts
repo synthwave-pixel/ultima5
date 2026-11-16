@@ -4,11 +4,12 @@ import { drawDungeonMap } from '../src/game/dungeonMap.ts';
 import { revealCells } from '../src/game/fog.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { commandMenu } from '../src/game/menu.ts';
+import { loadOptions, saveOptions } from '../src/game/settings.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { klimbOffer, searchOffer, signAhead } from '../src/game/targets.ts';
 import { A, T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
-import { fly, Landed, press } from './pilot.ts';
+import { fly, Landed, pick, press } from './pilot.ts';
 
 /** The dungeon's cells, by controller: what the menu offers for each, and how the map marks them (the port's). */
 describe("a dungeon's cells", () => {
@@ -38,6 +39,94 @@ describe("a dungeon's cells", () => {
     });
     return shown;
   };
+
+  it('offers Change View just below Look in a dungeon under Enhanced, Map last while the view is the large one; Retro neither', async () => {
+    const { labels: shown } = await labels(room());
+    expect(shown[shown.indexOf('Look') + 1]).toBe('Change View');
+    expect(shown[shown.length - 1]).toBe('Map');
+    const whole = room();
+    whole.g.options.dungeonView = 'full'; // the map large already: no Map to look at it
+    expect((await labels(whole)).labels).not.toContain('Map');
+    const retro = room();
+    retro.g.options.tileSet = 'original';
+    const retroShown = (await labels(retro)).labels;
+    expect(retroShown).not.toContain('Change View');
+    expect(retroShown[retroShown.length - 1]).toBe('Map');
+  });
+
+  it("switches the dungeon's view with Change View; Map shows the whole level until B, then the view again", async () => {
+    const choose = async (label: string): Promise<{ maps: number; during: string; after: string }> => {
+      const { g, p } = room();
+      g.options.dungeonView = 'mini';
+      let maps = 0;
+      let during = '';
+      g.hooks.showMap = async () => void maps++;
+      fly(g, p, [
+        pick('Commands', label),
+        (game) => {
+          if (during) return undefined;
+          during = game.options.dungeonView;
+          return Pad.B;
+        },
+      ]);
+      g.commandPrompt = 'dungeon';
+      await commandMenu(g).catch((e: unknown) => {
+        if (!(e instanceof Landed)) throw e;
+      });
+      return { maps, during, after: g.options.dungeonView };
+    };
+    expect(await choose('Change View')).toEqual({ maps: 0, during: '', after: 'full' }); // switched, kept, no key asked
+    expect(await choose('Map')).toEqual({ maps: 0, during: 'full', after: 'mini' });
+  });
+
+  it("ends Map's look at the level on A or Enter too, as on B, Escape or Space", async () => {
+    for (const end of [Pad.A, K.Enter, Pad.B, K.Escape, K.Space]) {
+      const { g, p } = room();
+      g.options.dungeonView = 'mini';
+      let asked = 0;
+      fly(g, p, [
+        pick('Commands', 'Map'),
+        () => {
+          asked++;
+          return asked === 1 ? end : Pad.B;
+        },
+      ]);
+      g.commandPrompt = 'dungeon';
+      await commandMenu(g).catch((e: unknown) => {
+        if (!(e instanceof Landed)) throw e;
+      });
+      expect(asked, `key ${end}`).toBe(1);
+      expect(g.options.dungeonView).toBe('mini');
+    }
+  });
+
+  it("keeps the view's layout as chosen when the settings are saved during Map's look (from the Pause menu)", async () => {
+    const store = new Map<string, string>();
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    try {
+      const { g, p } = room();
+      g.options.dungeonView = 'mini';
+      saveOptions(g.options);
+      fly(g, p, [
+        pick('Commands', 'Map'),
+        (game) => {
+          saveOptions(game.options); // a setting changed in the Pause menu while the level is looked at
+          return Pad.B;
+        },
+      ]);
+      g.commandPrompt = 'dungeon';
+      await commandMenu(g).catch((e: unknown) => {
+        if (!(e instanceof Landed)) throw e;
+      });
+      expect(loadOptions().dungeonView).toBe('mini');
+    } finally {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
 
   it('offers Search where there is something it could find, here, ahead or to either hand, and not behind', () => {
     expect(searchOffer(room().g)).toBe('hide');

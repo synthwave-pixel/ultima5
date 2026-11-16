@@ -11,7 +11,7 @@ import { freeActor } from './actors.ts';
 import { arenaFight } from './combat.ts';
 import { entryRow } from './dungeon.ts';
 import type { Game } from './game.ts';
-import { PC_TILES, TILES, type Options, type PcTiles, type Tiles } from './settings.ts';
+import { PC_TILES, TILES, type Options, type Tiles } from './settings.ts';
 
 /** A frigate, north: the party aboard, for the arenas fought on a ship's deck (combat.ts attackCombat). */
 const FRIGATE = 0x20;
@@ -111,12 +111,14 @@ export function startRoom(g: Game, dat: Uint8Array, d: number, room: number, lev
 
 /**
  * The look asked for on the address, for this page alone - not saved (the tiles page's view follows its own choice):
- * ?ux=standard or original, ?tiles= a set that UX offers. Anything else is left as the settings have it.
+ * ?ux=standard or original (the interface, Enhanced or Retro), ?tiles= a set that interface offers. Anything else is
+ * left as the settings have it - but Retro's tiles never Remastered, PC EGA in its place.
  */
 export function lookAsked(o: Options, q: URLSearchParams): void {
   const ux = q.get('ux');
   if (ux === 'standard' || ux === 'original') o.tileSet = ux;
   const tiles = q.get('tiles');
-  if (o.tileSet === 'standard' && TILES.includes(tiles as Tiles)) o.tiles = tiles as Tiles;
-  if (o.tileSet === 'original' && PC_TILES.includes(tiles as PcTiles)) o.pcTiles = tiles as PcTiles;
+  const offered: readonly Tiles[] = o.tileSet === 'standard' ? TILES : PC_TILES;
+  if (offered.includes(tiles as Tiles)) o.tiles = tiles as Tiles;
+  if (o.tileSet === 'original' && o.tiles === 'modern-pc') o.tiles = 'pc-ega';
 }

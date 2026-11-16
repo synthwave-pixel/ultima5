@@ -35,12 +35,17 @@ describe('the development starts', () => {
     for (const r of rooms) expect(roomCell(dat, r.dungeon, r.room, r.level)).not.toBeNull();
   });
 
-  it('take the look asked on the address for the page alone, and ignore what that UX does not offer', () => {
+  it('take the look asked on the address for the page alone, and ignore what that interface does not offer', () => {
     const o = { ...DEFAULTS };
     lookAsked(o, new URLSearchParams('ux=original&tiles=apple2'));
-    expect([o.tileSet, o.pcTiles, o.tiles]).toEqual(['original', 'apple2', DEFAULTS.tiles]);
+    expect([o.tileSet, o.tiles]).toEqual(['original', 'apple2']);
     lookAsked(o, new URLSearchParams('ux=original&tiles=modern-pc'));
-    expect(o.pcTiles).toBe('apple2'); // PC (1988) has no Modern PC
+    expect(o.tiles).toBe('apple2'); // Retro has no Remastered
+    lookAsked(o, new URLSearchParams('ux=original'));
+    expect(o.tiles).toBe('apple2');
+    const fresh = { ...DEFAULTS }; // Remastered, the default
+    lookAsked(fresh, new URLSearchParams('ux=original'));
+    expect(fresh.tiles).toBe('pc-ega');
     lookAsked(o, new URLSearchParams('ux=standard&tiles=pc-ega'));
     expect([o.tileSet, o.tiles]).toEqual(['standard', 'pc-ega']);
     lookAsked(o, new URLSearchParams('ux=nintendo&tiles=nes'));

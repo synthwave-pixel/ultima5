@@ -273,9 +273,15 @@ export interface Effects {
   /** Picture `i` of a picture file's contents; flags 1 flip vertically, 2 horizontally. */
   /**
    * Picture `i` of a picture file. `style` says what it is, for a look that draws it its own way: 'dungeon' for the
-   * corridor's walls, 'thing' for what stands in it, 'creature' for a half of its wandering creature.
+   * corridor's walls, 'thing' for what stands in it, 'creature' for a half of its wandering creature; `name` the file's
+   * name, for a machine's skin to draw its own (skins.ts).
    */
-  image(res: Uint8Array, i: number, x: number, y: number, flags?: number, style?: 'dungeon' | 'thing' | 'creature'): void;
+  image(res: Uint8Array, i: number, x: number, y: number, flags?: number, style?: 'dungeon' | 'thing' | 'creature', name?: string): void;
+  /**
+   * Whether the corridor's view is being drawn (true) or done (false): a machine's skin draws its lines and dots in
+   * its own ink meanwhile. True back where a skin is set.
+   */
+  viewInk?(on: boolean): boolean;
   /**
    * Pixels (x1, y1)-(x2, y2) of page `from` shrunk or grown into the box (dx, dy, dw, dh) of page `to` (the dungeon's
    * view made small, or grown to the map's square); the box's columns `clipFrom` to `clipTo` alone, where given.
@@ -299,6 +305,8 @@ export interface Effects {
    * `readSign(null)` is sign `key` - its place and the way it is seen from - read as far as it is since first shown.
    */
   readSign?(key: string | null, read?: boolean): void;
+  /** The colour number of the Retro sign's runes, on black, in the look chosen (skins.ts signRunes); null for white. */
+  signRunes?(): number | null;
   /** The colour runes printed from now read into English in (0xRRGGBB), or null for their own (runeWords.ts). */
   readInk?(rgb: number | null): void;
   /**

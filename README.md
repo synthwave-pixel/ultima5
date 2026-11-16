@@ -9,13 +9,15 @@ ships none of the PC game: it plays your own copy.*
 **Play it:** <https://synthwave-pixel.github.io/ultima5/>
 
 The page itself carries three things of the game's: the Ultima V
-Upgrade's music in `web/public/music/`, the PC version's CGA tiles, the
-Apple II version's tiles, for the Apple tile sets, the C64's and the Sharp
-X68k's tiles, and the box's painting, for the key art.
+Upgrade's music in `web/public/music/`; the other machines' looks - the
+PC version's CGA tiles and dungeon pictures, the Apple II's and the
+C64's tiles and dungeon pictures, and the Sharp X68k's tiles, with the
+PC's dungeon pictures recoloured where a machine has none of its own to
+be had; and the box's painting, for the key art.
 
-![The Modern look: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
+![The Enhanced interface: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
-![The two looks and their tile sets - Modern with Modern PC, Apple Color or PC EGA tiles, PC 1988 with PC EGA or Apple Color - each in the world, a town, combat and a dungeon, and for the Modern look the dungeon's whole-level map](promo/looks.jpg)
+![The two interfaces and their looks - Enhanced with Remastered, Apple Color or PC EGA, Retro with PC EGA or Apple Color - each in the world, a town, combat and a dungeon, and for the Enhanced interface the dungeon's whole-level map](promo/looks.jpg)
 
 - [Installation](#installation) The web, iPhone and iPad, Windows,
   macOS, the Steam Deck, Linux and Android.
@@ -82,7 +84,7 @@ Apple Silicon, macOS 13 or later. On an Intel Mac, play on the web.
 3. Right-click it → Properties → Permissions → Is executable.
 4. Run it. On the title screen choose Steam (beta) → Play from Steam →
    Compat. tool, and let it restart Steam.
-5. In Steam: Ultima V → ⚙ → Properties → Compatibility → Ultima V SP.
+5. In Steam: Ultima V → ⚙ → Properties → Compatibility → Ultima V Enhanced Edition.
 6. Return to Game Mode and press Play. If the controls don't respond, pick
    a Gamepad template in the game's controller settings. It updates itself.
 
@@ -246,14 +248,16 @@ reverse-engineered source of the DOS game,
 fixes. Everything new is optional. [What is new, in full](docs/features.md)
 has the whole list; the highlights:
 
-- **Two looks.** *Modern* (the default) redraws the screen at four times
-  the EGA's size, with eight sets of tiles: *Modern PC* (1988's own art,
-  taken from your files, cleaned up and toned), *PC EGA* (1988's tiles
-  exactly), *PC CGA* (1988's four-colour tiles for a CGA card), and
-  Ultima V's own tiles from the other computers it was made
-  for - *Apple Color*, *Apple //e* and *Apple //c* (the Apple II's, in
-  colour and on a green or white monitor), *Sharp X68k* and *C64*.
-  *PC (1988)* is the 1988 screen as it was, with any of them but Modern PC. The
+- **Two interfaces and eight looks.** The *Enhanced* interface (the
+  default) redraws the screen at four times the EGA's size, with the
+  port's conveniences; *Retro* is the 1988 screen and its
+  square-by-square play. Either takes any of eight looks, each its own
+  tiles, dungeon pictures and screen frame: *Remastered* (1988's own art,
+  taken from your files, cleaned up and toned; Enhanced only), *PC EGA*
+  (1988's exactly), *PC CGA* (1988's four colours for a CGA card), and
+  Ultima V as the other computers it was made for drew it - *Apple Color*,
+  *Apple //e* and *Apple //c* (the Apple II's, in colour and on a green or
+  white monitor), *Sharp X68k* and *C64*. The
   Ultima V Upgrade's music plays where the Upgrade played it, and one
   Sound setting chooses it with its effects: Classical, Electronic or
   Ambient, each with effects in the same instruments and its magic made
@@ -274,14 +278,14 @@ has the whole list; the highlights:
   Cheats; Classic input still lets you type anything. What a townsman
   says appears in a box at the top of the view, page by page, with the
   words to say framed at its foot, so you can see who you are talking
-  to - a merchant's too, haggling and all; Settings, Dialog: Log keeps it
+  to - a merchant's too, haggling and all; Appearance, Dialog: Log keeps it
   all in the message log, as 1988 did.
 - **A journal, maps and a dungeon map** that fill in as you play, kept
   with the save. The journal's **The Path** tells how far you walk the
   path of the Avatar, in 1988's own words, never a number; under the
   Modern and Story rules it reads four parts - in word, in deed, in battle and in
   the quest - and a deed that moved it is tinted in the log.
-- **Your own Avatar** (Modern PC): five figures and your choice of skin,
+- **Your own Avatar** (Remastered): five figures and your choice of skin,
   hair and clothes, changed at any mirror. The old "Male or Female?" is
   now "How art thou addressed?", since that is all it ever decided.
 - **One setting for the rules**: Story, Modern or Classic. Modern (the
@@ -315,13 +319,15 @@ without giving up what made it itself. A few principles decide most
 things:
 
 - **Ship none of the PC game.** Like OpenMW, the engine reads everything from
-  the player's own files - even the Modern PC art is derived from the
+  the player's own files - even the Remastered art is derived from the
   original tiles as the game runs: lifted off their ground, toned, and
   repainted through small per-figure rules, so the Avatar's skin, hair and
   clothes can be recoloured without redrawing a pixel. The tile-by-tile
   record is in [standard-originals.md](docs/standard-originals.md). The
-  other computers' sets are the exception: their versions' own tiles,
-  which a player of the PC game would not otherwise have.
+  other computers' looks are the exception: their versions' own tiles and
+  dungeon pictures, which a player of the PC game would not otherwise
+  have, and the PC's pictures recoloured in their colours where a machine's
+  own could not be had.
 - **A controller is enough.** Every choice can be made with the d-pad, A
   and B. A prompt is always a menu, never a wait for a button you would
   have to know about; that one rule reshaped the commands, the shops, the
@@ -330,18 +336,18 @@ things:
   only words the player has heard, and only ones the game answers to;
   the journal's hints say where and who, never the mantra or the Word.
 - **Keep 1988 one setting away.** Changes to the rules are options, with
-  the original as a choice (Classic input, the Classic rules, the PC
-  (1988) look). Bugs that robbed the player are fixed; quirks that are just
+  the original as a choice (Classic input, the Classic rules, the Retro
+  interface). Bugs that robbed the player are fixed; quirks that are just
   flavour are kept.
 - **Say what a choice does.** "Male or Female?" only ever chose the words
   the Avatar is addressed with, so it now asks exactly that. Every
   setting explains itself at the foot of the list.
 - **Measure before changing.** The figures' animation pace was worked out
-  from the DOS game's own wait loop: the Modern look moves them
-  at the pace of a 1988 XT, the PC (1988) look at an AT's.
+  from the DOS game's own wait loop: the Enhanced interface moves them
+  at the pace of a 1988 XT, Retro at an AT's.
 
 [art-brief.md](docs/art-brief.md) is the brief for an artist taking the
-Modern look's art further. The modern play and the builds follow the
+Remastered look's art further. The modern play and the builds follow the
 [ultima3](https://github.com/synthwave-pixel/ultima3) port.
 
 ## Credits
@@ -357,34 +363,48 @@ the player's own copy.
   borrows (MIT, Copyright (c) 2025 Leon McNeill; see [LICENSE](LICENSE)): its
   Standard border caps (`web/public/graphics/standard-caps.png`),
   its Standard figures and painted grounds (`web/art/standard/u3/`, from
-  which `npm run tiles` draws many of the Modern look's tiles in
+  which `npm run tiles` draws many of the Remastered look's tiles in
   `standard-tiles.png`; see [its note](web/art/standard/u3/README.md)),
   and its Standard sound effects, for the effects the two games share
   (`web/src/audio/chip3.ts`).
 - **The box's painting**, by Denis Loubet for Origin Systems (1988): the
   key art - Steam's library artwork, the boot screen, the banner above
   (`art/`, `web/art/cover/`). It remains its owners'.
-- **The PC CGA tiles** of the PC CGA tile set
-  (`web/public/graphics/cga-u5-tiles.png`): Ultima V's own, drawn by
-  Origin Systems for the MS-DOS version's CGA mode (1988), read from its
-  `TILES.4` by `npm run cga` (`web/tools/art/cga.ts`). They remain their
-  owners'.
-- **The Apple II tiles** of the Apple Color, Apple //e and Apple //c tile
-  sets (`web/public/graphics/apple2-u5-tiles.png`, `apple2-u5-mono.png`):
-  Ultima V's own, drawn by Origin Systems for the Apple II version (1988),
-  read off its Program disk by `npm run apple2` (`web/tools/art/apple2.ts`).
-  They remain their owners'.
-- **The Commodore 64 tiles** of the C64 tile set
-  (`web/public/graphics/c64-u5-tiles.png`): Ultima V's own, drawn by
-  Origin Systems for the Commodore 64 version (1988), read off its first
-  disk by `npm run c64` (`web/tools/art/c64.ts`). They remain their
-  owners'.
-- **The Sharp X68000 tiles** of the Sharp X68k tile set
+- **The PC CGA tiles and dungeon pictures** of the PC CGA look
+  (`web/public/graphics/cga-u5-tiles.png`, `pc-cga-u5-dungeon.png`):
+  Ultima V's own, drawn by Origin Systems for the MS-DOS version's CGA
+  mode (1988), read from its `TILES.4` by `npm run cga`
+  (`web/tools/art/cga.ts`) and its `DNG1-3.4`, `ITEMS.4` and `MON0-7.4`
+  by `npm run cga-dungeon` (`web/tools/art/cgaDungeon.ts`). They remain
+  their owners'.
+- **The Apple II tiles and dungeon pictures** of the Apple Color, Apple //e
+  and Apple //c looks (`web/public/graphics/apple2-u5-tiles.png`,
+  `apple2-u5-mono.png`, `apple2-u5-dungeon.png`,
+  `apple2-u5-dungeon-mono.png`): Ultima V's own, drawn by Origin Systems
+  for the Apple II version (1988), the tiles read off its Program disk by
+  `npm run apple2` (`web/tools/art/apple2.ts`), the dungeon's walls and
+  things off its Dungeon disk by `npm run apple2-dungeon`
+  (`web/tools/art/apple2Dungeon.ts`). Its disks hold no pictures of the
+  dungeon's wandering creatures, so those, its two narrow doorways and
+  one small thing are the PC's, recoloured in the Apple's colours. They
+  remain their owners'.
+- **The Commodore 64 tiles and dungeon pictures** of the C64 look
+  (`web/public/graphics/c64-u5-tiles.png`, `c64-u5-dungeon.png`): Ultima
+  V's own, drawn by Origin Systems for the Commodore 64 version (1988),
+  the tiles read off its first disk by `npm run c64`
+  (`web/tools/art/c64.ts`), the dungeon's walls and things off its second
+  by `npm run c64-dungeon` (`web/tools/art/c64Dungeon.ts`). Its wandering
+  creatures are hardware sprites not yet decoded, so those and its two
+  narrow doorways are the PC's, recoloured. They remain their owners'.
+- **The Sharp X68000 tiles** of the Sharp X68k look
   (`web/public/graphics/x68k-u5-tiles.png`): Ultima V's own, drawn by
   Infinity Co., Ltd. for Pony Canyon's Japanese Sharp X68000 release
   (1990), from the [Ultima Codex](https://wiki.ultimacodex.com/wiki/Ultima_V_internal_formats)'s
   images of them, by `npm run x68k` (`web/tools/art/x68k.ts`); thanks to
-  devonsoft, who first put them in the game. They remain their owners'.
+  devonsoft, who first put them in the game. Its dungeon
+  (`x68k-u5-dungeon.png`) is not its own, none of it to be had: the PC's
+  pictures, recoloured in its colours by `npm run recolour-dungeon`
+  (`web/tools/art/recolourDungeon.ts`). They remain their owners'.
 - **LairWare**, and Leon McNeill, whose Macintosh port of Ultima III,
   and its source ([beastie/ultima3](https://github.com/beastie/ultima3)), posted in 2025, the ultima3 port grew from - and so,
   through it, this one. Thank you.

@@ -195,7 +195,7 @@ function playLine(
       ? s.system === 'linux'
         ? LINUX_LINE
         : lineSays(s, check)
-      : 'Compat. tool on: in Steam, choose Ultima V SP under Compatibility.';
+      : 'Compat. tool on: in Steam, choose Ultima V Enhanced Edition under Compatibility.';
   // Without Steam there is nothing to set up, but what is on may be turned off, and the Flatpak's AppImage is offered.
   const blocked = !on && noSteam !== null && !s.flatpak;
   return {
@@ -271,7 +271,7 @@ function playMenu(
         o.compatTool,
         o.compatTool && check?.bothLinux
           ? 'Unused: the launch line is on too, and Steam runs that.'
-          : 'A compatibility tool, Ultima V SP, chosen in Steam.',
+          : 'A compatibility tool, Ultima V Enhanced Edition, chosen in Steam.',
         noSteam ?? cannot,
         toggler(g, steam, s, o, 'compatTool', say),
       ),

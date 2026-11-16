@@ -23,18 +23,21 @@ export interface Options {
    */
   autoCombat: AutoCombat;
   /** Dark bands over the picture, as a CRT showed it. */
-  /** Scanlines in the Modern look; the PC (1988) look keeps its own (pcScanlines). */
+  /** Scanlines in the Enhanced interface; Retro keeps its own (pcScanlines). */
   scanlines: boolean;
-  /** Scanlines in the PC (1988) look: on until turned off, as an old monitor showed it. */
+  /** Scanlines in the Retro interface: on until turned off, as an old monitor showed it. */
   pcScanlines: boolean;
-  /** The look: Modern ('standard', the port's screen) or PC (1988) ('original', the EGA game's screen and tiles). */
+  /**
+   * The interface (Gameplay's Interface): Enhanced ('standard', the port's screen and conveniences) or Retro
+   * ('original', the 1988 game's screen and its square-by-square play). The values are the looks' old names, kept so
+   * saved settings carry over.
+   */
   tileSet: TileSet;
-  /** The Modern look's tiles (Tiles): Modern PC, PC EGA, PC CGA, or another computer's (Apple Color, //e, //c, Sharp X68k, C64). */
+  /**
+   * The tiles (Appearance's Tiles), one choice for either interface, its frame and dungeon with them: Remastered (Enhanced
+   * alone), PC EGA, PC CGA, or another computer's (Apple Color, //e, //c, Sharp X68k, C64).
+   */
   tiles: Tiles;
-  /** The PC (1988) look's tiles (Tiles, under that look): PC EGA, PC CGA, or another computer's. */
-  pcTiles: PcTiles;
-  /** Modern PC's people and creatures drawn with a fine black line round them, to be seen on busy ground. */
-  outlines: boolean;
   /**
    * The Sound setting: the music and its effects together - Classical (the default), Electronic or Ambient, each its
    * soundtrack and the suite of effects in its sound, or Upgrade (2001), the Upgrade's MIDI and the PC speaker's effects.
@@ -229,16 +232,17 @@ export type TileSet = 'standard' | 'original';
  * CGA card, from its TILES.4, shipped as a sheet (sheetArt.ts CGA_SHEET). And Ultima V's own tiles from the other
  * computers it was made for, tile by tile on black: Apple Color, the Apple II's in its six colours (appleArt.ts);
  * Apple //e and Apple //c, the same on a green and a white monitor; Sharp X68k, the Japanese X68000 release's; C64,
- * the Commodore 64's (sheetArt.ts). The PC (1988) look (tileSet 'original') has a choice of its own (PcTiles).
+ * the Commodore 64's (sheetArt.ts). Remastered (once Modern PC; 'modern-pc') is the Enhanced interface's alone: Retro
+ * (tileSet 'original') offers the rest (PcTiles).
  */
 export type Tiles = 'modern-pc' | 'pc-ega' | 'pc-cga' | 'apple2' | 'apple2e' | 'apple2c' | 'x68k' | 'c64';
 export const TILES: readonly Tiles[] = ['modern-pc', 'pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
-/** The PC (1988) look's tiles: the EGA tiles as the game drew them, or another computer's set in their place. */
+/** The Retro interface's tiles: every set but Remastered, which is drawn for the Enhanced screen alone. */
 export type PcTiles = Exclude<Tiles, 'modern-pc'>;
 export const PC_TILES: readonly PcTiles[] = ['pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
 
 export const TILES_NAMES: Record<Tiles, string> = {
-  'modern-pc': 'Modern PC',
+  'modern-pc': 'Remastered',
   'pc-ega': 'PC EGA',
   'pc-cga': 'PC CGA',
   apple2: 'Apple Color',
@@ -267,8 +271,6 @@ export const DEFAULTS: Options = {
   pcScanlines: true,
   tileSet: 'standard',
   tiles: 'modern-pc',
-  pcTiles: 'pc-ega',
-  outlines: true,
   soundChoice: 'classical',
   musicLevel: 6,
   effectsLevel: 8,
@@ -342,7 +344,16 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   if (saved.rules !== undefined && !RULES.includes(saved.rules)) delete saved.rules;
   // A set this build does not have (Modern U3, gone 2026-09-30): the default.
   if (saved.tiles !== undefined && !TILES.includes(saved.tiles)) delete saved.tiles;
-  if (saved.pcTiles !== undefined && !PC_TILES.includes(saved.pcTiles)) delete saved.pcTiles;
+  // Outlines no setting now (2026-11-14): Remastered's people and creatures always have them.
+  delete (saved as Record<string, unknown>).outlines;
+  // One Tiles setting now, for either interface (2026-11-14): a player on Retro keeps the set they see (once their
+  // PC (1988) look's own choice), and Retro never has Remastered - PC EGA, the set it is drawn from, in its place.
+  const pcTiles = (saved as Record<string, unknown>).pcTiles as PcTiles | undefined;
+  delete (saved as Record<string, unknown>).pcTiles;
+  if (saved.tileSet === 'original') {
+    if (pcTiles !== undefined && PC_TILES.includes(pcTiles)) saved.tiles = pcTiles;
+    if (saved.tiles === undefined || saved.tiles === 'modern-pc') saved.tiles = 'pc-ega';
+  }
   if (saved.dialog !== undefined && !DIALOGS.includes(saved.dialog)) delete saved.dialog;
   if (saved.batterySaver !== undefined && typeof saved.batterySaver !== 'boolean') delete saved.batterySaver;
   if (saved.snapTargets !== undefined && typeof saved.snapTargets !== 'boolean') delete saved.snapTargets;

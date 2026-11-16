@@ -172,7 +172,7 @@ async function switchOption({ options, name, on, system, account, now, failed, e
         true,
         'done',
         (cloud === 'restarted' ? 'Done, and Steam restarted. In' : 'Done. Restart Steam, then in') +
-          ' Ultima V > Properties > Compatibility, choose Ultima V SP. Steam downloads the game, and Play starts this engine.' +
+          ' Ultima V > Properties > Compatibility, choose Ultima V Enhanced Edition. Steam downloads the game, and Play starts this engine.' +
           (cloud === 'steam-running' ? ` ${CLOUD_SAYS['steam-running']}` : '') +
           (flathub ? ` Steam from Flathub needs this run once too: ${OVERRIDE}` : ''),
       );

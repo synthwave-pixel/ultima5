@@ -225,10 +225,10 @@ describe('Steam (beta) on the title', () => {
       await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
       return p.log;
     };
-    expect(await printed('1.1.195')).toContain('Ultima V SP 1.1.195');
+    expect(await printed('1.1.195')).toContain('Ultima V Enhanced Edition 1.1.195');
     const web = await printed();
-    expect(web).toContain('Ultima V SP');
-    expect(web).not.toContain('Ultima V SP 1.');
+    expect(web).toContain('Ultima V Enhanced Edition');
+    expect(web).not.toContain('Ultima V Enhanced Edition 1.');
   });
 
   it('stands Launch From Steam in place of the lines that start a game, where Play from Steam is on outside Steam', () => {
@@ -334,7 +334,7 @@ describe('the Steam (beta) menu', () => {
       sq('Steam has no launch line yet: copy it, and paste it into Launch Options.'),
     );
     expect(await notes({ system: 'linux' }, { compatTool: true })).toContain(
-      sq('Compat. tool on: in Steam, choose Ultima V SP under Compatibility.'),
+      sq('Compat. tool on: in Steam, choose Ultima V Enhanced Edition under Compatibility.'),
     );
     const both = await notes({ system: 'linux' }, { playLine: true, compatTool: true }, ['Play from Steam', 'Compat. tool']);
     expect(both).toContain(sq('Unused: the launch line is on too, and Steam runs that.'));
@@ -378,7 +378,7 @@ describe('the Steam (beta) menu', () => {
     const linux = await notes('linux', {}, ['Play from Steam', 'Compat. tool', 'Back', 'Paths']);
     expect(linux).toContain(sq("Steam's Play starts this engine, by a compat. tool. Choose to set it up."));
     expect(linux).not.toContain(sq('Steam starts this engine by a line you paste into Launch Options.'));
-    expect(linux).toContain(sq('A compatibility tool, Ultima V SP, chosen in Steam.'));
+    expect(linux).toContain(sq('A compatibility tool, Ultima V Enhanced Edition, chosen in Steam.'));
     expect(linux).toContain(sq('Start Ultima V from Steam to change this.'));
     expect(linux).toContain(sq('Where the app found Steam, Ultima V and its Steam saves.'));
     expect(await notes('linux', { launch: true })).toContain(sq('Steam Cloud saves: saves made in Steam launches stay with Steam.'));

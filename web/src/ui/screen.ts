@@ -37,7 +37,8 @@ import {
   type Snapshot,
   type Words,
 } from './framebuffer.ts';
-import { type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
+import { doubled, type PictureKind, restyle, twice, type WallOf } from './standardPictures.ts';
+import { frameFor, mapArtFor, pieceFileOf, portDungeon, signRunes, signStyleFor, type Skin, SkinOvers } from './skins.ts';
 import type { FontChoice, Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
 import { setChoice, setProse, setSteps, type Measure, type Run, type RunFace } from './storyText.ts';
@@ -928,9 +929,13 @@ export class Screen implements Platform {
         const shot = fb.snapshot(0);
         return () => fb.restorePage(0, shot);
       },
-      image: (res, i, x, y, flags = 0, style) => {
+      image: (res, i, x, y, flags = 0, style, name) => {
         const v = picture(res, i);
-        if (v) fb.image(v, x, y, flags, this.styled(res, i, v, style));
+        if (v) fb.image(v, x, y, flags, this.skinned(name, i) ?? this.styled(res, i, v, style));
+      },
+      viewInk: (on) => {
+        fb.lineInk = on && this.skin ? this.skin.ink : null;
+        return this.skin !== null;
       },
       viewSlide: (x1, y1, x2, y2, k) => {
         if (this.look === 'standard') fb.viewSlide(x1, y1, x2, y2, k);
@@ -938,6 +943,7 @@ export class Screen implements Platform {
       dungeonTint: (dungeon) => {
         this.tint = dungeon;
         fb.signInk = signInk(dungeon);
+        fb.signStyle = signStyleFor(this.tiles, this.skin);
       },
       bitImage: (res, i, x, y) => {
         const v = bitPicture(res, i);
@@ -995,6 +1001,7 @@ export class Screen implements Platform {
       },
       transfer: (from, to, x1, y1, x2, y2, dx = x1, dy = y1) => fb.transfer(from, to, x1, y1, x2, y2, dx, dy),
       readSign: (key, read) => fb.readSign(key, read),
+      signRunes: () => signRunes(this.tiles),
       readInk: (rgb) => {
         fb.readInk = rgb;
       },
@@ -1380,6 +1387,7 @@ export class Screen implements Platform {
   setTileArt(set: 'standard' | 'original', tiles: Tiles = this.tiles, outlines = this.outlines): void {
     this.tiles = tiles;
     this.outlines = outlines;
+    this.chooseSkin(tiles);
     // The PC (1988) look's own tiles: PC EGA, or Modern PC, which it has not (a debug page's).
     const ega = set === 'original' && (tiles === 'pc-ega' || tiles === 'modern-pc');
     const made = this.sets.get(tiles);
@@ -1411,6 +1419,51 @@ export class Screen implements Platform {
     this.theme();
   }
 
+  /**
+   * The machines' skins made so far (skins.ts), by the set they go with; how one is made the first time its set is
+   * chosen (null, or a skin of null, for a set with none: Modern PC, PC EGA); and the skin of the set chosen now.
+   */
+  private readonly skins = new Map<Tiles, Skin | null>();
+  private readonly skinMaking = new Set<Tiles>();
+  makeSkin: ((kind: Tiles) => Promise<Skin | null>) | null = null;
+  private skin: Skin | null = null;
+  private readonly skinOvers = new SkinOvers();
+
+  /** Set `kind`'s skin, made (a debug page's, all at once): kept, and taken up if it is the set chosen. */
+  addSkin(kind: Tiles, skin: Skin | null): void {
+    this.skins.set(kind, skin);
+    if (kind === this.tiles) {
+      this.skin = skin;
+      this.theme();
+    }
+  }
+
+  /** Set `tiles`'s skin taken up: at once if made, else made now and taken up (the view drawn again) when ready. */
+  private chooseSkin(tiles: Tiles): void {
+    this.skin = this.skins.get(tiles) ?? null;
+    if (this.skins.has(tiles) || !this.makeSkin || this.skinMaking.has(tiles)) return;
+    this.skinMaking.add(tiles);
+    void this.makeSkin(tiles).then(
+      (skin) => {
+        this.skins.set(tiles, skin);
+        if (this.tiles !== tiles) return;
+        this.skin = skin;
+        this.theme();
+        if (skin) this.onTilesReady?.();
+      },
+      (e: unknown) => {
+        console.warn(`The ${tiles} dungeon could not be made`, e);
+        this.skinMaking.delete(tiles);
+      },
+    );
+  }
+
+  /** A dungeon picture (file `name`, picture `i`) as the skin set draws it; none without a skin, or for no such piece. */
+  private skinned(name: string | undefined, i: number): ImageOver | undefined {
+    const file = name ? pieceFileOf(name) : null;
+    return file ? this.skinOvers.over(this.skin, file, i) : undefined;
+  }
+
   private look: 'standard' | 'original' = 'original';
   /** Where the frame's tone comes from, once a game is under way (main.ts, chromeTone.ts); null for the copper. */
   toneOf: (() => ChromeTone | null) | null = null;
@@ -1420,7 +1473,7 @@ export class Screen implements Platform {
 
   /** The Standard tile art if that is the set in use, for what is drawn outside the screen (the land map). */
   get standardArt(): StandardArt | null {
-    return this.look === 'standard' && this.standard ? this.standard : null;
+    return mapArtFor(this.look, this.tiles, this.standard);
   }
   private inGame = false;
 
@@ -1451,13 +1504,14 @@ export class Screen implements Platform {
    * pixels in its own colours, each a square block: the art as it was drawn, the words beside it the port's.
    */
   private styled(res: Uint8Array, i: number, v: Picture, style?: PictureKind): ImageOver | undefined {
-    if (this.look !== 'standard' || !this.standard || style === undefined) return undefined;
+    if (!portDungeon(this.look, this.tiles) || !this.standard || style === undefined) return undefined;
     let m = this.restyled.get(res);
     if (!m) this.restyled.set(res, (m = new Map<number, Uint32Array>()));
     // A wall is the colour of the dungeon it stands in, so what is kept is kept by both.
     const tint = style === 'dungeon' ? this.tint : 0;
     const at = i * 16 + tint;
-    const px = m.get(at) ?? twice(restyle(v, style, tint, style === 'dungeon' ? wallOf(res, i) : undefined), v.width * 2, v.height * 2);
+    const grow = style === 'creature' ? twice : doubled;
+    const px = m.get(at) ?? grow(restyle(v, style, tint, style === 'dungeon' ? wallOf(res, i) : undefined), v.width * 2, v.height * 2);
     m.set(at, px);
     return { kind: 'rgba', px, width: v.width * HI, scale: HI };
   }
@@ -1515,6 +1569,8 @@ export class Screen implements Platform {
     if (!faces) for (const m of this.fb.letters) m.clear();
     this.fb.dosLetters = this.font === 'dos';
     this.fb.chrome = this.look === 'standard' && this.inGame;
+    // A machine's frame (skins.ts), while the game's own screen is up.
+    this.fb.frameSkin = this.inGame ? frameFor(this.tiles, this.skin, this.look === 'standard') : null;
     this.fb.softFlash = this.look === 'standard';
     this.fb.dirty = true;
   }

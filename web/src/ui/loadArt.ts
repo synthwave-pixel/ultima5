@@ -8,6 +8,8 @@
 
 import { appleArt, appleMono, GREEN_SCREEN, WHITE_SCREEN } from './appleArt.ts';
 import { C64_SHEET, CGA_SHEET, sheetArt, X68K_SHEET } from './sheetArt.ts';
+import { type Skin, SKIN_SPECS, skinFromSheet, tintSheet } from './skins.ts';
+import type { Tiles } from '../game/settings.ts';
 import { StandardArt, type Manifest } from './standardArt.ts';
 
 /**
@@ -82,6 +84,17 @@ export async function loadSheetArt(
   if (!mono) return null;
   const spec = appleMono(kind === 'apple2e' ? GREEN_SCREEN : WHITE_SCREEN, colour?.sheet ?? null, colour?.width ?? 0);
   return sheetArt(spec, tiles, mono.sheet, mono.width, lettering);
+}
+
+/** Set `kind`'s skin (skins.ts SKIN_SPECS): its dungeon and frame; null for a set with none; failing if its sheet is not had. */
+export async function loadSkin(kind: Tiles): Promise<Skin | null> {
+  const spec = SKIN_SPECS[kind];
+  if (!spec) return null;
+  const got = await loadSheet(spec.sheet);
+  // A sheet not to be had (offline, its cache not yet filled) fails, not null: the screen keeps a null as made, and
+  // would never ask again (Screen.chooseSkin forgets a failure, and tries again when the look is next chosen).
+  if (!got) throw new Error(`no ${spec.sheet}`);
+  return skinFromSheet(kind, spec.tint === undefined ? got.sheet : tintSheet(got.sheet, spec.tint), got.width, spec.colours);
 }
 
 /**

@@ -82,7 +82,7 @@ the name: electron-updater then overwrites the file in place, so its path
 never changes and the Steam compatibility tool can point at it (each start
 with the tool on points it at the AppImage started, `refreshCompatTool`). It is the build the docs recommend for Steam on Linux and the Deck;
 the permanent link is `releases/latest/download/ultima5-sp-x86_64.AppImage`.
-The window title is `Ultima V SP <version>`; the page reads the version
+The window title is `Ultima V Enhanced Edition <version>`; the page reads the version
 through `u5native.version()`. The Flatpak is built only
 where `flatpak-builder` and the Freedesktop 25.08 runtime, SDK and
 Electron base app are installed, which the Linux job does (on a Linux

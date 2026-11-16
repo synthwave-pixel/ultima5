@@ -46,7 +46,7 @@ function syncLines(system, sync, options) {
 
 /** The plain-text report for `facts` (steamReport.d.cts). */
 function report(f) {
-  const lines = ['Ultima V SP report', ''];
+  const lines = ['Ultima V Enhanced Edition report', ''];
   lines.push(`Version: ${f.version}`, `System: ${f.system} (${f.arch})`, `Build: ${f.build}`);
   lines.push(`Started by Steam: ${yesNo(f.bySteam)}`);
   for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID']) lines.push(`${name}: ${f.env[name] ?? 'not set'}`);

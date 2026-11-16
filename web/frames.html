@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>The frames</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for checking each tile set's frame by eye (skins.ts frameFor); the game does not link to it. Each set's
+      game, at a place, in the Retro and the Enhanced interface, side by side. Each is the game itself (?peek: nothing it
+      does is saved). The choices are kept in the URL.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          13px/1.35 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #1c1c1c;
+        border-bottom: 1px solid #333;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 8px 0 0;
+      }
+      header div {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      select {
+        font: inherit;
+      }
+      .legend {
+        margin: 0;
+        color: #999;
+        font-size: 12px;
+        flex-basis: 100%;
+      }
+      main {
+        padding: 8px 16px 32px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 16px 0 6px;
+        color: #8cc8ff;
+        font-weight: normal;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        color: #aaa;
+        font-size: 11px;
+      }
+      iframe {
+        display: block;
+        border: 1px solid #333;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>The frames</h1>
+      <div>
+        <label for="at">Where</label>
+        <select id="at">
+          <option value="world:84,108" selected>Britannia, outside Britain</option>
+          <option value="town:1">Britain</option>
+          <option value="dungeon:1">Deceit</option>
+        </select>
+      </div>
+      <div>
+        <label for="sets">Sets</label>
+        <select id="sets"></select>
+      </div>
+      <div>
+        <label for="width">Width</label>
+        <select id="width">
+          <option value="480">480</option>
+          <option value="640" selected>640</option>
+          <option value="960">960</option>
+        </select>
+      </div>
+      <p class="legend">
+        Each tile set's frame in the <b>Retro</b> and the <b>Enhanced</b> interface: each set its own, fixed, in both; Remastered (Enhanced
+        alone) the copper, its colour the place's. Each picture is the game itself, nothing it does saved.
+      </p>
+    </header>
+    <main id="sets-out"></main>
+    <script type="module" src="/src/dev/frames.ts"></script>
+  </body>
+</html>

@@ -23,6 +23,7 @@
 import { carve, plate, type CarveStyle } from './carve.ts';
 import { GLYPH_SIZE, type Font } from '../data/font.ts';
 import { EGA_PALETTE } from '../data/tiles.ts';
+import type { FrameSkin, SignStyle, SkinOver } from './skins.ts';
 import type { BitPicture, Picture } from '../data/images.ts';
 import type { Figure, Mark, Place } from '../game/io.ts';
 import { EXTRA_RGB } from './colours.ts';
@@ -37,7 +38,7 @@ export const TILE_X = 8;
 export const TILE_Y = 8;
 
 /** How a picture shows on the colour page, if not in its EGA colours (Framebuffer.image). */
-export type ImageOver = { kind: 'rgba'; px: Uint32Array; width: number; scale: number };
+export type ImageOver = { kind: 'rgba'; px: Uint32Array; width: number; scale: number } | SkinOver;
 
 /** A line of the story's words over a page: its run, the box it covers (colour page pixels, x1 y1 inclusive, x2 y2 not), and how much of it shows. */
 export interface Words {
@@ -272,6 +273,16 @@ export class Framebuffer {
   carve: CarveStyle = 'groove';
   /** The colour they are cut in (0xRRGGBB, colours.ts signInk): the dungeon's; 0 for the cut's own stone. */
   signInk = 0;
+  /**
+   * The sign in a look's own colours (skins.ts signStyleFor), flat: its plate, border and bolts, its runes painted, not
+   * cut; null for Remastered's, the cobbles' plate and its runes carved in the dungeon's colour (signInk).
+   */
+  signStyle: SignStyle | null = null;
+  /**
+   * The sixteen EGA colours as a machine's skin shows what is drawn in lines and dots (skins.ts Skin.ink: the
+   * corridor's edges, a field's crackle), while its view is drawn; null for the EGA's own.
+   */
+  lineInk: Uint32Array | null = null;
   private pulse: { saved: Uint32Array; shown: Uint32Array } | null = null;
   readonly hi = [new Uint32Array(HI_WIDTH * HI_HEIGHT), new Uint32Array(HI_WIDTH * HI_HEIGHT), new Uint32Array(HI_WIDTH * HI_HEIGHT)];
   /** Each page's story words, set over it by the screen (page 0's, as it shows it). */
@@ -544,7 +555,7 @@ export class Framebuffer {
     if (this.masks.length > 0 && this.masked(x * HI, y * HI)) return;
     if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
       this.px[y * WIDTH + x] = c & 15;
-      this.block(this.hx, x, y, EGA_RGBA[c & 15]);
+      this.block(this.hx, x, y, (this.lineInk ?? EGA_RGBA)[c & 15]);
       if (this.emitting) for (let r = 0; r < HI; r++) for (let k = 0; k < HI; k++) this.shineAt((y * HI + r) * HI_WIDTH + x * HI + k);
     }
   }
@@ -1071,7 +1082,9 @@ export class Framebuffer {
       // A sign on the wall: its letter cut into it (carve.ts).
       const mask = new Uint8Array(size * size);
       for (let i = 0; i < mask.length; i++) mask[i] = (over ? over(i) : ink[i]) ? 1 : 0;
-      const cut = carve(mask, wall, side, this.carve, on, this.signInk ? rgba(this.signInk) : 0);
+      const cut = this.signStyle
+        ? carve(mask, wall, side, 'paint', on, rgba(this.signStyle.ink))
+        : carve(mask, wall, side, this.carve, on, this.signInk ? rgba(this.signInk) : 0);
       for (let r = 0; r < side; r++) page.set(cut.subarray(r * side, r * side + side), (y + r) * HI_WIDTH + x);
       return;
     }
@@ -1222,9 +1235,10 @@ export class Framebuffer {
     const on = (v: number): number => Math.round((v * HI) / GRAIN) * GRAIN;
     if (this.signPlate && letters.length) {
       const [x1, y1, x2, y2] = [board.x1, board.y1, board.x2, board.y2].map(on);
-      plate(dst, stride, x1 - ox, y1 - oy, x2 - x1, y2 - y1, HI);
+      plate(dst, stride, x1 - ox, y1 - oy, x2 - x1, y2 - y1, HI, 1, this.signStyle ?? undefined);
     }
-    const [white, tint] = [colourRGBA(15), this.signInk ? rgba(this.signInk) : 0];
+    const [white, tint] = [colourRGBA(15), this.signStyle ? rgba(this.signStyle.ink) : this.signInk ? rgba(this.signInk) : 0];
+    const style = this.signStyle ? 'paint' : this.carve;
     letters.forEach((l, n) => {
       const shape = shapeOf(n);
       if (!shape) return;
@@ -1232,7 +1246,7 @@ export class Framebuffer {
       // The wall under it a square at a time (each square's top left pixel), cut, and put back a square at a time.
       const wall = new Uint32Array(side * side);
       for (let r = 0; r < side; r++) for (let c = 0; c < side; c++) wall[r * side + c] = dst[(y + r * GRAIN) * stride + x + c * GRAIN];
-      const cut = carve(shape, wall, side, this.carve, white, tint);
+      const cut = carve(shape, wall, side, style, white, tint);
       for (let r = 0; r < side; r++)
         for (let c = 0; c < side; c++)
           for (let dy = 0; dy < GRAIN; dy++) {
@@ -1253,7 +1267,7 @@ export class Framebuffer {
    * faces are not to hand or the sign has no plate. Kept, by the sign and how signs are cut.
    */
   private flatSign(text: string, left: number, top: number): Flat | null {
-    const key = [text, left, top, this.carve, this.signScale, this.signInk, this.signPlate].join('|');
+    const key = [text, left, top, this.carve, this.signScale, this.signInk, this.signPlate, JSON.stringify(this.signStyle)].join('|');
     if (this.flats.has(key)) return this.flats.get(key) ?? null;
     const mask = this.letterMask;
     let flat: Flat | null = null;
@@ -1483,13 +1497,23 @@ export class Framebuffer {
     const hs = from === to ? this.hi[from].slice() : this.hi[from];
     const hd = this.hi[to];
     const [SW, SH, DW, DH] = [sw * HI, sh * HI, dw * HI, dh * HI];
-    // Each pixel the source's pixels it covers, each weighed by how much of it they cover: grown by a tenth (the
-    // dungeon's view to the map's square), a pixel is one source pixel or two blended where it straddles them - where
-    // the nearest alone doubled every tenth row and column, and the view's walls and letters came out uneven.
-    const xs = areaTaps(SW, DW);
-    const ys = areaTaps(SH, DH);
     const [from0, to0] = [(c1 - dx) * HI, (c2 - dx + 1) * HI];
     const w = to0 - from0;
+    if (DW >= SW && DH >= SH) {
+      // Grown (the dungeon's view to the map's square, by a tenth): each pixel the nearest of the source's, none
+      // blended - a pixel of the view four or five of the square's, sharp, as the other sets' pictures are drawn.
+      const xs = Int32Array.from({ length: w }, (_, x) => Math.floor(((from0 + x + 0.5) * SW) / DW));
+      for (let y = 0; y < DH; y++) {
+        const row = (y1 * HI + Math.floor(((y + 0.5) * SH) / DH)) * HI_WIDTH + x1 * HI;
+        const out = (dy * HI + y) * HI_WIDTH + dx * HI + from0;
+        for (let x = 0; x < w; x++) hd[out + x] = hs[row + xs[x]];
+      }
+      this.dirty = true;
+      return;
+    }
+    // Shrunk: each pixel the source's pixels it covers, each weighed by how much of it they cover.
+    const xs = areaTaps(SW, DW);
+    const ys = areaTaps(SH, DH);
     // Across first, the source's rows to the square's columns, then down; weights in 256ths, red and blue worked as
     // one number (0x00bb00rr) and green as another.
     const across = new Uint32Array(SH * w);
@@ -1566,6 +1590,27 @@ export class Framebuffer {
               }
             }
           }
+        }
+      }
+    }
+    // A machine's piece (skins.ts): its own pixels, at its own size, over the whole of the picture's place on the
+    // colour page's finer grid (each of its pixels four or five of the grid's where it is smaller, none lost or drawn
+    // twice), the wall left showing where it is clear and drawn where it is not, whatever the EGA picture's mask says -
+    // turned about as the picture is: mirrored from x - 1 (its columns from x + width - 2 back), flipped from y + 1.
+    if (over?.kind === 'skin') {
+      const [w, ht] = [v.width * HI, v.height * HI];
+      const [x0, y0] = [(hflip ? x - 1 : x) * HI, (vflip ? y + 1 : y) * HI];
+      for (let hy = 0; hy < ht; hy++) {
+        const ty = y0 + hy;
+        if (ty < 0 || ty >= HI_HEIGHT) continue;
+        const ry = Math.floor(((hy + 0.5) * over.height) / ht);
+        const sy = vflip ? over.height - 1 - ry : ry;
+        for (let hx = 0; hx < w; hx++) {
+          const tx = x0 + hx;
+          if (tx < 0 || tx >= HI_WIDTH) continue;
+          const rx = Math.floor(((hx + 0.5) * over.width) / w);
+          const c = over.px[sy * over.width + (hflip ? over.width - 1 - rx : rx)];
+          if (c >>> 24 !== 0) h[ty * HI_WIDTH + tx] = c;
         }
       }
     }
@@ -1909,10 +1954,14 @@ export class Framebuffer {
     const out = new Uint32Array(image.data.buffer);
     out.set(this.hi[0]);
     if (this.chrome) {
-      this.copper(out);
-      this.drawTextCaps(out);
+      // A look's own frame, flat, its prompts' arrows with it (flatFrame); else the copper and its arrows over it.
+      if (this.frameSkin) this.flatFrame(out, this.frameSkin);
+      else {
+        this.copper(out);
+        this.drawTextCaps(out);
+      }
       for (const m of this.marks.values()) if (this.markShown(m)) this.drawMark(out, m);
-    }
+    } else if (this.frameSkin) this.flatFrame(out, this.frameSkin);
     this.dirty = false;
   }
 
@@ -1946,13 +1995,15 @@ export class Framebuffer {
 
   /** Standard's chrome over the picture: the frame's blue as copper, bevelled by its own shape; white beside it, the rim. */
   private copper(out: Uint32Array): void {
+    this.paintCopper(out, this.chromeEntry());
+  }
+
+  /** The frame's shape as it stands, cut once and kept (copper). */
+  private chromeEntry(): Framebuffer['chromeCache'][number] {
     // What the frame's shape is read from unchanged since the last frame, it is the last frame's: the shape is not
     // worked out again (chromeCells, the whole screen several times over, at every frame - a quarter of the work of
     // walking about).
-    if (!this.chromeInputsChanged() && this.chromeCache.length) {
-      this.paintCopper(out, this.chromeCache[0]);
-      return;
-    }
+    if (!this.chromeInputsChanged() && this.chromeCache.length) return this.chromeCache[0];
     const cls = this.chromeCells();
     // The frame's few shapes - the screen as it stands, with a menu's box, a popup's - each cut once and kept: a
     // menu opened and shut flips between two, and the cut (every pixel of the hi page, several times over) was paid
@@ -1965,20 +2016,61 @@ export class Framebuffer {
     } else if (hit > 0) {
       this.chromeCache.unshift(...this.chromeCache.splice(hit, 1));
     }
-    this.paintCopper(out, this.chromeCache[0]);
+    return this.chromeCache[0];
+  }
+
+  /**
+   * A machine's frame over the picture, flat (skins.ts FrameSkin): the frame's blue in its blue, the white along it in
+   * its white - the PC (1988) layout's, and the Modern layout's 'line' candidate. Kept with the shape, by the colours.
+   */
+  private flatFrame(out: Uint32Array, skin: FrameSkin): void {
+    const entry = this.chromeEntry();
+    const key = `${skin.blue}|${skin.white}`;
+    entry.flat ??= new Map();
+    let flat = entry.flat.get(key);
+    if (!flat) {
+      const [blue, white] = [rgba(skin.blue), rgba(skin.white)];
+      const at: number[] = [];
+      const colour: number[] = [];
+      entry.cells.forEach((c, i) => {
+        if (c !== 1 && c !== 2) return;
+        const [x, y] = [i % WIDTH, Math.floor(i / WIDTH)];
+        for (let dy = 0; dy < HI; dy++)
+          for (let dx = 0; dx < HI; dx++) {
+            at.push((y * HI + dy) * HI_WIDTH + x * HI + dx);
+            colour.push(c === 1 ? blue : white);
+          }
+      });
+      flat = { at: Uint32Array.from(at), colour: Uint32Array.from(colour) };
+      entry.flat.set(key, flat);
+    }
+    for (let i = 0; i < flat.at.length; i++) out[flat.at[i]] = flat.colour[i];
+    // The log's prompts, the border's caps it prints (capsInText), the frame's blue too.
+    const [p, blue] = [this.pages[0], rgba(skin.blue)];
+    for (const { cx, cy } of this.textCaps)
+      for (let y = cy * 8; y < cy * 8 + 8; y++)
+        for (let x = cx * 8; x < cx * 8 + 8; x++)
+          if (p[y * WIDTH + x] === 1)
+            for (let dy = 0; dy < HI; dy++) out.fill(blue, (y * HI + dy) * HI_WIDTH + x * HI, (y * HI + dy) * HI_WIDTH + x * HI + HI);
+  }
+
+  /** The frame's tone: the place's (chromeTone) - Remastered's copper's alone, a set's own frame being flat. */
+  private get tone(): ChromeTone | null {
+    return this.chromeTone;
   }
 
   /** A cut frame over the picture, in the place's tone. */
   private paintCopper(out: Uint32Array, entry: Framebuffer['chromeCache'][number]): void {
     const { at } = entry;
     // In the tone the place asks for (chromeTone), its colours recoloured once and kept with the shape.
-    const key = toneKey(this.chromeTone);
+    const tone = this.tone;
+    const key = toneKey(tone);
     let colour = entry.colour;
     if (key) {
       entry.toned ??= new Map();
       colour = entry.toned.get(key) ?? colour;
       if (colour === entry.colour) {
-        colour = toned(entry.colour, this.chromeTone!);
+        colour = toned(entry.colour, tone!);
         entry.toned.set(key, colour);
       }
     }
@@ -2151,14 +2243,15 @@ export class Framebuffer {
   /** The prompts' arrows over the cut frame, in its tone: as the cut draws an arrow on a bar (cutCopper, capOf). */
   private drawTextCaps(out: Uint32Array): void {
     const S = 8 * HI;
-    const key = toneKey(this.chromeTone);
+    const tone = this.tone;
+    const key = toneKey(tone);
     for (const { cx, cy, side } of this.textCaps) {
       const name = `${side}|${key}`;
       let piece = this.arrows.get(name);
       if (!piece) {
         const plain = capOf(ARROW, side, ARROW_LENGTH);
         if (!plain) continue;
-        piece = key ? toned(plain, this.chromeTone!) : plain;
+        piece = key ? toned(plain, tone!) : plain;
         this.arrows.set(name, piece);
       }
       for (let y = 0; y < S; y++) out.set(piece.subarray(y * S, y * S + S), (cy * S + y) * HI_WIDTH + cx * S);
@@ -2459,6 +2552,7 @@ export class Framebuffer {
     at: Uint32Array;
     colour: Uint32Array;
     toned?: Map<string, Uint32Array>;
+    flat?: Map<string, { at: Uint32Array; colour: Uint32Array }>;
   }[] = [];
 
   /**
@@ -2467,6 +2561,11 @@ export class Framebuffer {
    * shade kept, only its colour changed.
    */
   chromeTone: ChromeTone | null = null;
+  /**
+   * A tile set's own frame (skins.ts frameFor), while the game's screen is up: flat in its two colours in either
+   * interface, the place's tone set aside. Null for the interface's own (Remastered's copper, Retro's PC EGA).
+   */
+  frameSkin: FrameSkin | null = null;
 }
 
 /** A tone for the chrome (Framebuffer.chromeTone). */

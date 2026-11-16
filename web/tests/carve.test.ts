@@ -49,10 +49,10 @@ describe("a dungeon's signs, in another dungeon's light", () => {
     return r >= g && r >= b ? 'red' : g >= r && g >= b ? 'green' : 'blue';
   };
 
-  it('cuts the violet dungeons in red, the green ones in violet, and the red ones in green', () => {
-    for (const d of [1, 4, 7]) expect(hue(signInk(d)), `dungeon ${d}`).toBe('red');
+  it("cuts the violet dungeons in red, the green ones in violet, and the red ones (Hythloth's own red rock too) in green", () => {
+    for (const d of [1, 4]) expect(hue(signInk(d)), `dungeon ${d}`).toBe('red');
     for (const d of [2, 5, 6]) expect(hue(signInk(d)), `dungeon ${d}`).toBe('blue');
-    for (const d of [3, 8]) expect(hue(signInk(d)), `dungeon ${d}`).toBe('green');
+    for (const d of [3, 8, 7]) expect(hue(signInk(d)), `dungeon ${d}`).toBe('green');
   });
 
   it('keeps the hue of the light it is taken from, and is lighter than that light, to be read', () => {
@@ -66,7 +66,7 @@ describe("a dungeon's signs, in another dungeon's light", () => {
   });
 
   it("cuts the violet dungeons' signs in the runes' red, the groove's and the log's", () => {
-    for (const d of [1, 4, 7]) expect(signInk(d), `dungeon ${d}`).toBe(RUNE_RED);
+    for (const d of [1, 4]) expect(signInk(d), `dungeon ${d}`).toBe(RUNE_RED);
     expect(GROOVE_RED).toBe(0xff1f20c8);
     expect(RUNE_INK.evil).toBe(RUNE_RED);
   });

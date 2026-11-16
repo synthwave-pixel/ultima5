@@ -9,8 +9,8 @@
  * resource list (D_25ea) are LZW-compressed.
  */
 
-import { DataOvl } from './dataOvl.ts';
-import { GameFiles, u16 } from './files.ts';
+import type { DataOvl } from './dataOvl.ts';
+import { type GameFiles, u16 } from './files.ts';
 import { lzwDecompress } from './lzw.ts';
 
 export interface Picture {

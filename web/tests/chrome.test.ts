@@ -151,6 +151,30 @@ describe("the frame's shape, steady while the game goes on", () => {
     expect(out[at]).not.toBe(EGA_RGBA[1]);
   });
 
+  it("draws a prompt's arrow in a look's own frame colours, not the copper's, in either interface", () => {
+    const rows = new Uint8Array(128 * 8);
+    rows.set([0x80, 0xc0, 0xe0, 0xf0, 0xf0, 0xe0, 0xc0, 0x80], 2 * 8);
+    const capFonts = [{ rows }, { rows: new Uint8Array(128 * 8) }];
+    const rgbaOf = (c: number): number => (0xff000000 | ((c & 0xff) << 16) | (c & 0xff00) | (c >> 16)) >>> 0;
+    for (const enhanced of [true, false]) {
+      const fb = new Framebuffer(new Uint8Array(512 * 128), capFonts);
+      fb.chrome = enhanced;
+      fb.chromeAlso = [[184, 60, 191, 199]];
+      fb.textAreas = () => [[24, 9, 39, 23]];
+      fb.fill(0, 0, 319, 199, 0);
+      fb.fill(184, 60, 191, 199, 1); // the bar down the log's left
+      fb.glyph(0, 2, 24, 12, 1, 0);
+      fb.frameSkin = { blue: 0x00aaaa, white: 0xaaaaaa }; // the PC CGA's
+      fb.chromeTone = { hue: 215, sat: 1, value: 1.1 }; // out in Britannia: the copper would turn blue
+      const out = shown(fb);
+      const seen = new Set<number>();
+      for (let y = 12 * 8 * HI; y < 13 * 8 * HI; y++) for (let x = 24 * 8 * HI; x < 25 * 8 * HI; x++) seen.add(out[y * HI_WIDTH + x]);
+      expect(seen.has(rgbaOf(0x00aaaa)), `${enhanced ? 'Enhanced' : 'Retro'}: the arrow drawn`).toBe(true);
+      for (const v of seen)
+        expect([rgbaOf(0x00aaaa), rgbaOf(0xaaaaaa), 0xff000000], `${enhanced ? 'Enhanced' : 'Retro'}: 0x${v.toString(16)}`).toContain(v);
+    }
+  });
+
   it("is the same whatever the log's lines say against its bar, but for their first column", () => {
     const shape = (letters: boolean): Uint8Array => {
       const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
@@ -282,18 +306,37 @@ describe("the Standard frame's caps, drawn from the bar", () => {
 });
 
 describe("the dungeon's view grown to the map's square", () => {
-  it('weighs each pixel by what it covers, its light kept: a blend where it straddles two, where the nearest took one', () => {
+  it("copies whole pixels, none blended: each of the view's grown to four or five of the square's, its light kept", () => {
     const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
     // On page 1, 160 by 165 EGA pixels of stripes one EGA pixel wide (four of the colour page's), white and black.
     fb.page = 1;
     for (let x = 0; x < 160; x += 2) fb.fill(0x10 + x, 0xe, 0x10 + x, 0xb2, 15);
     fb.page = 0;
     fb.transferScaled(1, 0, [0x10, 0xe, 0xaf, 0xb2], [8, 8, 0xb0, 0xb0]);
-    const row = Array.from({ length: 0xb0 * HI }, (_, x) => bright(fb.hi[0][(8 * HI + 100) * HI_WIDTH + 8 * HI + x]));
-    // Where a pixel straddles a white stripe and a black, it is their blend; and the view is as light as it was.
-    expect(row.some((v) => v > 0 && v < 3 * 255)).toBe(true);
-    const mean = row.reduce((a, b) => a + b, 0) / row.length;
-    expect(Math.abs(mean - (3 * 255) / 2)).toBeLessThan(3);
+    for (const [name, line] of [
+      ['across', Array.from({ length: 0xb0 * HI }, (_, x) => bright(fb.hi[0][(8 * HI + 100) * HI_WIDTH + 8 * HI + x]))],
+      ['down', Array.from({ length: 0xb0 * HI }, (_, y) => bright(fb.hi[0][(8 * HI + y) * HI_WIDTH + 8 * HI + 100]))],
+    ] as const) {
+      if (name === 'across') {
+        // Every pixel white or black, never their blend; each stripe four or five wide.
+        expect(
+          line.every((v) => v === 0 || v === 3 * 255),
+          name,
+        ).toBe(true);
+        const runs: number[] = [];
+        for (let x = 0, n = 1; x < line.length; x++, n++)
+          if (x === line.length - 1 || line[x + 1] !== line[x]) {
+            runs.push(n);
+            n = 0;
+          }
+        expect(
+          runs.every((n) => n === 4 || n === 5),
+          runs.join(' '),
+        ).toBe(true);
+        const mean = line.reduce((a, b) => a + b, 0) / line.length;
+        expect(Math.abs(mean - (3 * 255) / 2)).toBeLessThan(3 * 255 * 0.03);
+      } else expect(new Set(line).size, name).toBe(1);
+    }
   });
 });
 

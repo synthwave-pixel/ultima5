@@ -16,7 +16,9 @@ const { APP_ID, findGame, parseVdf } = require('./steam.cjs');
 
 const FLATPAK_ID = 'com.synthwavepixel.ultima5';
 const TOOL = 'ultima5_sp';
-const TOOL_NAME = 'Ultima V SP';
+// The names Steam and the Dock show; the launcher's files keep the names they were first written by ("SP", once the
+// edition's), so a setup made before is found and replaced, not left beside a new one.
+const TOOL_NAME = 'Ultima V Enhanced Edition';
 const LAUNCHER = 'Ultima V SP.app';
 const LAUNCHER_EXE = 'Ultima V SP';
 const INSTALLDIR = 'Ultima V';
@@ -210,7 +212,11 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 \t<key>CFBundleIdentifier</key>
 \t<string>com.synthwavepixel.ultima5.steam</string>
 \t<key>CFBundleName</key>
-\t<string>${LAUNCHER_EXE}</string>
+\t<string>Ultima V</string>
+\t<key>CFBundleDisplayName</key>
+\t<string>${TOOL_NAME}</string>
+\t<key>CFBundleIconFile</key>
+\t<string>icon</string>
 \t<key>CFBundlePackageType</key>
 \t<string>APPL</string>
 \t<key>CFBundleInfoDictionaryVersion</key>
@@ -240,6 +246,15 @@ const readOr = (fs, path, fallback) => {
     return fs.readFileSync(path, 'utf8');
   } catch {
     return fallback;
+  }
+};
+
+/** A file's bytes, or null if it cannot be read. */
+const readBytes = (fs, path) => {
+  try {
+    return fs.readFileSync(path);
+  } catch {
+    return null;
   }
 };
 
@@ -306,6 +321,16 @@ function placeLauncher(fs, steamRoot, appExe) {
   const app = join(folder, LAUNCHER);
   writeIfChanged(fs, join(app, 'Contents', 'Info.plist'), infoPlist);
   writeIfChanged(fs, join(app, 'Contents', 'MacOS', LAUNCHER_EXE), launcherScript(appExe), 0o755);
+  // The app's own icon: macOS shows the launcher's, the app Steam started, in the Dock while the game plays.
+  const icon = readBytes(fs, join(dirname(dirname(appExe)), 'Resources', 'icon.icns'));
+  const iconFile = join(app, 'Contents', 'Resources', 'icon.icns');
+  if (icon && !readBytes(fs, iconFile)?.equals(icon)) {
+    fs.mkdirSync(dirname(iconFile), { recursive: true });
+    fs.writeFileSync(iconFile, icon);
+    // The bundle touched, so the Finder and the Dock read its icon again rather than the blank one they cached.
+    const now = new Date();
+    fs.utimesSync(app, now, now);
+  }
   return { app, madeFolder };
 }
 

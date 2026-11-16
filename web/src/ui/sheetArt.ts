@@ -320,9 +320,9 @@ export const X68K_SHEET: SheetSpec = {
   ),
 };
 
-/** The CGA's cyan and magenta (palette 1, bright), as the PC CGA tiles use them. */
-const CGA_CYAN = 0x55ffff;
-const CGA_MAGENTA = 0xff55ff;
+/** The CGA's cyan and magenta (palette 1, low intensity), as the PC CGA tiles use them. */
+const CGA_CYAN = 0x00aaaa;
+const CGA_MAGENTA = 0xaa00aa;
 /** The brazier whose bowl is magenta too: its fire only where it burns, in the bowl. */
 const BRAZIER = 0xbf;
 const cgaFire = fireOf(

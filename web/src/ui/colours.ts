@@ -23,15 +23,17 @@ export const Colour = {
   missed: 0x50 | 15, // the turn's marker flashed as a blow or shot misses (a dim white, apart from the dead's grey)
   virtueUp: 0x60 | 15, // the words of a deed that raised the Modern karma (a white just blue; white on the EGA page)
   virtueDown: 0x70 | 15, // the words of a deed that lowered it (a white just red; white on the EGA page)
+  appleGreen: 0x80 | 10, // the Apple //e's monitor green: its Retro sign's runes (bright green on the EGA page)
 } as const;
 
 /**
  * Which dungeon's walls are being drawn, and so what colour the stone
  * takes. The walls are one set of pictures in black and white, and the
- * eight dungeons are told apart by the light in them: Deceit, Wrong and
- * Hythloth cold and violet, Despise, Covetous and Shame green with damp,
- * Destard and Doom red with what burns below. It costs nothing but a
- * multiply, and no art is drawn twice.
+ * eight dungeons are told apart by the light in them: Deceit and Wrong
+ * cold and violet, Despise, Covetous and Shame green with damp, Destard
+ * and Doom red with what burns below - and Hythloth its own red rock, no
+ * light laid on it (OWN_COLOURS). It costs nothing but a multiply, and no
+ * art is drawn twice.
  */
 export const DUNGEON_TINTS = [
   0xffffff, // 0: no dungeon (the pictures as they stand)
@@ -41,9 +43,16 @@ export const DUNGEON_TINTS = [
   0x8a6aa8, // 4 Wrong
   0x6a9a62, // 5 Covetous
   0x6fae86, // 6 Shame (its walls are dark brick, so the light in it is lifted)
-  0x9080c4, // 7 Hythloth (the same)
+  0x9080c4, // 7 Hythloth (the green dungeons' signs' violet; its walls keep their own colours, OWN_COLOURS)
   0xb0564a, // 8 Doom
 ];
+
+/**
+ * The dungeons whose walls keep the corridor's own colours, no light laid on them: Hythloth's red rock (the player's
+ * choice, November 2026 - vibrant beside the violet). Its map's rock is in the light of that rock's bright red.
+ */
+export const OWN_COLOURS: readonly number[] = [7];
+export const OWN_ROCK_LIGHT = 0xc96a58;
 
 /**
  * The red of runes, 0xRRGGBB: the groove's (carve.ts), the violet dungeons' signs', and a word of evil said in runes
@@ -59,9 +68,9 @@ export const RUNE_RED = 0xc8201f;
  */
 export function signInk(dungeon: number): number {
   const [violet, green, red] = [
-    [1, 4, 7],
+    [1, 4],
     [2, 5, 6],
-    [3, 8],
+    [3, 8, 7], // Hythloth's walls their own red rock (OWN_COLOURS)
   ];
   const donor = violet.includes(dungeon) ? 8 : green.includes(dungeon) ? 7 : red.includes(dungeon) ? 6 : 0;
   if (!donor) return 0;
@@ -111,4 +120,4 @@ export function tinted(rgb: number, tint: number): number {
 }
 
 /** The extra colours by their colour number's high bits (0 is none: the EGA's own). */
-export const EXTRA_RGB = [0, 0xb8a0ff, 0x60a0ff, 0xc8a8ff, 0xff6ad5, 0xbcbcb4, 0xc4d4ff, 0xffc8c4];
+export const EXTRA_RGB = [0, 0xb8a0ff, 0x60a0ff, 0xc8a8ff, 0xff6ad5, 0xbcbcb4, 0xc4d4ff, 0xffc8c4, 0x33ff33];

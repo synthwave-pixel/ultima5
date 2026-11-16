@@ -50,6 +50,34 @@ describe('dungeons', () => {
     expect(drawn).toBeGreaterThan(10000);
   });
 
+  it('draws the whole view again, near walls and all, once a new look asks (the view dirty), not its middle alone', async () => {
+    const { g, p } = newGame();
+    inDungeon(g, 0);
+    g.options.tileSet = 'original';
+    let ticks: number[] = [];
+    let tints = 0;
+    p.fx.transfer = (_from, _to, x1) => void ticks.push(x1);
+    p.fx.dungeonTint = () => void tints++;
+    p.waitKey = async (idle?: () => void) => {
+      ticks = [];
+      idle?.();
+      idle?.();
+      idle?.();
+      tints = 0;
+      g.viewDirty = 1; // a look chosen anew (pageHooks.ts apply), or its tiles come
+      idle?.();
+      idle?.();
+      throw new Error('ran out');
+    };
+    await dungeonLoop(g, true).catch((e: Error) => {
+      if (!e.message.includes('ran out')) throw e;
+    });
+    // The whole view (from 0x10) at first, its middle (from 0x28) after; the whole again once, the middle again.
+    expect(ticks).toEqual([0x10, 0x28, 0x28, 0x10, 0x28]);
+    expect(g.viewDirty).toBe(0);
+    expect(tints, "the sign's colours the new look's").toBe(1);
+  });
+
   it('walks, searches out the hidden door in Deceit and climbs down', async () => {
     const { g, p } = newGame();
     inDungeon(g, 0);

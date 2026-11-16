@@ -314,7 +314,7 @@ Two more, specific to this game:
     cell first; `variantsBelow` the same versions below the world.
   - `palace: {tile: [cell, …]}` — Blackthorn's palace's own versions of
     the castle's squares where they differ, frames in turn.
-  - `pc: {tile: cell}` — Modern PC's own versions of tiles it keeps from
+  - `pc: {tile: cell}` — Remastered's own versions of tiles it keeps from
     this sheet, on the originals' grid.
   - `clock: [tile, …]` — the engine draws the hands itself.
 - A creature occupies **four consecutive tiles** — the game's own layout

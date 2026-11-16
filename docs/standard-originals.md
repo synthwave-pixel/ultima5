@@ -1,13 +1,14 @@
-# Standard look: the original actors and furniture
+# Remastered look: the original actors and furniture
 
-*This is the Modern PC tile set (Settings' Tiles). The other computers'
+*This is the Remastered look's tiles (Appearance's Look; once the Modern
+PC tile set, and the Standard look before that). The other computers'
 sets are `web/src/ui/appleArt.ts` and `web/src/ui/sheetArt.ts`.*
 
-The Standard look draws the original EGA actors and town furniture, their
+The Remastered look draws the original EGA actors and town furniture, their
 ground knocked out so the Standard floor or grass shows through, toned to
 the Standard palette. No outline is put into the tiles themselves: the
-Outlines setting (Settings, on to begin with) draws a fine black line
-round each figure as the screen draws it. The tiles are derived at load
+screen draws a fine black line round each figure (once the Outlines
+setting; always on since November 2026). The tiles are derived at load
 time from the player's own TILES.16 (the port ships no game art), and those
 the EGA animator changes (flags, clock, ladders by time of day) are derived
 again each tick.
@@ -149,7 +150,7 @@ over the river, in the original water's colours).
       north-south river, its banks and shore the river's own (shore.ts), the
       fall laid over it - a foam lip, streaks falling, foam at the foot
 
-### The Avatar's appearance (Modern PC)
+### The Avatar's appearance (Remastered)
 - [x] Five figures - fighter (332), mage (320), bard (324), rogue (the
       jester, 344), shepherd (the townsman, 336) - their skin (8 tones),
       hair (8 colours), main clothes and trim (12 named hues, or as
@@ -165,7 +166,7 @@ over the river, in the original water's colours).
 - [x] The walking and standing Avatar (332-335, 284) and the reflecting
       mirror (158) drawn as the player made the Avatar
 - [x] The people of Sosaria: one light brown skin (#c89868, #b07c50,
-      #825a36) in Modern PC, the rest of their brown left
+      #825a36) in Remastered, the rest of their brown left
       alone
 
 ## Review of 2026-09-28 (second pass)
@@ -225,7 +226,7 @@ over the river, in the original water's colours).
       shallows' a lighter; the water's the rivers' deep, so they meet as one
 - [x] Bridges (29, 106, 107): their own water lifted, the water beneath
       rolling under them
-- [x] Modern PC's cobbles (and the loose brick): their two lighter tones a
+- [x] Remastered's cobbles (and the loose brick): their two lighter tones a
       fifth darker
 - [x] Barrel (166): its gold light a paler shade of its brown
 - [x] White stone (254): the walls' plain dressed stone, darker

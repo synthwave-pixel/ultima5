@@ -25,6 +25,10 @@ describe('a held key', () => {
     return { holds, repeats, hold, setBusy: (b: boolean) => (busy = b), flushed: () => flushed };
   };
 
+  it("waits about as long as a system's own key repeat before a held key's first repeat: 400 ms", () => {
+    expect(HOLD_FIRST_MS).toBe(400);
+  });
+
   it("repeats at the game's pace, the first after HOLD_FIRST_MS, until let go", async () => {
     const { holds, repeats, hold } = setup();
     hold();
@@ -124,7 +128,9 @@ describe("a gamepad's held direction", () => {
     expect(sent[0]).toEqual([K.Right, 0]);
     expect(sent[1][1]).toBeGreaterThanOrEqual(HOLD_FIRST_MS);
     for (let i = 2; i < sent.length; i++) expect(sent[i][1] - sent[i - 1][1]).toBeGreaterThanOrEqual(INPUT_PACES.slow);
-    expect(sent.length).toBe(1 + 1 + Math.floor((1000 - 256) / 208));
+    // Read a frame (16 ms) at a time: the first repeat at the first frame past HOLD_FIRST_MS, each after a frame past the pace.
+    const first = Math.ceil(HOLD_FIRST_MS / 16) * 16;
+    expect(sent.length).toBe(1 + 1 + Math.floor((1000 - first) / 208));
   });
 
   it('sends no repeat while the game is busy', () => {
