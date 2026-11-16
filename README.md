@@ -17,7 +17,9 @@ be had; and the box's painting, for the key art.
 
 ![The Enhanced interface: a town, talk with the reply above and the words you have learned below, combat aboard a ship, a dungeon in first person and mapped whole, the journal, the cloth map, the Avatar at the mirror and the gypsy's questions](promo/features.jpg)
 
-![The two interfaces and their looks - Enhanced with Remastered, Apple Color or PC EGA, Retro with PC EGA or Apple Color - each in the world, a town, combat and a dungeon, and for the Enhanced interface the dungeon's whole-level map](promo/looks.jpg)
+![Eight looks, newest first - Remastered, Sharp X68k, C64, PC EGA and PC CGA, each in the Enhanced interface in the world, a town, combat, a dungeon in first person and the dungeon's whole-level map](promo/looks.jpg)
+
+![The Apple II's looks - Apple Color, Apple //e and Apple //c in the Enhanced interface - and the Retro interface, the 1988 screen, with PC EGA and Apple Color, each in the world, a town, combat and a dungeon](promo/looks-2.jpg)
 
 - [Installation](#installation) The web, iPhone and iPad, Windows,
   macOS, the Steam Deck, Linux and Android.
