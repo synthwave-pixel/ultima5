@@ -1,56 +1,71 @@
 # Builds the desktop app (desktop/, Electron) for Windows, macOS and Linux
-# and the Android app (mobile/, Capacitor), as the ultima3 port's do. A
-# push to main is a development build: every build stays as a workflow
-# artifact. A push to the release branch (git push origin main:release),
-# or a run started by hand (Actions > Desktop and Android builds > Run
-# workflow) with "publish" on, is a release: the builds are published as
-# a GitHub Release. With "publish" off a run keeps its builds as
-# artifacts, to try a change first; with "android_only" on, only the APK
-# is built (the desktop runners, macOS and Windows above all, are the
-# costly ones), and there is no release. The version is the major.minor from desktop/package.json
-# with the run number as the patch (1.0.37, say), decided by
-# desktop/version.cjs; a new series starts by changing that major.minor.
+# and the Android app (mobile/, Capacitor), as the ultima3 port's do. It
+# runs for releases and on demand, never for a push to main: main gets the
+# checks alone (ci.yml), which every run here also passes first.
+# A push to the release branch (git push origin main:release) is a
+# release, to every platform at once: the apps and the web game are all
+# built first, then the builds are published as a GitHub Release and the
+# site is deployed, in this one run, so a failure anywhere stops it before
+# anything reaches a player. (pages.yml only redeploys the latest release.) A run started by hand (Actions > Desktop and Android builds >
+# Run workflow) does what "kind" says: dev-builds (the default) keeps the
+# builds as workflow artifacts, to try a change, with nothing published and
+# the Mac app signed but not notarized; prerelease publishes a GitHub
+# pre-release, for testers (the updater and the update notice look only at
+# the latest full release, so nothing updates to it, and the site is not
+# deployed); release is a release, as a push to the release branch is.
+# With "android_only" on, only the APK is built (the desktop runners, macOS
+# and Windows above all, are the costly ones), and there is no release.
+# The version is the major.minor from desktop/package.json with this
+# workflow's run number as the patch (1.0.37, say), decided by
+# desktop/version.cjs; dev builds count too, so every build's number is
+# higher than the last, and a new series starts by changing that
+# major.minor. Keep the builds in this workflow: another would count from 1.
 # A release's notes are GitHub's generated ones (the compare link). The
 # release job first looks for a section of the root README headed with
 # the release's version ("### v1.0.37", or "### v1.0.37, <date>"), through
 # desktop/release-notes.cjs, and puts it above them; the README has no
 # such section, so a release says so in a warning and goes out with the
 # generated notes alone. The Windows builds are unsigned: see "The desktop
-# app" in docs/advanced.md for what that means on each platform. A run started by hand with "prerelease" on publishes the release
-# as a GitHub pre-release, for testers: the updater and the update notice
-# look only at the latest full release, so nothing updates to it, and the
-# site is not deployed. The APK is signed with the committed sideload key unless the
+# app" in docs/advanced.md for what that means on each platform. The APK is signed with the committed sideload key unless the
 # ANDROID_KEYSTORE_* secrets provide a release key. Linux gets a Flatpak
 # bundle as well as an AppImage; the Linux job installs (and caches) the
 # runtimes it needs.
 name: Desktop and Android builds
 
+run-name: ${{ github.event_name == 'push' && 'Release' || inputs.android_only && 'Android dev build' || inputs.kind == 'dev-builds' && 'Dev builds' || inputs.kind == 'prerelease' && 'Pre-release' || 'Release' }} from ${{ github.ref_name }}
+
 on:
   workflow_dispatch:
     inputs:
-      publish:
-        description: Publish a GitHub Release (off keeps the builds as artifacts only)
-        type: boolean
-        default: true
-      prerelease:
-        description: Publish as a pre-release, for testers - nothing updates to it, the site is not deployed
-        type: boolean
-        default: false
+      kind:
+        description: dev-builds keeps the builds as artifacts; prerelease publishes for testers; release publishes for everyone
+        type: choice
+        options: [dev-builds, prerelease, release]
+        default: dev-builds
       android_only:
         description: Build only the Android app (no desktop builds, so no release)
         type: boolean
         default: false
   # No paths filter: GitHub skips a filtered workflow when a push creates the branch, which is how a release starts.
   push:
-    branches: [main, release]
+    branches: [release]
 
 permissions:
   contents: write
-  actions: write # to start the Pages deploy after a release
+
+# Whether this run publishes (a release or a pre-release): its Mac app is then notarized and checked.
+env:
+  PUBLISH: ${{ github.event_name == 'push' || inputs.kind == 'release' || inputs.kind == 'prerelease' }}
 
 jobs:
+  # The checks main gets (ci.yml), first: nothing is built from a commit that fails them.
+  checks:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build:
     if: ${{ !inputs.android_only }}
+    needs: checks
     strategy:
       fail-fast: false
       matrix:
@@ -114,13 +129,13 @@ jobs:
           CSC_LINK: ${{ matrix.target == 'mac' && secrets.MACOS_CERTIFICATE_BASE64 || '' }}
           CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.MACOS_CERTIFICATE_PASSWORD || '' }}
           MACOS_SIGNING_IDENTITY: ${{ matrix.target == 'mac' && secrets.MACOS_SIGNING_IDENTITY || '' }}
-          # Notarized only for a release, which is what players download: a few minutes more a build.
-          APPLE_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_ID || '' }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_APP_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ matrix.target == 'mac' && github.ref == 'refs/heads/release' && secrets.APPLE_TEAM_ID || '' }}
-      # A release's Mac app must be notarized: electron-builder only warns when it cannot notarize (an Apple secret
+          # Notarized only when published, which is what players and testers download: a few minutes more a build.
+          APPLE_ID: ${{ matrix.target == 'mac' && env.PUBLISH == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.target == 'mac' && env.PUBLISH == 'true' && secrets.APPLE_APP_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.target == 'mac' && env.PUBLISH == 'true' && secrets.APPLE_TEAM_ID || '' }}
+      # A published Mac app must be notarized: electron-builder only warns when it cannot notarize (an Apple secret
       # missing), and Gatekeeper would then refuse the download. Builds without the certificate (a fork's) are not checked.
-      - if: matrix.target == 'mac' && github.ref == 'refs/heads/release'
+      - if: matrix.target == 'mac' && env.PUBLISH == 'true'
         run: |
           if [ "$SIGNED" != true ]; then echo 'Not signed: no certificate.'; exit 0; fi
           for app in dist/mac*/*.app; do spctl --assess --type execute -vv "$app"; done
@@ -150,6 +165,7 @@ jobs:
           if-no-files-found: error
 
   android:
+    needs: checks
     runs-on: ubuntu-latest
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -192,18 +208,83 @@ jobs:
           path: mobile/dist/*.apk
           if-no-files-found: error
 
-  # A manual run (unless told not to publish), or a push to the release branch, publishes one release with every file
-  # once all four builds exist; the tag lands on this commit.
+  # The site, for a release (not a pre-release, nor dev builds): the web game built from this commit, and the Flatpak
+  # repository it serves made from this run's own Flatpak, all before anything is published, so a failure here stops
+  # the release whole and the site is always the release's game, as the apps are.
+  site:
+    if: ${{ github.event_name == 'push' || inputs.kind == 'release' }}
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # The build's mark: the commit built.
+      - run: VITE_BUILD="$(git rev-parse --short=7 HEAD)" npm run build
+        env:
+          VITE_BASE: /ultima5/
+      # The Flatpak repository: this run's bundle, imported into a fresh OSTree repository and signed. A pruned
+      # repository holds one commit anyway, so nothing needs keeping between deploys. flatpak and ostree come from the
+      # cache kept per runner image, else the mirror (.github/actions/apt-install). Without the signing key the site
+      # goes without it.
+      - id: flatpak
+        run: |
+          if [ -n "$FLATPAK_GPG_KEY" ]; then echo "serve=yes" >>"$GITHUB_OUTPUT"; else
+            echo "serve=no" >>"$GITHUB_OUTPUT"
+            echo "No signing key: the site goes without its Flatpak repository."
+          fi
+        env:
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+      - if: steps.flatpak.outputs.serve == 'yes'
+        uses: actions/download-artifact@v8
+        with:
+          name: ultima5-linux
+          path: linux
+      - if: steps.flatpak.outputs.serve == 'yes'
+        timeout-minutes: 20
+        uses: ./.github/actions/apt-install
+        with:
+          packages: flatpak ostree
+      - if: steps.flatpak.outputs.serve == 'yes'
+        run: bash desktop/flatpak-repo.sh "$GITHUB_WORKSPACE/web/dist/flatpak" "$(ls "$GITHUB_WORKSPACE"/linux/*.flatpak | head -1)"
+        working-directory: ${{ github.workspace }}
+        env:
+          FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
+          FLATPAK_GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
+          SITE: https://synthwave-pixel.github.io/ultima5
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  # A push to the release branch, or a manual run of kind release or prerelease, publishes one release with every file
+  # once all four builds (and, for a release, the site) exist; the tag lands on this commit. Dev builds stop at their
+  # artifacts. A pre-release has no site, so a skipped one is no reason to stop.
   release:
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish) || github.ref == 'refs/heads/release' }}
-    needs: [build, android]
+    if: >-
+      ${{ !cancelled() && needs.build.result == 'success' && needs.android.result == 'success'
+      && (needs.site.result == 'success' || needs.site.result == 'skipped')
+      && (github.event_name == 'push' || inputs.kind == 'release' || inputs.kind == 'prerelease') }}
+    needs: [build, android, site]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - id: v
         run: echo "version=$(node desktop/version.cjs)" >> "$GITHUB_OUTPUT"
+      # The apps' builds only: the site's artifact (github-pages) is not a release file.
       - uses: actions/download-artifact@v8
         with:
+          pattern: ultima5-*
           path: files
           merge-multiple: true
       - run: ls -la files
@@ -216,12 +297,23 @@ jobs:
           if [ "$PRERELEASE" = true ]; then notes+=(--prerelease); fi
           gh release create "v$VERSION" files/* --title "v$VERSION" --generate-notes "${notes[@]}" --target "$GITHUB_SHA"
         env:
-          PRERELEASE: ${{ inputs.prerelease }}
+          PRERELEASE: ${{ inputs.kind == 'prerelease' }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.v.outputs.version }}
-      # The site follows the releases: deployed now from the commit just released, which also brings its Flatpak
-      # repository up to the newest release. Not for a pre-release.
-      - if: ${{ !inputs.prerelease }}
-        run: gh workflow run pages.yml --ref main -f source="$GITHUB_SHA"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # The site, deployed once the release is out: the build the site job made from this commit. Not for a pre-release.
+  deploy:
+    needs: [release, site]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

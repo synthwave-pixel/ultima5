@@ -224,10 +224,10 @@ The workflows in `.github/workflows/`:
 
 | Trigger | What happens |
 |---|---|
-| A push to `main` | Builds the desktop and Android apps as workflow artifacts. The site is not deployed. |
-| A push to `release` (`git push origin main:release`) | Publishes a release, then deploys that commit to GitHub Pages: the web game changes only with a release. |
-| Deploy to GitHub Pages, run by hand from the Actions tab | Deploys the `release` branch, or the commit or branch given. |
-| Desktop and Android builds, run by hand from the Actions tab | Publishes a release; "Android only" builds just the APK, and turning "publish" off keeps the run's builds as artifacts. |
+| A push to `main`, or a pull request | Checks only (`ci.yml`): formatting, lint (including `desktop/*.cjs`), the tests and the web build. Nothing is built for players and the site is not deployed. |
+| A push to `release` (`git push origin main:release`) | One release to every platform, in one run: the checks, then every app and the web game built, then the GitHub release published and the site deployed. A failure anywhere stops it before anything is published, and the web game changes only with a release. |
+| Redeploy the latest release, run by hand from the Actions tab | Puts the newest full release back on GitHub Pages (`pages.yml`), for when a release's deploy failed. It builds that release's tag and nothing else. |
+| Desktop and Android builds, run by hand from the Actions tab | Runs the checks, then builds by "kind": `dev-builds` (the default) keeps the builds as artifacts, with nothing published and the Mac app not notarized; `prerelease` publishes a pre-release for testers, without the site; `release` is a release, site included. "Android only" builds just the APK. |
 
 ## More reading
 

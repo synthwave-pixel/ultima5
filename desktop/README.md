@@ -41,15 +41,25 @@ Steam up and takes that away again on each system; and `instanceMode.cjs`
 tells a second copy whether the open one is a Steam launch or not.
 
 Builds for all three platforms come from the "Desktop and Android builds"
-workflow under Actions. It runs when started by hand (Actions > Run
-workflow), with "publish" deciding between a release and artifacts. The
-version comes from `version.cjs`: the major.minor of `version` in
-`package.json` with the run number as the patch in Actions, or a
-timestamped pre-release (`1.0.0-dev.20260915.2214`) for a build made
-anywhere else; `BUILD_VERSION` overrides both. `npm run dist` passes it
-to electron-builder as metadata, so `package.json` is never edited.
-macOS builds are Apple Silicon only. A manual run with "publish" off
-keeps the builds as artifacts instead of making a release.
+workflow under Actions. It runs for a push to the `release` branch, which
+is a release, and when started by hand (Actions > Run workflow), where
+"kind" chooses: `dev-builds` (the default) keeps the builds as workflow
+artifacts to try, with the Mac app signed but not notarized;
+`prerelease` publishes a pre-release for testers; `release` publishes a
+release. A release goes to every platform in one run: the apps and the
+web game are built, then the GitHub release is published and the site
+deployed, so a failure anywhere stops it before anything is published.
+It never runs for a push to `main`, which gets only the checks
+(the "Checks" workflow: formatting, lint, tests and the web build); every
+run of the builds passes those checks first. The version comes from
+`version.cjs`: the major.minor of `version` in `package.json` with the
+run number as the patch in Actions, or a timestamped pre-release
+(`1.0.0-dev.20260915.2214`) for a build made anywhere else;
+`BUILD_VERSION` overrides both. Dev builds use up run numbers as releases
+do, so every build is numbered above the last; the builds must stay in
+this one workflow, as another would count from 1. `npm run dist` passes
+the version to electron-builder as metadata, so `package.json` is never
+edited. macOS builds are Apple Silicon only.
 
 A release's notes are GitHub's generated ones, the compare link with
 the release before it. The release job first runs `release-notes.cjs`,
@@ -103,13 +113,16 @@ black window in Game Mode). The AppImage's menu entry and the Steam
 compatibility tool pass it on the command line.
 
 The site also serves the newest release as a Flatpak repository, at
-`/flatpak/` under the Pages address: the Pages workflow runs
-`flatpak-repo.sh`, which downloads the release's bundle, imports it into
-a fresh OSTree repository, signs it with the key in the `FLATPAK_GPG_KEY`
-and `FLATPAK_GPG_KEY_ID` secrets, and writes the `.flatpakrepo` and
-`.flatpakref` files beside it. The release job starts a Pages deploy
-after publishing, so the repository follows each release; a pruned
-repository holds one commit, so nothing is kept between deploys. The
+`/flatpak/` under the Pages address. The release run's site job runs
+`flatpak-repo.sh` on that run's own Flatpak build: it imports the bundle
+into a fresh OSTree repository, signs it with the key in the
+`FLATPAK_GPG_KEY` and `FLATPAK_GPG_KEY_ID` secrets, and writes the
+`.flatpakrepo` and `.flatpakref` files beside it. The site is built, the
+Flatpak repository included, before the release is published, and
+deployed after it in the same run, so the repository follows each
+release; a pruned repository holds one commit, so nothing is kept
+between deploys. "Redeploy the latest release" (`pages.yml`, by hand)
+puts the newest release back on the site, downloading its bundle. The
 service worker leaves `/flatpak/` alone (`navigateFallbackDenylist` in
 `../web/vite.config.ts`), or a browser that had played the game would be
 handed the game instead of the `.flatpakref`.

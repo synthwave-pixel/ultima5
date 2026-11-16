@@ -1,0 +1,68 @@
+# The checks: formatting, lint (web/ and desktop/*.cjs), the tests and the web build. Run on every push to main and
+# every pull request, and called by the desktop workflow (desktop.yml) before it builds anything, so neither a
+# release nor a dev build is made from a commit that fails them. Nothing is built for players here.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# A newer push to main, or to a pull request, stops the checks still running for the one before. Called from
+# desktop.yml the group is that workflow's, so a release's checks are never stopped by a push to main.
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.workflow == 'Checks' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            desktop/package-lock.json
+      # The game's files, from the private synthwave-pixel/ultima5-gamedata, when GAMEDATA_TOKEN (a read-only token
+      # for that repository) is set; a fork's pull request has no secrets and goes without. Never print the files: the
+      # logs are public.
+      - id: gamedata
+        run: if [ -n "$GAMEDATA_TOKEN" ]; then echo "fetch=yes" >>"$GITHUB_OUTPUT"; fi
+        env:
+          GAMEDATA_TOKEN: ${{ secrets.GAMEDATA_TOKEN }}
+      - if: steps.gamedata.outputs.fetch == 'yes'
+        uses: actions/checkout@v7
+        with:
+          repository: synthwave-pixel/ultima5-gamedata
+          token: ${{ secrets.GAMEDATA_TOKEN }}
+          path: gamedata-private
+          persist-credentials: false
+      - if: steps.gamedata.outputs.fetch == 'yes'
+        run: cp -R gamedata-private/ultima5 gamedata-private/*.zip gamedata/ && rm -rf gamedata-private
+        working-directory: ${{ github.workspace }}
+      - run: npm ci
+      # The desktop app's packages too: the tests load its modules (desktopUpdates.test.ts needs electron-updater).
+      # Electron itself is never run here, so its binary is not downloaded.
+      - run: npm ci
+        working-directory: desktop
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - run: npm run format:check
+      - run: npm run lint
+      # Every test where the checkout has the game's files; without them (a fork's pull request) the ones that need none.
+      - run: if [ -f ../gamedata/ultima5/DATA.OVL ]; then npm test; else npm run test:nodata; fi
+      # The game's files go before the build, as they do for the site.
+      - run: find gamedata -mindepth 1 -maxdepth 1 ! -name README.md -exec rm -rf {} +
+        working-directory: ${{ github.workspace }}
+      - run: npm run build
