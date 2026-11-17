@@ -21,6 +21,7 @@ import { unlockAnyCaster, unlockChest } from './magic.ts';
 import { Status } from './save.ts';
 import type { Offer } from './targets.ts';
 import { updateFrame } from './frame.ts';
+import { fieldWon } from './turn.ts';
 
 const CHEST = 1;
 
@@ -69,7 +70,7 @@ function safeOpener(g: Game): number {
 /** Loot and Leave on the combat menu: where a fight is won, the field may be left, and something lies there to take. */
 export function lootOffer(g: Game): Offer {
   const s = g.s;
-  if (g.commandPrompt !== 'combat' || s.battleWon === 0 || s.combatFlags & 0x80) return 'hide';
+  if (g.commandPrompt !== 'combat' || !fieldWon(g) || s.combatFlags & 0x80) return 'hide';
   const { chests, things } = lying(g);
   if (chests.length === 0 && things.length === 0) return 'hide';
   return able(g).length ? 'show' : 'grey';

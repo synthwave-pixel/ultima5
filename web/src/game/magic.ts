@@ -789,10 +789,10 @@ async function anExXen(g: Game): Promise<number> {
   if ((tileAt(g, s.crossX, s.crossY) & 0xfe) === T.T84) return 0;
   const i = combatantAt(g, s.crossX, s.crossY);
   if (i < 0 || immune(g, i) || !onMonsterSide(g, i) || resists(g, s.combatTurn, i)) return 0;
-  g.combat[i].flags ^= CF.Charmed;
-  // (Charmed now, by the caster - or freed: Game.charmedBy, for the eased rules' roll.)
-  if (g.combat[i].flags & CF.Charmed) g.charmedBy.set(i, s.combatTurn);
+  // Charmed now, by the caster (combat.ts charm: Game.charmedBy, for the eased rules' roll; Solo Mode ended) - or freed.
+  if (!(g.combat[i].flags & CF.Charmed)) charm(g, i, s.combatTurn);
   else {
+    g.combat[i].flags &= ~CF.Charmed;
     g.charmedBy.delete(i);
     released(g, i); // a daemon within, cast out (combat.ts castOut)
   }

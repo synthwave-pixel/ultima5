@@ -179,8 +179,8 @@ The options differ by system:
 
 Steam names the game "Ultima V" wherever the app cannot rename it, which is
 the Windows launch line. The app says which edition it is itself:
-the window title and the title screen show **Ultima V Enhanced Edition** and
-its version, and Settings ends with the same, greyed, a line each. The Linux
+the window title shows **Ultima V Enhanced Edition** and its version, and
+Settings ends with the same, greyed, a line each. The Linux
 compatibility tool is named Ultima V Enhanced Edition in Steam, and so is the
 Mac launch entry made from now on (one made before keeps its old name, Ultima V
 SP, as rewriting it would mean quitting Steam). On a Mac, Play starts a small

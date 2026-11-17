@@ -8,6 +8,7 @@
  */
 
 import { treasureLies } from './actors.ts';
+import { fieldWon } from './turn.ts';
 import { autoTitle, clearBorderTitle, borderTitle, drawVitals, invertMember, markTurn, updateFrame } from './frame.ts';
 import { liftDungeonMap } from './dungeonMap.ts';
 import { Game } from './game.ts';
@@ -457,8 +458,7 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
       // (A B on the heels of one that backed out of a menu or a page is that press again, a hand's bounce or a
       // double tap: ignored, not a turn passed - the port's.)
       else if (k === Pad.B && (g.p.now?.() ?? -Infinity) - g.backAt < BACK_TWICE) continue;
-      else if (k === Pad.B)
-        key = where === 'combat' && g.s.battleWon !== 0 && !(g.s.combatFlags & 0x80) && !treasureLies(g) ? K.Escape : K.Space;
+      else if (k === Pad.B) key = where === 'combat' && fieldWon(g) && !(g.s.combatFlags & 0x80) && !treasureLies(g) ? K.Escape : K.Space;
       // X: attack, wherever the party is - Fire, aboard a ship or beside a cannon, as the guns are the attack there.
       else if (k === Pad.X) {
         key = where !== 'combat' && firesHere(g) ? 0x46 : 0x41;

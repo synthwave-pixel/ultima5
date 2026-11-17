@@ -18,10 +18,11 @@ import { drawTextCard } from './shopCard.ts';
 import { CF, Game } from './game.ts';
 import { menuKey, PAUSED } from './input.ts';
 import { besideHarpsichord } from './harpsichord.ts';
-import { HARPSICHORD, K, Pad, SAVE_NOW } from './io.ts';
+import { HARPSICHORD, K, Pad, SAVE_NOW, SOLO, SOLO_OFF } from './io.ts';
 import { somethingBeside } from './items.ts';
 import { itemCounts, nextHeld, unloaded } from './zstats.ts';
-import { turnMember } from './turn.ts';
+import { fieldWon, turnMember } from './turn.ts';
+import { setAutoCombat } from './solo.ts';
 import { holdFullPanel } from './layout.ts';
 import { redrawSideMap } from './dungeonMap.ts';
 import { drawSwitchCard } from './readyCard.ts';
@@ -1267,6 +1268,9 @@ export function contextual(g: Game): Item[] {
     const last = g.lastSpell.get(who);
     if (last !== undefined && s.mixtures[last] !== 0 && !shortcutCasts(g).some((r) => r.spell === last))
       out.push({ label: `Cast (${SPELL_EFFECTS[last]})`, key: 0x100 + 7 });
+    // Solo Mode (solo.ts), a controller's: the member whose turn it is the only one to move; Cancel Solo once it is on.
+    if (g.options.input === 'controller' && who >= 0)
+      out.push(s.activeMember === 0xff ? { label: 'Solo Mode', key: SOLO } : { label: 'Cancel Solo', key: SOLO_OFF });
   }
   // A camp that would be a rest, with someone it would heal: it leads the rest of the menu (targets.ts campWanted).
   if ((where === 'outdoors' || where === 'dungeon') && campWanted(g)) out.push({ label: 'Camp', key: c('H') });
@@ -1285,7 +1289,7 @@ export function contextual(g: Game): Item[] {
   if ((where === 'town' || where === 'outdoors') && somethingBeside(g)) out.unshift({ label: 'Search', key: c('S') });
   // A fight won is left from the head of the menu: the field stays the party's until then, for its chests.
   // Not where the field cannot be left (Doom's last room): there it would only say so.
-  if (where === 'combat' && s.battleWon !== 0 && !(s.combatFlags & 0x80)) {
+  if (where === 'combat' && fieldWon(g) && !(s.combatFlags & 0x80)) {
     // Loot and Leave (loot.ts) above it, while there is something on the field to take and someone to take it: the
     // bar starts on what a won field is most often left by. Where no one can (all asleep), it waits greyed under it.
     const loot = lootOffer(g);
@@ -1678,8 +1682,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           label: `Auto combat: ${AUTO_COMBAT_NAMES[g.options.autoCombat]}`,
           note: AUTO_COMBAT_NOTES[g.options.autoCombat],
           act: () => {
-            g.options.autoCombat = AUTO_COMBAT[(AUTO_COMBAT.indexOf(g.options.autoCombat) + 1) % AUTO_COMBAT.length];
-            saveOptions(g.options);
+            setAutoCombat(g, AUTO_COMBAT[(AUTO_COMBAT.indexOf(g.options.autoCombat) + 1) % AUTO_COMBAT.length]);
           },
         },
         {
@@ -1805,12 +1808,6 @@ const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller:
 function editionLines(g: Game): Setting[] {
   const version = g.hooks.version?.();
   return [{ label: 'Enhanced Edition', enabled: false }, ...(version ? [{ label: `Version ${version}`, enabled: false }] : [])];
-}
-
-/** The edition's name with the app's version, where the page has one (the web has none): the title's. */
-export function editionName(g: Game): string {
-  const version = g.hooks.version?.();
-  return version ? `Ultima V Enhanced Edition ${version}` : 'Ultima V Enhanced Edition';
 }
 
 /** One line of the Settings menu: what it says, and what choosing it does. */

@@ -48,6 +48,9 @@ export const SAVE_NOW = 0x109;
 
 /** Play the harpsichord, as a command: its keyboard (harpsichord.ts), from Play or a walk into it (apart from menu.ts's own 0x104-0x10c). */
 export const HARPSICHORD = 0x106;
+/** Solo Mode and Cancel Solo, from the command menu in a fight (solo.ts). */
+export const SOLO = 0x10e;
+export const SOLO_OFF = 0x10f;
 
 /**
  * The harpsichord's keyboard as the screen draws it over the view (Draw.harpsichord, harpsichord.ts): in the box at

@@ -9,6 +9,7 @@
 
 import { drawMoons, drawVitals, invertMember } from './frame.ts';
 import { Game } from './game.ts';
+import { soloHurt } from './solo.ts';
 import { Status } from './save.ts';
 import { cue, deathCue } from './cues.ts';
 import { poisonKills, starvation } from './settings.ts';
@@ -130,6 +131,7 @@ export async function damageMembers(g: Game, who: number[], damage: number | num
   for (const i of who) invertMember(g, i);
   for (const [k, i] of who.entries()) {
     const m = s.members[i];
+    if ((typeof damage === 'number' ? damage : (damage[k] ?? 0)) > 0) soloHurt(g, m.name); // Solo Mode ends (solo.ts)
     m.hp = Math.max(m.hp - (typeof damage === 'number' ? damage : (damage[k] ?? 0)), floor);
     if (m.hp <= 0) {
       m.hp = 0;

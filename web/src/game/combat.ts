@@ -16,13 +16,14 @@
 import * as modern from './modernKarma.ts';
 import { canEnter, freeActor, setActor } from './actors.ts';
 import { reveal, sleepTicks } from './effects.ts';
+import { endSolo, soloHurt, soloOn, startSolo } from './solo.ts';
 import { borderTitle, clearBorderTitle, commandPrompt, drawVitals, invertMember, markTurn, turnColour, updateFrame } from './frame.ts';
 import { liftDungeonMap } from './dungeonMap.ts';
 import { CF, Game } from './game.ts';
 import { bumpCommand, corpseBlocks, foesAbout, isLoot, NOT_NOW } from './bumpAct.ts';
 import { bumpInto, getChar, getCharYN, getCommandKey, getHours, queueKeys, selectDirection, upOrDown } from './input.ts';
 import { restOutcome, restTimer } from './rest.ts';
-import { K, Pad } from './io.ts';
+import { K, Pad, SOLO, SOLO_OFF } from './io.ts';
 import { earnedLevel, Status } from './save.ts';
 import { gameDay, passTime } from './time.ts';
 import {
@@ -50,6 +51,7 @@ import { putAside } from './speech.ts';
 import { devMode } from '../devMode.ts';
 import { ammoHeld, spendOne } from './ammo.ts';
 import { shortArmNames } from './armNames.ts';
+import { fieldWon, onMonsterSide } from './turn.ts';
 
 /** Enemy flags (u5d macros.h ENEMY_FLAG_*). */
 export const EF = {
@@ -92,16 +94,8 @@ export const creatureReach = (g: Game, kind: number): number => Math.max(1, g.da
 
 // --- Who's who -----------------------------------------------------------------------------
 
-/** ULTIMA_5646: is combatant `i` on the monsters' side now (a charmed player is, a charmed monster is not). */
-export function onMonsterSide(g: Game, i: number): boolean {
-  const c = g.combat[i];
-  if (c.flags & CF.Dead) return false;
-  if (c.flags & CF.Player) {
-    if (c.who !== 0 && g.s.members[c.who].name[4] === 'j') return true;
-    return (c.flags & CF.Charmed) !== 0;
-  }
-  return (c.flags & CF.Charmed) === 0;
-}
+// onMonsterSide (ULTIMA_5646) lives in turn.ts, with the fight's other light questions; here for the fight's own use.
+export { onMonsterSide } from './turn.ts';
 
 /** COMSUBS_0094. */
 export function sayName(g: Game, i: number): void {
@@ -110,6 +104,12 @@ export function sayName(g: Game, i: number): void {
   // named the empty slot's kind, the first - "Mage killed!" for an insect swarm or a gargoyle.
   if (c.flags === 0 && g.gone.has(i)) return g.print(creatureName(g, g.gone.get(i)!));
   g.print(c.flags & CF.Player ? g.s.members[c.who].name : creatureName(g, c.who));
+}
+
+/** Something landed on combatant `i` - `how`: hit, asleep, poisoned, charmed: Solo Mode, if on, ends (solo.ts). */
+function soloStruck(g: Game, i: number, how: string): void {
+  const c = g.combat[i];
+  soloHurt(g, c.flags & CF.Player ? g.s.members[c.who].name : creatureName(g, c.who), how);
 }
 
 /** ULTIMA_6d82. */
@@ -304,6 +304,7 @@ export function wake(g: Game, i: number): void {
 export function putToSleep(g: Game, i: number): void {
   const c = g.combat[i];
   const s = g.s;
+  if (!(c.flags & CF.Dead) && !(c.flags & CF.Player && s.members[c.who].status === Status.Dead)) soloStruck(g, i, 'asleep');
   if (c.flags & CF.Player) {
     if (s.members[c.who].status === Status.Dead) return;
     s.members[c.who].status = Status.Sleeping;
@@ -445,6 +446,8 @@ async function prepareCombat(g: Game, flags: number, kindIn: number): Promise<vo
  * creature summoned to the party's side, and the Chaos Sword's wielder, shake nothing off.
  */
 export function charm(g: Game, i: number, by: number | 'bound'): void {
+  // Solo Mode ends at a charm landing (solo.ts) - not at a creature the party summons, theirs for good.
+  if (by !== 'bound' || g.combat[i].flags & CF.Player) soloStruck(g, i, 'charmed');
   g.combat[i].flags |= CF.Charmed;
   g.charmedBy.set(i, by);
 }
@@ -1015,6 +1018,8 @@ export async function damage(g: Game, i: number, amount: number): Promise<number
     s.d58a2 = 0x20;
     amount = 0;
   }
+  // Solo Mode ends at anyone's hurt (solo.ts): not a blow that does nothing, nor a body already fallen.
+  if (amount > 0 && (c.flags & CF.Dead) === 0) soloStruck(g, i, 'hit');
   // The eased rules (the port's): a sleeper hurt, and left standing, has an even chance to wake.
   if (easedRules(g) && amount > 0 && amount !== 99 && c.flags & CF.Asleep && g.random(0, 1) === 0) {
     const left = c.flags & CF.Player ? s.members[c.who].hp - amount : c.hp - amount;
@@ -1109,6 +1114,7 @@ export async function poison(g: Game, i: number, attacker: number): Promise<void
   const s = g.s;
   const c = g.combat[i];
   if (c.flags & CF.Player && s.members[c.who].status === Status.Good) {
+    soloStruck(g, i, 'poisoned'); // no hurt, but a blow landed (solo.ts)
     s.members[c.who].status = Status.Poisoned;
     g.print(s.members[c.who].name);
     g.say(0x6f4e); // " is poisoned!\n"
@@ -2434,7 +2440,7 @@ export function passOut(g: Game): number {
 }
 
 /** SJOG_1bb2: a member leaves the arena (all by the same side, where it matters). */
-async function leaveArena(g: Game, i: number, dir: number): Promise<boolean> {
+export async function leaveArena(g: Game, i: number, dir: number): Promise<boolean> {
   const s = g.s;
   if ((s.partyTile & 0xf8) === 0x20) {
     g.say(0x8e76); // "\nStay with ship!\n"
@@ -2452,8 +2458,19 @@ async function leaveArena(g: Game, i: number, dir: number): Promise<boolean> {
   countSides(g);
   g.say(s.dx === 0 ? 0x8ea6 : 0x8eae); // "Leave!\n" : "Escape!\n"
   await cue(g, 'Withdraw', () => g.sound.sweep(0x4b0, 2000, 1, 0x28));
+  // Solo Mode's member walking off a won field (solo.ts): the whole party leaves with them, by the same way - asleep
+  // or not - as each walking off it would (the port's). Where foes stand, they go alone, as in 1988.
+  const solo = soloOn(g) && (g.combat[i].flags & CF.Player) !== 0 && g.combat[i].who === s.activeMember;
+  const party = solo && fieldWon(g);
+  if (solo && !party) endSolo(g);
   s.activeMember = 0xff;
   removeCombatant(g, -i - 1);
+  if (party) {
+    for (let j = 0; j < 0x20; j++) {
+      const c = g.combat[j];
+      if (c.flags !== 0 && (c.flags & CF.Dead) === 0 && !onMonsterSide(g, j)) removeCombatant(g, -j - 1);
+    }
+  }
   drawVitals(g);
   updateFrame(g);
   return true;
@@ -2679,13 +2696,14 @@ async function escape(g: Game): Promise<number> {
       break;
     }
   }
-  const leave = anyone && !(s.combatFlags & 0x80) && s.battleWon !== 0;
+  const won = fieldWon(g); // no foe standing again since the victory (turn.ts)
+  const leave = anyone && !(s.combatFlags & 0x80) && won;
   if (!leave) g.say(0x4574); // "Escape"
   if (anyone) {
     if (s.combatFlags & 0x80) {
       g.say(0x457b); // "-Not here!\n"
       stay = true;
-    } else if (s.battleWon === 0) {
+    } else if (!won) {
       g.say(0x4587); // "-Not yet!\n"
       stay = true;
     }
@@ -3026,6 +3044,13 @@ async function playerTurn(g: Game): Promise<void> {
             }
             case 0x58:
               await misc(0x6ee0, 1);
+              break;
+            case SOLO:
+            case SOLO_OFF:
+              // Solo Mode and Cancel Solo (solo.ts), from a controller's menu: no turn spent.
+              if (key === SOLO) startSolo(g);
+              else endSolo(g);
+              again = true;
               break;
             default:
               g.say(0x6ee6); // "What?\n"

@@ -491,6 +491,28 @@ describes how the Enhanced interface and the Remastered look are drawn.
   summary; then the party's Withdraw, heard out before the place's music
   comes back. Nor does An Sanct flash the view for each chest it opens:
   cast on chest after chest, the flashes came some ten a second.
+- **Solo Mode**, in a fight's menu with a controller: the member whose
+  turn it is becomes the only one who moves - 1988's active player, which
+  the keyboard sets with 1-6 - for exploring a dungeon room or gathering
+  its loot without waiting on the others' turns. The log says "Solo:"
+  and the name, and no turn is spent. **Cancel Solo** takes its place in
+  the menu while it is on. It ends by itself as soon as anything lands on
+  anyone in the fight, member or foe - a blow that hurts, sleep, poison or
+  a charm, the party's own spells as much as a foe's ("Solo off: Iolo is
+  hit!", "...is asleep!") - so a foe behind a secret door or a ghost come
+  back does not catch the party standing idle. Any change to Auto combat
+  ends it too, and so does the fight's end. Once no foe stands, the solo
+  member walking off the field - or up or down a room's ladder - takes
+  the whole party with them by the same way, asleep or not, in a dungeon
+  room too. It is a plain leave: whatever is still lying there stays
+  (Loot and Leave takes it). While foes stand, the solo member walks off
+  alone, Solo Mode ends, and the others must follow by the same exit, as
+  in 1988.
+- **A won fight with a foe back on the field** - a charmed creature
+  broken free, the Chaos Sword's wielder turned - is not left as won:
+  Leave combat, Loot and Leave, B and Solo Mode's walk-out wait until no
+  foe stands again (1988 kept the victory, and let the party walk away
+  past the foe).
 - **Rations and reagents**, with a controller, are dialled: how many,
   the dial saying what one is (25 food; a lot of so many of a reagent),
   what the number on it costs of the gold there is, and for a reagent how

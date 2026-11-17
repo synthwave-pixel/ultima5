@@ -32,7 +32,9 @@ import {
 import { autoTitle } from './frame.ts';
 import { CF, Game } from './game.ts';
 import { K } from './io.ts';
-import { eased, saveOptions } from './settings.ts';
+import { eased } from './settings.ts';
+import { setAutoCombat } from './solo.ts';
+import { fieldWon } from './turn.ts';
 import { armsKind, handsOf, planSwitch } from './switchWeapon.ts';
 import { THROWN, unloaded } from './zstats.ts';
 import { T } from './tiles.ts';
@@ -101,8 +103,7 @@ function handBack(g: Game): void {
     g.autoHeld = true;
     return;
   }
-  g.options.autoCombat = 'off';
-  saveOptions(g.options);
+  setAutoCombat(g, 'off');
 }
 
 /** How soon after a B in a turn auto combat played a second B turns it off (ms): a double press. */
@@ -130,8 +131,7 @@ async function keysPressed(g: Game, interrupt?: AutoInterrupt): Promise<boolean>
     const now = g.p.now?.() ?? 0;
     if (now - g.autoBackAt < BACK_TWICE_MS) {
       g.autoBackAt = -Infinity;
-      g.options.autoCombat = 'off';
-      saveOptions(g.options);
+      setAutoCombat(g, 'off');
       while (g.p.pollKey() !== 0);
       if (g.text.win.x !== 0) g.printChar('\n');
       g.print('Auto combat off\n');
@@ -222,12 +222,12 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
     }
     // Treasure on the field is the player's to open or to leave (a chest may be trapped): the party waits for
     // them, and auto combat is still on for the next fight.
-    if (s.battleWon !== 0 && treasureLies(g)) {
+    if (fieldWon(g) && treasureLies(g)) {
       if (!toldOfTreasure) g.print('(treasure lies here)\n');
       toldOfTreasure = true;
       return 0;
     }
-    return s.battleWon !== 0 ? K.Escape : K.Space;
+    return fieldWon(g) ? K.Escape : K.Space;
   }
   toldOfTreasure = false;
   // The fight going anywhere: the foes' hit points and number lower than at the last party turn that lowered them.

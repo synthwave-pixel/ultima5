@@ -215,7 +215,9 @@ describe('Steam (beta) on the title', () => {
     expect(f.recorded).toEqual([[true, undefined]]);
   });
 
-  it('shows the edition and its version above the menu, in the desktop app and on the web', async () => {
+  // The row above the menu lies under the flames' bottom lines, which ate any label printed there: the edition's name
+  // and version are in Settings (and the desktop window's title) instead.
+  it('prints no edition label above the menu, in the desktop app or on the web', async () => {
     storage();
     /** What the title printed, up to Manage Saves (up from Create New Character), which waits for a key. */
     const printed = async (version?: string): Promise<string> => {
@@ -225,10 +227,10 @@ describe('Steam (beta) on the title', () => {
       await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
       return p.log;
     };
-    expect(await printed('1.1.195')).toContain('Ultima V Enhanced Edition 1.1.195');
-    const web = await printed();
-    expect(web).toContain('Ultima V Enhanced Edition');
-    expect(web).not.toContain('Ultima V Enhanced Edition 1.');
+    for (const log of [await printed('1.1.195'), await printed()]) {
+      expect(log).toContain('Copyright 1988 Lord British');
+      expect(log).not.toContain('Enhanced Edition');
+    }
   });
 
   it('stands Launch From Steam in place of the lines that start a game, where Play from Steam is on outside Steam', () => {
