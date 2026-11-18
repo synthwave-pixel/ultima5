@@ -10,6 +10,7 @@
  * offered only in development builds.
  */
 
+import { Relocate } from './relocate.ts';
 import * as modern from './modernKarma.ts';
 import { CF, Game } from './game.ts';
 import { Status } from './save.ts';
@@ -36,12 +37,8 @@ export function chargeCheat(g: Game, cheat: Cheat): number {
   return modern.deed(g, 'deeds', -cheat.penalty, 'Honesty', undefined, true);
 }
 
-/** Thrown to move the party to another map: the main loop (run.ts) catches it and goes on from the new place. */
-export class Relocate extends Error {
-  constructor() {
-    super('relocate');
-  }
-}
+/** Thrown to move the party to another map (relocate.ts); re-exported for the cheats' callers. */
+export { Relocate };
 
 const cap = (v: number, n: number, max: number): number => Math.min(max, v + n);
 const members = (g: Game): number[] => Array.from({ length: g.s.partySize }, (_, i) => i);

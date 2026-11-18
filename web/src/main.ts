@@ -374,7 +374,7 @@ async function start(): Promise<void> {
     const dev = await import('./game/devStarts.ts');
     if (battle[1] === 'arena') {
       // A save loaded in the fight (the Pause menu's) is gone on from, as the main loop goes on from it (run.ts).
-      const { Relocate } = await import('./game/cheats.ts');
+      const { Relocate } = await import('./game/relocate.ts');
       try {
         await dev.startArena(g, Number(battle[2]));
       } catch (e) {

@@ -9,6 +9,7 @@
  * eight saves for each of eight characters.
  */
 
+import { Relocate } from './relocate.ts';
 import { type PathData, PathState } from './modernKarma.ts';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import { Fog, type FogData } from './fog.ts';
@@ -701,7 +702,6 @@ export async function takeUp(g: Game, d: SaveData): Promise<never> {
   drawFrame(g);
   drawVitals(g);
   g.viewDirty = 1;
-  const { Relocate } = await import('./cheats.ts');
   throw new Relocate();
 }
 

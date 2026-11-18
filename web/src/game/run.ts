@@ -11,7 +11,7 @@ import { clearBorderTitle, drawColumn, drawVitals, panelWindows, setWind } from 
 import { Game } from './game.ts';
 import { outdoorsEntry, unstashWorldActors } from './outdoors.ts';
 import { enterTown, townLoop } from './town.ts';
-import { Relocate } from './cheats.ts';
+import { Relocate } from './relocate.ts';
 import { dungeonLoop } from './dungeon.ts';
 import { autosave } from './storage.ts';
 
