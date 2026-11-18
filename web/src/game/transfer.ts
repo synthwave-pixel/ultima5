@@ -14,18 +14,8 @@ import { charKey, chooseCharacter, MAX_CHARACTERS, newCharacter } from './charac
 import type { Game } from './game.ts';
 import { choose, showText, wrap } from './menu.ts';
 import { loadOptions, normaliseOptions, saveOptions, type Options } from './settings.ts';
-import {
-  avatarName,
-  characters,
-  currentCharacter,
-  deleteCharacter,
-  localSave,
-  parseSave,
-  roomForCharacter,
-  serialize,
-  type Character,
-  type SaveData,
-} from './storage.ts';
+import { characters, currentCharacter, deleteCharacter, localSave, roomForCharacter, type Character } from './storage.ts';
+import { avatarName, parseSave, serialize, type SaveData } from './ultima5Saves.ts';
 
 /** What the page can carry a game's text through. Each throws where the page may not. */
 export interface Transfer {

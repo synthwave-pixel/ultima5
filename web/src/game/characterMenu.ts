@@ -10,7 +10,9 @@
 import type { Game } from './game.ts';
 import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
 import { Save } from './save.ts';
-import { avatarName, characters, deleteCharacter, fromBase64, savedWhen, savedWhere, type Character, type SaveData } from './storage.ts';
+import { characters, deleteCharacter, savedWhen, type Character } from './storage.ts';
+import { avatarName, savedWhere, type SaveData } from './ultima5Saves.ts';
+import { fromBase64, type StoredSave } from './saveCodec.ts';
 
 /** How many lines of the list each character takes. */
 const LINES = 3;
@@ -19,7 +21,8 @@ const LINES = 3;
 const nameOf = (c: Character): string => avatarName(c.data) || 'The nameless';
 
 /** A save as a character's card: their name and level, to be chosen; where they are and when they saved, in grey. */
-export function cardOf(g: Game, data: SaveData): Item[] {
+export function cardOf(g: Game, stored: StoredSave): Item[] {
+  const data = stored as SaveData;
   const level = new Save(fromBase64(data.save)).members[0].level;
   const where = savedWhere(g, data);
   return [

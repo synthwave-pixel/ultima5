@@ -18,7 +18,8 @@ import { asPad, upper } from './input.ts';
 import { K, Pad } from './io.ts';
 import { menuSound } from './menu.ts';
 import { loadOptions } from './settings.ts';
-import { characters, currentCharacter, localSave, restore, roomForCharacter } from './storage.ts';
+import { characters, currentCharacter, localSave, roomForCharacter } from './storage.ts';
+import { restore } from './ultima5Saves.ts';
 
 /** The title's line in Journey Onward's place where the game is played from Steam (TitleMenu steamOnly). */
 const FROM_STEAM = 'Launch From Steam';

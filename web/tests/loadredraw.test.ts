@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Relocate } from '../src/game/cheats.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { serialize, takeUp } from '../src/game/storage.ts';
+import { serialize, takeUp } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers.ts';
 
 /**

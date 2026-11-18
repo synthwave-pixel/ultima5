@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clearBorderTitle, drawVitals, setWind } from '../src/game/frame.ts';
 import { withFullPanel } from '../src/game/layout.ts';
 import { gameWindows, journeyOnward } from '../src/game/run.ts';
-import { restore, serialize } from '../src/game/storage.ts';
+import { restore, serialize } from '../src/game/ultima5Saves.ts';
 import { A } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
 

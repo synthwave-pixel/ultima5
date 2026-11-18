@@ -7,22 +7,14 @@
  * character's apart (characters.ts): their last save in its own slot, and
  * the seven before it each in one of theirs, to go back to (localSave) -
  * eight saves for each of eight characters.
+ *
+ * What is each game's own - what a save holds, how it is checked and taken up, who and where it says - is the game's
+ * SaveCodec (saveCodec.ts): Ultima V's is ultima5Saves.ts.
  */
 
-import { GAME_ID, storageKey } from '../brand.ts';
-import { drawFrame, gameWindows } from './playScreen.ts';
-import { Relocate } from './relocate.ts';
-import { type PathData, PathState } from './modernKarma.ts';
+import { storageKey } from '../brand.ts';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
-import { Fog, type FogData } from './fog.ts';
-import { Vocabulary, type WordData } from './words.ts';
-import { Game, type Note } from './game.ts';
-import { Save, SAVE_SIZE } from './save.ts';
-import { preset } from './companions.ts';
 import { Win } from './frame.ts';
-import type { Dressing } from './io.ts';
-import { addressedAsLady, type Appearance, LADY, validAppearance } from './appearance.ts';
-import { placeTitle } from './journal.ts';
 import { SETTINGS_KEY } from './settings.ts';
 import { kept } from './keyStore.ts';
 import {
@@ -37,138 +29,17 @@ import {
   newCharacter,
   writeCharacterIds,
 } from './characters.ts';
+import type { GameCore } from './gameCore.ts';
+import { fromBase64, saveCodec, toBase64, type StoredSave } from './saveCodec.ts';
 
 /** Before characters, the one last save, whoever's (migrated to a character's: characters.ts, migrate). */
 export const SAVE_KEY = storageKey('save');
-export const SAVE_VERSION = 1;
 /** Before characters, the index of the saves before the last, each kept under SAVE_KEY and a number ("ultima5.save.12"). */
 export const SAVES_KEY = storageKey('saves');
 /** Before characters, how many saves before the last were kept. */
 const OLD_EARLIER = 9;
 /** How many saves before the last are kept: seven, eight saves in all (the virtues', and the characters' number). */
 export const EARLIER = 7;
-
-export interface SaveData {
-  game: typeof GAME_ID;
-  version: number;
-  /** SAVED.GAM, base64. */
-  save: string;
-  /** BRIT.OOL and UNDER.OOL, base64. */
-  brit: string;
-  under: string;
-  /** When it was written (ms since 1970). */
-  written: number;
-  /** The journal's clues (the modern engine's; older saves have none). */
-  notes?: Note[];
-  /** The regalia worn, in their own slot (Game.regalia; older saves kept them in the lasting spell's). */
-  regalia?: number;
-  /** What has been seen of the worlds, the towns and the dungeons, run-length encoded (older saves have none). */
-  fog?: FogData;
-  /** The words the player has heard said, and whose answers they have had (older saves have none). */
-  words?: WordData;
-  /** False for a game not yet begun, whose first turn points to the Tips (saves before tipsShown; none: begun). */
-  tipsNudged?: boolean;
-  /** The tips given in the log, by name (Game.tipsShown; older saves have none, but their tipsNudged). */
-  tipsShown?: string[];
-  /** The Avatar's appearance (appearance.ts; older saves have none: the default). */
-  appearance?: Appearance;
-  /** The companions' looks made at a mirror, by name (companions.ts; older saves have none: each as they begin). */
-  companions?: Record<string, Appearance>;
-  /** The day the old man last came to camp (Game.oldManDay; older saves have none: not yet). */
-  oldManDay?: number;
-  /** The arrows and quarrels above the save's 99, by item (Game.ammoExtra; older saves have none: none). */
-  ammo?: Record<string, number>;
-  /** The Modern karma's pools and what they have counted (modernKarma.ts; older saves have none: begun afresh). */
-  path?: PathData;
-}
-
-export function toBase64(bytes: Uint8Array): string {
-  let s = '';
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
-}
-
-export function fromBase64(s: string): Uint8Array {
-  const bin = atob(s);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-export function serialize(g: Game): SaveData {
-  return {
-    game: GAME_ID,
-    version: SAVE_VERSION,
-    save: toBase64(g.s.b),
-    brit: toBase64(g.ool.brit),
-    under: toBase64(g.ool.under),
-    written: Date.now(),
-    notes: g.notes,
-    regalia: g.regalia,
-    fog: g.fog.encode(),
-    words: g.words.encode(),
-    tipsShown: [...g.tipsShown],
-    appearance: g.appearance,
-    companions: Object.fromEntries(g.companionLooks),
-    oldManDay: g.oldManDay,
-    ammo: g.ammoExtra,
-    path: g.path.encode(),
-  };
-}
-
-/** Parse and check a save; throws with the reason when it will not do. */
-export function parseSave(text: string): SaveData {
-  const d = JSON.parse(text) as Partial<SaveData>;
-  if (d.game !== GAME_ID) throw new Error('not an Ultima V save');
-  if (typeof d.version !== 'number' || d.version > SAVE_VERSION) throw new Error('a save from a newer version');
-  if (typeof d.save !== 'string' || typeof d.brit !== 'string' || typeof d.under !== 'string') throw new Error('the save is incomplete');
-  if (fromBase64(d.save).length !== SAVE_SIZE || fromBase64(d.brit).length !== 256 || fromBase64(d.under).length !== 256)
-    throw new Error('the save is damaged');
-  return d as SaveData;
-}
-
-/**
- * A saved game taken up again. What the player has mapped is theirs, not
- * the Avatar's, so the save's record is added to what is already known
- * rather than put in its place: going back to a save after a party wipe
- * does not unlearn the country walked since it was written. `fresh`: a
- * character taken up from the title, from nothing of anyone else's - the
- * maps and the words known begun anew before the save's are added.
- */
-export function restore(g: Game, d: SaveData, fresh = false): void {
-  if (fresh) {
-    g.fog = new Fog();
-    g.words = new Vocabulary();
-  }
-  g.s.b.set(fromBase64(d.save));
-  g.ool.brit.set(fromBase64(d.brit));
-  g.ool.under.set(fromBase64(d.under));
-  g.notes = Array.isArray(d.notes) ? d.notes : [];
-  // The regalia worn: their own slot, or - a save from before it - the spell's slot they shared, moved out of it.
-  const s = g.s;
-  if (typeof d.regalia === 'number') g.regalia = d.regalia;
-  else if (s.icon === 0x0e || s.icon === 0x1c || s.icon === 0x1d) {
-    g.regalia = s.icon;
-    s.icon = s.protection = 0;
-  } else g.regalia = 0;
-  g.fog.merge(Fog.decode(d.fog));
-  g.words.merge(Vocabulary.decode(d.words));
-  // The tips given; a save from before the list, its pointer to the Tips alone - given, unless the game was not begun.
-  g.tipsShown = new Set(
-    Array.isArray(d.tipsShown) ? d.tipsShown.filter((t): t is string => typeof t === 'string') : d.tipsNudged === false ? [] : ['nudge'],
-  );
-  g.oldManDay = typeof d.oldManDay === 'number' && Number.isFinite(d.oldManDay) ? d.oldManDay : -1;
-  // The ammunition above the byte's 99 (ammo.ts), each a whole number up to 900; anything else, none.
-  g.ammoExtra = {};
-  for (const [k, n] of Object.entries(typeof d.ammo === 'object' && d.ammo !== null ? d.ammo : {}))
-    if (Number.isInteger(n) && n > 0 && n <= 900) g.ammoExtra[Number(k)] = n;
-  // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
-  g.path = PathState.decode(d.path);
-  g.appearance = validAppearance(d.appearance);
-  const made = typeof d.companions === 'object' && d.companions !== null ? Object.entries(d.companions) : [];
-  g.companionLooks = new Map(made.map(([name, look]) => [name, validAppearance(look)]));
-  g.draw.avatar?.(g.appearance, addressedAsLady(g));
-}
 
 /**
  * The ultima3 port's autosave: the game saves itself at Journey onward
@@ -182,11 +53,9 @@ export function restore(g: Game, d: SaveData, fresh = false): void {
  * dead, waiting on Lord British. True if it was saved: where it could not
  * be, the log says "Not saved!" in the place of "(saved)".
  */
-export function autosave(g: Game): boolean {
-  if (g.s.mapId !== 0) return false;
-  let alive = false;
-  for (let i = 0; i < g.s.partySize; i++) if (g.s.members[i].status !== 0x44) alive = true; // 'D'
-  if (!alive || localSave.off) return false;
+export function autosave(g: GameCore): boolean {
+  // Only where the game says (Ultima V's: outdoors, someone alive: ultima5Saves.ts canAutosave).
+  if (!saveCodec().canAutosave(g) || localSave.off) return false;
   const saved = localSave.write(g);
   // In the log, whatever window was being drawn in: coming back from "All is lost" to the last save, the screen's
   // was, and the note was printed over the frame's corner.
@@ -198,32 +67,11 @@ export function autosave(g: Game): boolean {
   return saved;
 }
 
-/** The saved game's Avatar as the player made it, and whether addressed as Lady; null with no game saved. */
-export function savedAvatar(): { look: Appearance; lady: boolean } | null {
-  const saved = localSave.read();
-  if (!saved) return null;
-  return { look: validAppearance(saved.appearance), lady: new Save(fromBase64(saved.save)).members[0].gender === LADY };
-}
-
-/**
- * How companion `name` looks in the title's scenes, where no game is loaded: as the saved game has them, a mirror's
- * colours kept; with no save, or none of that name in it, as they begin, of the roster's trade if it knows them.
- */
-export function savedDressing(g: Game, name: string): Dressing {
-  const saved = localSave.read();
-  const members = saved ? new Save(fromBase64(saved.save)).members : g.s.members;
-  const member = members.find((m) => m.name === name);
-  const made = saved && typeof saved.companions === 'object' && saved.companions !== null ? saved.companions[name] : undefined;
-  return {
-    look: made ? validAppearance(made) : preset(name, member?.cls ?? 0),
-    lady: member?.gender === LADY,
-  };
-}
-
 /** A save kept: the key it is stored under, and the game. */
-export interface Kept {
+/** A save kept, and the key it is kept under. `D`: the game's own save (Ultima V's: SaveData), for its callers. */
+export interface Kept<D extends StoredSave = StoredSave> {
   key: string;
-  data: SaveData;
+  data: D;
 }
 
 /** The saves before the last, by key, newest first; `next` numbers the next one kept. */
@@ -251,10 +99,11 @@ export function unpackSave(kept: string): string {
 }
 
 /** A save as kept, taken up, or null where there is none or it will not do (damaged, cut short). */
-export function parsed(text: string | null): SaveData | null {
+/** A kept save's text, unpacked and checked by the game's codec; null where it will not read. */
+export function parsed<D extends StoredSave = StoredSave>(text: string | null): D | null {
   if (!text) return null;
   try {
-    return parseSave(unpackSave(text));
+    return saveCodec().parse(unpackSave(text)) as D;
   } catch {
     return null;
   }
@@ -369,9 +218,6 @@ function store(key: string, text: () => string, id: string, ix: Index, spare: st
   }
 }
 
-/** The same game: a save written again with nothing played since (the party taken back to it, and saved at once). */
-const sameGame = (a: SaveData, b: SaveData): boolean => a.save === b.save && a.brit === b.brit && a.under === b.under;
-
 /** Every save of character `id`'s that reads, newest first: the last, then those before it. */
 function keptOf(id: string): Kept[] {
   const out: Kept[] = [];
@@ -389,7 +235,7 @@ function keptOf(id: string): Kept[] {
 }
 
 /** Character `id`'s last save; where it will not read, the newest of those before it that will. Null with none. */
-function lastOf(id: string): SaveData | null {
+function lastOf(id: string): StoredSave | null {
   try {
     const last = parsed(kept().getItem(lastKey(id)));
     if (last) return last;
@@ -400,20 +246,20 @@ function lastOf(id: string): SaveData | null {
 }
 
 /** A character and their last save, which says who and where they are, and when they last saved. */
-export interface Character {
+export interface Character<D extends StoredSave = StoredSave> {
   id: string;
-  data: SaveData;
+  data: D;
 }
 
 /** Every character with a save that reads, the newest last save first. */
-export function characters(): Character[] {
+export function characters<D extends StoredSave = StoredSave>(): Character<D>[] {
   migrate();
   const out: Character[] = [];
   for (const id of characterIds()) {
     const data = lastOf(id);
     if (data) out.push({ id, data });
   }
-  return out.sort((a, b) => b.data.written - a.data.written);
+  return out.sort((a, b) => b.data.written - a.data.written) as Character<D>[];
 }
 
 /** Whether another character may be made or imported: fewer than MAX_CHARACTERS kept. */
@@ -430,9 +276,6 @@ export function currentCharacter(): string | null {
   chooseCharacter(latest);
   return latest;
 }
-
-/** The Avatar's name in a save. */
-export const avatarName = (d: SaveData): string => new Save(fromBase64(d.save)).members[0].name.trim();
 
 /**
  * Character `id` let go, and all their saves and settings with them. The last character's settings stay as those in
@@ -481,7 +324,7 @@ function migrate(): void {
   if (old.length === 0) return;
   const groups = new Map<string, Kept[]>();
   for (const k of old) {
-    const name = avatarName(k.data);
+    const name = saveCodec().avatarName(k.data);
     groups.set(name, [...(groups.get(name) ?? []), k]);
   }
   const newest = (saves: Kept[]): number => Math.max(...saves.map((k) => k.data.written));
@@ -527,25 +370,25 @@ export const localSave = {
    * The current character's last save; where it will not read (damaged, cut short), the newest of the saves before
    * it that will, so that a bad slot never loses the game. Null with none.
    */
-  read(): SaveData | null {
+  read<D extends StoredSave = StoredSave>(): D | null {
     const id = currentCharacter();
-    return id === null ? null : lastOf(id);
+    return id === null ? null : (lastOf(id) as D | null);
   },
   /**
    * Every save of the current character's that reads, newest first: the last, then those before it (the last passed
    * over where it will not read).
    */
-  all(): Kept[] {
+  all<D extends StoredSave = StoredSave>(): Kept<D>[] {
     const id = currentCharacter();
-    return id === null ? [] : keptOf(id);
+    return id === null ? [] : (keptOf(id) as Kept<D>[]);
   },
   /** The game saved, as `write` saves it; true once it is read back whole. */
-  write(g: Game): boolean {
+  write(g: GameCore): boolean {
     if (this.off) return false;
     this.writes++;
     let text: string;
     try {
-      text = JSON.stringify(serialize(g));
+      text = JSON.stringify(saveCodec().serialize(g));
     } catch {
       return false;
     }
@@ -559,10 +402,10 @@ export const localSave = {
    * (nothing played since) is not kept twice.
    */
   put(text: string): boolean {
-    let fresh: SaveData;
+    let fresh: StoredSave;
     let packed: string;
     try {
-      fresh = parseSave(text);
+      fresh = saveCodec().parse(text);
       packed = packSave(text);
     } catch {
       return false;
@@ -578,7 +421,7 @@ export const localSave = {
       const lastText = kept().getItem(last);
       const before = parsed(lastText);
       let copy: string | null = null;
-      if (before && lastText !== null && !sameGame(before, fresh)) {
+      if (before && lastText !== null && !saveCodec().same(before, fresh)) {
         const key = `${last}.${ix.next++}`;
         if (!store(key, () => lastText, id, ix) || parsed(kept().getItem(key)) === null) {
           forget(key);
@@ -634,44 +477,13 @@ export function savedWhen(written: number, now = Date.now(), inProse = false): s
 }
 
 /**
- * Where a save was made, by the game's own names: the towne, castle, keep or hut ("Yew", "Lord British's Castle"),
- * the dungeon and its level ("Wrong, level 3"), or out in the open "Britannia" or "the Underworld" - a place's name
- * there where the party stands on its square, as the game saves itself at a door ("Minoc"; "Deceit, Underworld" at
- * a dungeon's way up), a shrine's on its own ("Shrine of Honesty").
- */
-export function savedWhere(g: Game, d: SaveData): string {
-  const s = new Save(fromBase64(d.save));
-  const id = s.mapId > 0x7f ? s.savedMapId : s.mapId;
-  if (id > 0x20 && id <= 0x28) return `${placeTitle(g, id)}, level ${s.level + 1}`;
-  if (id !== 0) return placeTitle(g, id) || 'Britannia';
-  const under = s.level === 0xff;
-  const locs = g.data.locations;
-  for (let i = under ? 0x20 : 0; i < 0x28; i++) {
-    if (locs[i]?.x !== s.x || locs[i]?.y !== s.y) continue;
-    return under ? `${placeTitle(g, i + 1)}, Underworld` : placeTitle(g, i + 1);
-  }
-  if (!under) {
-    const xs = g.data.bytes(0x1f6e, 8);
-    const ys = g.data.bytes(0x1f76, 8);
-    const virtues = g.data.table(0x1f4e, 8);
-    for (let i = 0; i < 8; i++) {
-      if (xs[i] !== s.x || ys[i] !== s.y) continue;
-      const virtue = virtues[i].charAt(0) + virtues[i].slice(1).toLowerCase();
-      // (Spirituality's, at the menus' width, the other way about.)
-      return virtue.length > 11 ? `${virtue} shrine` : `Shrine of ${virtue}`;
-    }
-  }
-  return under ? 'the Underworld' : 'Britannia';
-}
-
-/**
  * A list of saves to go back to, each on two lines: when it was made, to be chosen, and where under it in grey,
  * newest first. The save chosen, or null for B.
  */
-export async function chooseSave(g: Game, title: string, saves: Kept[]): Promise<Kept | null> {
+export async function chooseSave(g: GameCore, title: string, saves: Kept[]): Promise<Kept | null> {
   const { choose } = await import('./menu.ts');
   const items = saves.flatMap((k) => {
-    const where = savedWhere(g, k.data);
+    const where = saveCodec().where(g, k.data);
     return [{ label: savedWhen(k.data.written) }, { label: where.charAt(0).toUpperCase() + where.slice(1), enabled: false }];
   });
   for (;;) {
@@ -679,54 +491,4 @@ export async function chooseSave(g: Game, title: string, saves: Kept[]): Promise
     if (i === -2) continue; // to be drawn anew
     return i < 0 ? null : saves[i >> 1];
   }
-}
-
-/**
- * The game taken back to a save, all played since undone (All is lost's choice, and the Pause menu's), and handed
- * to the main loop (run.ts) to go on from where it was saved.
- */
-export async function takeUp(g: Game, d: SaveData): Promise<never> {
-  // Out of a fight (the Pause menu's, in one), what its own end puts right (combat.ts finishLoop): no key pressed in it
-  // carried over, the lighthouse's beam and the fight's music stopped.
-  if (g.s.mapId === 0xff) {
-    g.p.flushKeys();
-    g.lighthouse.step = 0xff;
-    g.sound.music(0);
-    g.autoShown = false;
-  }
-  restore(g, d);
-  const { drawVitals } = await import('./frame.ts');
-  // The screen drawn anew as Journey Onward draws it (run.ts journeyOnward): the menu's box taken away, the frame -
-  // which blacks out everything, the party's panel too - and the panel again, as nothing else draws it till it changes.
-  g.draw.chromeBox?.(null);
-  gameWindows(g);
-  drawFrame(g);
-  drawVitals(g);
-  g.viewDirty = 1;
-  throw new Relocate();
-}
-
-/**
- * CAST2_10fe_SaveGame: "Save game?" - Q, which 1988 called Quit. `asked`: the Pause menu's Save game (the port's), the
- * player's choice already made there - no "Quit:", no question, just the saving.
- */
-export async function saveCommand(g: Game, asked = false): Promise<number> {
-  if (asked)
-    g.print(g.t(0x966a).replace(/^Yes\n/, '')); // "Saving...\n"
-  else {
-    const { yesNo } = await import('./input.ts');
-    g.say(0xa1ea); // "Quit:"
-    g.say(0x9658); // "\nSave game? "
-    if (!(await yesNo(g))) {
-      g.say(0x9666); // "No\n"
-      return 0;
-    }
-    g.say(0x966a); // "Yes\nSaving...\n"
-  }
-  // Said done only once it is read back whole: where it could not be kept, the player is told so, the saves before
-  // it as they were.
-  if (localSave.write(g))
-    g.say(0x96ac); // "Done.\n"
-  else g.print('Not saved!\n');
-  return 0;
 }

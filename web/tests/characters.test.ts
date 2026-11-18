@@ -10,22 +10,19 @@ import { journeyOnward } from '../src/game/run.ts';
 import { Save } from '../src/game/save.ts';
 import { loadOptions, saveOptions, SETTINGS_KEY, type Options } from '../src/game/settings.ts';
 import {
-  avatarName,
   characters,
   currentCharacter,
   deleteCharacter,
   EARLIER,
-  fromBase64,
   localSave,
-  restore,
   SAVE_KEY,
   SAVES_KEY,
   saveKeys,
-  serialize,
   packSave,
   unpackSave,
-  type SaveData,
 } from '../src/game/storage.ts';
+import { avatarName, restore, serialize, type SaveData } from '../src/game/ultima5Saves.ts';
+import { fromBase64 } from '../src/game/saveCodec.ts';
 import { readLocations, TOWN_SIZE } from '../src/data/maps.ts';
 import { placeKey } from '../src/game/fog.ts';
 import { Vocabulary } from '../src/game/words.ts';
@@ -102,16 +99,16 @@ describe('characters', () => {
     vi.setSystemTime(new Date(2026, 9, 3, 11));
     const dupre = make('Dupre', ...Array.from({ length: 15 }, (_, i) => 100 + i));
     chooseCharacter(iolo);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([3, 2, 1]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([3, 2, 1]);
     chooseCharacter(dupre);
-    expect(localSave.all()).toHaveLength(EARLIER + 1);
-    expect(goldOf(localSave.read())).toBe(114);
+    expect(localSave.all<SaveData>()).toHaveLength(EARLIER + 1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(114);
     expect(names()).toEqual(['Dupre', 'Iolo']); // the newest last save first
   });
 
   it('are the latest when none is chosen, and none at all on a fresh machine', () => {
     expect(currentCharacter()).toBeNull();
-    expect(localSave.read()).toBeNull();
+    expect(localSave.read<SaveData>()).toBeNull();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 3, 10));
     make('Iolo', 1);
@@ -121,7 +118,7 @@ describe('characters', () => {
     make('Iolo', 3); // another of the same name: a character of their own
     chooseCharacter(null);
     expect(currentCharacter()).not.toBe(dupre);
-    expect(goldOf(localSave.read())).toBe(3);
+    expect(goldOf(localSave.read<SaveData>())).toBe(3);
     expect(characters()).toHaveLength(3);
   });
 
@@ -146,11 +143,11 @@ describe('characters', () => {
     expect(localSave.write(g)).toBe(true);
     expect(localSave.evicted).toBeGreaterThan(evicted);
     chooseCharacter(iolo);
-    const left = localSave.all().map((k) => goldOf(k.data));
+    const left = localSave.all<SaveData>().map((k) => goldOf(k.data));
     expect(left[0]).toBe(3); // Iolo's last save stands
     expect(left).not.toContain(1); // the oldest of all went first
     chooseCharacter(dupre);
-    expect(goldOf(localSave.read())).toBe(13);
+    expect(goldOf(localSave.read<SaveData>())).toBe(13);
   });
 
   it('are deleted with all their saves and settings; the last one’s settings stay the machine’s', () => {
@@ -209,10 +206,10 @@ describe('the saves from before characters', () => {
     const all = characters();
     expect(all.map((c) => avatarName(c.data))).toEqual(['Iolo', 'Dupre']);
     chooseCharacter(all[0].id);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([5, 4, 2]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([5, 4, 2]);
     expect(loadOptions().musicLevel).toBe(0);
     chooseCharacter(all[1].id);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([3, 1]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([3, 1]);
     // The old keys gone.
     expect([...store.keys()].filter((k) => k === SAVES_KEY || k.startsWith(SAVE_KEY))).toEqual([]);
   });
@@ -234,7 +231,7 @@ describe('the saves from before characters', () => {
   it('keep the newest eight of one Avatar’s ten, the two oldest let go', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     before(...Array.from({ length: 10 }, (_, i): [string, number, number] => ['Iolo', 10 - i, (10 - i) * 1000]));
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([10, 9, 8, 7, 6, 5, 4, 3]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([10, 9, 8, 7, 6, 5, 4, 3]);
     expect([...store.keys()].filter((k) => k.startsWith(SAVE_KEY))).toEqual([]);
   });
 
@@ -315,7 +312,7 @@ describe('Journey Onward', () => {
     const { g, done } = await atTitle(Pad.A, K.Down, Pad.A);
     expect(done).toBe(true);
     expect(g.s.gold).toBe(7);
-    expect(avatarName(localSave.read()!)).toBe('Iolo'); // the one in play now
+    expect(avatarName(localSave.read<SaveData>()!)).toBe('Iolo'); // the one in play now
   });
 
   it('deletes a character there, asked twice, and goes back to the title once one is left', async () => {
@@ -346,7 +343,7 @@ describe('Create New Character', () => {
     expect(made).not.toBe(iolo);
     expect(loadOptions().scanlines).toBe(true);
     chooseCharacter(iolo);
-    expect(goldOf(localSave.read())).toBe(7); // Iolo's game as it was
+    expect(goldOf(localSave.read<SaveData>())).toBe(7); // Iolo's game as it was
   });
 });
 
@@ -382,7 +379,7 @@ describe('export and import', () => {
     replaced.p.keys.push(Pad.A, K.Up, K.Up, Pad.A); // the clipboard; Replace Iolo's game
     expect(await importGame(replaced.g)).toBe(true);
     expect(characters()).toHaveLength(2);
-    expect(goldOf(characters().find((c) => avatarName(c.data) === 'Iolo')!.data)).toBe(11);
+    expect(goldOf(characters<SaveData>().find((c) => avatarName(c.data) === 'Iolo')!.data)).toBe(11);
     expect(saveKeys()).not.toBeNull();
   });
 });
@@ -492,9 +489,9 @@ describe('storage’s edges', () => {
     room = [...store].reduce((n, [k, v]) => n + k.length + v.length, 0) + 50;
     chooseCharacter(iolo);
     expect(localSave.write(game('Iolo', 3))).toBe(false);
-    expect(goldOf(localSave.read())).toBe(1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(1);
     chooseCharacter(dupre);
-    expect(goldOf(localSave.read())).toBe(2);
+    expect(goldOf(localSave.read<SaveData>())).toBe(2);
   });
 
   it('settings changed at the title are the latest character’s, not the machine’s', () => {
@@ -613,7 +610,7 @@ describe('the most characters kept', () => {
     expect(await importGame(namesake.g)).toBe(true);
     expect(seen[0]).toEqual(["Replace C3's game", 'Cancel']);
     expect(characters()).toHaveLength(MAX_CHARACTERS);
-    expect(goldOf(characters().find((c) => avatarName(c.data) === 'C3')!.data)).toBe(99);
+    expect(goldOf(characters<SaveData>().find((c) => avatarName(c.data) === 'C3')!.data)).toBe(99);
   });
 
   it('does not hold back the saves from before characters, however many Avatars they were', () => {
@@ -651,7 +648,7 @@ describe('a character list that fails', () => {
     expect(localSave.write(game('Dupre', 9))).toBe(true);
     fault = null;
     chooseCharacter(iolo);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([7]); // Iolo's untouched
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([7]); // Iolo's untouched
     chooseCharacter(null);
     expect(names().sort()).toEqual(['Dupre', 'Iolo']); // and Dupre found by their save
   });
@@ -668,7 +665,7 @@ describe('going back to a save, with several characters', () => {
     vi.useRealTimers();
     chooseCharacter(iolo);
     const { g, p } = newGame();
-    restore(g, localSave.read()!, true);
+    restore(g, localSave.read<SaveData>()!, true);
     g.inPlay = true;
     g.s.gold = 9999;
     for (const m of g.s.members.slice(0, g.s.partySize)) m.hp = 0;
@@ -725,9 +722,9 @@ describe('going back to a save, with several characters', () => {
     const dupre = make('Dupre', 10);
     chooseCharacter(iolo);
     expect(localSave.write(game('Iolo', 2))).toBe(true);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([2, 1]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([2, 1]);
     chooseCharacter(dupre);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([10]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([10]);
   });
 });
 
@@ -805,7 +802,7 @@ describe('saves kept packed', () => {
     expect(localSave.evicted).toBe(evicted);
     for (const c of characters()) {
       chooseCharacter(c.id);
-      expect(localSave.all()).toHaveLength(EARLIER + 1);
+      expect(localSave.all<SaveData>()).toHaveLength(EARLIER + 1);
     }
   });
 
@@ -836,9 +833,9 @@ describe('saves kept packed', () => {
     chooseCharacter(iolo);
     const key = saveKeys()!.last;
     store.set(key, 'z1:' + store.get(key)!.slice(3, 40)); // cut short
-    expect(goldOf(localSave.read())).toBe(1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(1);
     store.set(key, 'z1:not base64 at all!');
-    expect(goldOf(localSave.read())).toBe(1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(1);
   });
 
   it('read saves kept as text before they were packed, and keep them among the earlier ones as they are', () => {
@@ -847,9 +844,9 @@ describe('saves kept packed', () => {
     const key = saveKeys()!.last;
     const plain = unpackSave(store.get(key)!);
     store.set(key, plain); // as a save kept before packing was
-    expect(goldOf(localSave.read())).toBe(1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(1);
     expect(localSave.write(game('Iolo', 2))).toBe(true);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([2, 1]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([2, 1]);
   });
 });
 
@@ -1074,7 +1071,7 @@ describe("saves Steam's folder refuses", () => {
     const g = game('Dupre', 13);
     expect(localSave.write(g)).toBe(false);
     chooseCharacter(iolo);
-    expect(goldOf(localSave.read())).toBe(3);
+    expect(goldOf(localSave.read<SaveData>())).toBe(3);
   });
 
   it('let nothing go where a write is refused for any reason but a full disk', () => {

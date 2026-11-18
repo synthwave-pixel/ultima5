@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Fog, revealCells, revealView } from '../src/game/fog.ts';
-import { serialize, restore } from '../src/game/storage.ts';
+import { serialize, restore } from '../src/game/ultima5Saves.ts';
 import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
 

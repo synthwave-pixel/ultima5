@@ -19,6 +19,8 @@ import { TalkState } from './talk.ts';
 
 import { GameCore } from './gameCore.ts';
 import { ultima5Play } from './playHooks.ts';
+import { useSaves } from './saveCodec.ts';
+import { ultima5Saves } from './ultima5Saves.ts';
 
 /** The types every game shares (gameCore.ts), where their importers have long found them. */
 export type {
@@ -257,6 +259,7 @@ export class Game extends GameCore {
     super(p);
     this.s = save ?? new Save(data.files.get('INIT.GAM'));
     this.play = ultima5Play(this);
+    useSaves(ultima5Saves); // how the game is saved (ultima5Saves.ts), for the machinery (storage.ts)
   }
 
   protected override learnWords(text: string): void {

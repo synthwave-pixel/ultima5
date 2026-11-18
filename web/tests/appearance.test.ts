@@ -10,7 +10,7 @@ import {
   randomAppearance,
   validAppearance,
 } from '../src/game/appearance.ts';
-import { parseSave, restore, serialize } from '../src/game/storage.ts';
+import { parseSave, restore, serialize } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers.ts';
 
 describe("the Avatar's appearance", () => {

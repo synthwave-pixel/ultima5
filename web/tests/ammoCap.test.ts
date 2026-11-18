@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addAmmo, ammoFull, ammoHeld, ARROWS, armCounts, QUARRELS, spendOne } from '../src/game/ammo.ts';
 import { spendAmmo, weaponLabel } from '../src/game/combat.ts';
-import { restore, serialize } from '../src/game/storage.ts';
+import { restore, serialize } from '../src/game/ultima5Saves.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 

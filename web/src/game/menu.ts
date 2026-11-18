@@ -942,7 +942,8 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
           enabled: !midCommand,
           ...noSave(!midCommand),
           act: async () => {
-            const { chooseSave, localSave, savedWhen, takeUp } = await import('./storage.ts');
+            const { chooseSave, localSave, savedWhen } = await import('./storage.ts');
+            const { takeUp } = await import('./ultima5Saves.ts');
             const kept = localSave.all();
             if (kept.length === 0) {
               await showText(g, 'Load a save', wrap('No game has been saved yet.'));

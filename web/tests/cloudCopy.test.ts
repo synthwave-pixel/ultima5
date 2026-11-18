@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { applyChoice, planCopy } from '../src/game/cloudCopy.ts';
 import { CHARACTERS_KEY, charKey } from '../src/game/characters.ts';
 import { SAVE_SIZE } from '../src/game/save.ts';
-import { EARLIER, fromBase64, packSave, SAVE_VERSION, saveKeys, toBase64, unpackSave, type SaveData } from '../src/game/storage.ts';
+import { EARLIER, packSave, saveKeys, unpackSave } from '../src/game/storage.ts';
+import { SAVE_VERSION, type SaveData } from '../src/game/ultima5Saves.ts';
+import { fromBase64, toBase64, useSaves } from '../src/game/saveCodec.ts';
+import { ultima5Saves } from '../src/game/ultima5Saves.ts';
+
+// No game is made here: the saves' codec is set as main.ts sets it at the start.
+useSaves(ultima5Saves);
 
 /**
  * The copy made when Steam Cloud saves is turned on or off (cloudCopy.ts): every character's saves carried from one

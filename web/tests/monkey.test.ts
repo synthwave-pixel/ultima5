@@ -5,7 +5,8 @@ import { ARENAS, roomsToShow, startRoom } from '../src/game/devStarts.ts';
 import type { Game } from '../src/game/game.ts';
 import { unstashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward, runGame } from '../src/game/run.ts';
-import { localSave, parseSave, restore, serialize } from '../src/game/storage.ts';
+import { localSave } from '../src/game/storage.ts';
+import { parseSave, restore, serialize } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers.ts';
 
 /**
