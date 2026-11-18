@@ -13,7 +13,7 @@ import type { Font } from '../data/font.ts';
 import type { Appearance } from '../game/appearance.ts';
 import { K, type Draw, type Effects, type HarpView, type Platform, type Sound } from '../game/io.ts';
 import { bitPicture, picture, type Picture } from '../data/images.ts';
-import { TileAnimator } from './animate.ts';
+import { TileAnimator, type TileEffects } from './animate.ts';
 import { menuUp } from './pageMenu.ts';
 import {
   colourRGBA,
@@ -175,7 +175,7 @@ export class Screen implements Platform {
   readonly draw: Draw;
   readonly fx: Effects;
   sound: Sound = new Silence();
-  private readonly animator: TileAnimator;
+  private readonly animator: TileEffects;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly image: ImageData;
   /** The colour page as drawn (1280 by 800), and it grown by a whole number where the display is more than twice it. */
@@ -209,6 +209,8 @@ export class Screen implements Platform {
     readonly canvas: HTMLCanvasElement,
     tiles: Uint8Array,
     fonts: Font[],
+    /** What animates the tiles in place: Ultima V's effects (animate.ts) unless another game's are given. */
+    animator: (tiles: Uint8Array) => TileEffects = (t) => new TileAnimator(t),
   ) {
     // What the canvas shows (the boot screen at the display's size, or the loading notice) stays until the game first
     // draws: it is not sized here (sizing a canvas clears it, even to the size it has), only as it is shown (show).
@@ -233,7 +235,7 @@ export class Screen implements Platform {
     if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(canvas);
     window.addEventListener('resize', fit);
     fit();
-    this.animator = new TileAnimator(tiles);
+    this.animator = animator(tiles);
     const fb = this.fb;
     // What each marked row read when its marks were set: a mark shows only while its row still does.
     const markLines = new Map<number, string>();

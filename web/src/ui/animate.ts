@@ -84,8 +84,17 @@ function maskedMergeBlock(t: Uint8Array, dst: number, src: number, noise: number
   for (let i = 0; i < 0x80; i++) t[dst + i] = (t[noise + i] & t[src + i]) | t[dst + i];
 }
 
+/**
+ * What animates a tile set in place, a tick at a time (Screen.animateTiles), and sets its clock's hands
+ * (Screen.setClock). TileAnimator is Ultima V's; another game's tiles have their own.
+ */
+export interface TileEffects {
+  tick(): void;
+  setClock(hour: number, minute: number): void;
+}
+
 /** The tileset effects, one per animation tick; keeps the driver's noise seed. */
-export class TileAnimator {
+export class TileAnimator implements TileEffects {
   private seed = 0x7664;
 
   constructor(private readonly tiles: Uint8Array) {}
