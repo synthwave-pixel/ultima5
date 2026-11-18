@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askName } from '../src/game/intro.ts';
+import { askName } from '../src/game/characterQuestions.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { amount } from '../src/game/menu.ts';
 import { keys, newGame } from './helpers.ts';
@@ -17,6 +17,17 @@ describe('the name', () => {
     g.recording = '';
     return { g, p };
   };
+
+  it('stands its menu in the rows asked for (a game whose box ends higher than Ultima V’s)', async () => {
+    const { g, p } = ready();
+    let shown: string[] = [];
+    p.next = () => {
+      shown = p.rows.slice(0x14, 0x17).map((r) => r.join('').trim());
+      return K.Enter;
+    };
+    await askName(g, 8, 15, '', 0x14);
+    expect(shown).toEqual(['Type a name', 'Suggest a name', 'Continue']);
+  });
 
   it('is typed on a keyboard, straight onto its line, over the name it begins with', async () => {
     const { g, p } = ready();

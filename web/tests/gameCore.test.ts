@@ -20,10 +20,10 @@ describe('GameCore', () => {
 
 /**
  * The title's menu and the screens it opens (Journey Onward's character picker, Manage Saves, Steam (beta), the cloud
- * switch, export and import) are every game's: they take a GameCore, and reach a game's saves through its SaveCodec
+ * switch, export and import) and a new character's questions (characterQuestions.ts) are every game's: they take a GameCore, and reach a game's saves through its SaveCodec
  * (saveCodec.ts), never Ultima V's Game or Ultima V's saves (ultima5Saves.ts) directly.
  */
-const TITLE_SCREENS = ['titleMenu.ts', 'characterMenu.ts', 'steamMenu.ts', 'cloudSwitch.ts', 'transfer.ts'];
+const TITLE_SCREENS = ['titleMenu.ts', 'characterMenu.ts', 'steamMenu.ts', 'cloudSwitch.ts', 'transfer.ts', 'characterQuestions.ts'];
 
 describe('The title and its screens', () => {
   for (const file of TITLE_SCREENS)

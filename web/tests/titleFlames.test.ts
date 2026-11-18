@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_APPEARANCE } from '../src/game/appearance.ts';
 import { chooseAppearance } from '../src/game/appearanceMenu.ts';
 import type { Game } from '../src/game/game.ts';
-import { askAddress, askName } from '../src/game/intro.ts';
+import { askAddress, askName } from '../src/game/characterQuestions.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { confirm } from '../src/game/menu.ts';
 import { Framebuffer } from '../src/ui/framebuffer';
