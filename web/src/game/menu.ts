@@ -16,7 +16,6 @@ import { Game } from './game.ts';
 import { menuKey, PAUSED } from './input.ts';
 import { K, Pad, SAVE_NOW } from './io.ts';
 import { setAutoCombat } from './solo.ts';
-import { redrawSideMap } from './dungeonMap.ts';
 import { newOrderOffer } from './targets.ts';
 import {
   AUTO_COMBAT,
@@ -1023,7 +1022,7 @@ export interface Setting extends Item {
  * `choose` over a menu that holds the music (the pause menu, Settings): the music heard while the bar is on a line
  * that `listen`s - and, chosen, while its dial turns - and paused again as the bar leaves it.
  */
-async function chooseListening(g: Game, title: string, lines: Setting[], at: number): Promise<number> {
+async function chooseListening(g: GameCore, title: string, lines: Setting[], at: number): Promise<number> {
   const watch = g.choiceWatch;
   g.choiceWatch = (i, shown) => {
     watch?.(i, shown);
@@ -1045,7 +1044,7 @@ const percent = (n: number): string => (n === 0 ? 'Off' : `${n * 10}%`);
  * where given, is played at each step (a sound effect has nothing to hear otherwise). B puts the level back, and that
  * is heard too.
  */
-async function dialLevel(g: Game, title: string, start: number, set: (n: number) => void, sample?: () => void): Promise<void> {
+async function dialLevel(g: GameCore, title: string, start: number, set: (n: number) => void, sample?: () => void): Promise<void> {
   const hear = (n: number): void => {
     set(n);
     g.hooks.applyOptions?.(g.options);
@@ -1056,7 +1055,7 @@ async function dialLevel(g: Game, title: string, start: number, set: (n: number)
 }
 
 /** The music's level (Audio). */
-function musicLine(g: Game): Setting {
+function musicLine(g: GameCore): Setting {
   const o = g.options;
   return {
     label: `Music level: ${percent(o.musicLevel)}`,
@@ -1093,7 +1092,7 @@ function soundLine(g: GameCore): Setting {
 }
 
 /** The sound effects' level, a step's sound played at each step (Audio). */
-function effectsLevelLine(g: Game): Setting {
+function effectsLevelLine(g: GameCore): Setting {
   const o = g.options;
   return {
     label: `Sound FX level: ${percent(o.effectsLevel)}`,
@@ -1117,7 +1116,7 @@ function effectsLevelLine(g: Game): Setting {
  * At the title, with no Pause menu to hold them, Audio and Gameplay too. Each line carries what it does, so lines may
  * be added or moved without any numbering to keep in step.
  */
-export function settingLines(g: Game, title = false): Setting[] {
+export function settingLines(g: GameCore, title = false): Setting[] {
   const o = g.options;
   return [
     { label: 'Back', note: '' },
@@ -1165,7 +1164,7 @@ const FONT_NOTES: Record<FontChoice, string> = {
  * font (any font in either interface), where dialog is shown, scanlines, smooth motion and the Retro interface's
  * dungeon map. The Pause menu's, and Settings' at the title.
  */
-export function appearanceLines(g: Game): Setting[] {
+export function appearanceLines(g: GameCore): Setting[] {
   const o = g.options;
   const pc = o.tileSet !== 'standard';
   return [
@@ -1230,12 +1229,12 @@ export function appearanceLines(g: Game): Setting[] {
 }
 
 /** Appearance (appearanceLines). */
-export async function appearanceMenu(g: Game): Promise<number> {
+export async function appearanceMenu(g: GameCore): Promise<number> {
   return optionsMenu(g, 'Appearance', () => appearanceLines(g));
 }
 
 /** The line that opens Appearance: on the Pause menu, below Gameplay, and in Settings at the title. */
-function appearanceLine(g: Game): Setting {
+function appearanceLine(g: GameCore): Setting {
   return {
     label: 'Appearance',
     note: 'How the game looks: the look, font, dialog, scanlines, smooth motion.',
@@ -1244,7 +1243,7 @@ function appearanceLine(g: Game): Setting {
 }
 
 /** Export and Import saved game (transfer.ts): in play, Settings' lines; at the title, Manage Saves'. */
-export function transferLines(g: Game): Setting[] {
+export function transferLines(g: GameCore): Setting[] {
   return [
     {
       label: 'Export saved game',
@@ -1276,7 +1275,7 @@ export function transferLines(g: Game): Setting[] {
  * Gameplay: how the game plays - the interface, its input, and the rules the port lets the player soften or keep as
  * 1988's.
  */
-export function gameplayLines(g: Game): Setting[] {
+export function gameplayLines(g: GameCore): Setting[] {
   const o = g.options;
   return [
     { label: 'Back', note: '' },
@@ -1345,7 +1344,7 @@ export function gameplayLines(g: Game): Setting[] {
 let settingsDepth = 0;
 
 /** A menu of settings (`lines` as they now stand), each change kept and taken up as it is made. Returns a command key, or 0. */
-async function optionsMenu(g: Game, title: string, lines: () => Setting[]): Promise<number> {
+async function optionsMenu(g: GameCore, title: string, lines: () => Setting[]): Promise<number> {
   let at = 0;
   const o = g.options;
   // The music paused while the settings are gone through (at the title too, where nothing else holds it), but on the
@@ -1365,7 +1364,7 @@ async function optionsMenu(g: Game, title: string, lines: () => Setting[]): Prom
       saveOptions(o);
       g.hooks.applyOptions?.(o);
       // The map beside the dungeon's view, under the menu, in the look as it now is.
-      redrawSideMap(g);
+      g.play.settingChanged?.();
     }
   } finally {
     if (--settingsDepth === 0) {
@@ -1376,27 +1375,27 @@ async function optionsMenu(g: Game, title: string, lines: () => Setting[]): Prom
 }
 
 /** Settings (settingLines); `title`, opened from the title, where it holds the Pause menu's Audio and Gameplay too. */
-export async function settingsMenu(g: Game, title = false): Promise<number> {
+export async function settingsMenu(g: GameCore, title = false): Promise<number> {
   return optionsMenu(g, 'Settings', () => settingLines(g, title));
 }
 
 /** Gameplay (gameplayLines). */
-export async function gameplayMenu(g: Game): Promise<number> {
+export async function gameplayMenu(g: GameCore): Promise<number> {
   return optionsMenu(g, 'Gameplay', () => gameplayLines(g));
 }
 
 /** Audio: the Sound (the music and its effects) and how loud each is - the Pause menu's, and Settings' at the title. */
-export function audioLines(g: Game): Setting[] {
+export function audioLines(g: GameCore): Setting[] {
   return [{ label: 'Back', note: '' }, soundLine(g), musicLine(g), effectsLevelLine(g)];
 }
 
 /** Audio (audioLines). */
-export async function audioMenu(g: Game): Promise<number> {
+export async function audioMenu(g: GameCore): Promise<number> {
   return optionsMenu(g, 'Audio', () => audioLines(g));
 }
 
 /** The line that opens Audio: on the Pause menu, and in Settings at the title. */
-function audioLine(g: Game): Setting {
+function audioLine(g: GameCore): Setting {
   return {
     label: 'Audio',
     note: 'The soundtrack, the sound effects, and how loud each is.',
@@ -1408,17 +1407,14 @@ function audioLine(g: Game): Setting {
  * The line that opens Gameplay: on the Pause menu, and in Settings at the title. In play, a new interface lays the
  * screen out again: the Enhanced panel and its borders, or 1988's (layout.ts).
  */
-function gameplayLine(g: Game, inPlay = false): Setting {
+function gameplayLine(g: GameCore, inPlay = false): Setting {
   return {
     label: 'Gameplay',
     note: 'How the game plays: interface, input, rules and more.',
     act: async () => {
       const look = g.options.tileSet;
       await gameplayMenu(g);
-      if (inPlay && g.options.tileSet !== look) {
-        const { relayout } = await import('./layout.ts');
-        await relayout(g);
-      }
+      if (inPlay && g.options.tileSet !== look) await g.play.relayout?.();
     },
   };
 }

@@ -149,6 +149,10 @@ export interface PlayHooks {
   animating?(): () => void;
   /** Start or Select pressed in a menu while in play: the game held, its Pause menu over the menu. */
   pause?(): Promise<void>;
+  /** A setting changed in a settings menu: what of the play screen shows under the menu, drawn in it as it now is. */
+  settingChanged?(): void;
+  /** The interface changed from the Pause menu's Gameplay: the play screen laid out again for it. */
+  relayout?(): Promise<void>;
 }
 
 export class GameCore {

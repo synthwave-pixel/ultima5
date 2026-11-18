@@ -11,11 +11,11 @@
 import { GAME_ID } from '../brand.ts';
 import { kept } from './keyStore.ts';
 import { charKey, chooseCharacter, MAX_CHARACTERS, newCharacter } from './characters.ts';
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { choose, showText, wrap } from './menu.ts';
 import { loadOptions, normaliseOptions, saveOptions, type Options } from './settings.ts';
 import { characters, currentCharacter, deleteCharacter, localSave, roomForCharacter, type Character } from './storage.ts';
-import { avatarName, parseSave, serialize, type SaveData } from './ultima5Saves.ts';
+import { saveCodec, type StoredSave } from './saveCodec.ts';
 
 /** What the page can carry a game's text through. Each throws where the page may not. */
 export interface Transfer {
@@ -63,10 +63,10 @@ export function mendImport(text: string): string {
  */
 export function readImport(text: string): Exported {
   try {
-    return parseSave(text);
+    return saveCodec().parse(text);
   } catch (e) {
     try {
-      return parseSave(mendImport(text));
+      return saveCodec().parse(mendImport(text));
     } catch {
       throw e;
     }
@@ -74,14 +74,14 @@ export function readImport(text: string): Exported {
 }
 
 /** An exported game: the save, and the settings of the character it is (older files have none). */
-type Exported = SaveData & { settings?: Partial<Options> };
+type Exported = StoredSave & { settings?: Partial<Options> };
 
 /**
  * The game to export: the one in play, or at the title character `id`'s saved one (the current character's with
  * none named: the newest that reads, where the last will not), each with their settings; null if there is none.
  */
-export function exportText(g: Game, id: string | null = null): string | null {
-  if (g.inPlay) return asciiJson({ ...serialize(g), settings: g.options });
+export function exportText(g: GameCore, id: string | null = null): string | null {
+  if (g.inPlay) return asciiJson({ ...saveCodec().serialize(g), settings: g.options });
   const who = id ?? currentCharacter();
   const saved = who === null ? null : (characters().find((c) => c.id === who)?.data ?? null);
   if (!saved) return null;
@@ -107,12 +107,12 @@ export function exportName(when = new Date(), who = ''): string {
 }
 
 /** A character, as a list of them names each: the Avatar's name ("Shalom"). */
-const nameOf = (c: Character): string => avatarName(c.data) || 'The nameless';
+const nameOf = (c: Character): string => saveCodec().avatarName(c.data) || 'The nameless';
 
-const say = async (g: Game, title: string, text: string): Promise<void> => void (await showText(g, title, wrap(text)));
+const say = async (g: GameCore, title: string, text: string): Promise<void> => void (await showText(g, title, wrap(text)));
 
 /** Export: the game, to the clipboard or a file. */
-export async function exportGame(g: Game): Promise<void> {
+export async function exportGame(g: GameCore): Promise<void> {
   const t = g.hooks.transfer;
   if (!t) return;
   // At the title, with more than one character: whose, first.
@@ -131,7 +131,7 @@ export async function exportGame(g: Game): Promise<void> {
   }
   const text = exportText(g, id);
   if (!text) return say(g, 'Export', 'There is no saved game to export.');
-  const fileName = exportName(new Date(), avatarName(parseSave(text)));
+  const fileName = exportName(new Date(), saveCodec().avatarName(saveCodec().parse(text)));
   const where = await choose(
     g,
     'Export',
@@ -164,7 +164,7 @@ export async function exportGame(g: Game): Promise<void> {
  * one of the same name is kept, in their game's place if the player would rather. True if it was: the page is then
  * loaded again, to start from the title with it.
  */
-export async function importGame(g: Game): Promise<boolean> {
+export async function importGame(g: GameCore): Promise<boolean> {
   const t = g.hooks.transfer;
   if (!t) return false;
   const from = await choose(g, 'Import', [{ label: 'From the clipboard' }, { label: 'From a file' }], 0, true);
@@ -205,8 +205,8 @@ export async function importGame(g: Game): Promise<boolean> {
   const { settings: sent, ...save } = file;
   // The settings of a game exported before the mixer say Music and Sound FX in the old way: put in today's words first.
   const settings = sent && normaliseOptions(sent);
-  const name = avatarName(save) || 'The nameless';
-  const same = characters().find((c) => avatarName(c.data) === avatarName(save));
+  const name = saveCodec().avatarName(save) || 'The nameless';
+  const same = characters().find((c) => saveCodec().avatarName(c.data) === saveCodec().avatarName(save));
   // A new character only where there is room for one (MAX_CHARACTERS); a namesake's place may always be taken.
   const room = roomForCharacter();
   if (!same && !room) {

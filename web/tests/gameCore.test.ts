@@ -17,3 +17,19 @@ describe('GameCore', () => {
     expect(values.filter((f) => !ALLOWED.has(f))).toEqual([]);
   });
 });
+
+/**
+ * The title's menu and the screens it opens (Journey Onward's character picker, Manage Saves, Steam (beta), the cloud
+ * switch, export and import) are every game's: they take a GameCore, and reach a game's saves through its SaveCodec
+ * (saveCodec.ts), never Ultima V's Game or Ultima V's saves (ultima5Saves.ts) directly.
+ */
+const TITLE_SCREENS = ['titleMenu.ts', 'characterMenu.ts', 'steamMenu.ts', 'cloudSwitch.ts', 'transfer.ts'];
+
+describe('The title and its screens', () => {
+  for (const file of TITLE_SCREENS)
+    it(`${file} imports neither Ultima V's Game nor its saves`, () => {
+      const src = readFileSync(new URL(`../src/game/${file}`, import.meta.url), 'utf8');
+      const from = [...src.matchAll(/(?:^import\s[^;]*?from\s+|import\()'([^']+)'/gms)].map(([, f]) => f);
+      expect(from.filter((f) => f === './game.ts' || f === './ultima5Saves.ts')).toEqual([]);
+    });
+});

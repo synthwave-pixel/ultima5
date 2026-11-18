@@ -13,13 +13,13 @@ import { Colour } from '../ui/colours.ts';
 import { desktopModeWay } from '../ui/updates.ts';
 import { chooseCharacter, MAX_CHARACTERS } from './characters.ts';
 import { TICK_MS } from './effects.ts';
-import { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { asPad, upper } from './input.ts';
 import { K, Pad } from './io.ts';
 import { menuSound } from './menu.ts';
 import { loadOptions } from './settings.ts';
 import { characters, currentCharacter, localSave, roomForCharacter } from './storage.ts';
-import { restore } from './ultima5Saves.ts';
+import { saveCodec } from './saveCodec.ts';
 
 /** The title's line in Journey Onward's place where the game is played from Steam (TitleMenu steamOnly). */
 const FROM_STEAM = 'Launch From Steam';
@@ -34,8 +34,8 @@ export interface TitleContent {
   readonly idleKey: string;
   /** The row, in pixels, from which the menu's box is drawn in the Standard look's copper. */
   readonly menuRow: number;
-  /** A game line's column and its text (a string, or an address in the game's data); undefined for the port's lines. */
-  gameLine(key: string): [number, number | string] | undefined;
+  /** A game line's column and its text; undefined for the port's lines. */
+  gameLine(key: string): [number, string] | undefined;
   /** The opening, once as the title first comes up; whether it ran its course (the idle scenes then follow). */
   opening(): Promise<boolean>;
   /** The scenes the title shows when left idle. */
@@ -61,7 +61,7 @@ export interface TitleContent {
 
 export class TitleMenu {
   constructor(
-    private readonly g: Game,
+    private readonly g: GameCore,
     private readonly content: TitleContent,
   ) {}
 
@@ -75,7 +75,7 @@ export class TitleMenu {
     // from Steam, Launch From Steam stands in the place of the lines that start a game, and of Settings.
     const version = this.g.hooks.update?.offer()?.version;
     const keys = this.menuKeys();
-    const items = [...keys].map((k): [number, number | string] => {
+    const items = [...keys].map((k): [number, string] => {
       const line = this.content.gameLine(k);
       if (line) return line;
       const label =
@@ -127,8 +127,7 @@ export class TitleMenu {
       const fg = g.text.win.fg;
       if (this.greyAt(keys, i)) g.text.win.fg = 8;
       g.printChar(' ');
-      if (typeof text === 'string') g.print(text);
-      else g.say(text);
+      g.print(text);
       g.printChar(' ');
       g.text.win.fg = fg;
       if (i === sel) g.printChar(0xfd);
@@ -429,7 +428,7 @@ export class TitleMenu {
             who = picked;
           }
           this.useCharacter(who.id);
-          restore(g, who.data, true);
+          saveCodec().restore(g, who.data, true);
           return;
         }
         case 0x43: {

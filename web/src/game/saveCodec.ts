@@ -30,10 +30,15 @@ export interface SaveCodec {
   same(a: StoredSave, b: StoredSave): boolean;
   /** The Avatar's name in a save (the list of characters). */
   avatarName(d: StoredSave): string;
+  /** The Avatar's level in a save (a character's card: characterMenu.ts cardOf). */
+  level(d: StoredSave): number;
   /** Where a save was made, in words (the list of saves to go back to). */
   where(g: GameCore, d: StoredSave): string;
   /** Whether the game may save itself now (autosave). */
   canAutosave(g: GameCore): boolean;
+  /** A save taken up: the game put where it was (Journey Onward). `fresh`: the game's memory starts anew first, as
+   * when a character is taken up from the title rather than an earlier save of the game being played. */
+  restore(g: GameCore, d: StoredSave, fresh: boolean): void;
 }
 
 let codec: SaveCodec | null = null;
