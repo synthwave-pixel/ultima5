@@ -64,3 +64,29 @@ describe('the look changed in a dungeon', () => {
     expect(p.rows[0][3]).toBe('#');
   });
 });
+
+/**
+ * The title's menu leaves its lines in the text's record. The play screen (playScreen.ts drawFrame) blacks out their
+ * pixels, so a change of look, which draws the log's rows again from the record, brought back pieces of them: "racter"
+ * in the log, "d British" on the bottom border.
+ */
+describe('the look changed after the title', () => {
+  it("draws none of the title's lines again", async () => {
+    const { relayout } = await import('../src/game/layout.ts');
+    const { g, p } = newGame();
+    const t = g.text;
+    t.setWindow(0, 0, 0, 0x27, 0x18);
+    t.select(0);
+    t.moveTo(9, 20);
+    g.print('Create New Character');
+    t.moveTo(5, 24);
+    g.print('Copyright 1988 Lord British');
+    for (const row of p.rows) row.fill(' '); // drawFrame's fill, as the page shows it (the tests' text keeps its letters)
+    journeyOnward(g);
+    g.options.tileSet = 'original';
+    await relayout(g);
+    const screen = p.rows.map((r) => r.join('')).join('\n');
+    expect(screen).not.toContain('racter');
+    expect(screen).not.toContain('British');
+  });
+});

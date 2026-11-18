@@ -16,12 +16,15 @@ export function drawFrame(g: Game): void {
   d.chrome?.(true);
   d.pen = Colour.black;
   d.fill(0, 0, 319, 199);
+  const t = g.text;
+  // The text's record emptied with the screen: what the title's menu printed would otherwise be drawn again from it
+  // when the look changes (layout.ts relayout repaints the log's rows), pieces of its lines in the log and on the border.
+  t.clearArea(0, 0, 0x27, 0x18);
   d.pen = Colour.blue;
   d.fill(0, 0, 319, 6);
   d.fill(0, 185, 191, 191);
   d.fill(0, 0, 6, 191);
   d.fill(185, 0, 191, 191);
-  const t = g.text;
   t.select(0);
   t.win.fg = Colour.blue;
   t.moveTo(0, 0);
