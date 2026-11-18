@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { askAddress } from '../src/game/intro.ts';
+import { askAddress } from '../src/game/characterQuestions.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { newGame } from './helpers.ts';
 
