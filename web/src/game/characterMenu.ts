@@ -7,33 +7,31 @@
  * game files.
  */
 
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
-import { Save } from './save.ts';
 import { characters, deleteCharacter, savedWhen, type Character } from './storage.ts';
-import { avatarName, savedWhere, type SaveData } from './ultima5Saves.ts';
-import { fromBase64, type StoredSave } from './saveCodec.ts';
+import { saveCodec, type StoredSave } from './saveCodec.ts';
 
 /** How many lines of the list each character takes. */
 const LINES = 3;
 
 /** A character's name, or what stands for none. */
-const nameOf = (c: Character): string => avatarName(c.data) || 'The nameless';
+const nameOf = (c: Character): string => saveCodec().avatarName(c.data) || 'The nameless';
 
 /** A save as a character's card: their name and level, to be chosen; where they are and when they saved, in grey. */
-export function cardOf(g: Game, stored: StoredSave): Item[] {
-  const data = stored as SaveData;
-  const level = new Save(fromBase64(data.save)).members[0].level;
-  const where = savedWhere(g, data);
+export function cardOf(g: GameCore, stored: StoredSave): Item[] {
+  const codec = saveCodec();
+  const level = codec.level(stored);
+  const where = codec.where(g, stored);
   return [
-    { label: `${avatarName(data) || 'The nameless'}, level ${level}` },
+    { label: `${codec.avatarName(stored) || 'The nameless'}, level ${level}` },
     { label: where.charAt(0).toUpperCase() + where.slice(1), enabled: false },
-    { label: savedWhen(data.written), enabled: false },
+    { label: savedWhen(stored.written), enabled: false },
   ];
 }
 
 /** A character's lines: their last save's card. */
-const linesOf = (g: Game, c: Character): Item[] => cardOf(g, c.data);
+const linesOf = (g: GameCore, c: Character): Item[] => cardOf(g, c.data);
 
 /** A box drawn after the first has the title put back under it first (`redraw`), so none shows round a smaller one. */
 function boxes(redraw: () => Promise<void>): () => Promise<void> {
@@ -48,7 +46,7 @@ function boxes(redraw: () => Promise<void>): () => Promise<void> {
  * Whom to delete, from the characters `all` (one or many), and asked again by name, No first; deleted with all their
  * saves if Yes. True if one was. `box` readies the screen for each box.
  */
-async function deleteOne(g: Game, all: Character[], box: () => Promise<void>): Promise<boolean> {
+async function deleteOne(g: GameCore, all: Character[], box: () => Promise<void>): Promise<boolean> {
   await box();
   const d = await choose(
     g,
@@ -69,7 +67,7 @@ async function deleteOne(g: Game, all: Character[], box: () => Promise<void>): P
  * The title's Delete Character: whom, from every character kept - the only one too, which the picker (two or more)
  * cannot offer - asked twice. True if one was deleted. `redraw` as pickCharacter's.
  */
-export async function deleteCharacterMenu(g: Game, redraw: () => Promise<void>): Promise<boolean> {
+export async function deleteCharacterMenu(g: GameCore, redraw: () => Promise<void>): Promise<boolean> {
   const all = characters();
   return all.length > 0 && deleteOne(g, all, boxes(redraw));
 }
@@ -79,7 +77,7 @@ export async function deleteCharacterMenu(g: Game, redraw: () => Promise<void>):
  * line) - or null for B, or where a deletion has left one or none (the title, to go on from there). In a box of its
  * own over the title's picture, which `redraw` puts back under each box after the first.
  */
-export async function pickCharacter(g: Game, redraw: () => Promise<void>): Promise<Character | null> {
+export async function pickCharacter(g: GameCore, redraw: () => Promise<void>): Promise<Character | null> {
   const box = boxes(redraw);
   for (;;) {
     const all = characters();
@@ -101,7 +99,7 @@ export async function pickCharacter(g: Game, redraw: () => Promise<void>): Promi
  * Returns 'deleted' where a character went (the title then forgets whose game it had), 'left' where the game is to be
  * taken up anew (an import, the files removed), else null.
  */
-export async function manageSavesMenu(g: Game, redraw: () => Promise<void>): Promise<'deleted' | 'left' | null> {
+export async function manageSavesMenu(g: GameCore, redraw: () => Promise<void>): Promise<'deleted' | 'left' | null> {
   const box = boxes(redraw);
   let deleted = false;
   let at = 0;

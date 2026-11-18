@@ -1472,7 +1472,10 @@ export class Intro {
       gameKeys: MENU,
       idleKey: 'R',
       menuRow: TITLE_MENU_ROW,
-      gameLine: (key) => GAME_LINES[key],
+      gameLine: (key) => {
+        const line = GAME_LINES[key];
+        return line && [line[0], g.t(line[1])];
+      },
       opening: async () => {
         for (let i = 0; i < 0x100; i++) g.cycles.shown[i] = i;
         return this.opening();

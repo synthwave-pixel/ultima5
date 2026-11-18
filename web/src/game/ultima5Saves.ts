@@ -255,6 +255,8 @@ export const ultima5Saves: SaveCodec = {
   parse: (text) => parseSave(text),
   same: (a, b) => sameGame(a as SaveData, b as SaveData),
   avatarName: (d) => avatarName(d),
+  level: (d) => new Save(fromBase64(d.save)).members[0].level,
   where: (g, d) => savedWhere(g as Game, d),
   canAutosave: (g) => canAutosave(g as Game),
+  restore: (g, d, fresh) => restore(g as Game, d, fresh),
 };

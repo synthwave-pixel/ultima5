@@ -15,7 +15,7 @@
 
 import { REPO } from '../brand.ts';
 import { switchCloud } from './cloudSwitch.ts';
-import type { Game, LineCheck, PlayOption, SteamChoices, SteamHook, SteamStatus } from './game.ts';
+import type { GameCore, LineCheck, PlayOption, SteamChoices, SteamHook, SteamStatus } from './gameCore.ts';
 import { fixNote, syncFixable, syncNote, syncProblem } from './macSync.ts';
 import { choose, confirm, restoreView, showText, wrap, type Item } from './menu.ts';
 
@@ -71,7 +71,7 @@ function option(label: string, on: boolean, note: string, why: string | null, ac
 type Build = (s: SteamStatus | null, o: SteamChoices, check: LineCheck | null) => Line[];
 
 /** The Steam (beta) menu, until Back. */
-export async function steamMenu(g: Game): Promise<void> {
+export async function steamMenu(g: GameCore): Promise<void> {
   const steam = g.hooks.steam;
   if (!steam) return;
   await run(g, steam, TITLE, (s, o, check) => menuLines(g, steam, s, o, check));
@@ -79,7 +79,7 @@ export async function steamMenu(g: Game): Promise<void> {
 }
 
 /** A menu of `title` over what Steam has now, read again after each choice, until Back (its first line). */
-async function run(g: Game, steam: SteamHook, title: string, build: Build): Promise<void> {
+async function run(g: GameCore, steam: SteamHook, title: string, build: Build): Promise<void> {
   let at = 0;
   for (;;) {
     let s: SteamStatus | null = null;
@@ -103,7 +103,7 @@ async function run(g: Game, steam: SteamHook, title: string, build: Build): Prom
  * The menu's lines, the same six whatever stands, so that it reads the same each time: Back, Play from Steam, Cloud
  * Saves, the tester's two, and Paths. What a line does, and how it stands, is its note at the foot.
  */
-function menuLines(g: Game, steam: SteamHook, s: SteamStatus | null, o: SteamChoices, check: LineCheck | null): Line[] {
+function menuLines(g: GameCore, steam: SteamHook, s: SteamStatus | null, o: SteamChoices, check: LineCheck | null): Line[] {
   const say = async (text: string): Promise<void> => void (await showText(g, TITLE, wrap(text)));
   return [
     { label: 'Back', note: '' },
@@ -166,7 +166,7 @@ const UNREAD = 'What Steam has could not be read here.';
  * (the launch line, its Copy, the compatibility tool), and its note says how what is on stands.
  */
 function playLine(
-  g: Game,
+  g: GameCore,
   steam: SteamHook,
   s: SteamStatus | null,
   o: SteamChoices,
@@ -224,7 +224,7 @@ const lineSays = (s: SteamStatus, check: LineCheck | null): string =>
  * line only while one is on from an earlier version, to be turned off.
  */
 function playMenu(
-  g: Game,
+  g: GameCore,
   steam: SteamHook,
   s: SteamStatus,
   o: SteamChoices,
@@ -298,7 +298,7 @@ function syncLine(steam: SteamHook, s: SteamStatus | null, o: SteamChoices, say:
  * closing Steam, asked first while it runs; the saves sent to Windows alone re-marked). Grey where it can't be done from
  * here, saying where it can.
  */
-function fixCloudLine(g: Game, steam: SteamHook, s: SteamStatus, say: (text: string) => Promise<void>): Line {
+function fixCloudLine(g: GameCore, steam: SteamHook, s: SteamStatus, say: (text: string) => Promise<void>): Line {
   const sync = s.sync!;
   if (!syncFixable(sync)) return { label: 'Fix Cloud for Mac', enabled: false, rest: true, note: fixNote(sync) };
   const restarts = sync.rules === 'needed' && sync.steamRunning;
@@ -318,7 +318,7 @@ function fixCloudLine(g: Game, steam: SteamHook, s: SteamStatus, say: (text: str
  * only by turning Cloud saves off from a game Steam started.
  */
 function toggler(
-  g: Game,
+  g: GameCore,
   steam: SteamHook,
   s: SteamStatus,
   o: SteamChoices,
@@ -353,7 +353,7 @@ function toggler(
  * off there. Outside a Steam launch it is On where it is on for any account here. A launch that knows no account while
  * it is on for one here can't use it, and says so rather than Off.
  */
-function cloudLine(g: Game, steam: SteamHook, s: SteamStatus | null, o: SteamChoices, say: (text: string) => Promise<void>): Line {
+function cloudLine(g: GameCore, steam: SteamHook, s: SteamStatus | null, o: SteamChoices, say: (text: string) => Promise<void>): Line {
   if (s === null) return { label: `Cloud Saves: ${onOff(o.cloudAny)}`, enabled: false, rest: true, note: UNREAD };
   // Unlike Play, never switched outside a Steam launch, on or off: Steam's folder is only known in one.
   const cannot = !s.launch
@@ -392,7 +392,7 @@ async function copyLine(steam: SteamHook, say: (text: string) => Promise<void>):
 }
 
 /** A launch line just turned on: what to do with it, the line itself, and Copy. */
-async function showLine(g: Game, steam: SteamHook, message: string, line: string): Promise<void> {
+async function showLine(g: GameCore, steam: SteamHook, message: string, line: string): Promise<void> {
   const items: Item[] = [...said(message), grey(''), ...said(line), grey(''), { label: 'Copy launch line' }, { label: 'OK' }];
   const copy = items.length - 2;
   if ((await choose(g, 'Play from Steam', items, copy)) !== copy) return;

@@ -18,11 +18,11 @@
 import { GAME_ID_PATTERN } from '../brand.ts';
 import { applyChoice, planCopy, type Clash } from './cloudCopy.ts';
 import { cardOf } from './characterMenu.ts';
-import type { CloudSaves, Game } from './game.ts';
+import type { CloudSaves, GameCore } from './gameCore.ts';
 import { isSteamKey } from './keyStore.ts';
 import { choose, wrap, type Item } from './menu.ts';
 import { SAVES_KEY } from './storage.ts';
-import { avatarName } from './ultima5Saves.ts';
+import { saveCodec } from './saveCodec.ts';
 import { CHARACTERS_KEY } from './characters.ts';
 
 type Keys = Record<string, string>;
@@ -58,10 +58,10 @@ function inSafeOrder(writes: Keys, to: Keys): [string, string][] {
  * Which version of a clash to keep: 'from' (the side copied from) or 'to', or null for Cancel (or B). Each side's
  * last save as its card, under where it was played.
  */
-async function keepWhich(g: Game, clash: Clash, on: boolean): Promise<'from' | 'to' | null> {
+async function keepWhich(g: GameCore, clash: Clash, on: boolean): Promise<'from' | 'to' | null> {
   const here = 'On this computer:';
   const steam = 'In Steam:';
-  const said = wrap(`${avatarName(clash.from) || 'The nameless'} was played here and in Steam apart. Keep which?`);
+  const said = wrap(`${saveCodec().avatarName(clash.from) || 'The nameless'} was played here and in Steam apart. Keep which?`);
   const grey = (label: string): Item => ({ label, enabled: false });
   const fromAt = said.length + 2;
   const toAt = fromAt + 5;
@@ -85,7 +85,7 @@ type Pick = (clash: Clash) => Promise<'from' | 'to' | null>;
 
 /** Turns Steam Cloud saves on or off with its copy, and says how it went. `pick` settles each clash (the player, by default). */
 export async function switchCloud(
-  g: Game,
+  g: GameCore,
   cloud: CloudSaves,
   on: boolean,
   pick: Pick = (clash) => keepWhich(g, clash, on),
@@ -150,13 +150,13 @@ export async function switchCloud(
 }
 
 /** The games that have had Cloud saves offered by default this launch: it is asked once a launch, whatever came of it. */
-const offered = new WeakSet<Game>();
+const offered = new WeakSet<GameCore>();
 
 /** `names` as a list: "A", "A and B", "A, B and C". */
 const listOf = (names: string[]): string => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`);
 
 /** A box of text with OK. */
-async function say(g: Game, text: string): Promise<void> {
+async function say(g: GameCore, text: string): Promise<void> {
   const lines = wrap(text).map((label): Item => ({ label, enabled: false }));
   await choose(g, 'Steam Cloud', [...lines, { label: '', enabled: false }, { label: 'OK' }], lines.length + 1, true);
 }
@@ -169,7 +169,7 @@ async function say(g: Game, text: string): Promise<void> {
  * not offered again. Where Steam's folder can't be read nothing is done, to be tried at the next launch. Asked once a
  * launch. Whether a box was shown (the title to be drawn again).
  */
-export async function cloudByDefault(g: Game): Promise<boolean> {
+export async function cloudByDefault(g: GameCore): Promise<boolean> {
   const steam = g.hooks.steam;
   if (!steam || offered.has(g) || !steam.launched() || !steam.options().cloudOffered) return false;
   const theirs = steam.cloud.steam();
@@ -179,7 +179,7 @@ export async function cloudByDefault(g: Game): Promise<boolean> {
   const clashes = planCopy(steam.cloud.own(), theirs).clashes;
   let said: string;
   if (clashes.length > 0) {
-    const names = [...new Set(clashes.map((c) => avatarName(c.from) || 'The nameless'))];
+    const names = [...new Set(clashes.map((c) => saveCodec().avatarName(c.from) || 'The nameless'))];
     const lines = wrap(
       `${listOf(names)} ${names.length > 1 ? 'were' : 'was'} played here and in Steam apart. Turn Steam Cloud saves on? ` +
         'The newer save of each is kept, and the other as an earlier save.',
