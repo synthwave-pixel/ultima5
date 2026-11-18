@@ -11,6 +11,7 @@
  * (pageMenu.ts): a Steam Deck in Game Mode or an Android handheld has no mouse to get past it with.
  */
 
+import { GAME_NAME, GAME_TITLE, STORE } from '../brand.ts';
 import { GameFiles } from '../data/files.ts';
 import { complete, identify, listed, type Candidate, type Identified } from './gameFiles.ts';
 import { scanOutcome } from './scan.ts';
@@ -20,7 +21,7 @@ import { readZip } from './zip.ts';
 import { driveMenu, usable } from '../ui/pageMenu.ts';
 
 /** Where the game is sold (README's link too): Ultima V with IV and VI. */
-export const GOG = 'https://www.gog.com/en/game/ultima_456';
+export const GOG = STORE.url;
 
 const STYLE = `
 .u5-install { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -101,13 +102,13 @@ export function runInstaller(notice?: string): Promise<GameFiles> {
   root.className = 'u5-install';
   root.innerHTML = `
     <div class="box" role="dialog" aria-labelledby="u5-title">
-      <h1 id="u5-title">ULTIMA V: WARRIORS OF DESTINY</h1>
-      <p>This is a new engine for Ultima V. It plays your own copy of the MS-DOS game, which it does not include.</p>
+      <h1 id="u5-title">${GAME_TITLE}</h1>
+      <p>This is a new engine for ${GAME_NAME}. It plays your own copy of the MS-DOS game, which it does not include.</p>
       <p data-intro>Scan for it where it is usually kept, or give it the game's folder, its files, or a .zip of them: from a GOG
          installation, or the Internet Archive's copy. Everything is kept in this game's own storage.</p>
-      <p>No copy yet? GOG sells it in <a href="${GOG}" target="_blank" rel="noopener" data-gog>Ultima 4+5+6</a>, with Ultima IV and VI.</p>
+      <p>No copy yet? GOG sells it in <a href="${GOG}" target="_blank" rel="noopener" data-gog>${STORE.title}</a>, ${STORE.after}</p>
       <button type="button" data-scan>Scan for game files…</button>
-      <div class="drop" tabindex="-1">Drop the Ultima V folder, files or .zip here</div>
+      <div class="drop" tabindex="-1">Drop the ${GAME_NAME} folder, files or .zip here</div>
       <button type="button" data-pick="folder">Choose folder…</button>
       <button type="button" data-pick="files">Choose files or .zip…</button>
       <p class="status" aria-live="polite"></p>
@@ -183,7 +184,7 @@ export function runInstaller(notice?: string): Promise<GameFiles> {
       ? 'No game files found beside the app, at home, or where GOG and the game launchers install games.'
       : 'This site serves no game files.';
     const scan = async (): Promise<void> => {
-      status.textContent = desktop ? 'Looking for Ultima V…' : 'Looking for game files on this site…';
+      status.textContent = desktop ? `Looking for ${GAME_NAME}…` : 'Looking for game files on this site…';
       waiting = null;
       warn.classList.remove('on');
       try {
@@ -193,7 +194,7 @@ export function runInstaller(notice?: string): Promise<GameFiles> {
           status.textContent = got.text;
           return;
         }
-        status.textContent = `Found Ultima V in ${got.where}. Installing…`;
+        status.textContent = `Found ${GAME_NAME} in ${got.where}. Installing…`;
         await install(got.found);
       } catch (e) {
         status.textContent = `Could not scan: ${e instanceof Error ? e.message : String(e)}`;

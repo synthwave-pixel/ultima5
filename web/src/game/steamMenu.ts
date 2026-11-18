@@ -13,7 +13,7 @@
  * (desktop/steamOptions.cjs switchOption), and the menu is drawn again from what then stands.
  */
 
-import { REPO } from '../brand.ts';
+import { GAME_ID, GAME_NAME, REPO } from '../brand.ts';
 import { switchCloud } from './cloudSwitch.ts';
 import type { GameCore, LineCheck, PlayOption, SteamChoices, SteamHook, SteamStatus } from './gameCore.ts';
 import { fixNote, syncFixable, syncNote, syncProblem } from './macSync.ts';
@@ -26,15 +26,14 @@ export const APPIMAGE_PAGE = `https://github.com/${REPO}/releases/latest`;
 
 const TITLE = 'Steam (beta)';
 const NO_STEAM = "Steam isn't here. Install Steam and start it once, then come back.";
-const PASTE = 'In Steam: Ultima V > Properties > General > Launch Options, and paste it.';
+const PASTE = `In Steam: ${GAME_NAME} > Properties > General > Launch Options, and paste it.`;
 const MAC_WARNING =
-  "This closes Steam and changes Steam's own settings for Ultima V. Steam may undo the change when EA updates the " +
+  `This closes Steam and changes Steam's own settings for ${GAME_NAME}. Steam may undo the change when EA updates the ` +
   "game; then this app puts it back. Turning this off puts Steam's settings back as they were.";
 // Turning a Mac's Play off quits Steam, which in a Steam launch would end this game and cut short its Cloud sync.
 const MAC_QUIT_FIRST = 'Quit the game, then turn this off from outside Steam.';
 // macOS Sync: Steam's cloud rules for the game given MacOS, so that saves uploaded from here reach a Mac (steamSetup.cjs).
-const LINUX_CLOUD_WARNING =
-  "This closes Steam and opens it again, and changes Steam's settings for Ultima V so that Cloud saves made here reach a Mac too.";
+const LINUX_CLOUD_WARNING = `This closes Steam and opens it again, and changes Steam's settings for ${GAME_NAME} so that Cloud saves made here reach a Mac too.`;
 /** A Linux launch line, kept from an earlier version: what to do instead. */
 const LINUX_LINE = 'Fails in Game Mode. Turn it off, clear Launch Options, and use Compat. tool.';
 const CLOUD_STAYS =
@@ -134,7 +133,7 @@ function menuLines(g: GameCore, steam: SteamHook, s: SteamStatus | null, o: Stea
     },
     {
       label: 'Paths',
-      note: 'Where the app found Steam, Ultima V and its Steam saves.',
+      note: `Where the app found Steam, ${GAME_NAME} and its Steam saves.`,
       act: async () => void (await showText(g, 'Paths', paths(s))),
     },
   ];
@@ -150,9 +149,9 @@ function paths(s: SteamStatus | null): string[] {
   const out: string[] = [];
   if (s.steam === null) out.push(...part('Steam:', 'not found.'));
   else out.push(...part('Steam:', s.steam));
-  if (s.game === 'ok') out.push(...part('Ultima V:', s.where), ...part('Steam saves:', `${s.where}/ultima5-sp/<account>`));
-  else if (s.game === 'missing') out.push(...part('Ultima V:', `listed in ${s.where}, but its folder is not there.`));
-  else out.push(...part('Ultima V:', 'not installed in Steam.'));
+  if (s.game === 'ok') out.push(...part(`${GAME_NAME}:`, s.where), ...part('Steam saves:', `${s.where}/${GAME_ID}-sp/<account>`));
+  else if (s.game === 'missing') out.push(...part(`${GAME_NAME}:`, `listed in ${s.where}, but its folder is not there.`));
+  else out.push(...part(`${GAME_NAME}:`, 'not installed in Steam.'));
   out.push(`Steam account: ${s.account ? 'known' : 'not known'}`, `Started by Steam: ${s.launch ? 'yes' : 'no'}`);
   if (s.line !== null) out.push('', ...part('Launch line:', s.line));
   return out;
@@ -196,7 +195,7 @@ function playLine(
       ? s.system === 'linux'
         ? LINUX_LINE
         : lineSays(s, check)
-      : 'Compat. tool on: in Steam, choose Ultima V Enhanced Edition under Compatibility.';
+      : `Compat. tool on: in Steam, choose ${GAME_NAME} Enhanced Edition under Compatibility.`;
   // Without Steam there is nothing to set up, but what is on may be turned off, and the Flatpak's AppImage is offered.
   const blocked = !on && noSteam !== null && !s.flatpak;
   return {
@@ -236,8 +235,8 @@ function playMenu(
     s.line !== null
       ? null
       : s.system === 'windows'
-        ? "The portable Ultima V can't be started by Steam. Use the installed one."
-        : "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.";
+        ? `The portable ${GAME_NAME} can't be started by Steam. Use the installed one.`
+        : `Steam can't start this copy of ${GAME_NAME}. Use the Flatpak or the AppImage.`;
   const out: Line[] = [{ label: 'Back', note: '' }];
   if (s.flatpak) {
     out.push({
@@ -259,7 +258,11 @@ function playMenu(
         toggler(g, steam, s, o, 'playLine', say),
       ),
       o.playLine
-        ? { label: 'Copy launch line', note: "The line to paste into Ultima V's Launch Options in Steam.", act: () => copyLine(steam, say) }
+        ? {
+            label: 'Copy launch line',
+            note: `The line to paste into ${GAME_NAME}'s Launch Options in Steam.`,
+            act: () => copyLine(steam, say),
+          }
         : { label: 'Copy launch line', enabled: false, rest: true, note: 'Turn the launch line on first.' },
     );
   } else if (o.playLine) {
@@ -272,7 +275,7 @@ function playMenu(
         o.compatTool,
         o.compatTool && check?.bothLinux
           ? 'Unused: the launch line is on too, and Steam runs that.'
-          : 'A compatibility tool, Ultima V Enhanced Edition, chosen in Steam.',
+          : `A compatibility tool, ${GAME_NAME} Enhanced Edition, chosen in Steam.`,
         noSteam ?? cannot,
         toggler(g, steam, s, o, 'compatTool', say),
       ),
@@ -357,9 +360,9 @@ function cloudLine(g: GameCore, steam: SteamHook, s: SteamStatus | null, o: Stea
   if (s === null) return { label: `Cloud Saves: ${onOff(o.cloudAny)}`, enabled: false, rest: true, note: UNREAD };
   // Unlike Play, never switched outside a Steam launch, on or off: Steam's folder is only known in one.
   const cannot = !s.launch
-    ? 'Start Ultima V from Steam to change this.'
+    ? `Start ${GAME_NAME} from Steam to change this.`
     : s.game !== 'ok'
-      ? "Ultima V's folder in Steam isn't there, so this can't change now."
+      ? `${GAME_NAME}'s folder in Steam isn't there, so this can't change now.`
       : !s.account
         ? "Steam didn't say which account is playing, so this can't change now."
         : null;
@@ -385,7 +388,7 @@ function cloudLine(g: GameCore, steam: SteamHook, s: SteamStatus | null, o: Stea
 /** The launch line put on the clipboard, and where it goes said. */
 async function copyLine(steam: SteamHook, say: (text: string) => Promise<void>): Promise<void> {
   try {
-    await say((await steam.copyLine()) ? `Copied. ${PASTE}` : 'This copy of Ultima V has no launch line for Steam.');
+    await say((await steam.copyLine()) ? `Copied. ${PASTE}` : `This copy of ${GAME_NAME} has no launch line for Steam.`);
   } catch {
     await say('The clipboard is not available here.');
   }

@@ -10,6 +10,7 @@
  * browser's own ResizeObserver warning, a fetch called off - opens nothing.
  */
 
+import { GAME_NAME } from '../brand.ts';
 import { version } from '../../package.json';
 import { driveMenu, usable } from './pageMenu.ts';
 
@@ -120,7 +121,7 @@ export interface Setting {
 /** The details, as copied for a bug report and shown in the box. */
 export function crashDetails(log: CrashLog, at: Setting): string {
   const lines = [
-    'Ultima V - crash details',
+    `${GAME_NAME} - crash details`,
     `Version: ${at.version}`,
     `When: ${at.when.toISOString()}`,
     `Browser: ${at.userAgent}`,

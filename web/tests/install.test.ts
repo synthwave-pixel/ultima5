@@ -80,3 +80,28 @@ describe('installer', () => {
     expect(warnings(id)[0]).toBe('Damaged in the .zip (its own check fails): TILES.16.');
   });
 });
+
+describe('another game’s files (useGameSpec)', () => {
+  it('are looked for by the spec the game sets, and Ultima V’s again once it is set back', async () => {
+    const { gameSpec, useGameSpec, ULTIMA5 } = await import('../src/install/gameFiles.ts');
+    const other = {
+      required: ['AVATAR.EXE', 'WORLD.MAP'],
+      exactSize: { 'AVATAR.EXE': 4 },
+      known: {},
+      keep: () => null,
+    };
+    const given = [
+      { path: 'u4/AVATAR.EXE', data: new Uint8Array(4) },
+      { path: 'u4/WORLD.MAP', data: new Uint8Array(8) },
+    ];
+    useGameSpec(other);
+    try {
+      expect(gameSpec()).toBe(other);
+      const found = identify(given);
+      expect([found.missing, found.wrong, found.files.names().sort()]).toEqual([[], [], ['AVATAR.EXE', 'WORLD.MAP']]);
+    } finally {
+      useGameSpec(ULTIMA5);
+    }
+    expect(identify(given).missing.length).toBeGreaterThan(0); // Ultima V's files, none of them given
+  });
+});

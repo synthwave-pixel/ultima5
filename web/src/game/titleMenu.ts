@@ -9,6 +9,7 @@
  * view, the gypsy).
  */
 
+import { GAME_NAME } from '../brand.ts';
 import { Colour } from '../ui/colours.ts';
 import { desktopModeWay } from '../ui/updates.ts';
 import { chooseCharacter, MAX_CHARACTERS } from './characters.ts';
@@ -226,7 +227,7 @@ export class TitleMenu {
     g.p.flushKeys();
     const { choose, showText, wrap } = await import('./menu.ts');
     const lines = [
-      ...wrap(`Updated to Ultima V ${news.version}, from ${news.from}. Your saved game carries over.`).map((label) => ({
+      ...wrap(`Updated to ${GAME_NAME} ${news.version}, from ${news.from}. Your saved game carries over.`).map((label) => ({
         label,
         enabled: false,
       })),
@@ -261,7 +262,7 @@ export class TitleMenu {
     g.p.flushKeys();
     const { choose, wrap } = await import('./menu.ts');
     const restart = offer.kind === 'restart';
-    const name = offer.version ? `Ultima V ${offer.version}` : 'A new version';
+    const name = offer.version ? `${GAME_NAME} ${offer.version}` : 'A new version';
     const out = `${name} is out${offer.current ? `; this is ${offer.current}` : ''}.`;
     const text = !restart
       ? offer.page === false

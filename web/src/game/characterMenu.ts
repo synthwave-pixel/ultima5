@@ -7,6 +7,7 @@
  * game files.
  */
 
+import { GAME_NAME } from '../brand.ts';
 import type { GameCore } from './gameCore.ts';
 import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
 import { characters, deleteCharacter, savedWhen, type Character } from './storage.ts';
@@ -128,7 +129,7 @@ export async function manageSavesMenu(g: GameCore, redraw: () => Promise<void>):
           if (
             !(await confirm(
               g,
-              'Forget the installed Ultima V files? The saved games are kept; the files must be installed again to play.',
+              `Forget the installed ${GAME_NAME} files? The saved games are kept; the files must be installed again to play.`,
               true,
             ))
           )

@@ -5,7 +5,7 @@
  * a choice).
  */
 
-import { storageKey } from './brand.ts';
+import { GAME_NAME, storageKey } from './brand.ts';
 import { GameFiles } from './data/files.ts';
 import { runInstaller } from './install/installer.ts';
 import { loadInstalled, saveInstalled } from './install/store.ts';
@@ -13,7 +13,7 @@ import { complete, identify, listed } from './install/gameFiles.ts';
 import { scanOutcome } from './install/scan.ts';
 import { noteFilesFrom, steamFound, steamLaunch, steamNative, type SyncState } from './install/sources.ts';
 import { PAD_SEEN_KEY, STEAM_NOTED_KEY, steamStore, useStore } from './game/keyStore.ts';
-import type { TitleNote } from './game/game.ts';
+import type { TitleNote } from './game/gameCore.ts';
 import { fixLabel, syncFixable, syncProblem, syncText } from './game/macSync.ts';
 
 /** Whether the page has said its note already: it is said once a launch. */
@@ -21,7 +21,7 @@ let told = false;
 /** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
 let settled: TitleNote | null | undefined;
 const FOUND_KEY = storageKey('steamFoundNoted');
-const FOUND = 'Found Ultima V in your Steam library.';
+const FOUND = `Found ${GAME_NAME} in your Steam library.`;
 /** Whether this launch took Steam's copy and has yet to say so. */
 let foundPending = false;
 /** Whether Cloud saves is on but Steam's saves could not be reached this launch. */
@@ -35,7 +35,7 @@ const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turni
  * engine as keys it does not use, and no gamepad at all. Said once, on a Deck that Steam started, until a gamepad has
  * reached the game here.
  */
-const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
+const PAD_NOTE = `Buttons do nothing? In Steam's controller settings for ${GAME_NAME}, choose the Gamepad template.`;
 const PAD_NOTED_KEY = storageKey('deckPadNoted');
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
@@ -180,8 +180,8 @@ function once(key: string, text: string): TitleNote | null {
 /** What a Steam launch that cannot play Steam's copy tells the installer: what was wrong with it. */
 function steamNotice(launch: Extract<ReturnType<typeof steamLaunch>, { steam: true }>): string {
   if (launch.game === 'missing')
-    return `Steam lists Ultima V in ${launch.where}, but its folder is not there. Install it in Steam, then press Play again.`;
-  return 'Steam launched the game, but no Steam library holds Ultima V.';
+    return `Steam lists ${GAME_NAME} in ${launch.where}, but its folder is not there. Install it in Steam, then press Play again.`;
+  return `Steam launched the game, but no Steam library holds ${GAME_NAME}.`;
 }
 
 /**

@@ -3,12 +3,27 @@
  *
  * The game's identifiers, in one place: the prefix of every key it keeps in the browser's storage, the tag a saved
  * game carries, the installed files' database, the exported save's file name, and the repository its releases and
- * issues are on. Prose ("Ultima V" in what the player reads) is not here. A fork for another game (the Ultima IV port)
- * changes these and nothing else, so its saves never meet this game's on a shared origin.
+ * issues are on, and the game's name as the shared screens say it (the installer, the start-up's notes, the update's
+ * boxes, Steam (beta), Manage Saves: GAME_NAME). The game's own prose is not here. A fork for another game (the Ultima
+ * IV port) changes these and nothing else, so its saves never meet this game's on a shared origin.
  */
 
 /** What every storage key starts with ("ultima5.settings"), what a save says it is, and the database's name. */
 export const GAME_ID = 'ultima5';
+
+/** The game's name in what the player reads on the screens every game on this engine shares. */
+export const GAME_NAME = 'Ultima V';
+
+/** Its full title, as the installer heads its page. */
+export const GAME_TITLE = 'ULTIMA V: WARRIORS OF DESTINY';
+
+/** Where a player without a copy can get one (the installer's page; the README links the same): the link and its words. */
+export const STORE = {
+  url: 'https://www.gog.com/en/game/ultima_456',
+  /** "No copy yet? GOG sells it in <title>, <after>" */
+  title: 'Ultima 4+5+6',
+  after: 'with Ultima IV and VI.',
+};
 
 /** The GitHub repository the releases and issues are on. */
 export const REPO = 'synthwave-pixel/ultima5';

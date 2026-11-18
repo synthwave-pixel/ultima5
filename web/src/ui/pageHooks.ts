@@ -8,9 +8,8 @@
  */
 
 import { storageKey } from '../brand.ts';
-import { redrawSideMap } from '../game/dungeonMap.ts';
 import { INPUT_PACES } from './holds.ts';
-import type { Game } from '../game/game.ts';
+import type { GameCore } from '../game/gameCore.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
 import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
 import { clearInstalled } from '../install/store.ts';
@@ -18,10 +17,8 @@ import { reportArgs, steamLaunch, steamNative } from '../install/sources.ts';
 import { cloudSaves } from '../game/keyStore.ts';
 import { GamepadInput } from './gamepad.ts';
 import type { CapacitorLike } from './platform.ts';
-import { mapKey, showMap } from './mapView.ts';
 import { menuUp } from './pageMenu.ts';
 import { ScanlineOverlay } from './scanlines.ts';
-import { addressedAsLady } from '../game/appearance.ts';
 import type { Screen } from './screen.ts';
 import type { PcSound } from './sound.ts';
 import { fullScreen } from './fullScreen.ts';
@@ -225,7 +222,16 @@ export function androidSave(capacitor: unknown): ((text: string, name: string) =
 /** How long after the last press Battery saver lets the map rest. */
 export const BATTERY_SAVER_REST_MS = 60_000;
 
-export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElement, tiles: Uint8Array, sound: PcSound): void {
+/**
+ * A game's maps over the screen (Ultima V's: ui/mapView.ts), where it has them: shown when asked for (hooks.showMap),
+ * and given the controller's and touch pad's keys while up (`key` answers whether it took the key).
+ */
+export interface PageMap {
+  show(underworld: boolean, focus?: string): Promise<void>;
+  key(code: number): boolean;
+}
+
+export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvasElement, sound: PcSound, map?: PageMap): void {
   const native = Boolean((window as { Capacitor?: CapacitorLike }).Capacitor?.isNativePlatform?.());
   const scanlines = new ScanlineOverlay(canvas);
   // A tab nobody is looking at holds where it is, music and all, and takes up again when it comes back - unless
@@ -276,14 +282,14 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     sound.setMusic(o.musicLevel);
     screen.setFont(o.font);
     screen.setTileArt(o.tileSet, o.tiles);
-    g.draw.avatar?.(g.appearance, addressedAsLady(g));
+    g.draw.avatar?.(g.appearance, g.play.avatarLady?.() ?? false);
     g.viewDirty = 1;
   };
   // A tile set made after it was chosen (the first time it is): the map drawn again in it - the small one beside the
   // dungeon's view at once, a menu up over it or not.
   screen.onTilesReady = () => {
     g.viewDirty = 1;
-    redrawSideMap(g);
+    g.play.settingChanged?.();
   };
   apply(g.options);
   // A press on a gamepad or the touch pad is a controller's: the game is put in controller mode if it was not,
@@ -306,7 +312,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
     // While a box of the page's own is up, it is the controller's to answer.
     if (pageBox) return pageBox(code);
     // While the map is showing, the controller and touch pad drive it (zoom, move, close).
-    if (mapKey(code)) return;
+    if (map?.key(code)) return;
     screen.push(code, true, held);
   };
   const gamepad = new GamepadInput(
@@ -349,9 +355,7 @@ export function installPageHooks(g: Game, screen: Screen, canvas: HTMLCanvasElem
       await clearInstalled();
       location.reload();
     },
-    async showMap(underworld, focus) {
-      await showMap(g, tiles, underworld, () => screen.flushKeys(), screen.standardArt, focus);
-    },
+    ...(map ? { showMap: (underworld: boolean, focus?: string) => map.show(underworld, focus) } : {}),
     async askText(title, value, max) {
       const text = await textBox(title, value, max);
       screen.flushKeys();

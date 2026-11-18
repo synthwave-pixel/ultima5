@@ -153,6 +153,8 @@ export interface PlayHooks {
   settingChanged?(): void;
   /** The interface changed from the Pause menu's Gameplay: the play screen laid out again for it. */
   relayout?(): Promise<void>;
+  /** Whether the Avatar is addressed as Lady (the tile art's Avatar drawn as she is: appearance.ts addressedAsLady). */
+  avatarLady?(): boolean;
 }
 
 export class GameCore {
