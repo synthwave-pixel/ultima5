@@ -93,6 +93,41 @@ export const REQUIRED = [
  */
 const EXACT_SIZE: Record<string, number> = { 'DATA.OVL': 48464 };
 
+/**
+ * A game the installer can pick out of what it is given: the files it needs, those that must be one exact size, the
+ * known copies' fingerprints, and which other files to keep and under what name (`keep` gets the path as given and
+ * the upper-case base name, and answers the name to keep it as, or null). The one in use is set by the game
+ * (useGameSpec); Ultima V's unless another is.
+ */
+export interface GameSpec {
+  required: readonly string[];
+  exactSize: Record<string, number>;
+  known: Record<string, string[]>;
+  /** Files read at fixed offsets: one that is none of the known copies is the wrong version, not merely changed. */
+  mustBeKnown?: readonly string[];
+  keep(path: string, base: string): string | null;
+}
+
+/** Ultima V: its data files, DATA.OVL's one size, and the Upgrade's MIDI music (*.XMI) kept by name. */
+export const ULTIMA5: GameSpec = {
+  required: REQUIRED,
+  exactSize: EXACT_SIZE,
+  known: KNOWN,
+  keep: (_path, base) => (base.endsWith('.XMI') ? base : null),
+};
+
+let inUse: GameSpec = ULTIMA5;
+
+/** The game whose files the installer, the scan and the start-up look for, from now on (Ultima V's unless set). */
+export function useGameSpec(s: GameSpec): void {
+  inUse = s;
+}
+
+/** The game whose files are looked for. */
+export function gameSpec(): GameSpec {
+  return inUse;
+}
+
 export interface Candidate {
   /** Path as given, folders included, any separator. */
   path: string;
@@ -118,32 +153,37 @@ export function fingerprint(data: Uint8Array): string {
 }
 
 /** The files, of those given, that are none of the known copies. */
-export function unknownFiles(files: GameFiles): string[] {
-  return REQUIRED.filter((n) => files.has(n) && !KNOWN[n]?.includes(fingerprint(files.get(n))));
+export function unknownFiles(files: GameFiles, s: GameSpec = gameSpec()): string[] {
+  return s.required.filter((n) => files.has(n) && !s.known[n]?.includes(fingerprint(files.get(n))));
 }
 
 const baseName = (path: string): string => path.split(/[\\/]/).pop()!.toUpperCase();
 const depth = (path: string): number => path.split(/[\\/]/).length;
 
-export function identify(candidates: Candidate[]): Identified {
+export function identify(candidates: Candidate[], spec: GameSpec = gameSpec()): Identified {
   const best = new Map<string, Candidate>();
   for (const c of candidates) {
-    const name = baseName(c.path);
-    if (!REQUIRED.includes(name) && !name.endsWith('.XMI')) continue;
-    const prev = best.get(name);
-    if (!prev || depth(c.path) < depth(prev.path)) best.set(name, c);
+    const base = baseName(c.path);
+    const kept = spec.keep(c.path, base);
+    // A required file under its own name; a kept one under the name `keep` gives (both, where they differ).
+    const names = new Set([...(spec.required.includes(base) ? [base] : []), ...(kept ? [kept] : [])]);
+    for (const name of names) {
+      const prev = best.get(name);
+      if (!prev || depth(c.path) < depth(prev.path)) best.set(name, c);
+    }
   }
   const files = new GameFiles();
   const wrong: string[] = [];
   const damaged: string[] = [];
   for (const [name, c] of best) {
-    if (EXACT_SIZE[name] !== undefined && c.data.length !== EXACT_SIZE[name]) wrong.push(name);
+    if (spec.exactSize[name] !== undefined && c.data.length !== spec.exactSize[name]) wrong.push(name);
+    else if (spec.mustBeKnown?.includes(name) && !spec.known[name]?.includes(fingerprint(c.data))) wrong.push(name);
     else files.set(name, c.data);
     if (c.damaged) damaged.push(name);
   }
-  const missing = REQUIRED.filter((n) => !files.has(n) && !wrong.includes(n));
+  const missing = spec.required.filter((n) => !files.has(n) && !wrong.includes(n));
   // A file damaged in its zip is said to be that, and not said again as merely changed.
-  const changed = unknownFiles(files).filter((n) => !damaged.includes(n));
+  const changed = unknownFiles(files, spec).filter((n) => !damaged.includes(n));
   return { files, missing, wrong, changed, damaged };
 }
 

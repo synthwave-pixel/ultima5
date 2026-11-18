@@ -7,6 +7,7 @@
  * new interface, the screen laid out again.
  */
 
+import { addressedAsLady } from './appearance.ts';
 import { animating, drawVitals, updateFrame } from './frame.ts';
 import { redrawSideMap } from './dungeonMap.ts';
 import { pauseHere } from './input.ts';
@@ -35,6 +36,7 @@ export function ultima5Play(g: Game): PlayHooks {
     animating: () => animating(g),
     pause: () => pauseHere(g),
     settingChanged: () => redrawSideMap(g),
+    avatarLady: () => addressedAsLady(g),
     relayout: async () => {
       const { relayout } = await import('./layout.ts');
       await relayout(g);

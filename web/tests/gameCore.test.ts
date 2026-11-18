@@ -33,3 +33,27 @@ describe('The title and its screens', () => {
       expect(from.filter((f) => f === './game.ts' || f === './ultima5Saves.ts')).toEqual([]);
     });
 });
+
+/**
+ * What the app does as it starts (appStart.ts, boot.ts), the page's hooks (ui/pageHooks.ts) and the installer
+ * (install/) are every game's too: the game's files are found by its GameSpec (install/gameFiles.ts useGameSpec), and
+ * its name comes from brand.ts.
+ */
+const START_UP = [
+  '../appStart.ts',
+  '../boot.ts',
+  '../ui/pageHooks.ts',
+  '../install/gameFiles.ts',
+  '../install/installer.ts',
+  '../install/scan.ts',
+  '../install/sources.ts',
+];
+
+describe('the start-up', () => {
+  for (const file of START_UP)
+    it(`${file.slice(3)} imports neither Ultima V's Game nor its saves`, () => {
+      const src = readFileSync(new URL(`../src/game/${file}`, import.meta.url), 'utf8');
+      const from = [...src.matchAll(/(?:^import\s[^;]*?from\s+|import\()'([^']+)'/gms)].map(([, f]) => f);
+      expect(from.filter((f) => /(^|\/)game\.ts$|ultima5Saves\.ts$/.test(f))).toEqual([]);
+    });
+});

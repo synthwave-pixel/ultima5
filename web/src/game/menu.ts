@@ -8,6 +8,7 @@
  * letter picker that lets a controller type names and words.
  */
 
+import { GAME_NAME } from '../brand.ts';
 import type { GameCore } from './gameCore.ts';
 import { INPUT_PACE_LABELS, INPUT_PACE_NAMES } from '../ui/holds.ts';
 import { cue } from './cues.ts';
@@ -838,7 +839,7 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
     const update = g.hooks.update;
     const offer = update?.offer();
     if (!update || !offer?.version) return [];
-    const name = `Ultima V ${offer.version}`;
+    const name = `${GAME_NAME} ${offer.version}`;
     const say = (text: string) => async (): Promise<void> => void (await showText(g, 'Update', wrap(text)));
     return [
       {
