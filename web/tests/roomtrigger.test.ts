@@ -130,7 +130,7 @@ async function besideTheWall(then: (game: import('../src/game/game.ts').Game) =>
 }
 
 it("offers Push at the head of a won room's menu beside a wall that carries a trigger", async () => {
-  const { contextual } = await import('../src/game/menu.ts');
+  const { contextual } = await import('../src/game/offers.ts');
   let labels: string[] = [];
   await besideTheWall((game) => {
     labels = contextual(game).map((it) => it.label);

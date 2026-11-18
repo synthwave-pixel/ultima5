@@ -3,7 +3,7 @@ import { lookInDungeon, searchInDungeon } from '../src/game/dungeon.ts';
 import { drawDungeonMap } from '../src/game/dungeonMap.ts';
 import { revealCells } from '../src/game/fog.ts';
 import { K, Pad } from '../src/game/io.ts';
-import { commandMenu } from '../src/game/menu.ts';
+import { commandMenu } from '../src/game/offers.ts';
 import { loadOptions, saveOptions } from '../src/game/settings.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { klimbOffer, searchOffer, signAhead } from '../src/game/targets.ts';

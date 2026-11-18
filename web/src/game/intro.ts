@@ -11,22 +11,22 @@
 import { loadResource } from '../data/images.ts';
 import { Colour } from '../ui/colours.ts';
 import { blinker, waitMark } from './waitMark.ts';
-import { leftArrow, rightArrow, updateFrame } from './frame.ts';
+import { leftArrow, rightArrow } from './frame.ts';
 import { Game } from './game.ts';
+import { TitleMenu, type TitleContent } from './titleMenu.ts';
 import { menuSound, titleShown } from './menu.ts';
 import { asPad, upper } from './input.ts';
 import { addressedAsLady, customisable, DEFAULT_APPEARANCE } from './appearance.ts';
 import { K, Pad, type Place, type Dressing } from './io.ts';
 import { introTune, playTune, Tune } from './music.ts';
 import { Save } from './save.ts';
-import { characters, currentCharacter, localSave, restore, roomForCharacter, savedAvatar, savedDressing } from './storage.ts';
-import { chooseCharacter, MAX_CHARACTERS, newCharacter } from './characters.ts';
-import { loadOptions, saveOptions } from './settings.ts';
+import { localSave, savedAvatar, savedDressing } from './storage.ts';
+import { chooseCharacter, newCharacter } from './characters.ts';
+import { saveOptions } from './settings.ts';
 import { TICK_MS } from './effects.ts';
 import { T } from './tiles.ts';
 import { animateActors, clockTick } from './frame.ts';
 import { groundAmong, isGround } from './world.ts';
-import { desktopModeWay } from '../ui/updates.ts';
 
 /** The proportional text's layout (D_5146..D_5158): two column spans by height, the space's width, and the pen. */
 export interface Prose {
@@ -212,10 +212,6 @@ const GAME_LINES: Record<string, [number, number]> = {
   A: [0xb, 0x315e],
   R: [10, 0x316f],
 };
-/** The title's line in Journey Onward's place where the game is played from Steam (Intro steamOnly). */
-const FROM_STEAM = 'Launch From Steam';
-/** The title menu's box: the lines it holds (more scroll, intro.ts menu). */
-const MENU_ROWS = 8;
 
 /** The rows under the name's line where its menu stands. */
 const NAME_MENU_ROW = 0x15;
@@ -427,6 +423,7 @@ export class Intro {
   constructor(private readonly g: Game) {
     this.font = this.res('PROPORT.PCS');
     this.widths = g.data.bytes(0x50eb, 0x5a);
+    this.menuScreen = new TitleMenu(g, this.titleContent());
   }
 
   private get fx() {
@@ -659,75 +656,6 @@ export class Intro {
     titleBanner(this.g, text);
   }
 
-  /** INTRO_06bc: the choices, one highlighted (the original's Transfer from Ultima IV is left out: it only rebuilt the Avatar from an Ultima IV save). */
-  private menu(sel: number): void {
-    // The Standard look's copper for the menu's box, below the logo.
-    this.g.draw.chrome?.(true, TITLE_MENU_ROW);
-    const g = this.g;
-    // The game's five, and the port's own lines under them: its settings, managing the saves (characterMenu.ts),
-    // Steam (beta) in the desktop app (steamMenu.ts), a newer version (ui/updates.ts), and Quit in the apps. Played
-    // from Steam, Launch From Steam stands in the place of the lines that start a game, and of Settings.
-    const version = this.g.hooks.update?.offer()?.version;
-    const keys = this.menuKeys();
-    const items = [...keys].map((k): [number, number | string] => {
-      if (GAME_LINES[k]) return GAME_LINES[k];
-      const label =
-        k === 'L'
-          ? FROM_STEAM
-          : k === 'S'
-            ? 'Settings'
-            : k === 'M'
-              ? 'Manage Saves'
-              : k === 'T'
-                ? 'Steam (beta)'
-                : k === 'Q'
-                  ? 'Quit'
-                  : version
-                    ? `Update (${version})`
-                    : 'Update';
-      return [(0x28 - label.length - 2) >> 1, label];
-    });
-    // The box holds eight lines: more, and they scroll with the bar, an arrow at the box's edge where there are more
-    // above or below.
-    const top = items.length > 6 ? 0x10 : 0x11;
-    const scrolls = items.length > MENU_ROWS;
-    if (scrolls) {
-      if (sel < this.menuTop) this.menuTop = sel;
-      if (sel >= this.menuTop + MENU_ROWS) this.menuTop = sel - MENU_ROWS + 1;
-      this.menuTop = Math.max(0, Math.min(this.menuTop, items.length - MENU_ROWS));
-      g.text.clearArea(1, top, 0x26, top + MENU_ROWS - 1);
-    } else this.menuTop = 0;
-    const shown = scrolls ? items.slice(this.menuTop, this.menuTop + MENU_ROWS) : items;
-    if (scrolls) {
-      const fg = g.text.win.fg;
-      g.text.win.fg = Colour.lightGray;
-      if (this.menuTop > 0) {
-        g.text.moveTo(0x25, top);
-        g.printChar(0x18);
-      }
-      if (this.menuTop + MENU_ROWS < items.length) {
-        g.text.moveTo(0x25, top + MENU_ROWS - 1);
-        g.printChar(0x19);
-      }
-      g.text.win.fg = fg;
-    }
-    shown.forEach(([x, text], row) => {
-      const i = row + this.menuTop;
-      if (i === sel) g.printChar(0xfd);
-      g.text.moveTo(x, row + top);
-      // Journey Onward grey with no game saved to journey on with, and Launch From Steam (the port's), passed over by
-      // the bar.
-      const fg = g.text.win.fg;
-      if (this.greyAt(keys, i)) g.text.win.fg = 8;
-      g.printChar(' ');
-      if (typeof text === 'string') g.print(text);
-      else g.say(text);
-      g.printChar(' ');
-      g.text.win.fg = fg;
-      if (i === sel) g.printChar(0xfd);
-    });
-  }
-
   /**
    * How hard a game the new character is to have (the ultima3 port's question): each answer sets the rules that
    * Settings holds, where they may be changed afterwards - on the copy of the settings in use the new character is
@@ -758,167 +686,6 @@ export class Intro {
     const o = g.options;
     o.rules = i === 1 ? 'classic' : i === 0 ? 'modern' : 'story';
     g.hooks.applyOptions?.(o);
-  }
-
-  /**
-   * Character `id` the one in play, their settings in use (the look, the tiles, the sound and the music changed to
-   * theirs); null, the latest's (storage.ts currentCharacter).
-   */
-  private useCharacter(id: string | null): void {
-    const g = this.g;
-    chooseCharacter(id);
-    if (id === null) currentCharacter();
-    g.options = loadOptions();
-    g.hooks.applyOptions?.(g.options);
-  }
-
-  /** No game is saved: Journey Onward is grey, and the bar starts on Create New Character (menu, run). */
-  private noSave = false;
-
-  /**
-   * The title's lines' keys: the game's five, then the port's - Settings, Manage Saves (always: Import is how a new
-   * machine's first game may come), Steam (beta) in the desktop app, a waiting update, Quit in the apps. More than the
-   * box's eight scroll.
-   */
-  private menuKeys(): string {
-    const after = (this.g.hooks.update?.offer() ? '!' : '') + (this.g.hooks.quit ? 'Q' : '');
-    const steam = this.g.hooks.steam ? 'T' : '';
-    if (this.steamOnly()) return 'L' + MENU.slice(2) + 'M' + steam + after;
-    return MENU + 'SM' + steam + after;
-  }
-
-  /**
-   * Whether the game is played from Steam (the port's): Play from Steam on, and this copy not started by Steam. Then
-   * Journey Onward, Create New Character and Settings give way to Launch From Steam, grey, so that a game is started
-   * only where Steam keeps it; Steam (beta) is still there to turn Play from Steam off.
-   */
-  private steamOnly(): boolean {
-    const steam = this.g.hooks.steam;
-    if (!steam || steam.launched()) return false;
-    const o = steam.options();
-    return o.playLine || o.compatTool || o.macPlay;
-  }
-
-  /** Whether the title's line `i` of `keys` is grey, passed over by the bar: Launch From Steam, or Journey Onward with no game. */
-  private greyAt(keys: string, i: number): boolean {
-    return keys[i] === 'L' || (keys[i] === 'J' && this.noSave);
-  }
-
-  /** Whether Cloud saves on by default has been looked at this launch (newsBox). */
-  private cloudAsked = false;
-
-  /** Whether a newer version waits to be told of (updateBox). */
-  private updateDue(): boolean {
-    const offer = this.g.hooks.update?.offer();
-    return (!!offer && !offer.told) || !!this.g.hooks.update?.news?.() || !!this.g.hooks.note?.();
-  }
-
-  /**
-   * A note (hooks.note: a Steam launch's), or the first start of a newer version (the desktop app's), said once in a
-   * box of its own over the title: for a version, updated from what, and What's new - the release's notes, fetched from GitHub, as the game's own text pages. Whether the
-   * box was shown (the title to be drawn again).
-   */
-  private async newsBox(): Promise<boolean> {
-    const g = this.g;
-    // Cloud saves on by default, first: where the saves are kept, before anything is said of them.
-    if (!this.cloudAsked && g.hooks.steam?.launched()) {
-      this.cloudAsked = true;
-      const { cloudByDefault } = await import('./cloudSwitch.ts');
-      if (await cloudByDefault(g)) {
-        this.noSave = localSave.read() === null;
-        return true;
-      }
-    }
-    const update = g.hooks.update;
-    const note = g.hooks.note?.();
-    if (note) {
-      note.seen();
-      g.p.flushKeys();
-      const { choose, showText, wrap } = await import('./menu.ts');
-      const lines = [...wrap(note.text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
-      // A choice beside OK (macOS Sync's Fix now), on the bar first; what came of it said after.
-      const items = [...lines, ...(note.action ? [{ label: note.action.label }] : []), { label: 'OK' }];
-      const i = await choose(g, 'Steam', items, lines.length, true);
-      if (note.action && i === lines.length) {
-        const said = await note.action.run().catch((e: unknown) => `That didn't work: ${e instanceof Error ? e.message : String(e)}`);
-        await showText(g, 'Steam', wrap(said ?? "That can't be changed here."));
-      }
-      return true;
-    }
-    const news = update?.news?.();
-    if (!update || !news) return false;
-    update.newsSeen?.();
-    g.p.flushKeys();
-    const { choose, showText, wrap } = await import('./menu.ts');
-    const lines = [
-      ...wrap(`Updated to Ultima V ${news.version}, from ${news.from}. Your saved game carries over.`).map((label) => ({
-        label,
-        enabled: false,
-      })),
-      { label: '', enabled: false },
-    ];
-    const i = await choose(g, 'Updated', [...lines, { label: "What's new" }, { label: 'OK' }], lines.length, true);
-    if (i !== lines.length) return true;
-    const notes = await update.notes?.(news.version);
-    const text = notes
-      ? notes.split('\n').flatMap((l) => (l.trim() === '' ? [''] : wrap(l)))
-      : wrap("The release's notes could not be fetched here. They are on the game's Releases page.");
-    await showText(g, `What's new in ${news.version}`, text);
-    return true;
-  }
-
-  /** The first of the title menu's lines shown, where there are more than its box holds (menu). */
-  private menuTop = 0;
-
-  /**
-   * A newer version not yet told of (ui/updates.ts), in a box of its own over the title, once a version: what it is,
-   * and the way to it - the restart into a build come down, or its release's page, to read what changed and download
-   * from; or, where no page can be offered, only the way to it said. Later leaves it in the menu's Update line, which
-   * shows it `again` where there is nothing to take up. Whether the box was shown (the title to be drawn again).
-   */
-  private async updateBox(again = false): Promise<boolean> {
-    const g = this.g;
-    const update = g.hooks.update;
-    const offer = update?.offer();
-    if (!update || !offer || (offer.told && !again)) return false;
-    if (!offer.told) update.told();
-    // Keys pressed before it came (the opening skipped, the menu moved) are let go: none may answer it unseen.
-    g.p.flushKeys();
-    const { choose, wrap } = await import('./menu.ts');
-    const restart = offer.kind === 'restart';
-    const name = offer.version ? `Ultima V ${offer.version}` : 'A new version';
-    const out = `${name} is out${offer.current ? `; this is ${offer.current}` : ''}.`;
-    const text = !restart
-      ? offer.page === false
-        ? `${out} ${desktopModeWay(offer)}`
-        : `${out} Its page says what is new. Your saved game carries over.`
-      : offer.onQuit
-        ? `${name} has downloaded. It installs when the game quits.`
-        : !offer.installed
-          ? `${name} has downloaded. It is installed when you quit, or restart to play it now.`
-          : offer.quits
-            ? `${name} is installed. Quit, and start the game again to play it.`
-            : `${name} is installed. Restart to play it now, or it starts the next time you play.`;
-    const lines = [...wrap(text).map((label) => ({ label, enabled: false })), { label: '', enabled: false }];
-    // Where there is nothing to take up, the box is only closed.
-    const go = restart
-      ? offer.onQuit
-        ? null
-        : offer.quits
-          ? 'Quit now'
-          : 'Restart now'
-      : offer.page === false
-        ? null
-        : 'Open release page';
-    const i = await choose(
-      g,
-      restart ? 'Update ready' : 'Update available',
-      [...lines, ...(go ? [{ label: go }, { label: 'Later' }] : [{ label: 'OK' }])],
-      lines.length,
-      true,
-    );
-    if (go && i === lines.length) update.apply();
-    return true;
   }
 
   // --- The opening -------------------------------------------------------------------------
@@ -1163,7 +930,7 @@ export class Intro {
     g.printChar(0xff);
     fx.image(ultima, 1, 0x10, 0x41);
     this.menuBorders();
-    this.menu(4);
+    this.menuScreen.menu(4);
     await this.anyKey();
     fx.page(0);
     for (let i = 0x88; i >= 0; i -= 8) {
@@ -1654,7 +1421,7 @@ export class Intro {
       g.text.select(0);
       g.text.setWindow(0, 0, 0, 0x27, 0x18);
       void this.title(false); // no reveal and no burning in: drawn at once
-      this.titleMenu();
+      this.menuScreen.draw();
       this.selectPrompt();
       for (let n = 0; n < 4; n++) {
         this.spin(n);
@@ -1669,20 +1436,6 @@ export class Intro {
       g.draw.chromeHole?.(null);
     });
     g.draw.chrome?.(false);
-  }
-
-  /** The title's windows, and its banner and menu in them (the first item chosen). */
-  private titleMenu(sel = 0): void {
-    const g = this.g;
-    const t = g.text;
-    t.setWindow(0, 1, 0x10, 0x26, 0x17);
-    t.select(0);
-    g.printChar(0xff);
-    t.setWindow(0, 0, 0, 0x27, 0x18);
-    t.setWindow(1, 0x18, 1, 0x27, 9);
-    t.setWindow(2, 0x18, 0xb, 0x27, 0x17);
-    this.banner(g.t(0x31c1)); // "Copyright 1988 Lord British"
-    this.menu(sel);
   }
 
   /** "Select:" in the menu's top border, and the cursor after it. */
@@ -1703,238 +1456,66 @@ export class Intro {
     t.advance = true;
   }
 
+  /** The title's menu (titleMenu.ts), round and round, with Ultima V's title around it. */
+  readonly menuScreen: TitleMenu;
+
   /** INTRO_0986_Main: returns when the player journeys onward with a game in hand. */
-  async run(): Promise<void> {
+  run(): Promise<void> {
+    return this.menuScreen.run();
+  }
+
+  /** What Ultima V shows and does around the title's menu (titleMenu.ts TitleContent). */
+  private titleContent(): TitleContent {
     const g = this.g;
-    g.draw.chrome?.(false);
-    const t = g.text;
-    for (let i = 0; i < 0x100; i++) g.cycles.shown[i] = i;
-    t.select(0);
-    t.setWindow(0, 0, 0, 0x27, 0x18);
-    let fresh = await this.opening();
-    if (fresh) {
-      playTune(g, Tune.Theme, 'title');
-      await this.view();
-    }
-    fresh = true;
-    /** A choice made for the player, taken on the menu's next round (Journey Onward with no game: Create a character). */
-    let queued = 0;
-    for (;;) {
-      playTune(g, Tune.Theme, 'title');
-      this.noSave = localSave.read() === null;
-      let keys = this.menuKeys();
-      let choice = 0;
-      while (this.greyAt(keys, choice)) choice++;
-      this.titleMenu(choice);
-      let key = queued;
-      queued = 0;
-      while (key <= 0x20) {
-        // An update may come down while the title waits: its box, once a version, and its line added then.
-        if ((await this.newsBox()) || (await this.updateBox())) {
-          await this.title(false);
-          this.titleMenu(choice);
+    return {
+      gameKeys: MENU,
+      idleKey: 'R',
+      menuRow: TITLE_MENU_ROW,
+      gameLine: (key) => GAME_LINES[key],
+      opening: async () => {
+        for (let i = 0; i < 0x100; i++) g.cycles.shown[i] = i;
+        return this.opening();
+      },
+      attract: () => this.view(),
+      drawTitle: async () => {
+        await this.title(false);
+      },
+      banner: () => this.banner(g.t(0x31c1)), // "Copyright 1988 Lord British"
+      prompt: () => this.selectPrompt(),
+      spin: (n) => this.spin(n),
+      idle: () => this.fx.nextWDFrame(),
+      playTheme: () => playTune(g, Tune.Theme, 'title'),
+      quiet: () => playTune(g, Tune.None),
+      newCharacter: async () => {
+        const t = g.text;
+        // The theme plays on while the character is made, the flames flickering behind its questions (not the
+        // Appearance screen's, which covers them), up to the gypsy's pages, which have their own tune.
+        g.titleIdle = () => this.fx.nextWDFrame();
+        // A new character is one more beside those kept (characters.ts): nothing of anyone's is put by for it. The
+        // character is made below the logo and its flames, the name asked where the menu was, as in 1988.
+        try {
+          await this.createCharacter();
+        } finally {
+          g.titleIdle = null;
         }
-        if (this.menuKeys() !== keys) {
-          keys = this.menuKeys();
-          this.menu(choice);
-        }
-        this.selectPrompt();
-        key = 0;
-        for (let n = 0; n < 200 && key === 0 && !this.updateDue(); n++) {
-          key = upper(asPad(g, g.p.pollKey())); // a keyboard read as a controller is one here too
-          if (key === 0) {
-            this.spin(n);
-            this.fx.nextWDFrame();
-            await this.ticks(1);
-          }
-        }
-        // An update come while the title waits: its box at once (the loop's head), not after the next key.
-        if (key === 0 && this.updateDue()) continue;
-        switch (key) {
-          case K.Left:
-          case K.Up:
-            do choice = choice === 0 ? keys.length - 1 : choice - 1;
-            while (this.greyAt(keys, choice));
-            this.menu(choice);
-            menuSound(g, 'move');
-            break;
-          case K.Right:
-          case K.Down:
-            do choice = choice === keys.length - 1 ? 0 : choice + 1;
-            while (this.greyAt(keys, choice));
-            this.menu(choice);
-            menuSound(g, 'move');
-            break;
-          case K.Enter:
-          case K.Space:
-          case Pad.A:
-            key = keys.charCodeAt(choice);
-            break;
-          case 0:
-            key = 0x52;
-            break;
-          default: {
-            // (Launch From Steam is no choice: its letter is no key.)
-            const i = keys.indexOf(String.fromCharCode(key));
-            if (i >= 0 && keys[i] !== 'L') this.menu(i);
-            else key = 0;
-          }
-        }
-      }
-      switch (key) {
-        case 0x4a: {
-          playTune(g, Tune.None);
-          const kept = characters();
-          if (kept.length === 0) {
-            // In a box of its own over the title's picture, as the new character's question is (where 1988 printed
-            // "No active game. Please create a character" in the message window's place, over the menu's lines), the
-            // way on offered as the menu's first line.
-            const { choose } = await import('./menu.ts');
-            const i = await choose(
-              g,
-              'Journey Onward',
-              [
-                { label: 'No game is saved yet.', enabled: false },
-                { label: '', enabled: false },
-                { label: 'Create a character' },
-                { label: 'Back' },
-              ],
-              2,
-              true,
-            );
-            await this.title(false);
-            if (i === 2) queued = 0x43;
-            break;
-          }
-          // One character: theirs, straight in. More: whose (characterMenu.ts), any deleted there.
-          // (The menu's lines drawn again under its boxes: titleMenu.)
-          let who = kept[0];
-          if (kept.length > 1) {
-            const { pickCharacter } = await import('./characterMenu.ts');
-            const picked = await pickCharacter(g, async () => {
-              await this.title(false);
-              this.titleMenu(0); // the bar where it was, on Journey Onward
-            });
-            if (!picked) {
-              // Back, or a deletion that left one or none: the title, in the latest's settings.
-              this.useCharacter(null);
-              await this.title(false);
-              break;
-            }
-            who = picked;
-          }
-          this.useCharacter(who.id);
-          restore(g, who.data, true);
-          return;
-        }
-        case 0x43: {
-          // No more than MAX_CHARACTERS (characters.ts): at that, a character must go before another is made.
-          if (!roomForCharacter()) {
-            const { choose, wrap } = await import('./menu.ts');
-            // Wrapped to the box, as a question is (menu.ts confirm).
-            const said = wrap(`${MAX_CHARACTERS} characters are kept, all there is room for. Delete one to make another.`);
-            const i = await choose(
-              g,
-              'Create New Character',
-              [
-                ...said.map((label) => ({ label, enabled: false })),
-                { label: '', enabled: false },
-                { label: 'Delete a character...' },
-                { label: 'Back' },
-              ],
-              said.length + 1,
-              true,
-            );
-            if (i === said.length + 1) {
-              const { deleteCharacterMenu } = await import('./characterMenu.ts');
-              const redraw = async (): Promise<void> => {
-                await this.title(false);
-                this.titleMenu(1);
-              };
-              await redraw();
-              if (await deleteCharacterMenu(g, redraw)) this.useCharacter(null);
-            }
-            await this.title(false);
-            break;
-          }
-          // The theme plays on while the character is made, the flames flickering behind its questions (not the
-          // Appearance screen's, which covers them), up to the gypsy's pages, which have their own tune.
-          g.titleIdle = () => this.fx.nextWDFrame();
-          // A new character is one more beside those kept (characters.ts): nothing of anyone's is put by for it. The
-          // character is made below the logo and its flames, the name asked where the menu was, as in 1988.
-          try {
-            await this.createCharacter();
-          } finally {
-            g.titleIdle = null;
-          }
-          t.setWindow(0, 0, 0, 0x27, 0x18);
-          t.select(0);
-          g.printChar(0xff);
-          this.fx.page(1);
-          g.printChar(0xff);
-          this.fx.page(0);
-          await this.title(false);
-          break;
-        }
-        case 0x4d: {
-          // Manage Saves: Export and Import saved game, Delete Character, Remove game files (characterMenu.ts).
-          const { manageSavesMenu } = await import('./characterMenu.ts');
-          const redraw = async (): Promise<void> => {
-            await this.title(false);
-            this.titleMenu(keys.indexOf('M'));
-          };
-          if ((await manageSavesMenu(g, redraw)) === 'deleted') this.useCharacter(null);
-          await this.title(false);
-          break;
-        }
-        case 0x55:
+        t.setWindow(0, 0, 0, 0x27, 0x18);
+        t.select(0);
+        g.printChar(0xff);
+        this.fx.page(1);
+        g.printChar(0xff);
+        this.fx.page(0);
+        await this.title(false);
+      },
+      line: async (key) => {
+        if (key === 'U') {
           playTune(g, Tune.None);
           await this.introduction();
           await this.title(false);
-          break;
-        case 0x41:
+        } else if (key === 'A') {
           playTune(g, Tune.None);
           await this.acknowledgements();
-          break;
-        case 0x52:
-          await this.view();
-          break;
-        case 0x53: {
-          const { settingsMenu } = await import('./menu.ts');
-          // On a cleared screen, as in the game (the panel draws its own frame, the map's, centred); the title is
-          // drawn again after.
-          g.draw.pen = 0;
-          g.draw.fill(0, 0, 319, 199);
-          await settingsMenu(g, true);
-          t.select(0);
-          g.printChar(0xff);
-          await this.title(false);
-          break;
-        }
-        case 0x54: {
-          // Steam (beta), the desktop app's (steamMenu.ts): on a cleared screen, as Settings is; the title drawn again after.
-          const { steamMenu } = await import('./steamMenu.ts');
-          g.draw.pen = 0;
-          g.draw.fill(0, 0, 319, 199);
-          await steamMenu(g);
-          t.select(0);
-          g.printChar(0xff);
-          await this.title(false);
-          break;
-        }
-        case 0x21:
-          // Nothing to take up (a release with no page to offer): its box again, saying the way to it.
-          if (g.hooks.update?.offer()?.page === false) {
-            await this.updateBox(true);
-            await this.title(false);
-          } else g.hooks.update?.apply();
-          break;
-        case 0x51:
-          g.hooks.quit?.(); // the app goes; should it not, the title is still here
-          break;
-      }
-      void fresh;
-      void updateFrame;
-    }
+        } else if (key === 'R') await this.view();
+      },
+    };
   }
 }

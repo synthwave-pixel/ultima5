@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readBritannia, readUnderworld } from '../src/data/maps.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journalTop, type JournalLine } from '../src/game/journal.ts';
-import { journalScreen } from '../src/game/menu.ts';
+import { journalScreen } from '../src/game/journalScreen.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { focusOf, marksFor } from '../src/ui/mapMarks.ts';
 import { markInk } from '../src/ui/mapView.ts';

@@ -514,7 +514,7 @@ async function partyWords(k: Talk): Promise<void> {
   // What has been said so far in this conversation is learnt before the choice is offered, so that a word a
   // townsman has just let fall can be asked about while still standing before them.
   g.words.learn(g, g.recording ?? '');
-  const { answerMenu, sayMenu } = await import('./menu.ts');
+  const { answerMenu, sayMenu } = await import('./talkMenus.ts');
   t.echo = null;
   // Asked a question, the player answers it: yes, no, or a word the question is listening for that they have heard
   // somewhere. Asked their name, they give it. Otherwise it is their turn to ask.
@@ -1307,7 +1307,7 @@ async function guardDemands(g: Game): Promise<number> {
     g.say(0x90fc); // "Give now the\npassword, bearer\nof the Badge!"
     g.printChar('"');
     g.say(0x9128); // "\n\nYour response?\n"
-    const { askWord } = await import('./menu.ts');
+    const { askWord } = await import('./talkMenus.ts');
     const word = (await askWord(g, 0xe, 'Password', [g.t(0x4a9a)], true)).toUpperCase().slice(0, 4);
     g.printChar('\n');
     if (word === g.t(0x4a9a).toUpperCase()) {

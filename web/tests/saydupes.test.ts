@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { K, Pad } from '../src/game/io.ts';
-import { sayMenu } from '../src/game/menu.ts';
+import { sayMenu } from '../src/game/talkMenus.ts';
 import { keywordsOf, loadScript } from '../src/game/talk.ts';
 import { newGame } from './helpers.ts';
 

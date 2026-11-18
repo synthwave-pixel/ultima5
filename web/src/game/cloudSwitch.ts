@@ -15,6 +15,7 @@
  * earlier save (nothing is lost), or to leave it off, which is kept so it is not offered again.
  */
 
+import { GAME_ID_PATTERN } from '../brand.ts';
 import { applyChoice, planCopy, type Clash } from './cloudCopy.ts';
 import { cardOf } from './characterMenu.ts';
 import type { CloudSaves, Game } from './game.ts';
@@ -37,7 +38,7 @@ function sameSaves(a: Keys, b: Keys): boolean {
 }
 
 /** Whether `key` is an index of earlier saves: a character's, or the one from before characters. */
-const isIndex = (key: string): boolean => key === SAVES_KEY || /^ultima5\.char\.[^.]+\.saves$/.test(key);
+const isIndex = (key: string): boolean => key === SAVES_KEY || new RegExp(`^${GAME_ID_PATTERN}\\.char\\.[^.]+\\.saves$`).test(key);
 
 /**
  * The writes in an order a failure part way can lose nothing by: first the keys the receiving side (`to`) has not yet

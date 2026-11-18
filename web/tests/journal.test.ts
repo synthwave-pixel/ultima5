@@ -168,7 +168,7 @@ describe('the journal', () => {
   });
 
   it('prints the hint of the line the bar is on when Y is pressed, and leaves the list open', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { Pad } = await import('../src/game/io.ts');
     const { fly, Landed, press } = await import('./pilot.ts');
     const { g, p } = newGame();
@@ -180,7 +180,7 @@ describe('the journal', () => {
   });
 
   it("gives no hint for A, on a line or under one: a hint is Y's alone", async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { Pad } = await import('../src/game/io.ts');
     const { fly, Landed } = await import('./pilot.ts');
     const { g, p } = newGame();
@@ -233,7 +233,7 @@ describe("the journal's shrines and dungeons, on A", () => {
   });
 
   it('shows it on the panel as the bar comes to the line, and the list stays', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { Pad } = await import('../src/game/io.ts');
     const { fly, Landed } = await import('./pilot.ts');
     const { g, p } = newGame();
@@ -287,7 +287,7 @@ describe("the journal's clues, by topic", () => {
   });
 
   it('opens a topic to read on A, its greyed clues dim', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { journeyOnward } = await import('../src/game/run.ts');
     const { K, Pad } = await import('../src/game/io.ts');
     const { fly, Landed, press } = await import('./pilot.ts');
@@ -315,7 +315,7 @@ describe("the journal's clues, by topic", () => {
 
 describe("the journal's cards", () => {
   it('shows the line under the bar that says something on the party panel, and the party again on a line that does not', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { journeyOnward } = await import('../src/game/run.ts');
     const { K, Pad } = await import('../src/game/io.ts');
     const { fly, Landed } = await import('./pilot.ts');
@@ -356,7 +356,7 @@ describe("the journal's cards", () => {
 
 describe("the journal's card titles", () => {
   it("fit the panel's border on every line of the journal's own list, leaving the screen's border and next row alone", async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { journeyOnward } = await import('../src/game/run.ts');
     const { K, Pad } = await import('../src/game/io.ts');
     const { fly, Landed } = await import('./pilot.ts');
@@ -386,7 +386,7 @@ describe("the journal's card titles", () => {
 
 describe("the journal's long hints", () => {
   it('opens a hint too long for the log in a reader of its own, headed with the line, and goes back to the list', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { K, Pad } = await import('../src/game/io.ts');
     const { fly, Landed, press } = await import('./pilot.ts');
     const { journeyOnward } = await import('../src/game/run.ts');
@@ -453,7 +453,7 @@ describe("the journal's companions", () => {
 
 describe("the journal's equipment", () => {
   it('lists every piece, held or not; its card says what it is for (the quest things, only rumoured), Y where it is had', async () => {
-    const { journalScreen } = await import('../src/game/menu.ts');
+    const { journalScreen } = await import('../src/game/journalScreen.ts');
     const { journalTop } = await import('../src/game/journal.ts');
     const { K, Pad } = await import('../src/game/io.ts');
     const { fly, Landed } = await import('./pilot.ts');

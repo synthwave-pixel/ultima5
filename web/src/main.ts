@@ -5,6 +5,7 @@
  * installer), then start the game.
  */
 
+import { storageKey } from './brand.ts';
 import { egaTileArt } from './ui/egaTiles.ts';
 import { CARVE_STYLES, type CarveStyle } from './ui/carve.ts';
 import { drawCombatMarks } from './game/combat.ts';
@@ -15,7 +16,8 @@ import { readFont } from './data/font.ts';
 import { lzwDecompress } from './data/lzw.ts';
 import { GameData } from './game/data.ts';
 import { Game } from './game/game.ts';
-import { journeyOnward, runGame } from './game/run.ts';
+import { runGame } from './game/run.ts';
+import { journeyOnward } from './game/playScreen.ts';
 import { Save } from './game/save.ts';
 import { currentCharacter, localSave, restore } from './game/storage.ts';
 import { watchOtherWindows } from './game/otherWindows.ts';
@@ -31,7 +33,7 @@ import { installCrashHandler, reportCrash } from './ui/crash.ts';
 import { androidUpdates, desktopUpdates, webUpdates, type DesktopUpdates, type UpdateHook } from './ui/updates.ts';
 import { registerSW } from 'virtual:pwa-register';
 
-const WARNED_KEY = 'ultima5.iosWarned';
+const WARNED_KEY = storageKey('iosWarned');
 
 // Whatever breaks from here on is said, with a way out (crash.ts): the apps have no reload button of the browser's.
 installCrashHandler();
@@ -103,7 +105,7 @@ interface AndroidPlugins {
 }
 
 /** The version the Android app last told the player of (ui/updates.ts androidUpdates). */
-const UPDATE_TOLD_KEY = 'ultima5.updateTold';
+const UPDATE_TOLD_KEY = storageKey('updateTold');
 
 /**
  * What the page keeps is kept: ask the browser not to evict it, and warn an iOS tab of WebKit's seven days - in the
@@ -374,7 +376,7 @@ async function start(): Promise<void> {
     const dev = await import('./game/devStarts.ts');
     if (battle[1] === 'arena') {
       // A save loaded in the fight (the Pause menu's) is gone on from, as the main loop goes on from it (run.ts).
-      const { Relocate } = await import('./game/cheats.ts');
+      const { Relocate } = await import('./game/relocate.ts');
       try {
         await dev.startArena(g, Number(battle[2]));
       } catch (e) {

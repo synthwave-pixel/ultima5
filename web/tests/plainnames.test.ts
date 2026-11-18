@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { plainName } from '../src/game/menu.ts';
+import { plainName } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 

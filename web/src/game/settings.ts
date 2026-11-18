@@ -6,6 +6,7 @@
  * each play as they like; with no character, the machine's.
  */
 
+import { storageKey } from '../brand.ts';
 import { INPUT_PACE_NAMES, type InputPace } from '../ui/holds.ts';
 import type { Suite } from '../audio/sfxKeys.ts';
 import type { Soundtrack } from '../audio/soundtracks.ts';
@@ -253,7 +254,7 @@ export const TILES_NAMES: Record<Tiles, string> = {
 };
 
 /** The settings in use with no character: a fresh machine's, or the last character's once they are deleted. */
-export const SETTINGS_KEY = 'ultima5.settings';
+export const SETTINGS_KEY = storageKey('settings');
 
 /** Where the settings in use are kept: the chosen character's, or the machine's with none chosen. */
 function settingsKey(): string {

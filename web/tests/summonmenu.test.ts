@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { attackCommand, charm, enemy } from '../src/game/combat.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { Pad } from '../src/game/io.ts';
-import { commandMenu, contextual } from '../src/game/menu.ts';
+import { commandMenu, contextual } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitCommand, plainName, playWidth } from '../src/game/menu.ts';
+import { fitCommand, plainName, playWidth } from '../src/game/offers.ts';
 import { SPELL_EFFECTS } from '../src/game/magic.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { itemLabel } from '../src/game/zstats.ts';

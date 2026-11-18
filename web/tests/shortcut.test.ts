@@ -112,7 +112,7 @@ describe('shortcut casts', () => {
 
   it('puts each spell the moment calls for on a line of the command menu', async () => {
     const { g } = ready();
-    const { contextual } = await import('../src/game/menu.ts');
+    const { contextual } = await import('../src/game/offers.ts');
     g.commandPrompt = 'outdoors';
     g.s.members[1].hp = g.s.members[1].maxHp - 3;
     g.s.members[2].status = Status.Poisoned;

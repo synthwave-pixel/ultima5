@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { contextual } from '../src/game/menu.ts';
+import { contextual } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown } from '../src/game/town.ts';
 import { T } from '../src/game/tiles.ts';

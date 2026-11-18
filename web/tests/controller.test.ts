@@ -66,7 +66,7 @@ describe('playing with a controller alone', () => {
   it("can yell a Shadowlord's name once it has been heard, and not before", async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
-    const { askWord } = await import('../src/game/menu.ts');
+    const { askWord } = await import('../src/game/talkMenus.ts');
     const names = g.data.table(0x444a, 3);
     p.keys.push(Pad.A);
     expect(await askWord(g, 0x1e, 'Yell', names)).toBe(''); // only "Say nothing" to choose
@@ -78,7 +78,7 @@ describe('playing with a controller alone', () => {
   it('answers a question with a word it listens for that has been heard, or else that it knows not', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
-    const { answerMenu } = await import('../src/game/menu.ts');
+    const { answerMenu } = await import('../src/game/talkMenus.ts');
     // The password is not a yes-or-no question: nothing heard fits it, so there is only knowing not.
     p.keys.push(Pad.A);
     expect(await answerMenu(g, ['dawn'])).toBe('I KNOW NOT');
@@ -95,7 +95,7 @@ describe('playing with a controller alone', () => {
   it('offers yes and no where a question listens for either, and a way out of one asked again', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
-    const { answerMenu, LEAVE } = await import('../src/game/menu.ts');
+    const { answerMenu, LEAVE } = await import('../src/game/talkMenus.ts');
     let labels: string[] = [];
     p.next = () => {
       labels = g.menuShown?.labels ?? labels;
@@ -118,7 +118,7 @@ describe('playing with a controller alone', () => {
   it('does not take a longer word for a short mantra', async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
-    const { askWord } = await import('../src/game/menu.ts');
+    const { askWord } = await import('../src/game/talkMenus.ts');
     const mantras = g.data.table(0x1f5e, 8);
     g.words.learn(g, 'There is much to summon, and a rat behind.'); // much, rat, summon: none of them Mu, Ra or Summ
     p.keys.push(Pad.A);

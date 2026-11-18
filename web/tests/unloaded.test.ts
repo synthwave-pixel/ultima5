@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { autoKey } from '../src/game/autocombat.ts';
 import { attackCommand, enemy, snapTargets } from '../src/game/combat.ts';
-import { contextual } from '../src/game/menu.ts';
+import { contextual } from '../src/game/offers.ts';
 import { switchWeapon } from '../src/game/switchWeapon.ts';
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';

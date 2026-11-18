@@ -8,6 +8,7 @@
  * ui/pageHooks.ts).
  */
 
+import { GAME_ID } from '../brand.ts';
 import { kept } from './keyStore.ts';
 import { charKey, chooseCharacter, MAX_CHARACTERS, newCharacter } from './characters.ts';
 import type { Game } from './game.ts';
@@ -112,7 +113,7 @@ export function exportName(when = new Date(), who = ''): string {
   const two = (n: number): string => String(n).padStart(2, '0');
   const day = `${when.getFullYear()}${two(when.getMonth() + 1)}${two(when.getDate())}`;
   const name = who.replace(/[^A-Za-z0-9]/g, '');
-  return `ultima5-${name ? `${name}-` : ''}${day}-${two(when.getHours())}${two(when.getMinutes())}.json`;
+  return `${GAME_ID}-${name ? `${name}-` : ''}${day}-${two(when.getHours())}${two(when.getMinutes())}.json`;
 }
 
 /** A character, as a list of them names each: the Avatar's name ("Shalom"). */

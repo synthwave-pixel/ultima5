@@ -3,7 +3,7 @@ import { charm, damage, leaveArena, poison, putToSleep } from '../src/game/comba
 import { lootOffer } from '../src/game/loot.ts';
 import { CF } from '../src/game/game.ts';
 import { K, Pad, SOLO, SOLO_OFF } from '../src/game/io.ts';
-import { commandMenu } from '../src/game/menu.ts';
+import { commandMenu } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { Status } from '../src/game/save.ts';
 import { endSolo, setAutoCombat, startSolo } from '../src/game/solo.ts';

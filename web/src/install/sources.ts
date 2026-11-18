@@ -6,6 +6,7 @@
  * app's one bridge (desktop/scan.cjs); on Android, a folder the player picks (the app's GameFolder plugin).
  */
 
+import { storageKey } from '../brand.ts';
 import { REQUIRED } from './gameFiles.ts';
 import type { FoundCopy } from './scan.ts';
 import type { LineCheck, SteamStatus, SteamSwitched } from '../game/game.ts';
@@ -155,7 +156,7 @@ export interface ReportArgs {
   required: string[];
 }
 
-export const FILES_FROM_KEY = 'ultima5.filesFrom';
+export const FILES_FROM_KEY = storageKey('filesFrom');
 
 /** Records where the files just kept came from. Storage that will not take it leaves the copy 'unknown'. */
 export function noteFilesFrom(from: 'steam' | 'installer'): void {

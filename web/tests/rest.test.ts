@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { holeUpInBed, waitInTown } from '../src/game/cmds.ts';
 import { getHours } from '../src/game/input.ts';
 import { K, Pad } from '../src/game/io.ts';
-import { commandMenu, contextual } from '../src/game/menu.ts';
+import { commandMenu, contextual } from '../src/game/offers.ts';
 import { restOutcome, untilLine } from '../src/game/rest.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { Status } from '../src/game/save.ts';

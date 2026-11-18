@@ -358,7 +358,8 @@ export const POTION_COLOURS = [9, 14, 12, 10, 6, 13, 8, 15]; // blue, yellow, re
  * cast put first. To mix, every spell, in the game's order.
  */
 async function pickSpell(g: Game, casting: boolean, caster: number, mixing = false): Promise<number> {
-  const { choose, playRows, restoreView } = await import('./menu.ts');
+  const { choose, restoreView } = await import('./menu.ts');
+  const { playRows } = await import('./offers.ts');
   const s = g.s;
   // Each spell by what it does and the mixtures of it made ("Light x6"); greyed where it cannot be cast - or, mixing on a
   // controller (mixBySpell), where the party has not the reagents for one.

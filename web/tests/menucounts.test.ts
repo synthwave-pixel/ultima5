@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Pad } from '../src/game/io.ts';
-import { commandMenu } from '../src/game/menu.ts';
+import { commandMenu } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown } from '../src/game/town.ts';
 import { setTileAt } from '../src/game/world.ts';
