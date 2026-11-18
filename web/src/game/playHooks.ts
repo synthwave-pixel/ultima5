@@ -7,6 +7,7 @@
  */
 
 import { animating, drawVitals, updateFrame } from './frame.ts';
+import { pauseHere } from './input.ts';
 import type { Game } from './game.ts';
 import type { PlayHooks } from './gameCore.ts';
 import { merchantSpeaking } from './merchantSpeech.ts';
@@ -30,5 +31,6 @@ export function ultima5Play(g: Game): PlayHooks {
     },
     talkRows: () => (merchantSpeaking(g) ? talkMenu(g) : undefined),
     animating: () => animating(g),
+    pause: () => pauseHere(g),
   };
 }

@@ -147,6 +147,8 @@ export interface PlayHooks {
   restore?(): Promise<void>;
   talkRows?(): TalkRows | undefined;
   animating?(): () => void;
+  /** Start or Select pressed in a menu while in play: the game held, its Pause menu over the menu. */
+  pause?(): Promise<void>;
 }
 
 export class GameCore {

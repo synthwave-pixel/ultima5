@@ -7,6 +7,7 @@
  * line of text (ULTIMA_3b1c) and a number (ULTIMA_3b9e).
  */
 
+import type { GameCore } from './gameCore.ts';
 import { treasureLies } from './actors.ts';
 import { fieldWon } from './turn.ts';
 import { autoTitle, clearBorderTitle, borderTitle, drawVitals, invertMember, markTurn, updateFrame } from './frame.ts';
@@ -50,7 +51,7 @@ export function bumpInto(g: Game, command: number, dir: number): void {
  * ignored rather than doing something the player did not ask for. 0
  * means: wait for another key. [ and ] are the shoulders, LB and RB, with either input (a key no command has).
  */
-export function asPad(g: Game, k: number): number {
+export function asPad(g: GameCore, k: number): number {
   if (k === 0x5b) return Pad.LB;
   if (k === 0x5d) return Pad.RB;
   if (g.options.input !== 'controller' || k >= 0x100 || k < 0x20) return k;
@@ -93,7 +94,7 @@ export function asPad(g: Game, k: number): number {
  * backs out - and the letters, which are nobody's shortcuts in that mode,
  * do nothing.
  */
-export async function menuKey(g: Game, keep: number[] = [], idle?: () => void): Promise<number> {
+export async function menuKey(g: GameCore, keep: number[] = [], idle?: () => void): Promise<number> {
   if (g.beforeRead) await g.beforeRead();
   for (;;) {
     g.learnRead();
@@ -108,8 +109,8 @@ export async function menuKey(g: Game, keep: number[] = [], idle?: () => void): 
     noteBack(g, k);
     // Start or Select holds the game from any menu, as from the command prompt; the menu is drawn again after
     // (PAUSED). In the Pause menu, and what it opens, they back out of it, as ever.
-    if ((k === Pad.Start || k === Pad.Select) && g.inPlay && !g.paused) {
-      await pauseHere(g);
+    if ((k === Pad.Start || k === Pad.Select) && g.inPlay && !g.paused && g.play.pause) {
+      await g.play.pause();
       return PAUSED;
     }
     if (k !== 0) return k;
@@ -124,7 +125,7 @@ export const PAUSED = 0x1ff;
  * greyed there - a command part done is no game to keep (a potion taken before it is given to anyone) - and the
  * prompt left as it was.
  */
-async function pauseHere(g: Game): Promise<void> {
+export async function pauseHere(g: Game): Promise<void> {
   const { pauseMenu } = await import('./menu.ts');
   await pauseMenu(g, !g.commandPrompt);
 }
@@ -234,7 +235,7 @@ export function neediest(g: Game, need: Need = 'hurt'): number | undefined {
 }
 
 /** A B backing out, away from the command prompt: when, by the page's clock (Game.backAt). */
-function noteBack(g: Game, k: number): void {
+function noteBack(g: GameCore, k: number): void {
   if (k === Pad.B) g.backAt = g.p.now?.() ?? -Infinity;
 }
 

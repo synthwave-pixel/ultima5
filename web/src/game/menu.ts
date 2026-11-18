@@ -90,10 +90,10 @@ const NOTE_ROWS = 4;
 const BOX_NOTE_ROWS = 3;
 
 /** Wait for a key without the cursor (the menus draw their own highlight). */
-export const key = (g: Game): Promise<number> => menuKey(g);
+export const key = (g: GameCore): Promise<number> => menuKey(g);
 
 /** Put the map back as it was before a menu covered it. */
-export async function restoreView(g: Game): Promise<void> {
+export async function restoreView(g: GameCore): Promise<void> {
   g.draw.chromeBox?.(null);
   // The map drawn whole, the squares a townsman's box stands over too (they may hold what covered them); the box is
   // drawn again over it below.
@@ -126,7 +126,7 @@ let cols = WIDTH;
  * with two or three answers should not blot out the whole view (the
  * ultima3 port's placed windows). The text window is left selected.
  */
-export function box(g: Game, title: string, width: number, rows: number): void {
+export function box(g: GameCore, title: string, width: number, rows: number): void {
   const d = g.draw;
   const t = g.text;
   cols = Math.max(6, Math.min(WIDTH, width));
@@ -166,7 +166,7 @@ export function box(g: Game, title: string, width: number, rows: number): void {
  * text window is left selected. (box does this at the title; a screen in play that wants the title's arrangement, the
  * Appearance screen, asks for it.)
  */
-export function framedBox(g: Game, title: string, width: number, rows: number): void {
+export function framedBox(g: GameCore, title: string, width: number, rows: number): void {
   const t = g.text;
   cols = Math.max(6, Math.min(WIDTH, width));
   const head = title ? 2 : 0;
@@ -184,7 +184,7 @@ export function framedBox(g: Game, title: string, width: number, rows: number): 
  * pixels, inclusive), everything within cleared, and the Standard look's copper made of it and of nothing else on
  * the screen (the title's logo has the blue too).
  */
-function framed(g: Game, x1: number, y1: number, x2: number, y2: number): void {
+function framed(g: GameCore, x1: number, y1: number, x2: number, y2: number): void {
   const d = g.draw;
   d.pen = 0;
   d.fill(x1, y1, x2, y2);
@@ -224,7 +224,7 @@ export interface TalkRows {
  * centred as they are, its foot at the view's, as tall as its lines or the room `rows` leaves; no title. The text
  * window is left selected.
  */
-function talkBox(g: Game, width: number, lines: number, rows: TalkRows): void {
+function talkBox(g: GameCore, width: number, lines: number, rows: TalkRows): void {
   const d = g.draw;
   const t = g.text;
   // An even width, so it is centred to the pixel: the view's middle lies between two columns.
@@ -246,7 +246,7 @@ function talkBox(g: Game, width: number, lines: number, rows: TalkRows): void {
 }
 
 /** Draw a menu panel's frame and title - the map's square; the text window is left selected. */
-function panel(g: Game, title: string): void {
+function panel(g: GameCore, title: string): void {
   const d = g.draw;
   const t = g.text;
   cols = WIDTH;
@@ -265,7 +265,7 @@ function panel(g: Game, title: string): void {
 }
 
 /** One row of a list: its letter (when the list has them), its label, highlighted when chosen, gray when not to be had. */
-function row(g: Game, y: number, item: Item | undefined, chosen: boolean, lettered = true, width = cols): void {
+function row(g: GameCore, y: number, item: Item | undefined, chosen: boolean, lettered = true, width = cols): void {
   const t = g.text;
   const w = t.win;
   const letter = item?.key && item.key > 0x20 && item.key < 0x7f ? String.fromCharCode(item.key) : ' ';
@@ -284,7 +284,7 @@ function row(g: Game, y: number, item: Item | undefined, chosen: boolean, letter
  * A question with a few answers, in a box over the map; the view is put
  * back when it is answered. The index chosen, or -1 for B.
  */
-export async function ask(g: Game, title: string, labels: string[], start = 0): Promise<number> {
+export async function ask(g: GameCore, title: string, labels: string[], start = 0): Promise<number> {
   const at = await choose(
     g,
     title,
@@ -297,7 +297,7 @@ export async function ask(g: Game, title: string, labels: string[], start = 0): 
 }
 
 /** Yes or No, in a box; B is No, and Y and N answer it from any keyboard. */
-export async function askYesNo(g: Game): Promise<boolean> {
+export async function askYesNo(g: GameCore): Promise<boolean> {
   const at = await choose(
     g,
     '',
@@ -325,7 +325,7 @@ export async function askYesNo(g: Game): Promise<boolean> {
  * when B leaves it, so a level is heard as it turns and is as it was after.
  */
 export async function amount(
-  g: Game,
+  g: GameCore,
   low: number,
   high: number,
   start = low,
@@ -397,7 +397,7 @@ export async function amount(
  * The arrows at the right of a list too long for its box, where there are more lines above (on its first line) and
  * below (on its last) - in grey, as the title menu has them (intro.ts).
  */
-function scrollMarks(g: Game, rows: number, above: boolean, below: boolean): void {
+function scrollMarks(g: GameCore, rows: number, above: boolean, below: boolean): void {
   const t = g.text;
   const fg = t.win.fg;
   t.win.fg = Colour.lightGray;
@@ -415,7 +415,7 @@ function scrollMarks(g: Game, rows: number, above: boolean, below: boolean): voi
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
-export async function choose(g: Game, title: string, items: Item[], start = 0, boxed = false, talkRows?: TalkRows): Promise<number> {
+export async function choose(g: GameCore, title: string, items: Item[], start = 0, boxed = false, talkRows?: TalkRows): Promise<number> {
   // What was said for the Dialog setting's box shown first: the box drawn before the menu, not over it - and a list
   // low in the view, as a townsman's talk has it, the merchant's words in sight above it (merchantSpeech.ts).
   if (g.beforeRead) await g.beforeRead();
@@ -585,7 +585,7 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
  * column to its own side, so that a long word on one side has the room the other's short one leaves. Up and down go
  * a row (and wrap), left and right across it; A chooses, B goes back. The index chosen, or -1.
  */
-export async function chooseTwoColumns(g: Game, title: string, items: Item[], start = 0): Promise<number> {
+export async function chooseTwoColumns(g: GameCore, title: string, items: Item[], start = 0): Promise<number> {
   if (g.beforeRead) await g.beforeRead();
   const t = g.text;
   const was = t.current;
@@ -661,7 +661,7 @@ export interface Page {
    * panel's top-left letter, `put` a letter or a word in a colour of its own at a letter's place (column, row; row 0
    * the title's).
    */
-  picture?: (g: Game, at: { x0: number; y0: number; put: (x: number, y: number, text: string, fg?: number) => void }) => void;
+  picture?: (g: GameCore, at: { x0: number; y0: number; put: (x: number, y: number, text: string, fg?: number) => void }) => void;
 }
 
 /** The lines a page holds, under its title. */
@@ -673,7 +673,7 @@ export const PAGE_WIDTH = WIDTH;
  * Pages over the map, one at a time (the ultima3 port's Help): A, Enter or right turns to the next, and past the last
  * closes; left goes back; B or Escape closes. The title counts the pages; the keys go unsaid, as a menu's do.
  */
-export async function showPages(g: Game, pages: Page[]): Promise<void> {
+export async function showPages(g: GameCore, pages: Page[]): Promise<void> {
   const t = g.text;
   const was = t.current;
   let i = 0;
@@ -708,7 +708,7 @@ export async function showPages(g: Game, pages: Page[]): Promise<void> {
  * closes it and is returned. A line may have a colour of its own (`colours`, by line). Text longer than the panel
  * says at its foot how to move through it.
  */
-export async function showText(g: Game, title: string, lines: string[], colours: (number | undefined)[] = []): Promise<number> {
+export async function showText(g: GameCore, title: string, lines: string[], colours: (number | undefined)[] = []): Promise<number> {
   const t = g.text;
   const was = t.current;
   const long = lines.length > HEIGHT - 3;
@@ -792,7 +792,7 @@ const BUTTONS = new Set<number>(Object.values(Pad));
  * too much. They go through the same effects as the game's own sounds, so
  * each suite voices them its way and Upgrade (2001) as the PC speaker.
  */
-export function menuSound(g: Game, what: 'move' | 'back'): void {
+export function menuSound(g: GameCore, what: 'move' | 'back'): void {
   if (g.soundOff) return;
   // The game's own effects, by the parameters the original passes for them, so each set voices them its way.
   if (what === 'move')
@@ -1081,7 +1081,7 @@ const SOUND_NOTES: Record<SoundChoice, string> = {
 };
 
 /** The Sound: the music and its effects together (Audio). */
-function soundLine(g: Game): Setting {
+function soundLine(g: GameCore): Setting {
   const o = g.options;
   return {
     label: `Sound: ${SOUND_NAMES[o.soundChoice]}`,
@@ -1164,7 +1164,7 @@ const FONT_NOTES: Record<FontChoice, string> = {
  * font (any font in either interface), where dialog is shown, scanlines, smooth motion and the Retro interface's
  * dungeon map. The Pause menu's, and Settings' at the title.
  */
-export function appearanceLines(g: GameCore): Setting[] {
+export function appearanceLines(g: Game): Setting[] {
   const o = g.options;
   const pc = o.tileSet !== 'standard';
   return [
@@ -1423,7 +1423,7 @@ function gameplayLine(g: Game, inPlay = false): Setting {
 }
 
 /** A yes-or-no question as a menu. */
-export async function confirm(g: Game, question: string, boxed = false): Promise<boolean> {
+export async function confirm(g: GameCore, question: string, boxed = false): Promise<boolean> {
   const lines = wrap(question);
   const items: Item[] = [
     ...lines.map((l) => ({ label: l, enabled: false })),
@@ -1504,7 +1504,7 @@ const SPECIAL = ['Space', 'Del', 'Done', 'Cancel'];
  * goes into the word, Backspace rubs out, and a keyboard's Enter is Done
  * where the keyboard is not read as a controller.
  */
-export async function letterPicker(g: Game, mixedCase = false, restore = true, typed = false): Promise<number[]> {
+export async function letterPicker(g: GameCore, mixedCase = false, restore = true, typed = false): Promise<number[]> {
   const t = g.text;
   const was = t.current;
   // At the title the picker is a panel over the screen, put back as it was by its caller: the boxes after it are the
