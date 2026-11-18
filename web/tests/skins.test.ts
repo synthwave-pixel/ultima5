@@ -25,6 +25,7 @@ import {
   skinFromSheet,
   tintSheet,
   X68K_PALETTE,
+  X68K_SOFT,
   ownPiece,
   C64_PALETTE,
   APPLE_PALETTE,
@@ -297,10 +298,9 @@ describe('the Sharp X68k skin', () => {
     for (const v of px) expect(x68k.has(v)).toBe(true);
   });
 
-  it('draw its lines, its sign and its frame in its eight colours', () => {
-    const { ink, sign, frame } = SKIN_SPECS.x68k!.colours;
-    for (const v of ink) expect(x68k.has(v)).toBe(true);
-    for (const c of [sign.plate, sign.edge, sign.ink, frame.blue, frame.white]) expect(X68K_PALETTE).toContain(c);
+  it('draw its frame in its eight colours (its lines and sign shown softer, as its tiles: x68kTone.test.ts)', () => {
+    const { frame } = SKIN_SPECS.x68k!.colours;
+    for (const c of [frame.blue, frame.white]) expect(X68K_PALETTE).toContain(c);
   });
 
   const png = decodePng(readFileSync(new URL('../public/graphics/x68k-u5-dungeon.png', import.meta.url)));
@@ -856,7 +856,7 @@ describe("the Enhanced sign in each look's colours", () => {
   const palettes: Record<string, number[]> = {
     'pc-ega': [0x000000, 0x5555ff, 0xffffff],
     'pc-cga': [...CGA_COLOURS],
-    x68k: [...X68K_PALETTE],
+    x68k: [0x000000, ...X68K_SOFT], // shown softer (x68kTone.test.ts), its plate black as every look's
     c64: [...C64],
     apple2: [...APPLE_COLOURS],
   };

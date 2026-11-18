@@ -15,6 +15,8 @@
 import { TileAnimator } from './animate.ts';
 import { HI } from './framebuffer.ts';
 import { ORIGINALS, tileOf } from './originals.ts';
+import { type SheetTone, toned } from './sheetTone.ts';
+import { X68K_TONE } from './skins.ts';
 import { CELL, type Manifest, SHEET_COLUMNS, StandardArt } from './standardArt.ts';
 
 const N = 16;
@@ -44,6 +46,16 @@ export interface SheetSpec {
    * its sea (the CGA's cyan rivers, its magenta sea); null or none to draw it as the sea is.
    */
   flowTint?: (t: number) => number | null;
+  /**
+   * How its colours are shown (sheetTone.ts), laid on last as each square is drawn: what is found by colour (the
+   * water, the fire) is found in the sheet's own. None: as the sheet has them.
+   */
+  tone?: SheetTone;
+}
+
+/** A cell as `spec`'s tone shows it, its own pixels blended as they are (each `CELL / spec.w` of the cell's across). */
+function shown(spec: SheetSpec, cell: Uint32Array): Uint32Array {
+  return spec.tone ? toned(cell, CELL, CELL, spec.tone, CELL / spec.w) : cell;
 }
 
 /** 0xRRGGBB as RGBA in memory order, opaque. */
@@ -230,7 +242,7 @@ function animated(
             out[i] = water[((y - roll + CELL) % CELL) * CELL + x];
         }
     }
-    return out;
+    return shown(spec, out);
   };
 }
 
@@ -254,7 +266,7 @@ export function sheetArt(
   // Each square its own tile, as the computer drew it: none of the Modern look's land drawn from the map over it.
   art.landFromMap = false;
   if (lettering) [art.font, art.runes, art.caps] = [lettering.font, lettering.runes, lettering.caps];
-  for (let t = 0; t < 512; t++) art.put(t, cellOf(spec, sheet, width, t));
+  for (let t = 0; t < 512; t++) art.put(t, shown(spec, cellOf(spec, sheet, width, t)));
   art.useDerived(tiles, [...FLOWS, ...(spec.flags?.keys() ?? []), ...FLICKERS], animated(spec, sheet, width, tiles));
   return art;
 }
@@ -310,6 +322,8 @@ export const X68K_SHEET: SheetSpec = {
   ground: 'clear',
   squares: false,
   water: [0x0000ff, 0x00ffff],
+  // Shown softer than the X68000's full-on colours, harsh on a modern screen (skins.ts X68K_TONE).
+  tone: X68K_TONE,
   fire: fireOf(
     new Map<number, number[]>([
       ...TORCHES.map((t): [number, number[]] => [t, [0xffff00]]),

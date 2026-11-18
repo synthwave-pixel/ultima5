@@ -94,7 +94,7 @@ export async function loadSkin(kind: Tiles): Promise<Skin | null> {
   // A sheet not to be had (offline, its cache not yet filled) fails, not null: the screen keeps a null as made, and
   // would never ask again (Screen.chooseSkin forgets a failure, and tries again when the look is next chosen).
   if (!got) throw new Error(`no ${spec.sheet}`);
-  return skinFromSheet(kind, spec.tint === undefined ? got.sheet : tintSheet(got.sheet, spec.tint), got.width, spec.colours);
+  return skinFromSheet(kind, spec.tint === undefined ? got.sheet : tintSheet(got.sheet, spec.tint), got.width, spec.colours, spec.tone);
 }
 
 /**

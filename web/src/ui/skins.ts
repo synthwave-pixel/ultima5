@@ -16,6 +16,7 @@ import type { Picture } from '../data/images.ts';
 import { EGA_PALETTE } from '../data/tiles.ts';
 import type { Tiles } from '../game/settings.ts';
 import { Colour, RUNE_RED } from './colours.ts';
+import { type SheetTone, toned, toneOf } from './sheetTone.ts';
 
 /** The files the dungeon's pictures come from, by their names less the extension. */
 export type PieceFile = 'DNG1' | 'DNG2' | 'DNG3' | 'ITEMS' | 'MON0' | 'MON1' | 'MON2' | 'MON3' | 'MON4' | 'MON5' | 'MON6' | 'MON7';
@@ -155,7 +156,13 @@ export interface Skin {
  * A skin from its sheet (RGBA in memory order, `width` wide, laid out as PIECES - at a whole multiple of the layout's
  * size, the X68000's twice it, each piece's place as many times larger) and its colours.
  */
-export function skinFromSheet(name: Tiles, sheet: Uint32Array, width: number, colours: Pick<Skin, 'ink' | 'sign' | 'frame'>): Skin {
+export function skinFromSheet(
+  name: Tiles,
+  sheet: Uint32Array,
+  width: number,
+  colours: Pick<Skin, 'ink' | 'sign' | 'frame'>,
+  tone?: SheetTone,
+): Skin {
   const cut = new Map<string, Uint32Array>();
   const k = Math.max(1, Math.round(width / SKIN_SHEET_W));
   return {
@@ -171,6 +178,8 @@ export function skinFromSheet(name: Tiles, sheet: Uint32Array, width: number, co
       if (!px) {
         px = new Uint32Array(w * h);
         for (let y = 0; y < h; y++) px.set(sheet.subarray((y0 + y) * width + x0, (y0 + y) * width + x0 + w), y * w);
+        // In the set's tone, where it has one (the X68k's), each piece alone: none blended with the next in the sheet.
+        if (tone) px = toned(px, w, h, tone);
         cut.set(key, px);
       }
       return { px, w, h };
@@ -207,6 +216,15 @@ export class SkinOvers {
 
 /** The Sharp X68000's eight colours, as its tiles have them (0xRRGGBB). */
 export const X68K_PALETTE = [0x000000, 0x0000ff, 0xff0000, 0xff00ff, 0x00ff00, 0x00ffff, 0xffff00, 0xffffff] as const;
+/**
+ * The eight as the set shows them (sheetTone.ts): the text palette's full-on colours, harsh on a modern screen, as
+ * gentler ones - in X68K_PALETTE's order.
+ */
+export const X68K_SOFT = [0x0c0e0c, 0x3058c0, 0xc8442c, 0xa0508c, 0x44a03c, 0x6cc0cc, 0xe8c864, 0xece8dc] as const;
+/** The Sharp X68k set's tone: its eight as X68K_SOFT, each pixel blended with its neighbours across. */
+export const X68K_TONE: SheetTone = toneOf(X68K_PALETTE, X68K_SOFT, true);
+/** A colour of the eight (0xRRGGBB) as the set shows it. */
+const x68kSoft = (c: number): number => X68K_SOFT[X68K_PALETTE.indexOf(c as (typeof X68K_PALETTE)[number])] ?? c;
 
 /** The C64's sixteen colours (the "Pepto" palette, as tools/art/c64.ts C64). */
 export const C64_PALETTE = [
@@ -312,7 +330,9 @@ export function recolouredPiece(v: Picture, palette: readonly number[], dither =
  * Each machine's skin as shipped (public/graphics): its sheet, laid out as PIECES; a monochrome sheet's lit pixels
  * shown in `tint` (0xRRGGBB, the Apple //e's green, the //c's white); and its colours. Modern PC and PC EGA have none.
  */
-export const SKIN_SPECS: Partial<Record<Tiles, { sheet: string; tint?: number; colours: Pick<Skin, 'ink' | 'sign' | 'frame'> }>> = {
+export const SKIN_SPECS: Partial<
+  Record<Tiles, { sheet: string; tint?: number; colours: Pick<Skin, 'ink' | 'sign' | 'frame'>; tone?: SheetTone }>
+> = {
   // Its own dungeon off its disk 2 (tools/art/c64Dungeon.ts).
   c64: {
     sheet: 'c64-u5-dungeon.png',
@@ -337,14 +357,16 @@ export const SKIN_SPECS: Partial<Record<Tiles, { sheet: string; tint?: number; c
   },
   apple2e: monoSkin(APPLE_GREEN),
   apple2c: monoSkin(APPLE_WHITE),
-  // Its own dungeon off its disk 1 (tools/art/x68kDungeon.ts), in its text palette's colours.
+  // Its own dungeon off its disk 1 (tools/art/x68kDungeon.ts), in its text palette's colours shown softer, as its tiles
+  // are (X68K_TONE) - its lines and sign too; its frame the X68000's own blue and white, as the game drew it.
   x68k: {
     sheet: 'x68k-u5-dungeon.png',
     colours: {
-      ink: inkOf(X68K_PALETTE),
-      sign: { plate: 0x000000, edge: 0x0000ff, ink: 0xffffff },
+      ink: inkOf(X68K_PALETTE).map((v) => X68K_TONE.colours.get(v) ?? v),
+      sign: { plate: 0x000000, edge: x68kSoft(0x0000ff), ink: x68kSoft(0xffffff) }, // black, every look's plate
       frame: { blue: 0x0000ff, white: 0xffffff },
     },
+    tone: X68K_TONE,
   },
   'pc-cga': {
     sheet: 'pc-cga-u5-dungeon.png',
