@@ -451,7 +451,7 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
       let key = k;
       // Enter is A too, but for Classic input in a dungeon, where it turns the party about as in 1988.
       const turns = where === 'dungeon' && g.options.input !== 'controller';
-      if (k === Pad.A || k === K.Tab || (k === K.Enter && !turns)) key = await menu.commandMenu(g);
+      if (k === Pad.A || k === K.Tab || (k === K.Enter && !turns)) key = await (await import('./offers.ts')).commandMenu(g);
       // B passes; on a won field it leaves, as Escape does, there being nothing to pass for - unless treasure lies
       // there still, which B must not walk away from by accident (Leave combat, at the head of the menu, does it on
       // purpose), or the field is one that cannot be left (Doom's last room), where B is the only pass there is.

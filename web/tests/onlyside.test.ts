@@ -56,7 +56,7 @@ describe('the one way a command could go', () => {
   });
 
   it('leaves Talk out of the command menu with no one in reach - none two squares off past a ladder', async () => {
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     const { Pad } = await import('../src/game/io.ts');
     const labels = async (g: Awaited<ReturnType<typeof town>>): Promise<string[]> => {
       let shown: string[] = [];

@@ -963,7 +963,7 @@ describe('a skiff rowed back to its ship, by controller', () => {
     journeyOnward(g);
     const s = g.s;
     const { freeActor, setActor } = await import('../src/game/actors.ts');
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0, x: 133, y: 150 });
@@ -993,7 +993,7 @@ describe('a magic carpet where it lies, by controller', () => {
     journeyOnward(g);
     const s = g.s;
     const { freeActor, setActor } = await import('../src/game/actors.ts');
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0 });

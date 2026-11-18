@@ -6,7 +6,7 @@ import { holdFullPanel } from '../src/game/layout.ts';
 import { castCommand, mixCommand, SPELL_EFFECTS } from '../src/game/magic.ts';
 import { isCaster, restedMp } from '../src/game/rest.ts';
 import { drawSpellCard, makeable, spellWords } from '../src/game/magicPanel.ts';
-import { commandMenu } from '../src/game/menu.ts';
+import { commandMenu } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { Colour } from '../src/ui/colours.ts';
 import { newGame } from './helpers.ts';

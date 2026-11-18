@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
-import { commandMenu } from '../src/game/menu.ts';
+import { commandMenu } from '../src/game/offers.ts';
 import { selectSpell, shortcutCasts } from '../src/game/magic.ts';
 import {
   getOffer,

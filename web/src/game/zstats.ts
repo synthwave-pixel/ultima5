@@ -834,7 +834,8 @@ const LONG_ITEM_NAMES: Record<string, string> = {
  */
 async function pickFromMenu(g: Game, m: number, mode: number): Promise<number> {
   const s = g.s;
-  const { choose, playRows, playWidth, restoreView } = await import('./menu.ts');
+  const { choose, restoreView } = await import('./menu.ts');
+  const { playRows, playWidth } = await import('./offers.ts');
   const width = playWidth(g, false);
   // The counts as the lists show them, each pass afresh: readying one moves them (the ammunition's whole: ammo.ts).
   const countsNow = (): ArrayLike<number> => (mode === 0x52 ? armCounts(g) : itemCounts(g));

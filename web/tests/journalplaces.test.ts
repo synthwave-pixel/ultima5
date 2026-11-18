@@ -102,7 +102,7 @@ describe("the journal's places", () => {
 
 describe("the journal's cards' titles", () => {
   it('fit the panel border, every place and every piece of equipment', async () => {
-    const { cardTitle } = await import('../src/game/menu.ts');
+    const { cardTitle } = await import('../src/game/journalScreen.ts');
     expect(cardTitle('Shrines')).toBe('Shrines:');
     expect(cardTitle("Buccaneer's Den")).toBe("Buccaneer's:");
     expect(cardTitle('Sandalwood box')).toBe('Sandalwood:');

@@ -159,7 +159,7 @@ describe('the Pause menu', () => {
     expect(labels.at(-1)).toContain('Auto combat: Allies');
     expect(labels.at(-1)).toEqual(expect.arrayContaining(['Resume', 'Save game', 'Save and quit']));
 
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     for (const where of ['town', 'combat'] as const) {
       g.commandPrompt = where;
       let offered: string[] = [];

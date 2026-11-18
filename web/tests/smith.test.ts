@@ -31,7 +31,7 @@ describe('Smith the talking horse', () => {
   });
 
   it('is offered Board beside him, and will not be ridden: "Nay!", as 1988 has him', async () => {
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     const { g, p } = await bySmith();
     let shown: string[] = [];
     p.next = () => {
@@ -51,7 +51,7 @@ describe('Smith the talking horse', () => {
   });
 
   it('offers no Board beside a horse who has nothing to say: one is boarded where it stands', async () => {
-    const { commandMenu } = await import('../src/game/menu.ts');
+    const { commandMenu } = await import('../src/game/offers.ts');
     const { g, p } = await bySmith();
     const smith = g.s.npcs.findIndex((n) => n.fa === 13);
     g.s.npcs[smith].fa = 0;
