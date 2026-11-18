@@ -5,21 +5,9 @@ import { Relocate } from '../src/game/cheats.ts';
 import type { Game } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { Save } from '../src/game/save.ts';
-import {
-  autosave,
-  EARLIER,
-  fromBase64,
-  localSave,
-  parseSave,
-  SAVE_KEY,
-  saveCommand,
-  saveKeys,
-  unpackSave,
-  savedWhen,
-  savedWhere,
-  serialize,
-  type SaveData,
-} from '../src/game/storage.ts';
+import { autosave, EARLIER, localSave, SAVE_KEY, saveKeys, unpackSave, savedWhen } from '../src/game/storage.ts';
+import { parseSave, saveCommand, savedWhere, serialize, type SaveData } from '../src/game/ultima5Saves.ts';
+import { fromBase64 } from '../src/game/saveCodec.ts';
 import { newGame } from './helpers.ts';
 
 /**
@@ -115,7 +103,7 @@ describe('a save', () => {
     // Every write to the slot spoiled, the last's own put back too: its copy stands for it.
     fault = (k, v) => (k === key ? v.slice(0, v.length >> 1) : undefined);
     expect(localSave.write(g)).toBe(false);
-    expect(goldOf(localSave.read())).toBe(100);
+    expect(goldOf(localSave.read<SaveData>())).toBe(100);
     fault = null;
     expect(localSave.write(g)).toBe(true);
     expect(goldOf(store.get(lastKey()))).toBe(500);
@@ -138,7 +126,7 @@ describe('a save', () => {
     expect(localSave.evicted - evicted).toBeGreaterThan(0);
     expect(goldOf(store.get(lastKey()))).toBe(6);
     expect(goldOf(store.get(earlierKeys()[0]))).toBe(5);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([6, 5, ...[4, 3].slice(0, earlierKeys().length - 1)]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([6, 5, ...[4, 3].slice(0, earlierKeys().length - 1)]);
     // No room even for the copy: nothing written, nothing lost.
     room = 10;
     const before = new Map(store);
@@ -169,7 +157,7 @@ describe('the earlier saves', () => {
       g.s.gold = 100 + i;
       expect(localSave.write(g)).toBe(true);
     }
-    const kept = localSave.all();
+    const kept = localSave.all<SaveData>();
     expect(kept).toHaveLength(EARLIER + 1);
     expect(kept.map((k) => goldOf(k.data))).toEqual([111, 110, 109, 108, 107, 106, 105, 104]);
     expect(kept.map((k) => k.data.written)).toEqual([...kept.map((k) => k.data.written)].sort((a, b) => b - a));
@@ -221,24 +209,24 @@ describe('the earlier saves', () => {
     g.s.gold = 200;
     localSave.write(g);
     store.set(lastKey(), '{"game":"ultima5","version":1,"save":"AAA'); // cut short
-    expect(goldOf(localSave.read())).toBe(100);
-    expect(localSave.all()).toHaveLength(1);
+    expect(goldOf(localSave.read<SaveData>())).toBe(100);
+    expect(localSave.all<SaveData>()).toHaveLength(1);
     // Written again: the damaged slot is not kept among the earlier saves.
     g.s.gold = 300;
     expect(localSave.write(g)).toBe(true);
     expect(earlierKeys()).toHaveLength(1);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([300, 100]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([300, 100]);
   });
 
   it('begin with the one save of a game from before them (from before characters, too), which loads as it did', () => {
     const old = JSON.stringify(serialize(game(42).g));
     store.set(SAVE_KEY, old);
-    expect(localSave.read()?.save).toBe(parseSave(old).save);
-    expect(localSave.all()).toHaveLength(1);
+    expect(localSave.read<SaveData>()?.save).toBe(parseSave(old).save);
+    expect(localSave.all<SaveData>()).toHaveLength(1);
     const { g } = game(43);
     expect(localSave.write(g)).toBe(true);
     expect(unpackSave(store.get(earlierKeys()[0])!)).toBe(old);
-    expect(localSave.all().map((k) => goldOf(k.data))).toEqual([43, 42]);
+    expect(localSave.all<SaveData>().map((k) => goldOf(k.data))).toEqual([43, 42]);
   });
 });
 

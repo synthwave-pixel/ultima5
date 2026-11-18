@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { campOutdoors, OLD_MAN_EVERY } from '../src/game/combat.ts';
-import { serialize, restore } from '../src/game/storage.ts';
+import { serialize, restore } from '../src/game/ultima5Saves.ts';
 import { gameDay } from '../src/game/time.ts';
 import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';

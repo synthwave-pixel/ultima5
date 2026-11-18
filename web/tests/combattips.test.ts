@@ -62,7 +62,7 @@ describe("a fight's tips", () => {
   });
 
   it('are kept with the saved game, a new character beginning them afresh', async () => {
-    const { restore, serialize } = await import('../src/game/storage.ts');
+    const { restore, serialize } = await import('../src/game/ultima5Saves.ts');
     const g = begun();
     combatTip(g);
     const saved = serialize(g);
@@ -107,7 +107,7 @@ describe("a fight's tips", () => {
     expect(third).toContain('Tip:PressLB/RBtocyclesnaptargets!');
     // Every tip given: no fight after has one, nor does the game taken up again from its save.
     for (let n = 0; n < 3; n++) expect(await fight(g, p)).not.toContain('Tip:');
-    const { restore, serialize } = await import('../src/game/storage.ts');
+    const { restore, serialize } = await import('../src/game/ultima5Saves.ts');
     const again = newGame(1);
     journeyOnward(again.g);
     restore(again.g, serialize(g));

@@ -71,7 +71,8 @@ async function dying(g: Game): Promise<void> {
   // The port's (from the ultima3 port): the choice to take up the last save again instead, or one of the seven before
   // it - each greyed, and said, where there is none - each line saying what it does. A choice, not a question to be
   // backed out of: B is no answer (from the earlier saves' list, it is back to this).
-  const { chooseSave, localSave, savedWhen, savedWhere, takeUp } = await import('./storage.ts');
+  const { chooseSave, localSave, savedWhen } = await import('./storage.ts');
+  const { savedWhere, takeUp } = await import('./ultima5Saves.ts');
   const kept = localSave.all();
   const last = kept[0] ?? null;
   const earlier = kept.slice(1);

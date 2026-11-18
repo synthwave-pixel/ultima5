@@ -14,21 +14,22 @@
 import { GAME_ID_PATTERN, storageKey } from '../brand.ts';
 import { CHARACTERS_KEY, charKey, listedIn, listText } from './characters.ts';
 import { isSteamKey } from './keyStore.ts';
-import { EARLIER, parsed, parseIndex, saveKeys, type SaveData } from './storage.ts';
+import { EARLIER, parsed, parseIndex, saveKeys } from './storage.ts';
+import { type StoredSave } from './saveCodec.ts';
 
 type Keys = Record<string, string>;
 
 /** A character played on both sides apart: their last save on the side copied from, and on the receiving side. */
 export interface Clash {
   id: string;
-  from: SaveData;
-  to: SaveData;
+  from: StoredSave;
+  to: StoredSave;
 }
 
 /** One side's own of a character: every key of theirs Steam keeps, and their saves that read, newest first. */
 interface Held {
   keys: Keys;
-  saves: { key: string; data: SaveData }[];
+  saves: { key: string; data: StoredSave }[];
 }
 
 /** What a copy does to the receiving side: the keys written, and the earlier saves it put out of the index. */
@@ -82,10 +83,10 @@ function held(side: Keys, id: string): Held {
  * The same save: written at the same moment, of the same game. Not the text as kept, which differs for one save kept
  * packed on one side and as plain text on the other.
  */
-const same = (a: SaveData, b: SaveData): boolean => a.written === b.written && a.save === b.save;
+const same = (a: StoredSave, b: StoredSave): boolean => a.written === b.written && a.save === b.save;
 
 /** Whether `d` is among a side's saves. */
-const among = (d: SaveData, saves: Held['saves']): boolean => saves.some((s) => same(s.data, d));
+const among = (d: StoredSave, saves: Held['saves']): boolean => saves.some((s) => same(s.data, d));
 
 /** Whether `key` is one of character `id`'s saves or their index, not their settings or anything else of theirs. */
 function isSave(id: string, key: string): boolean {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward, runGame } from '../src/game/run.ts';
 import { localSave } from '../src/game/storage.ts';
@@ -25,7 +26,8 @@ describe('the game saves itself at doors', () => {
     const before = localSave.writes;
     const saved: { mapId: number; x: number; y: number }[] = [];
     const write = localSave.write.bind(localSave);
-    localSave.write = (game) => {
+    localSave.write = (core) => {
+      const game = core as Game;
       saved.push({ mapId: game.s.mapId, x: game.s.x, y: game.s.y });
       return write(game);
     };

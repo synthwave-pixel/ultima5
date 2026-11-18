@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chooseCharacter } from '../src/game/characters.ts';
 import { K } from '../src/game/io';
 import { wrap } from '../src/game/menu';
-import { SAVE_KEY, saveKeys, serialize, unpackSave } from '../src/game/storage';
+import { SAVE_KEY, saveKeys, unpackSave } from '../src/game/storage';
+import { serialize } from '../src/game/ultima5Saves.ts';
 import { asciiJson, exportGame, exportName, exportText, importGame, mendImport, type Transfer } from '../src/game/transfer';
-import { parseSave } from '../src/game/storage';
+import { parseSave } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers';
 
 /**

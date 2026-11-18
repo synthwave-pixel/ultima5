@@ -74,7 +74,7 @@ describe('the Tips', () => {
 describe('the pointer to the Tips', () => {
   it("is given on a new game's first turn, once, and never to a game saved before it", async () => {
     const { journeyOnward } = await import('../src/game/run.ts');
-    const { restore, serialize } = await import('../src/game/storage.ts');
+    const { restore, serialize } = await import('../src/game/ultima5Saves.ts');
     const { g, p } = newGame();
     g.tipsShown = new Set(); // as a new character leaves it (intro.ts createCharacter)
     journeyOnward(g);

@@ -27,7 +27,7 @@ import {
 } from './cmds.ts';
 import { getCommand, jimmyCommand, openCommand, searchCommand } from './items.ts';
 import { lookCommand, viewGem } from './look.ts';
-import { saveCommand } from './storage.ts';
+import { saveCommand } from './ultima5Saves.ts';
 import { tileAt } from './world.ts';
 import { readyCommand, ztatsCommand } from './zstats.ts';
 import { T } from './tiles.ts';

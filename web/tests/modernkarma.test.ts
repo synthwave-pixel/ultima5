@@ -13,7 +13,7 @@ import {
   PathState,
   POOLS,
 } from '../src/game/modernKarma.ts';
-import { restore, serialize } from '../src/game/storage.ts';
+import { restore, serialize } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers.ts';
 
 type G = ReturnType<typeof newGame>['g'];

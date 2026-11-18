@@ -3,7 +3,8 @@ import { chooseCharacter } from '../src/game/characters.ts';
 import { Intro, unmadeAvatar } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { Save } from '../src/game/save.ts';
-import { fromBase64, localSave } from '../src/game/storage.ts';
+import { localSave } from '../src/game/storage.ts';
+import { fromBase64 } from '../src/game/saveCodec.ts';
 import { newGame } from './helpers.ts';
 
 const store = new Map<string, string>();

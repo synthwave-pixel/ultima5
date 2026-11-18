@@ -4,7 +4,7 @@ import { HAIR, HUES, PEOPLE_SKIN } from '../src/game/appearance.ts';
 import { companionLook, dressingOfActor, PRESETS, talkName } from '../src/game/companions.ts';
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { parseSave, restore, serialize } from '../src/game/storage.ts';
+import { parseSave, restore, serialize } from '../src/game/ultima5Saves.ts';
 import { dress, labels, MASKS } from '../src/ui/avatarRegions.ts';
 import { indices, original } from '../src/ui/originals.ts';
 import { gameFiles, newGame } from './helpers.ts';

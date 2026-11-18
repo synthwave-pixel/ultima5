@@ -21,7 +21,8 @@ import { cardOf } from './characterMenu.ts';
 import type { CloudSaves, Game } from './game.ts';
 import { isSteamKey } from './keyStore.ts';
 import { choose, wrap, type Item } from './menu.ts';
-import { avatarName, SAVES_KEY } from './storage.ts';
+import { SAVES_KEY } from './storage.ts';
+import { avatarName } from './ultima5Saves.ts';
 import { CHARACTERS_KEY } from './characters.ts';
 
 type Keys = Record<string, string>;

@@ -5,6 +5,8 @@
  * installer), then start the game.
  */
 
+import { useSaves } from './game/saveCodec.ts';
+import { ultima5Saves } from './game/ultima5Saves.ts';
 import { storageKey } from './brand.ts';
 import { egaTileArt } from './ui/egaTiles.ts';
 import { CARVE_STYLES, type CarveStyle } from './ui/carve.ts';
@@ -19,7 +21,8 @@ import { Game } from './game/game.ts';
 import { runGame } from './game/run.ts';
 import { journeyOnward } from './game/playScreen.ts';
 import { Save } from './game/save.ts';
-import { currentCharacter, localSave, restore } from './game/storage.ts';
+import { currentCharacter, localSave } from './game/storage.ts';
+import { restore } from './game/ultima5Saves.ts';
 import { watchOtherWindows } from './game/otherWindows.ts';
 import { Intro, unmadeAvatar } from './game/intro.ts';
 import { Screen } from './ui/screen.ts';
@@ -249,6 +252,8 @@ async function start(): Promise<void> {
   // The tile art, while the game's files are found: all of it is had before the notice goes.
   const art = loadStandardArt(font);
   // Where the saves are kept, before anything reads one.
+  // How Ultima V's saves are kept (ultima5Saves.ts), before anything reads one; Game sets the same.
+  useSaves(ultima5Saves);
   chooseStore();
   const files = await gameFiles();
   await lettering;

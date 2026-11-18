@@ -10,7 +10,8 @@ import { cloudSaves, kept, useStore } from '../src/game/keyStore.ts';
 import { settingLines } from '../src/game/menu.ts';
 import { cloudByDefault } from '../src/game/cloudSwitch.ts';
 import { APPIMAGE_PAGE, ISSUES, steamMenu } from '../src/game/steamMenu.ts';
-import { localSave, saveKeys, serialize, type SaveData } from '../src/game/storage.ts';
+import { localSave, saveKeys } from '../src/game/storage.ts';
+import { serialize, type SaveData } from '../src/game/ultima5Saves.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
 
 /**
@@ -780,7 +781,7 @@ describe('Steam Cloud saves in the menu', () => {
     try {
       return characterIds().flatMap((id) => {
         chooseCharacter(id);
-        return localSave.all().map((k) => k.data);
+        return localSave.all<SaveData>().map((k) => k.data);
       });
     } finally {
       chooseCharacter(null);

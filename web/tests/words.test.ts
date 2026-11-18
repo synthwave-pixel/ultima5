@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { answersTo, KNOWN_FROM_THE_START, scriptKeywords, Vocabulary } from '../src/game/words.ts';
-import { serialize, restore } from '../src/game/storage.ts';
+import { serialize, restore } from '../src/game/ultima5Saves.ts';
 import { newGame } from './helpers.ts';
 
 /**

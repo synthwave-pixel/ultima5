@@ -20,7 +20,8 @@ import { addressedAsLady, customisable, DEFAULT_APPEARANCE } from './appearance.
 import { K, Pad, type Place, type Dressing } from './io.ts';
 import { introTune, playTune, Tune } from './music.ts';
 import { Save } from './save.ts';
-import { localSave, savedAvatar, savedDressing } from './storage.ts';
+import { localSave } from './storage.ts';
+import { savedAvatar, savedDressing } from './ultima5Saves.ts';
 import { chooseCharacter, newCharacter } from './characters.ts';
 import { saveOptions } from './settings.ts';
 import { TICK_MS } from './effects.ts';
