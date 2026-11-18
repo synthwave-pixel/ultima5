@@ -19,7 +19,8 @@ import { saysWord } from '../../src/game/cmds.ts';
 import { fixScript } from '../../src/game/talk.ts';
 import type { Game } from '../../src/game/game.ts';
 import { KEYWORD_LABELS } from '../../src/game/keywordLabels.ts';
-import { scriptSpeech, talksBackwards, townsfolkSaying, Vocabulary, wordRoot } from '../../src/game/words.ts';
+import { scriptSpeech, talksBackwards, Vocabulary, wordRoot } from '../../src/game/words.ts';
+import { townsfolkSaying } from '../../src/game/ultima5Lexicon.ts';
 import { analyse } from './analysis.ts';
 
 const TLK = ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK'];

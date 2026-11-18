@@ -8,7 +8,8 @@
 import { saysWord } from './cmds.ts';
 import { Game } from './game.ts';
 import type { Keyword } from './talk.ts';
-import { sayable, talksBackwards, townsfolkSaying } from './words.ts';
+import { sayable, talksBackwards } from './words.ts';
+import { townsfolkSaying } from './ultima5Lexicon.ts';
 import { KEYWORD_LABELS } from './keywordLabels.ts';
 import { OPEN_ANSWERS } from './openAnswers.ts';
 import { talkMenu } from './speech.ts';

@@ -4,7 +4,8 @@ import { Pad } from '../src/game/io.ts';
 import { KEYWORD_LABELS } from '../src/game/keywordLabels.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkToNpc } from '../src/game/talk.ts';
-import { sayable, talksBackwards, townsfolkSaying } from '../src/game/words.ts';
+import { sayable, talksBackwards } from '../src/game/words.ts';
+import { townsfolkSaying } from '../src/game/ultima5Lexicon.ts';
 import { analyse, type Row } from '../tools/talk/analysis.ts';
 import { newGame } from './helpers.ts';
 

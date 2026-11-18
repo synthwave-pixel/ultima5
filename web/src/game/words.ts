@@ -21,8 +21,9 @@
  * what a player types (cmds.ts saysWord).
  */
 
-import type { Game } from './game.ts';
-import { saysWord } from './cmds.ts';
+import type { GameCore } from './gameCore.ts';
+import { lexicon } from './lexicon.ts';
+import { saysWord } from './saysWord.ts';
 
 /**
  * What a well grants (look.ts): a horse, and the five jokes Origin left
@@ -32,7 +33,7 @@ import { saysWord } from './cmds.ts';
 export const WISHES = [0x7242, 0x724c, 0x7254, 0x7260, 0x7266, 0x726e];
 
 /** How a word is written in the record: upper case, letters and digits only. */
-const key = (word: string): string =>
+export const key = (word: string): string =>
   word
     .toUpperCase()
     .replace(/[^A-Z0-9']/g, '')
@@ -48,73 +49,19 @@ const wordsIn = (text: string): string[] =>
   // A name spelt out with full stops is one word, kept as it is written: "H.M.S." (the Cape, Jimmy of Trinsic's).
   (text.match(/(?:[A-Za-z]\.){2,}|[A-Za-z0-9']+/g) ?? []).filter((w) => w.length >= 2);
 
-/**
- * Every word the game answers to, from the player's own files: each
- * townsman's keywords, the mantras and virtues, the words of power and
- * the Lycaeum's lore. Read once and kept, since nothing in it changes.
- */
-function answerable(g: Game): Set<string> {
-  if (!cached.has(g.data)) {
-    const stubs = new Set<string>();
-    for (const name of ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK']) {
-      const file = g.data.files.get(name);
-      if (!file?.length) continue;
-      const count = file[0] | (file[1] << 8);
-      for (let i = 0; i < count; i++) {
-        const at = 2 + i * 4;
-        const script = file.subarray(file[at + 2] | (file[at + 3] << 8), i + 1 < count ? file[at + 6] | (file[at + 7] << 8) : file.length);
-        for (const word of scriptKeywords(script)) stubs.add(key(word));
-        // And what their questions listen for (the Resistance's password, a name), beyond yes and no.
-        for (const word of scriptAnswers(script)) if (word.length > 2) stubs.add(key(word));
-      }
-    }
-    for (const table of [
-      g.data.table(0x1f4e, 8), // the virtues
-      g.data.table(0x1f5e, 8), // their mantras
-      g.data.table(0x4502, 8), // the words of power
-      g.data.table(0x4c74, 0x1a), // the Lycaeum's lore
-      WISHES.map((a) => g.t(a)), // what a well will grant
-      g.data.table(0x444a, 3), // the Shadowlords' names, yelled at their flames
-      [g.t(0x4a9a)], // the password the Oppression's guards ask of one who wears the badge
-    ]) {
-      for (const word of table) if (word) stubs.add(key(word));
-    }
-    stubs.delete('');
-    cached.set(g.data, stubs);
-  }
-  return cached.get(g.data)!;
-}
-const cached = new WeakMap<Game['data'], Set<string>>();
+/** Every word the game in use answers to (lexicon.ts): none before a game has set its own. */
+const answerable = (g: GameCore): Set<string> => lexicon()?.answerable(g) ?? new Set<string>();
+
+/** What a new Avatar knows: the game's starting words, or Ultima V's where no game has said (KNOWN_FROM_THE_START). */
+const startingWords = (): readonly string[] => lexicon()?.startingWords ?? KNOWN_FROM_THE_START;
 
 /** Whether the game answers to the word (it, or a stub of it, is a keyword, an answer, a mantra, a word of power...). */
-export function answersTo(g: Game, word: string): boolean {
+export function answersTo(g: GameCore, word: string): boolean {
   const answers = answerable(g);
   const k = key(word);
   for (let n = 2; n <= k.length; n++) if (answers.has(k.slice(0, n)) && (n >= 3 || n === k.length)) return true;
   return false;
 }
-
-/** How many of Britannia's townsfolk say each word (scriptSpeech, their questions too): what is rare is a topic. */
-export function townsfolkSaying(g: Game): (word: string) => number {
-  if (!saying.has(g.data)) {
-    const count = new Map<string, number>();
-    const compressed = g.data.table(0x24ea, 0x80);
-    for (const name of ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK']) {
-      const file = g.data.files.get(name);
-      if (!file?.length) continue;
-      const n = file[0] | (file[1] << 8);
-      const starts = Array.from({ length: n }, (_, i) => file[4 + i * 4] | (file[5 + i * 4] << 8)).sort((a, b) => a - b);
-      for (const at of starts) {
-        const end = starts.find((s) => s > at) ?? file.length;
-        for (const w of new Set(scriptSpeech(file.subarray(at, end), compressed, true))) count.set(w, (count.get(w) ?? 0) + 1);
-      }
-    }
-    saying.set(g.data, count);
-  }
-  const count = saying.get(g.data)!;
-  return (word) => count.get(word.toLowerCase()) ?? 0;
-}
-const saying = new WeakMap<Game['data'], Map<string, number>>();
 
 /** A word's root, for its forms (shadowlord, shadowlords, shadowlord's; seek, seeketh) against another word. */
 export function wordRoot(word: string): string {
@@ -326,7 +273,7 @@ export class Vocabulary {
   private readonly labels = new Map<string, string>();
 
   constructor() {
-    for (const word of KNOWN_FROM_THE_START) this.add(word.toLowerCase()); // as a word heard is kept
+    for (const word of startingWords()) this.add(word.toLowerCase()); // as a word heard is kept
   }
 
   /** Whether a word has been heard said, in any form that matches it. */
@@ -347,7 +294,7 @@ export class Vocabulary {
    * Learn from something said or read: every word in it the game answers
    * to is kept, as it was written there. Returns how many were new.
    */
-  learn(g: Game, text: string): number {
+  learn(g: GameCore, text: string): number {
     const answers = answerable(g);
     let added = 0;
     for (const word of wordsIn(text)) {
@@ -472,12 +419,12 @@ export class Vocabulary {
     for (const [s, word] of other.labels) if (!this.labels.has(s)) this.labels.set(s, word);
   }
 
-  /** Back to what a new Avatar knows (KNOWN_FROM_THE_START). */
+  /** Back to what a new Avatar knows (the game's starting words). */
   clear(): void {
     this.known.clear();
     this.heard.clear();
     this.labels.clear();
-    for (const word of KNOWN_FROM_THE_START) this.add(word.toLowerCase()); // as a word heard is kept
+    for (const word of startingWords()) this.add(word.toLowerCase()); // as a word heard is kept
   }
 
   encode(): WordData {

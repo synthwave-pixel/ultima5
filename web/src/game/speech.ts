@@ -10,10 +10,9 @@
  * description stay in the log.
  */
 
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { Colour } from '../ui/colours.ts';
 import { CLEAR_WINDOW } from '../ui/text.ts';
-import { animating, updateFrame } from './frame.ts';
 import { LOST_FOCUS, TURN_LEFT, TURN_RIGHT } from './io.ts';
 import { blinker, waitMark } from './waitMark.ts';
 
@@ -67,23 +66,36 @@ export function talkMenuRows(dx: number, dy: number): { first: number; last: num
  * Who speaks, squares from the party, where it is not the townsman talked to (g.talk.npc): a guard, a prisoner, the
  * old man at the camp (merchantSpeech.ts withSpeaker); null for the townsman.
  */
-const speakers = new WeakMap<Game, { dx: number; dy: number }>();
-export function speakFrom(g: Game, at: { dx: number; dy: number } | null): void {
+const speakers = new WeakMap<GameCore, { dx: number; dy: number }>();
+export function speakFrom(g: GameCore, at: { dx: number; dy: number } | null): void {
   if (at) speakers.set(g, at);
   else speakers.delete(g);
 }
 
-/** Where whoever speaks stands, squares from the party: the speaker set (speakFrom), else the townsman talked to. */
-function speaker(g: Game): { dx: number; dy: number } {
-  const at = speakers.get(g);
-  if (at) return at;
-  const s = g.s;
-  const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
-  return { dx: a ? a.x - s.x : 0, dy: a ? a.y - s.y : 0 };
+/**
+ * What the speech box asks of the game's play screen: where the one talked to stands, squares from the party; the
+ * view drawn again whole (the box taken off it); and the view's animation while a page waits for a key, as a
+ * function to call each tick. Ultima V's is ultima5Speaker.ts; a game sets its own (useSpeaker).
+ */
+export interface Speaker {
+  at(): { dx: number; dy: number };
+  redraw(): void;
+  animate(): () => void;
+}
+const speakersOf = new WeakMap<GameCore, Speaker>();
+
+/** The game's speaker, from now on. */
+export function useSpeaker(g: GameCore, s: Speaker): void {
+  speakersOf.set(g, s);
+}
+
+/** Where whoever speaks stands, squares from the party: the speaker set (speakFrom), else the one talked to. */
+function speaker(g: GameCore): { dx: number; dy: number } {
+  return speakers.get(g) ?? speakersOf.get(g)?.at() ?? { dx: 0, dy: 0 };
 }
 
 /** The talk's menu's rows (talkMenuRows), for whoever the party talks to now. */
-export function talkMenu(g: Game): { first: number; last: number } {
+export function talkMenu(g: GameCore): { first: number; last: number } {
   const { dx, dy } = speaker(g);
   return talkMenuRows(dx, dy);
 }
@@ -93,16 +105,16 @@ interface Talking {
   place: Place;
   shown: { left: number; top: number; width: number; height: number; back: () => void } | null;
 }
-const talks = new WeakMap<Game, Talking>();
+const talks = new WeakMap<GameCore, Talking>();
 
 /** Whether the townsman's words go to the play area: the Dialog setting's Play, in play. */
-export const speechOn = (g: Game): boolean => g.options.dialog === 'play' && g.inPlay;
+export const speechOn = (g: GameCore): boolean => g.options.dialog === 'play' && g.inPlay;
 
 /**
  * Begin the townsman's words afresh: the box last shown (and the menu last answered) put away, the view as it is, and
  * the window off the screen emptied and chosen. Nothing where the setting is Log.
  */
-export function begin(g: Game): void {
+export function begin(g: GameCore): void {
   if (!speechOn(g)) return;
   const { dx, dy } = speaker(g);
   const place = placement(dx, dy);
@@ -117,7 +129,7 @@ export function begin(g: Game): void {
 }
 
 /** The box shown taken off the view - the view drawn again - or, `always`, the view drawn again whatever was over it. */
-function putAway(g: Game, always = false): void {
+function putAway(g: GameCore, always = false): void {
   const k = talks.get(g);
   const b = k?.shown;
   if (!b && !always) return;
@@ -129,7 +141,7 @@ function putAway(g: Game, always = false): void {
   g.covers.delete('menu');
   const was = g.text.current;
   g.viewDirty = 1;
-  updateFrame(g);
+  speakersOf.get(g)?.redraw();
   g.text.select(was);
 }
 
@@ -137,7 +149,7 @@ function putAway(g: Game, always = false): void {
  * The box shown, read, put away while the speaker goes on (combat.ts blessings): what comes before their next words -
  * the old man's flash over the view - not drawn over its words, which it would wipe and leave the frame.
  */
-export function putAside(g: Game): void {
+export function putAside(g: GameCore): void {
   putAway(g);
 }
 
@@ -145,17 +157,17 @@ export function putAside(g: Game): void {
  * The townsman speaks: their window chosen (after the log had the party's words). The log's line ended first where
  * the party's left it open - an answer typed as nothing, whose line the townsman's reply would have ended in the log.
  */
-export function speak(g: Game): void {
+export function speak(g: GameCore): void {
   if (!speechOn(g) || !talks.has(g)) return;
   if (g.text.current === LOG && g.text.win.x !== 0) g.printChar('\n');
   g.text.select(SPEECH);
 }
 
 /** Whether the townsman's window is the one written in now. */
-const speaking = (g: Game): boolean => speechOn(g) && talks.has(g) && g.text.current === SPEECH;
+const speaking = (g: GameCore): boolean => speechOn(g) && talks.has(g) && g.text.current === SPEECH;
 
 /** The rows written and not yet shown: their text, those before the first with anything in it left out (`from`). */
-function unshown(g: Game): { from: number; lines: string[] } {
+function unshown(g: GameCore): { from: number; lines: string[] } {
   const w = g.text.windows[SPEECH];
   const all = g.text.stagedLines().slice(0, w.y + (w.x > 0 ? 1 : 0));
   let from = 0;
@@ -169,7 +181,7 @@ function unshown(g: Game): { from: number; lines: string[] } {
  * The next box of what is written: as many rows as there is room for, in a box their size centred over the townsman;
  * then, `wait`, the arrow at its corner till a key. The rows shown are let go from the window off the screen.
  */
-async function showPage(g: Game, wait: boolean): Promise<void> {
+async function showPage(g: GameCore, wait: boolean): Promise<void> {
   const k = talks.get(g);
   if (!k) return;
   const t = g.text;
@@ -201,7 +213,7 @@ async function showPage(g: Game, wait: boolean): Promise<void> {
 }
 
 /** The box's frame round cells (left, top) on, `width` by `height`: emptied, edged, and kept clear of the map. */
-function frameBox(g: Game, left: number, top: number, width: number, height: number): void {
+function frameBox(g: GameCore, left: number, top: number, width: number, height: number): void {
   const d = g.draw;
   const [x1, y1, x2, y2] = [left * 8 - 4, top * 8 - 4, (left + width) * 8 + 3, (top + height) * 8 + 3];
   d.pen = 0;
@@ -216,7 +228,7 @@ function frameBox(g: Game, left: number, top: number, width: number, height: num
 }
 
 /** The box shown drawn again as it was, its words and all: after the Pause menu has been over it (menu.ts restoreView). */
-export function redrawBox(g: Game): void {
+export function redrawBox(g: GameCore): void {
   const b = talks.get(g)?.shown;
   if (!b) return;
   frameBox(g, b.left, b.top, b.width, b.height);
@@ -224,7 +236,7 @@ export function redrawBox(g: Game): void {
 }
 
 /** Everything written shown, box by box, each but the last read (a key) before the next; the last too, `read`. */
-async function flush(g: Game, read: boolean): Promise<boolean> {
+async function flush(g: GameCore, read: boolean): Promise<boolean> {
   const rows = talks.get(g)?.place.rows ?? 1;
   let shown = false;
   for (;;) {
@@ -236,20 +248,20 @@ async function flush(g: Game, read: boolean): Promise<boolean> {
 }
 
 /** The party speaks, or the game prompts: what the townsman said shown (it stays while they answer), the log chosen. */
-export async function listen(g: Game): Promise<void> {
+export async function listen(g: GameCore): Promise<void> {
   if (!speechOn(g) || !talks.has(g)) return;
   if (g.text.current === SPEECH) await flush(g, false);
   g.text.select(LOG);
 }
 
 /** Wait for a key, the story page's arrow blinking at (x, y): the box's lower right corner. */
-async function waitHere(g: Game, x: number, y: number): Promise<void> {
+async function waitHere(g: GameCore, x: number, y: number): Promise<void> {
   g.p.flushKeys();
   waiting.add(g);
   try {
     // The arrow blinking, and the map going on round the box, as it does round the talk's menu.
     const blink = blinker(g, x, y);
-    const animate = animating(g);
+    const animate = speakersOf.get(g)?.animate() ?? ((): void => {});
     // A key reads on, as at every wait (input.ts rawKey): not a turn of the right stick, nor the window losing focus -
     // a pad whose stick rests off its centre would otherwise turn every page by itself.
     for (;;) {
@@ -264,19 +276,19 @@ async function waitHere(g: Game, x: number, y: number): Promise<void> {
   }
   waitMark(g, false, x, y);
 }
-const waiting = new WeakSet<Game>();
+const waiting = new WeakSet<GameCore>();
 
 /** Whether words have been written for the box that it has not yet shown (merchantSpeech.ts). */
-export const unshownWords = (g: Game): boolean => talks.has(g) && unshown(g).lines.length > 0;
+export const unshownWords = (g: GameCore): boolean => talks.has(g) && unshown(g).lines.length > 0;
 
 /** The words written for the box and not yet shown, a line to a row (merchantSpeech.ts). */
-export const unshownText = (g: Game): string => (talks.has(g) ? unshown(g).lines.join('\n') : '');
+export const unshownText = (g: GameCore): string => (talks.has(g) ? unshown(g).lines.join('\n') : '');
 
 /** Whether the box waits for a key now, its arrow blinking (for whoever plays the game from outside: the tests). */
-export const waitsForKey = (g: Game): boolean => waiting.has(g);
+export const waitsForKey = (g: GameCore): boolean => waiting.has(g);
 
 /** The box as it stands, in text cells, or none (for whoever looks at the game from outside: the tests). */
-export const boxShown = (g: Game): { left: number; top: number; width: number; height: number } | null => {
+export const boxShown = (g: GameCore): { left: number; top: number; width: number; height: number } | null => {
   const b = talks.get(g)?.shown;
   return b ? { left: b.left, top: b.top, width: b.width, height: b.height } : null;
 };
@@ -285,7 +297,7 @@ export const boxShown = (g: Game): { left: number; top: number; width: number; h
  * Before a word is written (talk.ts): where the row it goes on - the cursor's, or `ahead` the next - lies past the
  * room the box has, the box so far is shown and waits for a key, the word to go on at the top of the next.
  */
-export async function room(g: Game, ahead: number): Promise<void> {
+export async function room(g: GameCore, ahead: number): Promise<void> {
   if (!speaking(g)) return;
   const k = talks.get(g)!;
   const w = g.text.windows[SPEECH];
@@ -295,14 +307,14 @@ export async function room(g: Game, ahead: number): Promise<void> {
 }
 
 /** One of the scripts' own pauses (talk.ts, 0x83 and 0x8f): what is written shown, the arrow, till a key. */
-export async function pause(g: Game): Promise<boolean> {
+export async function pause(g: GameCore): Promise<boolean> {
   if (!speaking(g)) return false;
   await flush(g, true);
   return true;
 }
 
 /** The talk over: what is yet unshown read first (a key, `read`), then the box put away. */
-export async function end(g: Game, read: boolean): Promise<void> {
+export async function end(g: GameCore, read: boolean): Promise<void> {
   if (!talks.has(g)) return;
   if (read && speaking(g)) await flush(g, true);
   putAway(g);

@@ -5,7 +5,8 @@ import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
-import { townsfolkSaying, Vocabulary } from '../src/game/words.ts';
+import { Vocabulary } from '../src/game/words.ts';
+import { townsfolkSaying } from '../src/game/ultima5Lexicon.ts';
 import { newGame } from './helpers.ts';
 
 const TLK = ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK'];
