@@ -11,6 +11,7 @@
  * Pure: what to write on the receiving side is worked out here, and written by whoever asked.
  */
 
+import { GAME_ID_PATTERN, storageKey } from '../brand.ts';
 import { CHARACTERS_KEY, charKey, listedIn, listText } from './characters.ts';
 import { isSteamKey } from './keyStore.ts';
 import { EARLIER, parsed, parseIndex, saveKeys, type SaveData } from './storage.ts';
@@ -59,7 +60,7 @@ function steamOnly(side: Keys): Keys {
 function idsOn(side: Keys): string[] {
   const ids = listedIn(side[CHARACTERS_KEY] ?? null);
   for (const key of Object.keys(side)) {
-    const m = /^ultima5\.char\.([^.]+)\./.exec(key);
+    const m = new RegExp(`^${GAME_ID_PATTERN}\\.char\\.([^.]+)\\.`).exec(key);
     if (m && !ids.includes(m[1])) ids.push(m[1]);
   }
   return ids;
@@ -153,7 +154,8 @@ export function planCopy(from: Keys, to: Keys): CopyPlan {
   }
   const added = theirIds.filter((id) => !ourIds.includes(id));
   if (added.length > 0) writes[CHARACTERS_KEY] = listText([...ourIds, ...added]);
-  for (const [k, v] of Object.entries(source)) if (k !== CHARACTERS_KEY && !k.startsWith('ultima5.char.') && !(k in target)) writes[k] = v;
+  for (const [k, v] of Object.entries(source))
+    if (k !== CHARACTERS_KEY && !k.startsWith(storageKey('char.')) && !(k in target)) writes[k] = v;
   return { writes: changes(writes, target), removes, clashes, sides };
 }
 

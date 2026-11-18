@@ -9,6 +9,7 @@
  * eight saves for each of eight characters.
  */
 
+import { GAME_ID, storageKey } from '../brand.ts';
 import { drawFrame, gameWindows } from './playScreen.ts';
 import { Relocate } from './relocate.ts';
 import { type PathData, PathState } from './modernKarma.ts';
@@ -38,17 +39,17 @@ import {
 } from './characters.ts';
 
 /** Before characters, the one last save, whoever's (migrated to a character's: characters.ts, migrate). */
-export const SAVE_KEY = 'ultima5.save';
+export const SAVE_KEY = storageKey('save');
 export const SAVE_VERSION = 1;
 /** Before characters, the index of the saves before the last, each kept under SAVE_KEY and a number ("ultima5.save.12"). */
-export const SAVES_KEY = 'ultima5.saves';
+export const SAVES_KEY = storageKey('saves');
 /** Before characters, how many saves before the last were kept. */
 const OLD_EARLIER = 9;
 /** How many saves before the last are kept: seven, eight saves in all (the virtues', and the characters' number). */
 export const EARLIER = 7;
 
 export interface SaveData {
-  game: 'ultima5';
+  game: typeof GAME_ID;
   version: number;
   /** SAVED.GAM, base64. */
   save: string;
@@ -96,7 +97,7 @@ export function fromBase64(s: string): Uint8Array {
 
 export function serialize(g: Game): SaveData {
   return {
-    game: 'ultima5',
+    game: GAME_ID,
     version: SAVE_VERSION,
     save: toBase64(g.s.b),
     brit: toBase64(g.ool.brit),
@@ -118,7 +119,7 @@ export function serialize(g: Game): SaveData {
 /** Parse and check a save; throws with the reason when it will not do. */
 export function parseSave(text: string): SaveData {
   const d = JSON.parse(text) as Partial<SaveData>;
-  if (d.game !== 'ultima5') throw new Error('not an Ultima V save');
+  if (d.game !== GAME_ID) throw new Error('not an Ultima V save');
   if (typeof d.version !== 'number' || d.version > SAVE_VERSION) throw new Error('a save from a newer version');
   if (typeof d.save !== 'string' || typeof d.brit !== 'string' || typeof d.under !== 'string') throw new Error('the save is incomplete');
   if (fromBase64(d.save).length !== SAVE_SIZE || fromBase64(d.brit).length !== 256 || fromBase64(d.under).length !== 256)

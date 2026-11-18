@@ -7,6 +7,7 @@
  * either way.
  */
 
+import { GAME_ID_PATTERN, storageKey } from '../brand.ts';
 import type { CloudSaves, SteamSwitched } from './game.ts';
 
 let chosen: Storage | undefined;
@@ -26,8 +27,8 @@ export function useStore(s?: Storage): void {
  * "playing" mark, which only says that this machine has them open (otherWindows.ts).
  */
 export function isSteamKey(key: string): boolean {
-  if (/^ultima5\.char\.[^.]+\.playing$/.test(key)) return false;
-  return /^ultima5\.(save|saves|characters)(\.|$)/.test(key) || key.startsWith('ultima5.char.');
+  if (new RegExp(`^${GAME_ID_PATTERN}\\.char\\.[^.]+\\.playing$`).test(key)) return false;
+  return new RegExp(`^${GAME_ID_PATTERN}\\.(save|saves|characters)(\\.|$)`).test(key) || key.startsWith(storageKey('char.'));
 }
 
 /**
@@ -100,14 +101,14 @@ export interface CloudBridge {
  * Where this machine keeps that an account's player has been told how saves are kept with Cloud saves on (boot.ts
  * steamNote), under the account's id: `${STEAM_NOTED_KEY}.<account>`.
  */
-export const STEAM_NOTED_KEY = 'ultima5.steamNoted';
+export const STEAM_NOTED_KEY = storageKey('steamNoted');
 
 /**
  * Where this machine keeps that a gamepad has reached the game (ui/gamepad.ts), and so that a Steam Deck's buttons
  * work here: the note on Steam's controller layout (boot.ts steamNote) is not needed. Kept in local storage, never with
  * Steam's saves, as it is this machine's.
  */
-export const PAD_SEEN_KEY = 'ultima5.padSeen';
+export const PAD_SEEN_KEY = storageKey('padSeen');
 
 /** A gamepad has reached the game: kept, where it can be. */
 export function notePadSeen(): void {

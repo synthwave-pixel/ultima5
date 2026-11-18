@@ -13,13 +13,14 @@
  */
 export const MAX_CHARACTERS = 8;
 
+import { GAME_ID_PATTERN, storageKey } from '../brand.ts';
 import { kept } from './keyStore.ts';
 
 /** Every character's id, in the order they were made: `{ version: 1, ids }`. */
-export const CHARACTERS_KEY = 'ultima5.characters';
+export const CHARACTERS_KEY = storageKey('characters');
 
 /** Where something of character `id`'s is kept: "save", "saves", "settings" ("ultima5.char.k3x9q2.save"). */
-export const charKey = (id: string, what: string): string => `ultima5.char.${id}.${what}`;
+export const charKey = (id: string, what: string): string => storageKey(`char.${id}.${what}`);
 
 /** The character in play, or about to be: chosen at the title, made, or (storage.ts currentCharacter) the latest. */
 let chosen: string | null = null;
@@ -56,7 +57,7 @@ function found(): string[] {
     const ls = kept();
     if (!ls || typeof ls.key !== 'function' || typeof ls.length !== 'number') return out;
     for (let i = 0; i < ls.length; i++) {
-      const m = /^ultima5\.char\.([a-z0-9]+)\.save$/.exec(ls.key(i) ?? '');
+      const m = new RegExp(`^${GAME_ID_PATTERN}\\.char\\.([a-z0-9]+)\\.save$`).exec(ls.key(i) ?? '');
       if (m) out.push(m[1]);
     }
   } catch {

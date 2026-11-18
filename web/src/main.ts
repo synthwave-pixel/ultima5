@@ -5,6 +5,7 @@
  * installer), then start the game.
  */
 
+import { storageKey } from './brand.ts';
 import { egaTileArt } from './ui/egaTiles.ts';
 import { CARVE_STYLES, type CarveStyle } from './ui/carve.ts';
 import { drawCombatMarks } from './game/combat.ts';
@@ -32,7 +33,7 @@ import { installCrashHandler, reportCrash } from './ui/crash.ts';
 import { androidUpdates, desktopUpdates, webUpdates, type DesktopUpdates, type UpdateHook } from './ui/updates.ts';
 import { registerSW } from 'virtual:pwa-register';
 
-const WARNED_KEY = 'ultima5.iosWarned';
+const WARNED_KEY = storageKey('iosWarned');
 
 // Whatever breaks from here on is said, with a way out (crash.ts): the apps have no reload button of the browser's.
 installCrashHandler();
@@ -104,7 +105,7 @@ interface AndroidPlugins {
 }
 
 /** The version the Android app last told the player of (ui/updates.ts androidUpdates). */
-const UPDATE_TOLD_KEY = 'ultima5.updateTold';
+const UPDATE_TOLD_KEY = storageKey('updateTold');
 
 /**
  * What the page keeps is kept: ask the browser not to evict it, and warn an iOS tab of WebKit's seven days - in the

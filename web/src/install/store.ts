@@ -7,10 +7,11 @@
  * browser's keeping, is found at the next start rather than mid-game.
  */
 
+import { GAME_ID } from '../brand.ts';
 import { GameFiles } from '../data/files.ts';
 import { fingerprint } from './gameFiles.ts';
 
-const DB = 'ultima5';
+const DB = GAME_ID;
 const STORE = 'gamefiles';
 /** The record of fingerprints, among the files: a key no file is named. */
 const PRINTS = '#prints';

@@ -13,15 +13,16 @@
  * (desktop/steamOptions.cjs switchOption), and the menu is drawn again from what then stands.
  */
 
+import { REPO } from '../brand.ts';
 import { switchCloud } from './cloudSwitch.ts';
 import type { Game, LineCheck, PlayOption, SteamChoices, SteamHook, SteamStatus } from './game.ts';
 import { fixNote, syncFixable, syncNote, syncProblem } from './macSync.ts';
 import { choose, confirm, restoreView, showText, wrap, type Item } from './menu.ts';
 
 /** The game's issues on GitHub, for Report an issue. */
-export const ISSUES = 'https://github.com/synthwave-pixel/ultima5/issues';
+export const ISSUES = `https://github.com/${REPO}/issues`;
 /** The latest release's page, where the AppImage is downloaded (the Flatpak's Get the AppImage). */
-export const APPIMAGE_PAGE = 'https://github.com/synthwave-pixel/ultima5/releases/latest';
+export const APPIMAGE_PAGE = `https://github.com/${REPO}/releases/latest`;
 
 const TITLE = 'Steam (beta)';
 const NO_STEAM = "Steam isn't here. Install Steam and start it once, then come back.";

@@ -14,6 +14,8 @@
  * The releases page, never the file itself: what changed is read there first, and the download is the player's.
  */
 
+import { REPO } from '../brand.ts';
+
 /** What there is to update to. `told`: the player has been shown its box already (shown once a version). */
 export interface UpdateOffer {
   kind: 'restart' | 'release';
@@ -63,8 +65,8 @@ export interface UpdateHook {
   notes?: (version: string) => Promise<string | null>;
 }
 
-export const RELEASES = 'https://github.com/synthwave-pixel/ultima5/releases/latest';
-const LATEST_API = 'https://api.github.com/repos/synthwave-pixel/ultima5/releases/latest';
+export const RELEASES = `https://github.com/${REPO}/releases/latest`;
+const LATEST_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 
 /** A version's numbers (1.1.12, v1.1.12): major, minor, patch; a pre-release (1.1.0-dev.x) ranks below its release. */
 function parts(version: string): number[] {

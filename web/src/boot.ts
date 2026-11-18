@@ -5,6 +5,7 @@
  * a choice).
  */
 
+import { storageKey } from './brand.ts';
 import { GameFiles } from './data/files.ts';
 import { runInstaller } from './install/installer.ts';
 import { loadInstalled, saveInstalled } from './install/store.ts';
@@ -19,7 +20,7 @@ import { fixLabel, syncFixable, syncProblem, syncText } from './game/macSync.ts'
 let told = false;
 /** The note, once worked out (null: none to say this launch), as the title looks for it at every tick. */
 let settled: TitleNote | null | undefined;
-const FOUND_KEY = 'ultima5.steamFoundNoted';
+const FOUND_KEY = storageKey('steamFoundNoted');
 const FOUND = 'Found Ultima V in your Steam library.';
 /** Whether this launch took Steam's copy and has yet to say so. */
 let foundPending = false;
@@ -35,7 +36,7 @@ const FIRST_LAUNCH = 'Saves made while playing from Steam stay with Steam. Turni
  * reached the game here.
  */
 const PAD_NOTE = "Buttons do nothing? In Steam's controller settings for Ultima V, choose the Gamepad template.";
-const PAD_NOTED_KEY = 'ultima5.deckPadNoted';
+const PAD_NOTED_KEY = storageKey('deckPadNoted');
 
 /** The copy installed in this browser, if it is whole and as it was installed; else why not (or nothing, never installed). */
 async function installedCopy(): Promise<{ files: GameFiles | null; notice?: string }> {

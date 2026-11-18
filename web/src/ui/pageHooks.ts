@@ -7,6 +7,7 @@
  * shown. And the controllers: a gamepad, and the touch pad on a touch.
  */
 
+import { storageKey } from '../brand.ts';
 import { redrawSideMap } from '../game/dungeonMap.ts';
 import { INPUT_PACES } from './holds.ts';
 import type { Game } from '../game/game.ts';
@@ -26,7 +27,7 @@ import type { PcSound } from './sound.ts';
 import { fullScreen } from './fullScreen.ts';
 import { TouchPad } from './touch.ts';
 
-const PAD_KEY = 'ultima5.touchpad';
+const PAD_KEY = storageKey('touchpad');
 
 function remember(key: string, value: string): void {
   try {
