@@ -6,6 +6,7 @@
  * Places and shops as the game files and the code have them.
  */
 
+import type { GameCore } from './gameCore.ts';
 import type { Game } from './game.ts';
 import { choose, showText, wrap } from './menu.ts';
 
@@ -165,7 +166,7 @@ export const COMBAT_TIPS: { id: string; pad: string; keys: string; shoulders?: b
 ];
 
 /** The fight's tip, given now (combat.ts playerTurn), worded for what the player last pressed; null, none. */
-export function combatTip(g: Game): string | null {
+export function combatTip(g: GameCore): string | null {
   const o = g.options;
   if (o.input !== 'controller' || !o.autoAim || !o.snapTargets) return null;
   const tip = COMBAT_TIPS.find((t) => !g.tipsShown.has(t.id));

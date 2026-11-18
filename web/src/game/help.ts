@@ -6,12 +6,12 @@
  * the party. What the settings do is said in Settings itself, at the foot of the list.
  */
 
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import type { Page } from './menu.ts';
 import { Colour } from '../ui/colours.ts';
 
 /** A closed outline's inside filled, a row at a time, in the pen's colour (the controller's body). */
-function fillShape(g: Game, points: [number, number][]): void {
+function fillShape(g: GameCore, points: [number, number][]): void {
   const ys = points.map(([, y]) => y);
   for (let y = Math.min(...ys); y <= Math.max(...ys); y++) {
     const xs: number[] = [];
@@ -26,7 +26,7 @@ function fillShape(g: Game, points: [number, number][]): void {
 }
 
 /** The outline itself, in the pen's colour. */
-function outline(g: Game, points: [number, number][]): void {
+function outline(g: GameCore, points: [number, number][]): void {
   points.forEach(([x1, y1], i) => {
     const [x2, y2] = points[(i + 1) % points.length];
     g.draw.line(x1, y1, x2, y2);
@@ -240,7 +240,7 @@ const LETTERS: Page[] = [
  * A dungeon, for the input set and the look in use: a controller's player is told of the Enhanced dungeon's Change View (the
  * walking is the d-pad's, as anywhere) and the right stick's turns; the keyboard's, the keys that walk it. The EGA look's map is a setting.
  */
-function dungeonPage(g: Game): Page {
+function dungeonPage(g: GameCore): Page {
   const pad = g.options.input === 'controller';
   const standard = g.options.tileSet === 'standard';
   const map = standard
@@ -252,7 +252,7 @@ function dungeonPage(g: Game): Page {
 }
 
 /** How the look in use shows the party (and, for the keyboard's player, the active player and saving). */
-function partyPage(g: Game): Page {
+function partyPage(g: GameCore): Page {
   const letters = g.options.statusLetters ? ['Letters: P S D C'] : [];
   if (g.options.tileSet !== 'standard')
     return {
@@ -297,6 +297,6 @@ function partyPage(g: Game): Page {
 }
 
 /** The Help pages for the input set and the look in use. */
-export function helpPages(g: Game): Page[] {
+export function helpPages(g: GameCore): Page[] {
   return [...(g.options.input === 'controller' ? CONTROLLER : LETTERS), dungeonPage(g), partyPage(g)];
 }

@@ -8,9 +8,10 @@
  * letter picker that lets a controller type names and words.
  */
 
+import type { GameCore } from './gameCore.ts';
 import { INPUT_PACE_LABELS, INPUT_PACE_NAMES } from '../ui/holds.ts';
 import { cue } from './cues.ts';
-import { animating, drawVitals, updateFrame, Win } from './frame.ts';
+import { drawVitals, Win } from './frame.ts';
 import { Game } from './game.ts';
 import { menuKey, PAUSED } from './input.ts';
 import { K, Pad, SAVE_NOW } from './io.ts';
@@ -35,8 +36,7 @@ import {
   SOUND_CHOICES,
   type SoundChoice,
 } from './settings.ts';
-import { CENTRE, redrawBox, TALK_WIDTH, talkMenu } from './speech.ts';
-import { merchantSpeaking } from './merchantSpeech.ts';
+import { CENTRE, TALK_WIDTH } from './speech.ts';
 import { Colour } from '../ui/colours.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 import { desktopModeWay } from '../ui/updates.ts';
@@ -102,22 +102,12 @@ export async function restoreView(g: Game): Promise<void> {
   // At the title there is no map or party to put back (a game's stats would come up over it): what opened the menu
   // draws the title again itself.
   if (!g.inPlay) return;
-  if (g.inDungeon) {
-    const { refresh } = await import('./dungeon.ts');
-    // The corridor's picture is smaller than the map's square: what a menu drew in the margin round it goes first.
-    g.draw.pen = 0;
-    g.draw.fill(8, 8, 0xb7, 0xb7);
-    refresh(g);
-  } else {
-    g.viewDirty = 1;
-    updateFrame(g);
-    redrawBox(g); // a townsman's words, where the menu was over them (the Pause menu's, in a talk)
-  }
-  drawVitals(g);
+  // The play screen drawn again (Ultima V's: the corridor or the map, a townsman's words over it, the stats).
+  await g.play.restore?.();
 }
 
 /** Text at (x, y) in the menus' window, a character at a time, never wrapping or scrolling it. */
-function put(g: Game, x: number, y: number, text: string): void {
+function put(g: GameCore, x: number, y: number, text: string): void {
   const t = g.text;
   const was = t.advance;
   t.advance = false;
@@ -429,13 +419,13 @@ export async function choose(g: Game, title: string, items: Item[], start = 0, b
   // What was said for the Dialog setting's box shown first: the box drawn before the menu, not over it - and a list
   // low in the view, as a townsman's talk has it, the merchant's words in sight above it (merchantSpeech.ts).
   if (g.beforeRead) await g.beforeRead();
-  const talk = talkRows ?? (!boxed && merchantSpeaking(g) ? talkMenu(g) : undefined);
+  const talk = talkRows ?? (!boxed ? g.play.talkRows?.() : undefined);
   const t = g.text;
   const was = t.current;
   // (A talk's menu - low in the view, framed - holds its lines alone: no title, no notes. Its title is still the
   // menu's, for whoever reads which it is.)
   const talking = !boxed && talk !== undefined && g.inPlay;
-  const animate = talking ? animating(g) : undefined;
+  const animate = talking ? g.play.animating?.() : undefined;
   const noted = !boxed && !talking && items.some((it) => it.note);
   const rows = boxed
     ? Math.min(items.length, HEIGHT - 6)
@@ -1015,7 +1005,7 @@ const RULES_NOTES: Record<Rules, string> = {
 const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller: 'Controller' };
 
 /** The edition and the app's version as Settings' last lines, greyed: the version where the page has one. */
-function editionLines(g: Game): Setting[] {
+function editionLines(g: GameCore): Setting[] {
   const version = g.hooks.version?.();
   return [{ label: 'Enhanced Edition', enabled: false }, ...(version ? [{ label: `Version ${version}`, enabled: false }] : [])];
 }
@@ -1174,7 +1164,7 @@ const FONT_NOTES: Record<FontChoice, string> = {
  * font (any font in either interface), where dialog is shown, scanlines, smooth motion and the Retro interface's
  * dungeon map. The Pause menu's, and Settings' at the title.
  */
-export function appearanceLines(g: Game): Setting[] {
+export function appearanceLines(g: GameCore): Setting[] {
   const o = g.options;
   const pc = o.tileSet !== 'standard';
   return [

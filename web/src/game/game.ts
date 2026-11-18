@@ -18,6 +18,7 @@ import { Actor, Save } from './save.ts';
 import { TalkState } from './talk.ts';
 
 import { GameCore } from './gameCore.ts';
+import { ultima5Play } from './playHooks.ts';
 
 /** The types every game shares (gameCore.ts), where their importers have long found them. */
 export type {
@@ -201,11 +202,6 @@ export class Game extends GameCore {
    * reading was made - or 'disarmed', by An Sanct or a key; its badge shows it (world.ts drawReadings). Forgotten with the place (a new fight, level or map).
    */
   readonly bumped = new Map<string, Bumped>();
-  /**
-   * What lies over the view while the map goes on animating under it (EGA pixels, inclusive): the talk's menu and the
-   * townsman's box (menu.ts talkBox, speech.ts). The squares under them are not drawn (world.ts drawView, covered).
-   */
-  readonly covers = new Map<'menu' | 'speech', [number, number, number, number]>();
   /** The member a bumped command is done by, chosen for it (bumpAct.ts): -1 for whoever the command asks for. */
   bumpWho = -1;
   /**
@@ -247,8 +243,6 @@ export class Game extends GameCore {
   autoAim = false;
   /** Where the crosshair starts, if a foe stands there in reach: the foe walked into, Snap attacks off (combat.ts aim). */
   aimFrom: { x: number; y: number } | null = null;
-  /** A spell is being cast: its aim is marked as a spell's, not a weapon's (combat.ts crosshair). */
-  casting = false;
   /** A direction is being asked: whoever acts is marked, the arrows pointing out (combat.ts drawCombatMarks). */
   directing = false;
   /** The member a spell will be for, as the choice of them moves - marked in a fight; -1 while none is chosen. */
@@ -262,6 +256,7 @@ export class Game extends GameCore {
   ) {
     super(p);
     this.s = save ?? new Save(data.files.get('INIT.GAM'));
+    this.play = ultima5Play(this);
   }
 
   protected override learnWords(text: string): void {

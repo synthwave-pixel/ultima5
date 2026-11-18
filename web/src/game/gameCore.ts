@@ -16,6 +16,7 @@ import { type Random, TrueRandom } from './rng.ts';
 import { type Appearance, DEFAULT_APPEARANCE } from './appearance.ts';
 import { DEFAULTS, type Options } from './settings.ts';
 import type { Transfer } from './transfer.ts';
+import type { TalkRows } from './menu.ts';
 
 export interface Note {
   who: string;
@@ -137,7 +138,28 @@ export interface SteamHook {
   cloud: CloudSaves;
 }
 
+/**
+ * What a game's play screen does around the menus (menu.ts): put back what a menu covered, the rows of a
+ * conversation a menu is drawn beside, and the view's animation while a menu waits. None at the title or in a
+ * game that has no such screen; Ultima V's are playHooks.ts's.
+ */
+export interface PlayHooks {
+  restore?(): Promise<void>;
+  talkRows?(): TalkRows | undefined;
+  animating?(): () => void;
+}
+
 export class GameCore {
+  /** The play screen's part in the menus (PlayHooks). */
+  play: PlayHooks = {};
+  /**
+   * What lies over the view while the map goes on animating under it (EGA pixels, inclusive): the talk's menu and the
+   * townsman's box (menu.ts talkBox, speech.ts). The squares under them are not drawn (world.ts drawView, covered).
+   */
+  readonly covers = new Map<'menu' | 'speech', [number, number, number, number]>();
+  /** A spell is being cast: its aim is marked as a spell's, not a weapon's (combat.ts crosshair). */
+  casting = false;
+
   constructor(readonly p: Platform) {
     // The message window's repeated turns fold (text.ts): "North (x5)" rather than five lines of it.
     p.text.foldWindow = 2; // frame.ts Win.messages

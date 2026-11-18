@@ -7,6 +7,7 @@
  * the Modern PC tiles alone (standardArt.ts); every other set draws the Avatar as it is, the appearance kept.
  */
 
+import type { GameCore } from './gameCore.ts';
 import type { Game } from './game.ts';
 
 export interface Appearance {
@@ -110,6 +111,6 @@ export const LADY = 0x0c;
 export const addressedAsLady = (g: Game): boolean => g.s.members[0].gender === LADY;
 
 /** Whether the Avatar's appearance is drawn, and may be changed: the Standard look with the Modern PC tiles. */
-export function customisable(g: Game): boolean {
+export function customisable(g: GameCore): boolean {
   return g.options.tileSet === 'standard' && g.options.tiles === 'modern-pc';
 }

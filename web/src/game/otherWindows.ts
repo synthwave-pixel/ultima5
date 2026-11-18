@@ -8,6 +8,7 @@
  * once for each other window. Windows playing different characters are nothing to each other.
  */
 
+import type { GameCore } from './gameCore.ts';
 import { charKey, freshId } from './characters.ts';
 import type { Game } from './game.ts';
 
@@ -52,7 +53,7 @@ const beatOf = (text: string | null): Beat | null => {
  * Character `id` watched for in other windows, from now on in this one (the game begun, main.ts): its heartbeat begun,
  * and another window's - found now, or heard of later - marked for the warning (g.otherWindow).
  */
-export function watchOtherWindows(g: Game, id: string, around: Surroundings = page): void {
+export function watchOtherWindows(g: GameCore, id: string, around: Surroundings = page): void {
   const tab = freshId([]);
   const key = playingKey(id);
   const heard = (beat: Beat | null): void => {
