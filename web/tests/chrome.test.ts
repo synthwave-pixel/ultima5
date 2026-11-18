@@ -56,6 +56,19 @@ describe('the Standard frame', () => {
     expect(bright(at(33))).toBeLessThan(bright(base));
   });
 
+  it("colours a title dialog's own frame in its tone, the frame about it copper as it was", () => {
+    const fb = barred();
+    fb.chromeToned = [{ at: [0, 0, 159, 8], tone: { hue: 215, sat: 1, value: 1.1 } }];
+    const out = shown(fb);
+    const rgb = (v: number): [number, number, number] => [v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff];
+    const [r1, , b1] = rgb(out[16 * HI_WIDTH + 80 * HI]); // within the dialog's box
+    const [r2, , b2] = rgb(out[16 * HI_WIDTH + 240 * HI]); // beyond it
+    expect(b1).toBeGreaterThan(r1); // blue
+    expect(r2).toBeGreaterThan(b2); // copper
+    fb.chromeToned = [];
+    expect(rgb(shown(fb)[16 * HI_WIDTH + 80 * HI])[0]).toBe(r2); // and copper again once the dialog is gone
+  });
+
   it('follows a slanted end a pixel at a time, where the EGA steps it four', () => {
     const fb = new Framebuffer(new Uint8Array(512 * 128), fonts);
     fb.chrome = true;

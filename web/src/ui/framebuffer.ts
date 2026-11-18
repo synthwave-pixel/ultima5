@@ -262,6 +262,11 @@ export class Framebuffer {
    * rules below allow: the dialogs' own frames at the title, one over another, above the rows the copper runs from.
    */
   chromeAlso: [number, number, number, number][] = [];
+  /**
+   * The title's dialogs' frames in a tone of their own (EGA pixels, inclusive), not the place's: blue, or a warning's
+   * purple, over its copper (menu.ts). The last given is over those before it.
+   */
+  chromeToned: { at: [number, number, number, number]; tone: ChromeTone }[] = [];
 
   /** The first row the frame may be on: where the copper runs from, or a dialog's frame above it. */
   private get chromeTop(): number {
@@ -2090,15 +2095,31 @@ export class Framebuffer {
   /** A cut frame over the picture, in the place's tone. */
   private paintCopper(out: Uint32Array, entry: Framebuffer['chromeCache'][number]): void {
     const { at } = entry;
-    // In the tone the place asks for (chromeTone), its colours recoloured once and kept with the shape.
-    const tone = this.tone;
-    const key = toneKey(tone);
+    // In the tone the place asks for (chromeTone), its colours recoloured once and kept with the shape - and within
+    // a title dialog's box, in that dialog's (chromeToned).
+    const parts = this.chromeToned;
+    const key = [toneKey(this.tone), ...parts.map((r) => `${r.at.join()}:${toneKey(r.tone)}`)].join('/');
     let colour = entry.colour;
     if (key) {
       entry.toned ??= new Map();
       colour = entry.toned.get(key) ?? colour;
       if (colour === entry.colour) {
-        colour = toned(entry.colour, tone!);
+        colour = this.tone ? toned(entry.colour, this.tone) : entry.colour.slice();
+        if (parts.length) {
+          const tones = parts.map((r) => toned(entry.colour, r.tone));
+          for (let i = 0; i < at.length; i++) {
+            const [x, y] = [Math.floor((at[i] % HI_WIDTH) / HI), Math.floor(at[i] / HI_WIDTH / HI)];
+            for (let k = parts.length - 1; k >= 0; k--) {
+              const [x1, y1, x2, y2] = parts[k].at;
+              if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
+                colour[i] = tones[k][i];
+                break;
+              }
+            }
+          }
+        }
+        // A few kept (the title's dialogs come and go in a handful of places), not every one ever shown.
+        if (entry.toned.size >= 8) entry.toned.clear();
         entry.toned.set(key, colour);
       }
     }

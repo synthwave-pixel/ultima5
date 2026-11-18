@@ -12,6 +12,7 @@
  */
 
 import type { Occasion } from '../audio/soundtracks.ts';
+import type { ChromeTone } from '../ui/framebuffer.ts';
 import type { Text } from '../ui/text.ts';
 import type { Appearance } from './appearance.ts';
 
@@ -194,9 +195,10 @@ export interface Draw {
    * The game's screen (frame, panels, menus) is up, or not (the intro and ending's full pictures): the Standard look
    * themes the first only - from row `fromRow` down. With `only` (EGA pixels, inclusive), that rectangle is added to
    * what is themed, `on` and `fromRow` as they were (the whole of it, if nothing was): a dialog's own frame at the
-   * title, over a picture whose blue is its own.
+   * title, over a picture whose blue is its own - in `tone`, where given, not the copper (menu.ts, the title's
+   * dialogs in blue, its warnings in purple).
    */
-  chrome?(on: boolean, fromRow?: number, only?: [number, number, number, number]): void;
+  chrome?(on: boolean, fromRow?: number, only?: [number, number, number, number], tone?: ChromeTone): void;
   /**
    * A dialog's box over the map, in the EGA's pixels (x1, y1, x2, y2), whose blue border the Standard look draws as
    * the frame's copper, as it does a menu's at the map's edge; null once the view is drawn again.

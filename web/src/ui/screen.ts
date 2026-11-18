@@ -343,17 +343,21 @@ export class Screen implements Platform {
         if (this.look === 'standard') fb.spellPulse(square);
       },
       unpulse: () => fb.uncover(),
-      chrome: (on, fromRow = 0, only) => {
+      chrome: (on, fromRow = 0, only, tone) => {
         // A dialog's own frame is added to what is copper already (the title menu's box below it, a question over
-        // Settings at the title); the screen's copper set anew lets them all go.
+        // Settings at the title), in its own tone where it has one; the screen's copper set anew lets them all go.
         if (only) {
-          if (!this.inGame) [fb.chromeFrom, fb.chromeAlso] = [HEIGHT, []];
+          if (!this.inGame) [fb.chromeFrom, fb.chromeAlso, fb.chromeToned] = [HEIGHT, [], []];
           fb.chromeAlso = [...fb.chromeAlso.filter((r) => r.join() !== only.join()), only];
+          fb.chromeToned = fb.chromeToned.filter((r) => r.at.join() !== only.join());
+          if (tone) fb.chromeToned.push({ at: only, tone });
+          fb.dirty = true;
           this.inGame = true;
           this.theme();
           return;
         }
         fb.chromeAlso = [];
+        fb.chromeToned = [];
         this.inGame = on;
         fb.chromeFrom = fromRow;
         this.theme();

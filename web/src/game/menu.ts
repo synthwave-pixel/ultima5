@@ -38,6 +38,7 @@ import {
 } from './settings.ts';
 import { CENTRE, TALK_WIDTH } from './speech.ts';
 import { Colour } from '../ui/colours.ts';
+import { TITLE_DIALOG, TITLE_WARNING } from './chromeTone.ts';
 import { devMode, enableDevMode } from '../devMode.ts';
 import { desktopModeWay } from '../ui/updates.ts';
 
@@ -54,6 +55,12 @@ const TITLE_LEFT = 9;
  * picture - until the title is drawn again (titleShown).
  */
 let titlePanel = false;
+
+/** While an Are you sure? is asked: its frame at the title in the warning's purple, not the dialogs' blue. */
+let warning = false;
+
+/** The tone of a dialog's frame at the title (Standard): the overworld's blue, or a warning's purple. */
+const titleTone = () => (warning ? TITLE_WARNING : TITLE_DIALOG);
 
 /** The title drawn again: its dialogs are its own again, not a panel's (intro.ts). */
 export function titleShown(): void {
@@ -154,7 +161,7 @@ export function box(g: GameCore, title: string, width: number, rows: number): vo
     d.line(x2, y1, x2, y2);
   }
   if (g.inPlay) d.chromeBox?.([x1, y1, x2, y2]);
-  else d.chrome?.(true, 0, [x1, y1, x2, y2]); // at the title, its lines copper as the panel's frame about it
+  else d.chrome?.(true, 0, [x1, y1, x2, y2], titleTone()); // at the title, its lines in the dialogs' tone
   t.setWindow(WIN, left, top, left + cols - 1, top + rows + head - 1);
   t.select(WIN);
   if (title) put(g, Math.max(0, (cols - title.length) >> 1), 0, title);
@@ -207,7 +214,7 @@ function framed(g: GameCore, x1: number, y1: number, x2: number, y2: number): vo
   d.line(x2 - 7, y1 + 7, x2 - 7, y2 - 7);
   d.line(x2 - 7, y2 - 7, x1 + 7, y2 - 7);
   d.line(x1 + 7, y2 - 7, x1 + 7, y1 + 7);
-  d.chrome?.(true, 0, [x1, y1, x2, y2]);
+  d.chrome?.(true, 0, [x1, y1, x2, y2], g.inPlay ? undefined : titleTone());
 }
 
 /** How many pixels a frame's corner leaves bare on each of its first rows, from the outside in. */
@@ -1430,8 +1437,14 @@ export async function confirm(g: GameCore, question: string, boxed = false): Pro
     { label: 'Yes', key: c('Y') },
   ];
   // The map's square, as every question in play and in Settings (at the title too); `boxed`, a box of its own - asked
-  // of the title's menu, over its picture.
-  return (await choose(g, 'Are you sure?', items, lines.length + 1, boxed)) === lines.length + 2;
+  // of the title's menu, over its picture. At the title, framed in the warning's purple (titleTone).
+  const before = warning;
+  warning = true;
+  try {
+    return (await choose(g, 'Are you sure?', items, lines.length + 1, boxed)) === lines.length + 2;
+  } finally {
+    warning = before;
+  }
 }
 
 /** The cheats: pick one, see what it did; one that moves the party ends the menus. */

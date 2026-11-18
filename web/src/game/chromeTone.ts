@@ -16,6 +16,9 @@ import type { Game } from './game.ts';
 const SHADOWLORD: ChromeTone = { hue: 285, sat: 1, value: 1.05 };
 /** Out in Britannia by day: the copper's blue. */
 const OVERWORLD: ChromeTone = { hue: 215, sat: 1, value: 1.1 };
+/** The title's dialogs over its copper (menu.ts): the overworld's blue by day; a question that warns, the Shadowlord's purple. */
+export const TITLE_DIALOG: ChromeTone = OVERWORLD;
+export const TITLE_WARNING: ChromeTone = SHADOWLORD;
 /** How much darker the blue is at the darkest of the night. */
 const NIGHT = 0.25;
 /** A shrine, the Codex: a soft gold. */
