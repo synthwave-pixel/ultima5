@@ -63,6 +63,22 @@ function shown(fb: Framebuffer): Uint32Array {
   return new Uint32Array(image.data.buffer).slice();
 }
 
+/**
+ * Where two screens first differ, and what each has there, or null where they are the same. A whole screen compared
+ * with toEqual walks a million pixels through vitest's deep equality, which took a CI runner past a minute.
+ */
+function firstDifference(got: Uint32Array, want: Uint32Array): string | null {
+  if (got.length !== want.length) return `${got.length} pixels, not ${want.length}`;
+  for (let k = 0; k < got.length; k++) {
+    if (got[k] !== want[k]) {
+      const x = k % HI_WIDTH;
+      const y = Math.floor(k / HI_WIDTH);
+      return `pixel (${x}, ${y}): ${got[k].toString(16)}, not ${want[k].toString(16)}`;
+    }
+  }
+  return null;
+}
+
 /** An EGA picture's own pixels as a skin piece would give them: its colours, clear where its mask is. */
 function asSkin(v: Picture): Uint32Array {
   const out = new Uint32Array(v.width * v.height);
@@ -146,10 +162,10 @@ describe('machine skins', () => {
         for (const fb of [a, b]) fb.fill(0, 0, 319, 199, 8);
         a.image(v, 20, 10, flags);
         b.image(v, 20, 10, flags, { kind: 'skin', px: asSkin(v), width: v.width, height: v.height });
-        expect(shown(b), `${name} ${i} flags ${flags}`).toEqual(shown(a));
+        expect(firstDifference(shown(b), shown(a)), `${name} ${i} flags ${flags}`).toBeNull();
       }
     }
-  }, 60_000);
+  });
 
   it("show the wall through a skin piece's clear pixels, whatever the EGA mask says", () => {
     const v = picture(res('DNG1.16'), 0)!;
