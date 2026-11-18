@@ -13,7 +13,7 @@
  * its sound where it had one, silence where it had none.
  */
 
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { effectsOf } from './settings.ts';
 
 /** The cues, by name: each in the sound catalogue (dev/sfxCatalogue.ts CUES), so each suite renders it. */
@@ -50,7 +50,7 @@ export type Cue = (typeof CUE_NAMES)[number];
  * Sound cue `name` in the port's effects (the three suites); in Upgrade (2001)'s PC speaker, the DOS game's own sound
  * for the moment (`original`), or none. Waits as an effect does: a moment at most.
  */
-export async function cue(g: Game, name: Cue, original?: () => Promise<void>, whole = false): Promise<void> {
+export async function cue(g: GameCore, name: Cue, original?: () => Promise<void>, whole = false): Promise<void> {
   if (g.soundOff) return;
   if (effectsOf(g.options.soundChoice) !== 'original' && g.sound.cue) return g.sound.cue(name, whole);
   if (original) return original();

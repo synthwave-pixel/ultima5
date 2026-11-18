@@ -6,7 +6,7 @@
  * a player new to it could not tell a page waiting from one still drawing. Not a key hint: any key goes on.
  */
 
-import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 
 /** The arrow's place: the last few pixels of the page's lower right corner, clear on every story page. */
 const X = 306;
@@ -16,7 +16,7 @@ const Y = 190;
  * The arrow drawn (`on`) or rubbed out, on the screen (page 0) whatever page is being drawn behind it - at (x, y), the
  * story page's corner unless given (speech.ts puts it at its panel's).
  */
-export function waitMark(g: Game, on: boolean, x = X, y = Y): void {
+export function waitMark(g: GameCore, on: boolean, x = X, y = Y): void {
   const d = g.draw;
   const fx = g.p.fx;
   const page = fx.pageNow?.() ?? 0;
@@ -32,7 +32,7 @@ export function waitMark(g: Game, on: boolean, x = X, y = Y): void {
 const BLINK = 9;
 
 /** A blink: for a wait's idle calls (about 18 a second), the arrow lit and dark by turns. */
-export function blinker(g: Game, x = X, y = Y): () => void {
+export function blinker(g: GameCore, x = X, y = Y): () => void {
   let n = 0;
   return () => {
     if (n % BLINK === 0) waitMark(g, n % (2 * BLINK) === 0, x, y);
