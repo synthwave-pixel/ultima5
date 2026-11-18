@@ -9,6 +9,7 @@
  * eight saves for each of eight characters.
  */
 
+import { drawFrame, gameWindows } from './playScreen.ts';
 import { Relocate } from './relocate.ts';
 import { type PathData, PathState } from './modernKarma.ts';
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
@@ -693,7 +694,6 @@ export async function takeUp(g: Game, d: SaveData): Promise<never> {
     g.autoShown = false;
   }
   restore(g, d);
-  const { drawFrame, gameWindows } = await import('./run.ts');
   const { drawVitals } = await import('./frame.ts');
   // The screen drawn anew as Journey Onward draws it (run.ts journeyOnward): the menu's box taken away, the frame -
   // which blacks out everything, the party's panel too - and the panel again, as nothing else draws it till it changes.
