@@ -307,8 +307,13 @@ describe('the Sharp X68k skin', () => {
 
   it('ship its own dungeon in its eight colours, twice the layout, every piece drawn at its own size', () => {
     expect([png.width, png.height]).toEqual([SKIN_SHEET_W * X68K_SCALE, SKIN_SHEET_H * X68K_SCALE]);
-    for (let i = 0; i < png.data.length; i += 4)
-      if (png.data[i + 3]) expect(x68k.has((0xff000000 | (png.data[i + 2] << 16) | (png.data[i + 1] << 8) | png.data[i]) >>> 0)).toBe(true);
+    // The first pixel in none of the eight, checked in a plain loop: an expect per pixel took seconds.
+    let bad: string | null = null;
+    for (let i = 0; i < png.data.length && bad === null; i += 4) {
+      const rgba = (0xff000000 | (png.data[i + 2] << 16) | (png.data[i + 1] << 8) | png.data[i]) >>> 0;
+      if (png.data[i + 3] && !x68k.has(rgba)) bad = `pixel ${i / 4}: ${rgba.toString(16)} is none of the eight colours`;
+    }
+    expect(bad).toBeNull();
     const skin = skinFromSheet('x68k', sheetWords(png), png.width, SKIN_SPECS.x68k!.colours);
     for (const p of PIECES) {
       const piece = skin.piece(p.file, p.i)!;
@@ -401,11 +406,16 @@ describe('the Apple skins', () => {
   it('ship its dungeon in its six colours, and lit where it is lit on the monitor', () => {
     const allowed = new Set(APPLE_PALETTE.map(rgbaOf));
     const [c, m] = [words(colour), words(mono)];
-    for (let k = 0; k < c.length; k++) {
-      expect(c[k] >>> 24 === 0).toBe(m[k] >>> 24 === 0);
-      if (c[k] >>> 24) expect(allowed.has(c[k])).toBe(true);
-      if (m[k] >>> 24) expect([rgbaOf(0), rgbaOf(0xffffff)]).toContain(m[k]);
+    const [black, white] = [rgbaOf(0), rgbaOf(0xffffff)];
+    // The first pixel that breaks a rule, checked in a plain loop: an expect per pixel took seconds (CI timed it out).
+    let bad: string | null = c.length === m.length ? null : `${c.length} colour pixels, ${m.length} monitor`;
+    for (let k = 0; k < c.length && bad === null; k++) {
+      const [lit, monoLit] = [c[k] >>> 24 !== 0, m[k] >>> 24 !== 0];
+      if (lit !== monoLit) bad = `pixel ${k}: lit in ${lit ? 'colour' : 'the monitor'} only`;
+      else if (lit && !allowed.has(c[k])) bad = `pixel ${k}: ${c[k].toString(16)} is none of the six colours`;
+      else if (monoLit && m[k] !== black && m[k] !== white) bad = `pixel ${k}: ${m[k].toString(16)} on the monitor`;
     }
+    expect(bad).toBeNull();
     for (const [name, png] of [
       ['apple2', colour],
       ['apple2e', mono],
