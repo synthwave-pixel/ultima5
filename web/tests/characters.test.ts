@@ -275,7 +275,7 @@ async function atTitleWith(setup: (g: Game) => void, ...keys: number[]) {
       return false;
     },
   );
-  const lines = (intro as unknown as { menuKeys(): string }).menuKeys();
+  const lines = (intro.menuScreen as unknown as { menuKeys(): string }).menuKeys();
   return { ...made, done, lines };
 }
 

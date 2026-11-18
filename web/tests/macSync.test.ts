@@ -73,7 +73,7 @@ describe('macOS Sync', () => {
   });
 });
 
-/** The title's note with a choice beside OK (game/intro.ts newsBox): Fix now on the bar first, what came of it said. */
+/** The title's note with a choice beside OK (game/titleMenu.ts newsBox): Fix now on the bar first, what came of it said. */
 describe("the title's note with Fix now", () => {
   it('runs the fix when chosen and says what came of it; OK leaves it alone', async () => {
     const box = (choose: number[]) => {
@@ -85,7 +85,7 @@ describe("the title's note with Fix now", () => {
         action: { label: 'Fix now', run: async () => (ran++, 'Done: sent again.') },
       });
       p.keys.push(...choose);
-      return { g, p, ran: () => ran, intro: new Intro(g) as unknown as { newsBox(): Promise<boolean> } };
+      return { g, p, ran: () => ran, intro: new Intro(g).menuScreen as unknown as { newsBox(): Promise<boolean> } };
     };
     const fix = box([K.Enter, K.Enter]);
     expect(await fix.intro.newsBox()).toBe(true);

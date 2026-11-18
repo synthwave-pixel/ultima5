@@ -192,10 +192,10 @@ describe('Steam (beta) on the title', () => {
   it('is a line of the title only where the page has a Steam hook', async () => {
     storage();
     const without = newGame();
-    expect((new Intro(without.g) as unknown as { menuKeys(): string }).menuKeys()).not.toContain('T');
+    expect((new Intro(without.g).menuScreen as unknown as { menuKeys(): string }).menuKeys()).not.toContain('T');
     const { g, p } = newGame();
     g.hooks.steam = fake().hook;
-    expect((new Intro(g) as unknown as { menuKeys(): string }).menuKeys()).toBe('JCUARSMT');
+    expect((new Intro(g).menuScreen as unknown as { menuKeys(): string }).menuKeys()).toBe('JCUARSMT');
     // No game saved: the bar on Create New Character; up past Journey Onward (grey) to the last line, Steam (beta).
     p.keys.push(K.Escape, K.Escape, K.Escape, K.Up, Pad.A);
     await expect(new Intro(g).run()).rejects.toThrow('script ran out of keys');
@@ -238,7 +238,7 @@ describe('Steam (beta) on the title', () => {
     const keys = (choices: Partial<SteamChoices>, status: Partial<SteamStatus> = {}): string => {
       const { g } = newGame();
       g.hooks.steam = fake(status, choices).hook;
-      return (new Intro(g) as unknown as { menuKeys(): string }).menuKeys();
+      return (new Intro(g).menuScreen as unknown as { menuKeys(): string }).menuKeys();
     };
     expect(keys({ playLine: true })).toBe('LUARMT');
     expect(keys({ compatTool: true })).toBe('LUARMT');
