@@ -11,7 +11,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { saysWord } from '../../src/game/cmds.ts';
 import type { Game } from '../../src/game/game.ts';
-import { scriptSpeech, talksBackwards, townsfolkSaying, Vocabulary, wordRoot } from '../../src/game/words.ts';
+import { scriptSpeech, talksBackwards, Vocabulary, wordRoot } from '../../src/game/words.ts';
+import { townsfolkSaying } from '../../src/game/ultima5Lexicon.ts';
 
 const TLK = ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK'];
 const NPC = ['TOWNE.NPC', 'DWELLING.NPC', 'CASTLE.NPC', 'KEEP.NPC'];

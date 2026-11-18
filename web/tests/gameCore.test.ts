@@ -33,3 +33,19 @@ describe('The title and its screens', () => {
       expect(from.filter((f) => f === './game.ts' || f === './ultima5Saves.ts')).toEqual([]);
     });
 });
+
+/**
+ * What the party learns and how a speaker's words are shown (words.ts, lexicon.ts, saysWord.ts, speech.ts) are every
+ * game's: the words come from the game's lexicon (Ultima V's: ultima5Lexicon.ts), the speaker from the game's
+ * Speaker (ultima5Speaker.ts).
+ */
+const WORDS_AND_SPEECH = ['words.ts', 'lexicon.ts', 'saysWord.ts', 'speech.ts'];
+
+describe('words and speech', () => {
+  for (const file of WORDS_AND_SPEECH)
+    it(`${file} imports neither Ultima V's Game nor its saves`, () => {
+      const src = readFileSync(new URL(`../src/game/${file}`, import.meta.url), 'utf8');
+      const from = [...src.matchAll(/(?:^import\s[^;]*?from\s+|import\()'([^']+)'/gms)].map(([, f]) => f);
+      expect(from.filter((f) => /(^|\/)(game|frame|cmds)\.ts$|ultima5(Saves|Lexicon|Speaker)\.ts$/.test(f))).toEqual([]);
+    });
+});

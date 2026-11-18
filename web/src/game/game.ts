@@ -8,6 +8,10 @@
  * menus' memory) is GameCore's (gameCore.ts), which Game extends.
  */
 
+import { useLexicon } from './lexicon.ts';
+import { useSpeaker } from './speech.ts';
+import { ultima5Speaker } from './ultima5Speaker.ts';
+import { ultima5Lexicon } from './ultima5Lexicon.ts';
 import { TileCycles } from '../ui/animate.ts';
 import { GameData } from './data.ts';
 import { Fog } from './fog.ts';
@@ -260,6 +264,8 @@ export class Game extends GameCore {
     this.s = save ?? new Save(data.files.get('INIT.GAM'));
     this.play = ultima5Play(this);
     useSaves(ultima5Saves); // how the game is saved (ultima5Saves.ts), for the machinery (storage.ts)
+    useLexicon(ultima5Lexicon()); // the words it answers to (ultima5Lexicon.ts), for what the party learns (words.ts)
+    useSpeaker(this, ultima5Speaker(this)); // its play screen as the speech box needs it (ultima5Speaker.ts)
   }
 
   protected override learnWords(text: string): void {
