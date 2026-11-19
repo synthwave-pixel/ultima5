@@ -1,6 +1,6 @@
 // web/tests/appearanceMenu.test.ts
 import { describe, expect, it } from 'vitest';
-import { type Appearance, DEFAULT_APPEARANCE } from '../src/game/appearance.ts';
+import { type Appearance, DEFAULT_APPEARANCE, LADY } from '../src/game/appearance.ts';
 import {
   ABOVE,
   chooseAppearance,
@@ -217,6 +217,22 @@ describe('the Appearance screen', () => {
       expect(covers(x, y), `${x},${y}`).toBe(true);
     expect(Math.min(...large.map((l) => l.y))).toBeGreaterThan(-(under?.size ?? 0));
     expect(Math.max(...large.map((l) => l.y))).toBeLessThanOrEqual(ABOVE[3]);
+  });
+
+  it('draws a Lady Avatar as she is (a mage without the beard), and a Sir as he is', async () => {
+    for (const [gender, lady] of [
+      [LADY, true],
+      [0x0b, false],
+    ] as const) {
+      const { g, p } = setup();
+      g.s.members[0].gender = gender;
+      const given: (boolean | undefined)[] = [];
+      Object.assign(p.draw, { avatar: (_look: Appearance, l?: boolean) => given.push(l) });
+      p.keys.push(K.Right, Pad.B); // the mage, then B
+      await chooseAppearance(g, { ...DEFAULT_APPEARANCE });
+      expect(given.length).toBeGreaterThan(1);
+      expect(given.every((l) => l === lady)).toBe(true);
+    }
   });
 
   it('draws the scene a game gives it, in its place: its world, its scene in the walk, its name and its address', async () => {
