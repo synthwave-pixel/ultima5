@@ -2,9 +2,10 @@
  * sheetTone.ts
  *
  * A set's colours shown softer than its sheet has them (the Sharp X68k's: skins.ts X68K_TONE): each of its colours as
- * a gentler one, and each pixel blended a little with its neighbours across, as a monitor ran a dither's two colours
- * together. Laid on as a tile or a dungeon piece is drawn (sheetArt.ts, skins.ts), so the sheets stay the machine's own
- * and what is found in them by colour - the water, the fire - is found as before.
+ * a gentler one, its pixels kept crisp. A tone may also blend each pixel a little with its neighbours across, as a
+ * monitor ran a dither's two colours together; the X68k's does not (its players liked the colours, not the blur).
+ * Laid on as a tile or a dungeon piece is drawn (sheetArt.ts, skins.ts), so the sheets stay the machine's own and what
+ * is found in them by colour - the water, the fire - is found as before.
  */
 
 /** How a set's colours are shown. */

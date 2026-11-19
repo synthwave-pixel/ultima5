@@ -53,7 +53,7 @@ export interface SheetSpec {
   tone?: SheetTone;
 }
 
-/** A cell as `spec`'s tone shows it, its own pixels blended as they are (each `CELL / spec.w` of the cell's across). */
+/** A cell as `spec`'s tone shows it; a tone that blends, its own pixels as they are (each `CELL / spec.w` of the cell's across). */
 function shown(spec: SheetSpec, cell: Uint32Array): Uint32Array {
   return spec.tone ? toned(cell, CELL, CELL, spec.tone, CELL / spec.w) : cell;
 }
@@ -322,7 +322,7 @@ export const X68K_SHEET: SheetSpec = {
   ground: 'clear',
   squares: false,
   water: [0x0000ff, 0x00ffff],
-  // Shown softer than the X68000's full-on colours, harsh on a modern screen (skins.ts X68K_TONE).
+  // Shown in softer colours than the X68000's full-on ones, harsh on a modern screen, its pixels crisp (skins.ts X68K_TONE).
   tone: X68K_TONE,
   fire: fireOf(
     new Map<number, number[]>([

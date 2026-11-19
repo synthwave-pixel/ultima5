@@ -178,7 +178,7 @@ export function skinFromSheet(
       if (!px) {
         px = new Uint32Array(w * h);
         for (let y = 0; y < h; y++) px.set(sheet.subarray((y0 + y) * width + x0, (y0 + y) * width + x0 + w), y * w);
-        // In the set's tone, where it has one (the X68k's), each piece alone: none blended with the next in the sheet.
+        // In the set's tone, where it has one (the X68k's), each piece alone (a tone that blends: none with the next in the sheet).
         if (tone) px = toned(px, w, h, tone);
         cut.set(key, px);
       }
@@ -218,11 +218,11 @@ export class SkinOvers {
 export const X68K_PALETTE = [0x000000, 0x0000ff, 0xff0000, 0xff00ff, 0x00ff00, 0x00ffff, 0xffff00, 0xffffff] as const;
 /**
  * The eight as the set shows them (sheetTone.ts): the text palette's full-on colours, harsh on a modern screen, as
- * gentler ones - in X68K_PALETTE's order.
+ * gentler ones, each pixel still its own (none blended) - in X68K_PALETTE's order.
  */
 export const X68K_SOFT = [0x0c0e0c, 0x3058c0, 0xc8442c, 0xa0508c, 0x44a03c, 0x6cc0cc, 0xe8c864, 0xece8dc] as const;
-/** The Sharp X68k set's tone: its eight as X68K_SOFT, each pixel blended with its neighbours across. */
-export const X68K_TONE: SheetTone = toneOf(X68K_PALETTE, X68K_SOFT, true);
+/** The Sharp X68k set's tone: its eight as X68K_SOFT, each pixel kept crisp (none blended with its neighbours). */
+export const X68K_TONE: SheetTone = toneOf(X68K_PALETTE, X68K_SOFT, false);
 /** A colour of the eight (0xRRGGBB) as the set shows it. */
 const x68kSoft = (c: number): number => X68K_SOFT[X68K_PALETTE.indexOf(c as (typeof X68K_PALETTE)[number])] ?? c;
 
@@ -357,8 +357,8 @@ export const SKIN_SPECS: Partial<
   },
   apple2e: monoSkin(APPLE_GREEN),
   apple2c: monoSkin(APPLE_WHITE),
-  // Its own dungeon off its disk 1 (tools/art/x68kDungeon.ts), in its text palette's colours shown softer, as its tiles
-  // are (X68K_TONE) - its lines and sign too; its frame the X68000's own blue and white, as the game drew it.
+  // Its own dungeon off its disk 1 (tools/art/x68kDungeon.ts), in its text palette's colours shown softer, its pixels
+  // crisp, as its tiles are (X68K_TONE) - its lines and sign too; its frame the X68000's own blue and white, as drawn.
   x68k: {
     sheet: 'x68k-u5-dungeon.png',
     colours: {
