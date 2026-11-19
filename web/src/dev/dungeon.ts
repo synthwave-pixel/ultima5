@@ -19,7 +19,7 @@ import { HI, HI_HEIGHT, HI_WIDTH } from '../ui/framebuffer.ts';
 import { Screen } from '../ui/screen.ts';
 import { loadStandardArt } from '../ui/loadArt.ts';
 import { refresh } from '../game/dungeon.ts';
-import { DUNGEON_CREATURES } from '../game/dungeonMap.ts';
+import { DUNGEON_CREATURES } from '../game/ultima5DungeonMap.ts';
 import { TILE_NAMES } from '../data/tileNames.ts';
 import { DosRandom } from '../game/rng.ts';
 import { PC_TILES, TILES, TILES_NAMES, type Tiles } from '../game/settings.ts';

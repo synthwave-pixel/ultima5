@@ -12,7 +12,8 @@
 import { readTownLevel, TOWN_SIZE, type Location } from '../data/maps.ts';
 import { EGA_PALETTE as EGA } from '../data/tiles.ts';
 import type { Game } from '../game/game.ts';
-import { cellLook, kindOf, levelCells, unrolled } from '../game/dungeonMap.ts';
+import { levelCells, unrolled } from '../game/dungeonMap.ts';
+import { cellLook, kindOf } from '../game/ultima5DungeonMap.ts';
 import { tinted } from './colours.ts';
 import type { StandardArt } from './standardArt.ts';
 

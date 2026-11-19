@@ -16,22 +16,23 @@
  * a side round the party, sits
  * under the party panel over the top of the log (text.ts cover), the log
  * going on beneath it unseen until the map is lifted.
+ *
+ * Every game's: it reads the dungeon through the game's DungeonMapSource
+ * (useDungeonMap) - the view's box, the look, the party's level, each
+ * cell's kind and tiles, the cells known and the creatures seen. Ultima
+ * V's is ultima5DungeonMap.ts.
  */
 
-import { Colour, DUNGEON_TINTS, OWN_COLOURS, OWN_ROCK_LIGHT } from '../ui/colours.ts';
-import { creatureSeen, feltCells, inTheDark } from './fog.ts';
-import { creatureFrame, partyFigures } from './world.ts';
-import { compactPanel, Win } from './frame.ts';
-import type { Game } from './game.ts';
+import { Colour } from '../ui/colours.ts';
+import type { GameCore } from './gameCore.ts';
 import type { ViewCell } from './io.ts';
-import { A, T } from './tiles.ts';
 
 /** The map's square on the screen, in EGA pixels a side from (8, 8): the Standard look's dungeon view, grown to it. */
 const SQUARE = 0xb0;
 
-/** The dungeon view's rectangle on the screen (DUNGEON_1a90 fills it). */
-const VIEW = { x1: 0x10, y1: 0x0e, x2: 0xaf, y2: 0xb2 };
 const CELLS = 8;
+/** The message log's text window (frame.ts Win.messages). */
+const LOG = 2;
 
 /**
  * The log's cells the Standard look's small map (or small view) lies over: under the party panel's band, nine rows of
@@ -51,24 +52,9 @@ const SMALL_CELL = Math.floor(SLOT.size / AROUND);
 const SMALL_AT = (SLOT.size - SMALL_CELL * AROUND) >> 1;
 
 /**
- * The Standard look's cells drawn in its own tiles, laid edge to edge as a town's are - a pixel of a tile to a pixel
- * of the map (the cells are sixteen pixels, as the tiles are): the rock the wall in the dungeon's light, a passage
- * cobbles, and what stands in it over them, as the tiles have it.
+ * What a cell is: what the party knows of it, a hidden thing as it looks. Orbs, altars and traps are Ultima IV's
+ * (Ultima V's levels have none).
  */
-const COBBLES = T.T44;
-const BONES = 0xcf;
-const COLLAPSED = T.DF;
-const STANDS: Partial<Record<Kind, number[]>> = {
-  up: [T.LadderUp],
-  down: [T.LadderDown],
-  updown: [T.LadderDown, T.LadderUp], // the up ladder over the down
-  chest: [0x100 + A.Chest],
-  treasure: [0x100 + A.Gold],
-  door: [T.DoorB8],
-  roomDoor: [T.DoorB8],
-};
-
-/** What a cell is, by the high nibble the original keeps it in: what the party knows of it, a hidden thing as it looks. */
 export type Kind =
   | 'rock'
   | 'floor'
@@ -82,77 +68,84 @@ export type Kind =
   | 'field'
   | 'door'
   | 'roomDoor'
-  | 'rubble';
-
-export function kindOf(cell: number): Kind {
-  switch (cell & 0xf0) {
-    case 0x00:
-    case 0x90: // "nothing of note"
-      return 'floor';
-    case 0x10:
-      return 'up';
-    case 0x20:
-      return 'down';
-    case 0x30:
-      return 'updown';
-    case 0x40: // a closed chest (its trap in the low bits)
-      return 'chest';
-    case 0x50:
-      return 'fountain';
-    case 0x60: // a pit; a pit trap or a bomb not yet found looks like the passage it lies in
-      return (cell & 7) === 0 ? 'pit' : 'floor';
-    case 0x70: // an opened chest, its treasure to be got
-      return 'treasure';
-    case 0x80: // sleep, poison, fire and energy fields
-      return 'field';
-    case 0xe0:
-      return 'door';
-    case 0xa0: // a room's heavy door: cleared (0xa_) or its fight still behind it (0xf_)
-    case 0xf0:
-      return 'roomDoor';
-    case 0xc0: // a stalactite, a caved in passage or a skeleton: in the way
-      return 'rubble';
-    default:
-      return 'rock'; // a wall, and a door still hidden in one
-  }
-}
-
-/** Whether the party can go through a cell of this kind (the map's cells are linked where it can). */
-const passable = (kind: Kind): boolean => kind !== 'rock' && kind !== 'rubble';
-
-/** A field's colour, by its kind (the low bits): as the view's crackle has it (dungeon.ts field). */
-const FIELD_COLOURS = [Colour.magenta, Colour.green, Colour.red, Colour.blue];
+  | 'rubble'
+  | 'orb'
+  | 'altar'
+  | 'trap';
 
 /**
- * How a cell of `kind` (a field's colour its cell's low bits, `field`) is drawn in the look's tiles (STANDS), one over another - each with its tint, the rock's Remastered's
- * dungeon light - and a box of an EGA colour over its middle where the original drew one (a pit, a field): the Enhanced
- * map's and the maps' page's alike (interiorMap.ts dungeonPicture).
+ * How a cell is drawn in the look's tiles, one over another - each with its tint - and a box of an EGA colour over its
+ * middle where the original drew one (a pit, a field). No tiles: the look draws the map's own shapes.
  */
-export function cellLook(g: Game, kind: Kind, field = 0): { tiles: { tile: number; tint?: number }[]; box?: number } {
-  const dungeon = g.s.mapId - 0x20;
-  // The dungeon's light, Remastered's own: every other look's wall as its look draws it.
-  // Hythloth's (OWN_COLOURS) its own red rock's.
-  const lit = OWN_COLOURS.includes(dungeon) ? OWN_ROCK_LIGHT : DUNGEON_TINTS[dungeon >= 1 && dungeon <= 8 ? dungeon : 0];
-  const light = g.options.tiles === 'modern-pc' ? lit : undefined;
-  if (kind === 'rock' || kind === 'rubble') {
-    const wall = light === undefined ? { tile: T.Wall } : { tile: T.Wall, tint: light };
-    // Rubble: remains or a caved in passage over the rock, as the dungeon has them (Save.dungeonLook); a stalactite,
-    // the rock alone.
-    const look = g.s.dungeonLook & 0xf;
-    return { tiles: kind === 'rubble' && look !== 1 ? [wall, { tile: look === 2 ? COLLAPSED : BONES }] : [wall] };
-  }
-  // The passage: cobbles, and what stands in it over them - a pit the original's black box, a field its colour.
-  const tiles = [{ tile: COBBLES }];
-  if (kind === 'fountain') return { tiles: [...tiles, { tile: g.cycles.shown[T.Fountain] }] };
-  if (kind === 'pit') return { tiles, box: Colour.black };
-  if (kind === 'field') return { tiles, box: FIELD_COLOURS[field & 3] + 8 };
-  return { tiles: [...tiles, ...(STANDS[kind] ?? []).map((tile) => ({ tile }))] };
+export interface CellLook {
+  tiles: { tile: number; tint?: number }[];
+  box?: number;
 }
 
-/** A cell in the look's tiles (cellLook); false where the look draws no tiles, and nothing is drawn. */
-function tiled(g: Game, kind: Kind, px: number, py: number, n: number, field: number): boolean {
+/** The level the party is on, as the map reads it. Its cells are (x, y), 0-7; the level wraps. */
+export interface MapLevel {
+  /** The level's own name, for Smooth motion's glide (the scene it slides within). */
+  readonly scene: string;
+  /** The party's cell, and the way it faces: 0 north, 1 east, 2 south, 3 west. */
+  readonly x: number;
+  readonly y: number;
+  readonly facing: number;
+  /** What the party knows of a cell. */
+  kind(x: number, y: number): Kind;
+  /** A field's colour (its low bits: 0 magenta, 1 green, 2 red, 3 blue, FIELD_COLOURS), and the look's detail. */
+  detail(x: number, y: number): number;
+  /** Whether the level's passages join through a cell: one the party can pass, or a hidden door it walks through. */
+  joins(x: number, y: number): boolean;
+  /** The cells the party has seen (y * 8 + x, non-zero), kept; none where it has never been. */
+  known(): Uint8Array | undefined;
+  /** In the dark: the eight round the party felt for, not kept (feltCells). */
+  readonly dark: boolean;
+  /** The creatures the party sees: each one's cell, its tile in the Standard look, and its name for the glide. */
+  creatures(): { x: number; y: number; tile: number; mover: string }[];
+  /** The look's tiles for a cell of `kind`, `detail` its detail. */
+  look(kind: Kind, detail: number): CellLook;
+}
+
+/** What the map needs of a game: set by the game (useDungeonMap); Ultima V's is ultima5DungeonMap.ts. */
+export interface DungeonMapSource {
+  /** The first-person view's rectangle on the screen, in EGA pixels (inclusive): the EGA look's maps lie in it. */
+  readonly view: { x1: number; y1: number; x2: number; y2: number };
+  /** Whether the Standard look is drawn (its tiles, its small map over the log, its whole-level map round the party). */
+  standard(): boolean;
+  /** Whether the party panel is compact, the small map's room under it over the log (frame.ts compactPanel). */
+  compact(): boolean;
+  /** The party's leader's tile in the Standard look (world.ts partyFigures), or null. */
+  leader(): number | null;
+  /** The level the party is on, or null outside a dungeon. */
+  level(): MapLevel | null;
+}
+
+const sources = new WeakMap<GameCore, DungeonMapSource>();
+
+/** The game's dungeon as the map reads it (null: none). */
+export function useDungeonMap(g: GameCore, source: DungeonMapSource | null): void {
+  if (source) sources.set(g, source);
+  else sources.delete(g);
+}
+
+export function dungeonMapSource(g: GameCore): DungeonMapSource | null {
+  return sources.get(g) ?? null;
+}
+
+/** The party's level, where the game has a map and the party is below. */
+const levelOf = (g: GameCore): MapLevel | null => sources.get(g)?.level() ?? null;
+
+/** Whether the party can go through a cell of this kind (the map's cells are linked where it can). */
+export const passable = (kind: Kind): boolean => kind !== 'rock' && kind !== 'rubble';
+
+/** A field's colour, by its kind (the low bits): as the view's crackle has it (dungeon.ts field). */
+export const FIELD_COLOURS = [Colour.magenta, Colour.green, Colour.red, Colour.blue];
+
+/** A cell in the look's tiles (MapLevel.look); false where the look draws no tiles, and nothing is drawn. */
+function tiled(g: GameCore, lv: MapLevel, kind: Kind, px: number, py: number, n: number, field: number): boolean {
   const d = g.draw;
-  const { tiles, box } = cellLook(g, kind, field);
+  const { tiles, box } = lv.look(kind, field);
+  if (tiles.length === 0) return false;
   for (const [k, t] of tiles.entries()) if (!d.icon?.(t.tile, px, py, n, false, t.tint) && k === 0) return false;
   if (box !== undefined) {
     const r = Math.max(1, Math.round(n / 5));
@@ -164,9 +157,9 @@ function tiled(g: Game, kind: Kind, px: number, py: number, n: number, field: nu
 }
 
 /** Draw one cell at (px, py), `n` pixels a side, with arms to the cells it opens onto. */
-function cell(g: Game, kind: Kind, px: number, py: number, n: number, links: number, field = 0): void {
+function cell(g: GameCore, lv: MapLevel, kind: Kind, px: number, py: number, n: number, links: number, field = 0): void {
   const d = g.draw;
-  if (tiled(g, kind, px, py, n, field)) return;
+  if (tiled(g, lv, kind, px, py, n, field)) return;
   if (kind === 'rock' || kind === 'rubble') {
     // The rock: dark grey.
     d.pen = Colour.darkGray;
@@ -241,21 +234,31 @@ function cell(g: Game, kind: Kind, px: number, py: number, n: number, links: num
       d.pen = FIELD_COLOURS[field & 3] + 8;
       d.fill(cx - r, cy - r, cx + r, cy + r);
       break;
+    case 'orb':
+      d.pen = Colour.magenta + 8;
+      d.fill(cx - r, cy - r, cx + r, cy + r);
+      break;
+    case 'altar':
+      d.pen = Colour.brightWhite;
+      d.fill(cx - r, cy - (r >> 1), cx + r, cy + (r >> 1));
+      break;
+    case 'trap':
+      d.pen = Colour.brightRed;
+      d.line(cx - r, cy - r, cx + r, cy + r);
+      d.line(cx - r, cy + r, cx + r, cy - r);
+      break;
     case 'floor':
       break;
   }
 }
 
-/** The Standard tile of each dungeon creature (MON0-7.16), for looks that draw it as its figure: the view, the map. */
-export const DUNGEON_CREATURES = [0x190, 0x194, 0x198, 0x19c, 0x1a0, 0x1a4, 0x1b0, 0x1ac];
-
 /**
- * The level's creature (actor 1) on its cell at (px, py), `n` pixels a side: in the Standard look its figure, walking;
- * in the EGA look a red mark.
+ * A creature seen (MapLevel.creatures, its `tile`) on its cell at (px, py), `n` pixels a side: in the Standard look its
+ * figure, walking; in the EGA look a red mark.
  */
-function creature(g: Game, px: number, py: number, n: number): void {
+function creature(g: GameCore, tile: number, px: number, py: number, n: number): void {
   const d = g.draw;
-  if (d.icon?.(DUNGEON_CREATURES[g.s.actors[1].tile & 7] + creatureFrame(), px, py, n)) return;
+  if (d.icon?.(tile, px, py, n)) return;
   const r = Math.max(1, Math.round(n / 5));
   const [cx, cy] = [px + Math.round(n / 2), py + Math.round(n / 2)];
   d.pen = Colour.brightRed;
@@ -263,7 +266,7 @@ function creature(g: Game, px: number, py: number, n: number): void {
 }
 
 /** The party, and which way it faces. */
-function party(g: Game, px: number, py: number, n: number): void {
+function party(g: GameCore, src: DungeonMapSource, lv: MapLevel, px: number, py: number, n: number): void {
   const d = g.draw;
   const cx = px + Math.round(n / 2);
   const cy = py + Math.round(n / 2);
@@ -273,13 +276,13 @@ function party(g: Game, px: number, py: number, n: number): void {
     [1, 0],
     [0, 1],
     [-1, 0],
-  ][g.s.facing & 3];
+  ][lv.facing & 3];
   // The Standard look: the party's leader, as the map above ground draws it (world.ts partyFigures: the Avatar as the
   // player made it, walking, or the first of the party still living), its tile laid on the cell a pixel to a pixel;
   // and a pointer out past the cell's edge on the side the party faces, in the way it would go.
   const lay = (): boolean => {
-    const leader = partyFigures(g)[0];
-    return g.options.tileSet === 'standard' && !!leader && !!d.icon?.(leader.tile, px, py, n);
+    const leader = src.leader();
+    return src.standard() && leader !== null && !!d.icon?.(leader, px, py, n);
   };
   if (lay()) {
     // A triangle a row at a time, its base just past the cell's edge and its point outward, two pixels wide at the point
@@ -316,12 +319,12 @@ function party(g: Game, px: number, py: number, n: number): void {
  * Whether the dungeon is walked, and pointed in, by the compass (the Standard look's whole-level map up): the d-pad's
  * Up is north rather than ahead (dungeon.ts compassStep, lookDirection).
  */
-export function byCompass(g: Game): boolean {
+export function byCompass(g: GameCore): boolean {
   return g.options.tileSet === 'standard' && g.options.dungeonView === 'full';
 }
 
 /** The Standard look's small map taken off the log: the log's rows under it drawn again as they now read. */
-export function liftDungeonMap(g: Game): void {
+export function liftDungeonMap(g: GameCore): void {
   if (!g.mapOverLog) return;
   g.mapOverLog = false;
   g.text.uncover();
@@ -332,8 +335,18 @@ export function liftDungeonMap(g: Game): void {
  * (4, 4), so that it starts at its first cell - each `n` pixels, at (x0, y0), in a frame of its own (it is set in
  * something: the log, the EGA look's view).
  */
-function grid(g: Game, seen: Uint8Array, x0: number, y0: number, n: number, span: number, cx: number, cy: number): void {
-  const s = g.s;
+function grid(
+  g: GameCore,
+  src: DungeonMapSource,
+  lv: MapLevel,
+  seen: Uint8Array,
+  x0: number,
+  y0: number,
+  n: number,
+  span: number,
+  cx: number,
+  cy: number,
+): void {
   const d = g.draw;
   const w = n * span;
   d.pen = Colour.black;
@@ -343,8 +356,8 @@ function grid(g: Game, seen: Uint8Array, x0: number, y0: number, n: number, span
   d.line(x0 - 2, y0 + w + 1, x0 + w + 1, y0 + w + 1);
   d.line(x0 - 2, y0 - 2, x0 - 2, y0 + w + 1);
   d.line(x0 + w + 1, y0 - 2, x0 + w + 1, y0 + w + 1);
-  const at = (x: number, y: number): number => s.dungeon[s.level * 0x40 + (y & 7) * 8 + (x & 7)];
-  const open = (x: number, y: number): boolean => seen[(y & 7) * CELLS + (x & 7)] !== 0 && passable(kindOf(at(x, y)));
+  const kindAt = (x: number, y: number): Kind => lv.kind(x & 7, y & 7);
+  const open = (x: number, y: number): boolean => seen[(y & 7) * CELLS + (x & 7)] !== 0 && passable(kindAt(x, y));
   const first = -(span >> 1);
   for (let j = 0; j < span; j++) {
     for (let i = 0; i < span; i++) {
@@ -356,27 +369,28 @@ function grid(g: Game, seen: Uint8Array, x0: number, y0: number, n: number, span
       if (open(x + 1, y)) links |= 2;
       if (open(x, y + 1)) links |= 4;
       if (open(x - 1, y)) links |= 8;
-      cell(g, kindOf(at(x, y)), x0 + i * n, y0 + j * n, n, links, at(x, y));
+      cell(g, lv, kindAt(x, y), x0 + i * n, y0 + j * n, n, links, lv.detail(x, y));
     }
   }
-  // The creature, where the party sees it (fog.ts creatureSeen), and the party over all.
-  const a = s.actors[1];
-  if (creatureSeen(g)) {
+  // The creatures, where the party sees them (MapLevel.creatures), and the party over all.
+  for (const a of lv.creatures()) {
     const [ax, ay] = [(a.x - cx - first + 8) & 7, (a.y - cy - first + 8) & 7];
-    if (ax < span && ay < span) creature(g, x0 + ax * n, y0 + ay * n, n);
+    if (ax < span && ay < span) creature(g, a.tile, x0 + ax * n, y0 + ay * n, n);
   }
-  const px = ((s.x & 7) - cx - first + 8) & 7;
-  const py = ((s.y & 7) - cy - first + 8) & 7;
-  if (px < span && py < span) party(g, x0 + px * n, y0 + py * n, n);
+  const px = ((lv.x & 7) - cx - first + 8) & 7;
+  const py = ((lv.y & 7) - cy - first + 8) & 7;
+  if (px < span && py < span) party(g, src, lv, x0 + px * n, y0 + py * n, n);
 }
 
+type Box = DungeonMapSource['view'];
+
 /** The EGA look's maps of the whole level, each a grid of the level as it lies: over all the view, or in its corner. */
-const EGA_WHOLE = {
-  x: VIEW.x1 + Math.floor((VIEW.x2 - VIEW.x1 + 1 - 20 * CELLS) / 2),
-  y: VIEW.y1 + Math.floor((VIEW.y2 - VIEW.y1 + 1 - 20 * CELLS) / 2),
+const egaWhole = (view: Box): { x: number; y: number; n: number } => ({
+  x: view.x1 + Math.floor((view.x2 - view.x1 + 1 - 20 * CELLS) / 2),
+  y: view.y1 + Math.floor((view.y2 - view.y1 + 1 - 20 * CELLS) / 2),
   n: 20,
-};
-const EGA_CORNER = { x: VIEW.x2 - 8 * CELLS - 3, y: VIEW.y1 + 3, n: 8 };
+});
+const egaCorner = (view: Box): { x: number; y: number; n: number } => ({ x: view.x2 - 8 * CELLS - 3, y: view.y1 + 3, n: 8 });
 
 /** The Standard look's whole-level map: eleven cells of sixteen pixels a side round the party, filling the map's square. */
 const WHOLE = 16;
@@ -393,9 +407,6 @@ const STEPS: readonly [number, number][] = [
 /** A cell's place in the level's grid (y * 8 + x), wrapped. */
 const at8 = (x: number, y: number): number => ((y & 7) << 3) | (x & 7);
 
-/** Whether the level joins up through a cell: one the party can pass, and a hidden door, which once found it walks through. */
-const joins = (cell: number): boolean => (cell & 0xf0) === 0xd0 || passable(kindOf(cell));
-
 /**
  * Where the cells the party can reach lie from it, the level unrolled from where it stands: its passages walked out
  * step by step, each cell placed at its steps from the party (dx, dy), as far as they run - the passages as they are
@@ -403,21 +414,26 @@ const joins = (cell: number): boolean => (cell & 0xf0) === 0xd0 || passable(kind
  * own edges, and join up only as pieces). By each cell's place in the grid. Null where they loop round the level - a
  * cell met again at another place, so that they go on for ever (Shame's seventh level, Doom's fifth).
  */
-export function unrolled(g: Game): Map<number, [number, number]> | null {
-  const s = g.s;
-  const cellAt = (dx: number, dy: number): number => s.dungeon[s.level * 0x40 + at8(s.x + dx, s.y + dy)];
-  const placed = new Map<number, [number, number]>([[at8(s.x, s.y), [0, 0]]]);
+export function unrolled(g: GameCore): Map<number, [number, number]> | null {
+  const lv = levelOf(g);
+  return lv && unrolledFrom(lv);
+}
+
+/** unrolled, of the level `lv`. */
+function unrolledFrom(lv: MapLevel): Map<number, [number, number]> | null {
+  const joinsAt = (dx: number, dy: number): boolean => lv.joins((lv.x + dx) & 7, (lv.y + dy) & 7);
+  const placed = new Map<number, [number, number]>([[at8(lv.x, lv.y), [0, 0]]]);
   // Walked out from the party's own cell, which joins the passages round it (not through rock, which would join
   // pieces that do not meet).
-  const queue: [number, number][] = joins(cellAt(0, 0)) ? [[0, 0]] : [];
+  const queue: [number, number][] = joinsAt(0, 0) ? [[0, 0]] : [];
   for (let q = queue.shift(); q; q = queue.shift()) {
     for (const [sx, sy] of STEPS) {
       const [dx, dy] = [q[0] + sx, q[1] + sy];
-      if (!joins(cellAt(dx, dy))) continue;
-      const was = placed.get(at8(s.x + dx, s.y + dy));
+      if (!joinsAt(dx, dy)) continue;
+      const was = placed.get(at8(lv.x + dx, lv.y + dy));
       if (was && (was[0] !== dx || was[1] !== dy)) return null;
       if (was) continue;
-      placed.set(at8(s.x + dx, s.y + dy), [dx, dy]);
+      placed.set(at8(lv.x + dx, lv.y + dy), [dx, dy]);
       queue.push([dx, dy]);
     }
   }
@@ -438,10 +454,15 @@ export interface LevelCell {
  * passage where it was walked out to, the rock beside such a passage - the level's other pieces (reached by other
  * ladders) not at all; where they loop round the level, every cell wherever it comes round.
  */
-export function levelCells(g: Game, seen: Uint8Array, r: number): LevelCell[] {
-  const s = g.s;
-  const places = unrolled(g);
-  const cellAt = (x: number, y: number): number => s.dungeon[s.level * 0x40 + at8(x, y)];
+export function levelCells(g: GameCore, seen: Uint8Array, r: number): LevelCell[] {
+  const lv = levelOf(g);
+  return lv ? cellsOf(lv, seen, r) : [];
+}
+
+/** levelCells, of the level `lv`. */
+function cellsOf(lv: MapLevel, seen: Uint8Array, r: number): LevelCell[] {
+  const s = lv;
+  const places = unrolledFrom(lv);
   const placedAt = (i: number, j: number): boolean => {
     const p = places?.get(at8(s.x + i, s.y + j));
     return !!p && p[0] === i && p[1] === j;
@@ -449,7 +470,7 @@ export function levelCells(g: Game, seen: Uint8Array, r: number): LevelCell[] {
   const shownAt = (i: number, j: number): boolean => {
     if (!places || placedAt(i, j)) return true;
     // Rock beside a passage where it lies (a corner's too); a passage anywhere else is another place.
-    if (joins(cellAt(s.x + i, s.y + j))) return false;
+    if (lv.joins((s.x + i) & 7, (s.y + j) & 7)) return false;
     for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) if (placedAt(i + ex, j + ey)) return true;
     return false;
   };
@@ -470,21 +491,21 @@ export function levelCells(g: Game, seen: Uint8Array, r: number): LevelCell[] {
  * at all. Where they loop round the level, it goes on as it begins past its edges, as a gem's view of it has it
  * (dungeon.ts dungeonView), every cell wherever it comes round.
  */
-function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): ViewCell[] {
-  const s = g.s;
+function aroundParty(g: GameCore, src: DungeonMapSource, lv: MapLevel, seen: Uint8Array, x0: number, y0: number): ViewCell[] {
+  const s = lv;
   // Smooth motion: each square as drawn, to be drawn again bare of the party or the creature (ui/viewGlide.ts).
   const squares = new Map<number, () => void>();
   const r = ACROSS >> 1;
-  const places = unrolled(g);
-  const cellAt = (x: number, y: number): number => s.dungeon[s.level * 0x40 + at8(x, y)];
-  const open = (x: number, y: number): boolean => seen[at8(x, y)] !== 0 && passable(kindOf(cellAt(x, y)));
-  for (const { i, j, x, y } of levelCells(g, seen, r)) {
+  const places = unrolledFrom(lv);
+  const kindAt = (x: number, y: number): Kind => lv.kind(x & 7, y & 7);
+  const open = (x: number, y: number): boolean => seen[at8(x, y)] !== 0 && passable(kindAt(x, y));
+  for (const { i, j, x, y } of cellsOf(lv, seen, r)) {
     let links = 0;
     if (open(x, y - 1)) links |= 1;
     if (open(x + 1, y)) links |= 2;
     if (open(x, y + 1)) links |= 4;
     if (open(x - 1, y)) links |= 8;
-    const square = (): void => cell(g, kindOf(cellAt(x, y)), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, cellAt(x, y));
+    const square = (): void => cell(g, lv, kindAt(x, y), x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE, links, lv.detail(x, y));
     square();
     squares.set((j + r) * ACROSS + i + r, square);
   }
@@ -498,16 +519,15 @@ function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): ViewCel
       squares.get((j + r) * ACROSS + i + r)?.();
     },
   });
-  // The creature, where the party sees it (fog.ts creatureSeen): where its cell lies from the party.
-  const a = s.actors[1];
-  if (creatureSeen(g)) {
+  // The creatures, where the party sees them (MapLevel.creatures): where each one's cell lies from the party.
+  for (const a of lv.creatures()) {
     const [i, j] = places?.get(at8(a.x, a.y)) ?? [((a.x - s.x + 4) & 7) - 4, ((a.y - s.y + 4) & 7) - 4];
     if (Math.abs(i) <= r && Math.abs(j) <= r) {
-      creature(g, x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE);
-      if (i !== 0 || j !== 0) cells[(j + r) * ACROSS + i + r] = { mover: 'a1', bare: bare(i, j) };
+      creature(g, a.tile, x0 + (i + r) * WHOLE, y0 + (j + r) * WHOLE, WHOLE);
+      if (i !== 0 || j !== 0) cells[(j + r) * ACROSS + i + r] = { mover: a.mover, bare: bare(i, j) };
     }
   }
-  party(g, x0 + r * WHOLE, y0 + r * WHOLE, WHOLE);
+  party(g, src, lv, x0 + r * WHOLE, y0 + r * WHOLE, WHOLE);
   cells[r * ACROSS + r] = { party: true, bare: bare(0, 0) };
   return cells;
 }
@@ -516,19 +536,20 @@ function aroundParty(g: Game, seen: Uint8Array, x0: number, y0: number): ViewCel
  * The Standard look's first-person view made small beside the whole-level map, in EGA pixels (x1, y1, x2, y2,
  * inclusive): its whole picture fitted to the square SLOT, centred in it.
  */
-const SMALL_VIEW: [number, number, number, number] = (() => {
-  const w = Math.round(((VIEW.x2 - VIEW.x1 + 1) * SLOT.size) / (VIEW.y2 - VIEW.y1 + 1));
+function smallViewOf(view: Box): [number, number, number, number] {
+  const w = Math.round(((view.x2 - view.x1 + 1) * SLOT.size) / (view.y2 - view.y1 + 1));
   const x = SLOT.x + ((SLOT.size - w) >> 1);
   return [x, SLOT.y, x + w - 1, SLOT.y + SLOT.size - 1];
-})();
+}
 
 /**
  * The first-person view as the whole-level map shows it small beside itself, with its frame (EGA pixels, inclusive),
  * where it is shown (the Standard look's map up, the party panel compact over the log); else null.
  */
-export function smallView(g: Game): [number, number, number, number] | null {
-  if (!byCompass(g) || !compactPanel(g)) return null;
-  const [x1, y1, x2, y2] = SMALL_VIEW;
+export function smallView(g: GameCore): [number, number, number, number] | null {
+  const src = dungeonMapSource(g);
+  if (!src || !byCompass(g) || !src.compact()) return null;
+  const [x1, y1, x2, y2] = smallViewOf(src.view);
   return [x1 - 1, y1 - 1, x2 + 1, y2 + 1];
 }
 
@@ -537,13 +558,15 @@ export function smallView(g: Game): [number, number, number, number] | null {
  * in EGA pixels - on the whole level's map, or the small map round the party (null where the cell is not on it), or
  * none with the EGA look's map off. (The dungeon map cells page, mapcells.html, cuts the cells out by it.)
  */
-export function mapCell(g: Game, x: number, y: number): [number, number, number] | null {
-  const s = g.s;
-  if (g.options.tileSet === 'standard') {
+export function mapCell(g: GameCore, x: number, y: number): [number, number, number] | null {
+  const src = dungeonMapSource(g);
+  const s = src?.level();
+  if (!src || !s) return null;
+  if (src.standard()) {
     if (g.options.dungeonView === 'full') {
       // Where the level unrolls from the party, there; else (rock, or a level that loops) its nearest.
       const r = ACROSS >> 1;
-      const [i, j] = unrolled(g)?.get(at8(x, y)) ?? [((x - s.x + 4) & 7) - 4, ((y - s.y + 4) & 7) - 4];
+      const [i, j] = unrolledFrom(s)?.get(at8(x, y)) ?? [((x - s.x + 4) & 7) - 4, ((y - s.y + 4) & 7) - 4];
       return Math.abs(i) <= r && Math.abs(j) <= r ? [8 + (i + r) * WHOLE, 8 + (j + r) * WHOLE, WHOLE] : null;
     }
     const half = AROUND >> 1;
@@ -552,7 +575,7 @@ export function mapCell(g: Game, x: number, y: number): [number, number, number]
     return i < AROUND && j < AROUND ? [SLOT.x + SMALL_AT + i * n, SLOT.y + SMALL_AT + j * n, n] : null;
   }
   if (g.options.dungeonMap === 'off') return null;
-  const at = g.options.dungeonMap === 'full' ? EGA_WHOLE : EGA_CORNER;
+  const at = g.options.dungeonMap === 'full' ? egaWhole(src.view) : egaCorner(src.view);
   return [at.x + (x & 7) * at.n, at.y + (y & 7) * at.n, at.n];
 }
 
@@ -563,16 +586,21 @@ export function mapCell(g: Game, x: number, y: number): [number, number, number]
  * Map command switched (Options.dungeonView), the whole level's map in the view's place, and the first-person view
  * made small beside it. Nothing is drawn where the party has not been, and nothing at all outside a dungeon.
  */
-export function drawDungeonMap(g: Game): void {
-  const s = g.s;
-  const standard = g.options.tileSet === 'standard';
+export function drawDungeonMap(g: GameCore): void {
+  const src = dungeonMapSource(g);
+  const s = src?.level();
+  if (!src || !s) {
+    liftDungeonMap(g);
+    return g.draw.viewDrawn?.(null);
+  }
+  const standard = src.standard();
   const mode = g.options.dungeonMap;
   // The level as far as it is known, and in the dark the cells round the party as well, felt for but not kept.
-  const known = standard || mode !== 'off' ? g.fog.placeSeen(s.mapId, s.level) : null;
+  const known = standard || mode !== 'off' ? s.known() : null;
   let seen = known;
-  if (known !== null && inTheDark(g)) {
+  if (known !== null && s.dark) {
     seen = known ? known.slice() : new Uint8Array(CELLS * CELLS);
-    feltCells(g, seen);
+    feltCells(s, seen);
   }
   if (!seen || !standard) liftDungeonMap(g);
   if (!seen) return g.draw.viewDrawn?.(null);
@@ -581,14 +609,14 @@ export function drawDungeonMap(g: Game): void {
   // Smooth motion glides the Standard look's whole-level map, the level sliding under the party (ui/viewGlide.ts); the
   // small map and the first-person view step, as ever.
   if (!(standard && full)) {
-    drawMap(g, seen, standard, full);
+    drawMap(g, src, s, seen, standard, full);
     d.viewDrawn?.(null);
     return;
   }
   d.viewBegin?.();
-  const cells = drawMap(g, seen, standard, full);
+  const cells = drawMap(g, src, s, seen, standard, full);
   d.viewDrawn?.({
-    scene: `${s.mapId}:${s.level}`,
+    scene: s.scene,
     origin: { x: s.x - (ACROSS >> 1), y: s.y - (ACROSS >> 1) },
     wrap: CELLS,
     cells,
@@ -601,14 +629,15 @@ export function drawDungeonMap(g: Game): void {
  * the view the large one, the panel its own height): a look chosen in a menu over it, or its tiles come, show on it then,
  * not only at the party's next step.
  */
-export function redrawSideMap(g: Game): void {
-  if (g.inDungeon && g.options.tileSet === 'standard' && g.options.dungeonView === 'mini' && compactPanel(g)) drawDungeonMap(g);
+export function redrawSideMap(g: GameCore): void {
+  const src = dungeonMapSource(g);
+  if (src?.level() && src.standard() && g.options.dungeonView === 'mini' && src.compact()) drawDungeonMap(g);
 }
 
 /** drawDungeonMap's drawing: the whole-level map's squares, as the Standard look draws them, for Smooth motion. */
-function drawMap(g: Game, seen: Uint8Array, standard: boolean, full: boolean): ViewCell[] {
-  const s = g.s;
+function drawMap(g: GameCore, src: DungeonMapSource, s: MapLevel, seen: Uint8Array, standard: boolean, full: boolean): ViewCell[] {
   const d = g.draw;
+  const view = src.view;
   let cells: ViewCell[] = [];
   if (full) {
     // The Standard look: the party in the middle of the map's square and the level round it (aroundParty), eleven cells
@@ -617,37 +646,48 @@ function drawMap(g: Game, seen: Uint8Array, standard: boolean, full: boolean): V
     if (standard) {
       d.pen = Colour.black;
       d.fill(8, 8, 8 + SQUARE - 1, 8 + SQUARE - 1);
-      cells = aroundParty(g, seen, 8, 8);
+      cells = aroundParty(g, src, s, seen, 8, 8);
     } else {
+      const at = egaWhole(view);
       d.pen = Colour.black;
-      d.fill(VIEW.x1, VIEW.y1, VIEW.x2, VIEW.y2);
-      grid(g, seen, EGA_WHOLE.x, EGA_WHOLE.y, EGA_WHOLE.n, CELLS, 4, 4);
+      d.fill(view.x1, view.y1, view.x2, view.y2);
+      grid(g, src, s, seen, at.x, at.y, at.n, CELLS, 4, 4);
     }
   }
   if (!standard) {
-    if (!full) grid(g, seen, EGA_CORNER.x, EGA_CORNER.y, EGA_CORNER.n, CELLS, 4, 4);
+    const at = egaCorner(view);
+    if (!full) grid(g, src, s, seen, at.x, at.y, at.n, CELLS, 4, 4);
     return cells;
   }
   // Beside the view, over the log's top rows: not while the party panel is at its full height over them (layout.ts).
-  if (!compactPanel(g)) return cells;
+  if (!src.compact()) return cells;
   if (!g.mapOverLog) {
-    g.text.cover(Win.messages, LOG_COVER.c1, LOG_COVER.r1, LOG_COVER.c2, LOG_COVER.r2);
+    g.text.cover(LOG, LOG_COVER.c1, LOG_COVER.r1, LOG_COVER.c2, LOG_COVER.r2);
     g.mapOverLog = true;
   }
   d.pen = Colour.black;
   d.fill(LOG_COVER.c1 * 8, LOG_COVER.r1 * 8, LOG_COVER.c2 * 8 + 7, LOG_COVER.r2 * 8 + 7);
   if (!full) {
-    grid(g, seen, SLOT.x + SMALL_AT, SLOT.y + SMALL_AT, SMALL_CELL, AROUND, s.x & 7, s.y & 7);
+    grid(g, src, s, seen, SLOT.x + SMALL_AT, SLOT.y + SMALL_AT, SMALL_CELL, AROUND, s.x & 7, s.y & 7);
     return cells;
   }
   // The first-person view, small: its whole picture fitted to the square, a frame against it.
-  const [x, y, x2, y2] = SMALL_VIEW;
+  const [x, y, x2, y2] = smallViewOf(view);
   const [w, h] = [x2 - x + 1, y2 - y + 1];
-  g.p.fx.transferScaled?.(1, 0, VIEW.x1, VIEW.y1, VIEW.x2, VIEW.y2, x, y, w, h);
+  g.p.fx.transferScaled?.(1, 0, view.x1, view.y1, view.x2, view.y2, x, y, w, h);
   d.pen = Colour.lightGray;
   d.line(x - 1, y - 1, x + w, y - 1);
   d.line(x - 1, y + h, x + w, y + h);
   d.line(x - 1, y - 1, x - 1, y + h);
   d.line(x + w, y - 1, x + w, y + h);
   return cells;
+}
+
+/**
+ * Underground, the party's cell and the eight round it, which it knows even in the dark (the port's, as the ultima3
+ * port maps its dungeons: felt for, not seen, and so never kept on the map - the map shows them while the party stands
+ * there). `seen` is the level's record to add them to; a dungeon's grid is eight by eight and wraps.
+ */
+export function feltCells(lv: MapLevel, seen: Uint8Array): void {
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) seen[((lv.y + dy) & 7) * 8 + ((lv.x + dx) & 7)] = 1;
 }
