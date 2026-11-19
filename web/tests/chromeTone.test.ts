@@ -72,3 +72,18 @@ describe("the frame's colour by place", () => {
     expect(chromeTone(shrine)).toMatchObject({ hue: 215 });
   });
 });
+
+describe("the dungeons' grey, for another game's dungeons", () => {
+  it('is the grey chromeTone gives each level, the deepest past the eighth', async () => {
+    const { dungeonTone, OVERWORLD, SHRINE } = await import('../src/game/chromeTone.ts');
+    for (let level = 0; level < 8; level++) {
+      const { g } = newGame();
+      Object.assign(g.s, { mapId: 0x21, level });
+      expect(dungeonTone(level), `level ${level}`).toEqual(chromeTone(g));
+    }
+    expect(dungeonTone(9)).toEqual(dungeonTone(7));
+    expect(dungeonTone(-1)).toEqual(dungeonTone(0));
+    expect(OVERWORLD).toMatchObject({ hue: 215, value: 1.1 });
+    expect(SHRINE).toMatchObject({ hue: 42 });
+  });
+});
