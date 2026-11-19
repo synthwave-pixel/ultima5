@@ -50,4 +50,31 @@ describe('a game’s lexicon', () => {
     const answers = u5.answerable(g);
     for (const w of ['SHAD', 'HONESTY', 'AHM']) expect(answers.has(w), w).toBe(true);
   });
+
+  it('hears a word by the game’s own rule where it gives one, Ultima V’s otherwise', () => {
+    const was = lexicon();
+    const answers = (): Set<string> => new Set(['BEG', 'SHAD', 'HEALTH']);
+    // Ultima IV's C_A4B4: the first four letters, a word shorter than four only whole.
+    const fourOrWhole = (word: string, heard: string): boolean =>
+      word.length < 4 ? heard.toUpperCase() === word.toUpperCase() : heard.slice(0, 4).toUpperCase() === word.slice(0, 4).toUpperCase();
+    const core = new GameCore(new FakePlatform());
+    try {
+      useLexicon({ answerable: answers, startingWords: [], says: fourOrWhole });
+      const v = new Vocabulary();
+      v.learn(core, 'Beggars, begone! The shadows; heal.');
+      expect(['beggars', 'begone', 'shadows', 'heal'].map((w) => v.knows(w))).toEqual([false, false, true, true]);
+      expect([answersTo(core, 'beggars'), answersTo(core, 'beg'), answersTo(core, 'healer')]).toEqual([false, true, true]);
+      expect([v.forStub('BEG'), v.forStub('SHAD'), v.forStub('HEALTH')]).toEqual([null, 'shadows', 'heal']);
+      v.learn(core, 'Thou mayst beg.');
+      expect(v.forStub('BEG')).toBe('beg');
+      // None given: Ultima V's, a word heard beginning with the stub (saysWord).
+      useLexicon({ answerable: answers, startingWords: [] });
+      const u5 = new Vocabulary();
+      u5.learn(core, 'Beggars, begone! The shadows; heal.');
+      expect(['beggars', 'begone', 'shadows', 'heal'].map((w) => u5.knows(w))).toEqual([true, true, true, false]);
+      expect([u5.forStub('BEG'), u5.forStub('HEALTH')]).toEqual(['begone', null]);
+    } finally {
+      useLexicon(was);
+    }
+  });
 });

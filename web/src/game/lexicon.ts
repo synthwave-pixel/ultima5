@@ -13,6 +13,12 @@ export interface Lexicon {
   answerable(g: GameCore): Set<string>;
   /** What a new Avatar knows before hearing anything. */
   startingWords: readonly string[];
+  /**
+   * Whether `heard` (a word as Vocabulary keys it) says `word` (one the game answers to, or a keyword's stub), as the
+   * game matches what a player types. Where a game gives none, Ultima V's (saysWord, ULTIMA_6f1e): the word heard
+   * begins with the game's, which may be a stub of three letters or more.
+   */
+  says?: (word: string, heard: string) => boolean;
 }
 
 let inUse: Lexicon | null = null;
