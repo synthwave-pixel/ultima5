@@ -242,6 +242,22 @@ export const TILES: readonly Tiles[] = ['modern-pc', 'pc-ega', 'pc-cga', 'apple2
 export type PcTiles = Exclude<Tiles, 'modern-pc'>;
 export const PC_TILES: readonly PcTiles[] = ['pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
 
+/** The looks the game offers, as its entry sets them (useLooks): Ultima V's eight unless it says otherwise. */
+let offered: readonly Tiles[] = TILES;
+
+/**
+ * The Looks this game offers in Appearance (its entry's, as useSaves and useGameSpec are): a port whose art is not
+ * yet made offers fewer - the Ultima IV port PC EGA alone until its Remastered is baked. Null, Ultima V's eight.
+ */
+export function useLooks(looks: readonly Tiles[] | null): void {
+  offered = looks ?? TILES;
+}
+
+/** The looks offered under the interface `tileSet`: Retro never Remastered, which is drawn for the Enhanced screen. */
+export function looksOffered(tileSet: TileSet): readonly Tiles[] {
+  return tileSet === 'standard' ? offered : offered.filter((t) => t !== 'modern-pc');
+}
+
 export const TILES_NAMES: Record<Tiles, string> = {
   'modern-pc': 'Remastered',
   'pc-ega': 'PC EGA',
@@ -376,11 +392,18 @@ export function normaliseOptions(from: Saved): Partial<Options> {
 export function loadOptions(): Options {
   try {
     const raw = kept()?.getItem(settingsKey()) ?? kept()?.getItem(SETTINGS_KEY);
-    if (raw) return { ...DEFAULTS, ...normaliseOptions(JSON.parse(raw) as Saved) };
+    if (raw) return lookOffered({ ...DEFAULTS, ...normaliseOptions(JSON.parse(raw) as Saved) });
   } catch {
     // Private windows and blocked storage: the defaults will do.
   }
-  return { ...DEFAULTS };
+  return lookOffered({ ...DEFAULTS });
+}
+
+/** A look the game does not offer (useLooks) under the interface chosen: its first in its place. Ultima V's, kept. */
+function lookOffered(o: Options): Options {
+  const looks = looksOffered(o.tileSet);
+  if (!looks.includes(o.tiles)) o.tiles = looks[0];
+  return o;
 }
 
 export function saveOptions(o: Options): void {

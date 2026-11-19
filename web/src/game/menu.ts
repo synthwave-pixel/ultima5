@@ -24,9 +24,8 @@ import {
   type FontChoice,
   RULES,
   LEVELS,
-  PC_TILES,
+  looksOffered,
   saveOptions,
-  TILES,
   TILES_NAMES,
   type Tiles,
   type AutoCombat,
@@ -1178,12 +1177,12 @@ export function appearanceLines(g: GameCore): Setting[] {
   return [
     { label: 'Back', note: '' },
     {
-      // The look, one set after another - its tiles, its frame and its dungeon (skins.ts): every set under Enhanced
-      // (settings.ts Tiles), all but Remastered under Retro (PcTiles); one choice for either interface.
+      // The look, one set after another - its tiles, its frame and its dungeon (skins.ts): every set the game offers
+      // under Enhanced (settings.ts looksOffered), all but Remastered under Retro; one choice for either interface.
       label: `Look: ${TILES_NAMES[o.tiles]}`,
       note: TILES_NOTES[o.tiles],
       act: () => {
-        const offered: readonly Tiles[] = o.tileSet === 'standard' ? TILES : PC_TILES;
+        const offered = looksOffered(o.tileSet);
         o.tiles = offered[(offered.indexOf(o.tiles) + 1) % offered.length];
       },
     },

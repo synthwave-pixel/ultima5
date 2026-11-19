@@ -11,7 +11,7 @@ import { freeActor } from './actors.ts';
 import { arenaFight } from './combat.ts';
 import { entryRow } from './dungeon.ts';
 import type { Game } from './game.ts';
-import { PC_TILES, TILES, type Options, type Tiles } from './settings.ts';
+import { looksOffered, type Options, type Tiles } from './settings.ts';
 
 /** A frigate, north: the party aboard, for the arenas fought on a ship's deck (combat.ts attackCombat). */
 const FRIGATE = 0x20;
@@ -118,7 +118,7 @@ export function lookAsked(o: Options, q: URLSearchParams): void {
   const ux = q.get('ux');
   if (ux === 'standard' || ux === 'original') o.tileSet = ux;
   const tiles = q.get('tiles');
-  const offered: readonly Tiles[] = o.tileSet === 'standard' ? TILES : PC_TILES;
+  const offered = looksOffered(o.tileSet);
   if (offered.includes(tiles as Tiles)) o.tiles = tiles as Tiles;
   if (o.tileSet === 'original' && o.tiles === 'modern-pc') o.tiles = 'pc-ega';
 }
