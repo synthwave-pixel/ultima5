@@ -4,12 +4,14 @@
  * The Appearance screen (the port's own): the Avatar's figure, skin, hair and clothes chosen from a boxed list, each
  * row's value turned by left and right, and shown as it changes in the bedroom of the title's first scene - the
  * Avatar standing below its mirror, and the mirror giving the new look back - and beside the menu, the figure again,
- * large and walking, for its detail.
+ * large and walking, for its detail. The scene is the game's (MirrorScene): Ultima V's the title's bedroom under its
+ * Britannia (ultima5Mirror); another game shows its mirror in a scene of its own (chooseLook).
  */
 
 import { readBritannia, tileAt } from '../data/maps.ts';
 import { addressedAsLady, type Appearance, FIGURES, HAIR, HUES, randomAppearance, SKIN } from './appearance.ts';
 import type { Game } from './game.ts';
+import type { GameCore } from './gameCore.ts';
 import { asPad } from './input.ts';
 import { drawScene, SCENE_MAP, titleBanner, VIEW_SCENE } from './intro.ts';
 import { K, Pad } from './io.ts';
@@ -43,6 +45,52 @@ export const LARGE_AT: readonly [number, number] = [248 + ((320 - 248 - LARGE_SI
  */
 export const WORLD_SQUARE: readonly [number, number] = [50, 17];
 export const ABOVE: [number, number, number, number] = [0, 0, 319, VIEW_SCENE[1] - 9];
+
+/**
+ * Where a game shows its mirror: the scene under the menu, the world behind the menu above it, the scene's name at the
+ * title, and how the Avatar is addressed. Ultima V's is the title's bedroom under its Britannia (ultima5Mirror).
+ */
+export interface MirrorScene {
+  /** The scene's rectangle under the menu (EGA pixels, inclusive): the chrome's hole while the screen is up. */
+  readonly rect: readonly [number, number, number, number];
+  /** The world behind the menu, above the scene: the large figure (LARGE_AT) stands in it. */
+  world(): void;
+  /** The scene, the one being made standing in it in the Avatar's place (the walking Avatar, 0x14c), in step `step` (0-3) of the walk. */
+  scene(step: number): void;
+  /** At the title, `name` in the border under the scene, as the title names its scenes. */
+  banner(name: string): void;
+  /** Whether the Avatar is addressed as Lady: the Avatar drawn as she is (a mage without the beard). */
+  lady(): boolean;
+}
+
+/**
+ * Ultima V's mirror: the bedroom of the title's first scene - the Avatar standing below its mirror, and the mirror
+ * giving the new look back - under Britannia's squares grown to the large figure's size (drawWorld).
+ */
+export function ultima5Mirror(g: Game): MirrorScene {
+  // The room: its squares (copy), and the same with the mirror reflecting and the Avatar on the square below it,
+  // someone standing as the attract mode keeps them (a 0 square, their figure 0x80 on).
+  const room = g.data.files.get('MISCMAPS.DAT').subarray(0x2c0 + SCENE_ROOM * 0x80);
+  const copy = new Uint8Array(0x100);
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 0x13; x++) copy[y * 32 + x] = room[x + y * 0x20];
+  const map = copy.slice();
+  const [mx, my] = MIRROR_SQUARE;
+  const [ax, ay] = AVATAR_SQUARE;
+  map[my * 32 + mx] = MIRROR_REFLECTING;
+  map[ay * 32 + ax] = 0;
+  return {
+    rect: VIEW_SCENE,
+    world: () => drawWorld(g),
+    scene: (step) => {
+      map[ay * 32 + ax + 0x80] = AVATAR_ACTOR + (step & 3);
+      // The Avatar is the one before the mirror here, so it gives him back as he is being made.
+      g.draw.leader?.({ map: SCENE_MAP, x: ax, y: ay });
+      drawScene(g, map, copy);
+    },
+    banner: (name) => titleBanner(g, name),
+    lady: () => addressedAsLady(g),
+  };
+}
 
 function drawWorld(g: Game): void {
   const fx = g.p.fx;
@@ -141,6 +189,16 @@ export async function chooseAppearance(
   start: Appearance,
   who?: { name: string; base: number; lady: boolean },
 ): Promise<Appearance | null> {
+  return chooseLook(g, start, ultima5Mirror(g), who);
+}
+
+/** The Appearance screen (chooseAppearance) in the scene a game shows its mirror in. */
+export async function chooseLook(
+  g: GameCore,
+  start: Appearance,
+  scene: MirrorScene,
+  who?: { name: string; base: number; lady: boolean },
+): Promise<Appearance | null> {
   const t = g.text;
   const was = t.current;
   const back = g.p.fx.keepScreen?.();
@@ -148,24 +206,11 @@ export async function chooseAppearance(
   const rows = rowsFor(who ? VALUES.filter((v) => v.field !== 'figure') : VALUES);
   const title = who ? who.name : 'Appearance';
   let at = 0;
-  // The room: its squares (copy), and the same with the mirror reflecting and the Avatar on the square below it,
-  // someone standing as the attract mode keeps them (a 0 square, their figure 0x80 on).
-  const room = g.data.files.get('MISCMAPS.DAT').subarray(0x2c0 + SCENE_ROOM * 0x80);
-  const copy = new Uint8Array(0x100);
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 0x13; x++) copy[y * 32 + x] = room[x + y * 0x20];
-  const map = copy.slice();
-  const [mx, my] = MIRROR_SQUARE;
-  const [ax, ay] = AVATAR_SQUARE;
-  map[my * 32 + mx] = MIRROR_REFLECTING;
-  map[ay * 32 + ax] = 0;
   let step = 0;
   let pass = 0;
   let copyNote = COPY_LABEL;
   const drawRoom = (): void => {
-    map[ay * 32 + ax + 0x80] = AVATAR_ACTOR + (step & 3);
-    // The Avatar is the one before the mirror here, so it gives him back as he is being made.
-    g.draw.leader?.({ map: SCENE_MAP, x: ax, y: ay });
-    drawScene(g, map, copy);
+    scene.scene(step & 3);
     // And beside the menu, large, in the same step of his walk, out in the world drawn behind the menu (drawWorld).
     const [lx, ly] = LARGE_AT;
     g.p.fx.stage?.({
@@ -199,7 +244,7 @@ export async function chooseAppearance(
   };
   const changed = (): void => {
     if (who) g.draw.avatar?.(look, who.lady, who.base);
-    else g.draw.avatar?.(look, addressedAsLady(g));
+    else g.draw.avatar?.(look, scene.lady());
     drawRoom();
   };
   // The Avatar walks on the spot, a step every fourth pass, as the Standard look's figures do - but for the step being
@@ -218,15 +263,15 @@ export async function chooseAppearance(
     g.draw.fill(0, 0, 319, 199);
   }
   // The world first, the menu's box over it (the stage keeps the screen as it stands then, the figure's ground).
-  drawWorld(g);
-  g.draw.chromeHole?.(VIEW_SCENE);
+  scene.world();
+  g.draw.chromeHole?.([...scene.rect]);
   if (g.inPlay) framedBox(g, title, WIDTH, rows.count);
   else {
     box(g, title, WIDTH, rows.count);
     // At the title, the room's name in the border under it, as each scene's is (in play the screen has no border).
     const was = g.text.current;
     g.text.select(0);
-    titleBanner(g, 'The Mirror');
+    scene.banner('The Mirror');
     g.text.select(was);
   }
   changed();
@@ -273,8 +318,8 @@ export async function chooseAppearance(
     }
   } finally {
     // Given up: the Avatar drawn as it was - and after a companion's, always: the Avatar's place is the Avatar's again.
-    if (who) g.draw.avatar?.(g.appearance, addressedAsLady(g));
-    else if (!result) g.draw.avatar?.(start, addressedAsLady(g));
+    if (who) g.draw.avatar?.(g.appearance, scene.lady());
+    else if (!result) g.draw.avatar?.(start, scene.lady());
     g.menuShown = null;
     g.draw.chromeHole?.(null);
     g.p.fx.stage?.(null);

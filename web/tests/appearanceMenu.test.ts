@@ -1,7 +1,16 @@
 // web/tests/appearanceMenu.test.ts
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_APPEARANCE } from '../src/game/appearance.ts';
-import { ABOVE, chooseAppearance, LARGE_AT, MIRROR_SQUARE, VALUE_WIDTH, VALUES, WORLD_SQUARE } from '../src/game/appearanceMenu.ts';
+import { type Appearance, DEFAULT_APPEARANCE } from '../src/game/appearance.ts';
+import {
+  ABOVE,
+  chooseAppearance,
+  chooseLook,
+  LARGE_AT,
+  MIRROR_SQUARE,
+  VALUE_WIDTH,
+  VALUES,
+  WORLD_SQUARE,
+} from '../src/game/appearanceMenu.ts';
 import { readBritannia, tileAt } from '../src/data/maps.ts';
 import { T } from '../src/game/tiles.ts';
 import { SCENE_MAP, VIEW_SCENE } from '../src/game/intro.ts';
@@ -208,6 +217,42 @@ describe('the Appearance screen', () => {
       expect(covers(x, y), `${x},${y}`).toBe(true);
     expect(Math.min(...large.map((l) => l.y))).toBeGreaterThan(-(under?.size ?? 0));
     expect(Math.max(...large.map((l) => l.y))).toBeLessThanOrEqual(ABOVE[3]);
+  });
+
+  it('draws the scene a game gives it, in its place: its world, its scene in the walk, its name and its address', async () => {
+    const { g, p, tiles } = setup();
+    const calls: string[] = [];
+    const holes: unknown[] = [];
+    const avatars: [Appearance, boolean | undefined][] = [];
+    Object.assign(p.draw, {
+      chromeHole: (r: unknown) => holes.push(r),
+      avatar: (look: Appearance, lady?: boolean) => avatars.push([{ ...look }, lady]),
+    });
+    const scene = {
+      rect: [8, 104, 311, 183] as const,
+      world: () => calls.push('world'),
+      scene: (step: number) => calls.push(`scene ${step}`),
+      banner: (name: string) => calls.push(`banner ${name}`),
+      lady: () => true,
+    };
+    // The figure turned once (the mage), then B.
+    p.keys.push(K.Right, Pad.B);
+    expect(await chooseLook(g, { ...DEFAULT_APPEARANCE }, scene)).toBeNull();
+    expect(calls.filter((c) => c === 'world')).toHaveLength(1);
+    expect(calls.indexOf('world')).toBeLessThan(calls.findIndex((c) => c.startsWith('scene')));
+    expect(calls.filter((c) => c.startsWith('scene')).every((c) => /^scene [0-3]$/.test(c))).toBe(true);
+    expect(calls.filter((c) => c.startsWith('banner'))).toEqual(['banner The Mirror']);
+    expect(holes).toEqual([[8, 104, 311, 183], null]);
+    expect(avatars.every(([, lady]) => lady === true)).toBe(true);
+    expect(avatars.some(([look]) => look.figure === 1)).toBe(true);
+    expect(avatars[avatars.length - 1][0]).toEqual(DEFAULT_APPEARANCE); // given up: drawn as it was
+    expect(tiles).toEqual([]); // nothing of Ultima V's room
+    // In play, no name in a border.
+    calls.length = 0;
+    g.inPlay = true;
+    p.keys.push(Pad.B);
+    await chooseLook(g, { ...DEFAULT_APPEARANCE }, scene);
+    expect(calls.some((c) => c.startsWith('banner'))).toBe(false);
   });
 
   it('fits every value between its arrows with a space either side', () => {
