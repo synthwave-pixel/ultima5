@@ -59,6 +59,8 @@ const startingWords = (): readonly string[] => lexicon()?.startingWords ?? KNOWN
 export function answersTo(g: GameCore, word: string): boolean {
   const answers = answerable(g);
   const k = key(word);
+  const own = lexicon()?.says;
+  if (own) return [...answers].some((a) => own(a, k));
   for (let n = 2; n <= k.length; n++) if (answers.has(k.slice(0, n)) && (n >= 3 || n === k.length)) return true;
   return false;
 }
@@ -81,11 +83,14 @@ const sameRoot = (a: string, b: string): boolean => wordRoot(a) === wordRoot(b);
  * A word heard (as the record keys it) that says a townsman's keyword: as typed, or without its apostrophes - a
  * name heard as "R'hien" is Lady Hayden's "rhie", as "RHIEN" typed was in 1988 (the word said is then sayable).
  */
-const fitsStub = (stub: string, k: string): boolean => saysWord(stub, k) || (k.includes("'") && saysWord(stub, k.replace(/'/g, '')));
+const fitsStub = (stub: string, k: string): boolean => says(stub, k) || (k.includes("'") && says(stub, k.replace(/'/g, '')));
+
+/** Whether `heard` says the game's `word` by the game's own rule (Lexicon.says), Ultima V's (saysWord) where it gives none. */
+const says = (word: string, heard: string): boolean => lexicon()?.says?.(word, heard) ?? saysWord(word, heard);
 
 /** The word to say for a keyword: as heard, or without its apostrophes where only that says it (fitsStub). */
 export function sayable(stub: string, word: string): string {
-  return saysWord(stub, word.toUpperCase()) ? word : word.replace(/['.]/g, '');
+  return says(stub, word.toUpperCase()) ? word : word.replace(/['.]/g, '');
 }
 
 /**
@@ -302,7 +307,13 @@ export class Vocabulary {
       if (!k || this.known.has(k)) continue;
       // The word itself, or the stub of it the game answers to - as heard, or without its apostrophes (R'hien).
       let matched = false;
+      // By the game's own rule where it gives one (Lexicon.says), else as Ultima V matches: the stubs of three letters on.
+      const own = lexicon()?.says;
       for (const w of k.includes("'") ? [k, k.replace(/'/g, '')] : [k]) {
+        if (own) {
+          matched ||= [...answers].some((a) => own(a, w));
+          continue;
+        }
         matched ||= answers.has(w);
         for (let n = 3; !matched && n < w.length; n++) matched = answers.has(w.slice(0, n));
       }
@@ -396,7 +407,7 @@ export class Vocabulary {
     if (best === null && !whole && backwards && s.length >= 4) {
       for (const k of this.known.keys()) {
         const back = [...k].reverse().join('');
-        if (saysWord(s, back) && (best === null || back.length < best.length)) best = back.toLowerCase();
+        if (says(s, back) && (best === null || back.length < best.length)) best = back.toLowerCase();
       }
     }
     if (best !== null && !whole) this.labels.set(s, best);
