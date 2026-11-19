@@ -1,7 +1,8 @@
 // The desktop app's scan for the player's copy of MS-DOS Ultima V (web/src/install/sources.ts desktopCopies): a
 // short list of roots - beside the app, home, where GOG and the Linux launchers install games - and under each the
-// folders named like the game (u5, Ultima 5, Ultima V™.app ...), searched a few levels down for DATA.OVL. Each
-// folder found is read for the files the page asks for and the Upgrade's music; the page checks them and installs.
+// folders named like the game (u5, Ultima 5, Ultima V™.app ...), searched a few levels down for DATA.OVL. Steam's
+// libraries' games (steamapps/common) are roots too, last, so a Steam copy is found whether or not the start took it.
+// Each folder found is read for the files the page asks for and the Upgrade's music; the page checks them and installs.
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { basename, dirname, join, sep } = require('node:path');
 
@@ -13,9 +14,17 @@ const gameFolderName = (name) => GAME.test(name);
  * Where to look, in order, on `platform` (process.platform's names). On Linux the launchers keep each game in a Wine
  * prefix of its own, so `list(dir)`, the child folders of `dir` (nothing, unless given: roots stays pure), finds those
  * prefixes - one per Lutris game under ~/Games, one per game under Heroic's Prefixes (with or without its `default`
- * level) - and each one's drive_c/GOG Games is a root.
+ * level) - and each one's drive_c/GOG Games is a root. `steamLibraries` (steam.cjs libraryPaths) each give their
+ * steamapps/common, after the rest.
  */
-function roots({ platform, home, env, appDir, drives, list = () => [] }) {
+function roots({ platform, home, env, appDir, drives, list = () => [], steamLibraries = [] }) {
+  const steam = steamLibraries.map((lib) =>
+    platform === 'win32' ? `${lib.replace(/[\\/]+$/, '')}\\steamapps\\common` : join(lib, 'steamapps', 'common'),
+  );
+  return [...placeRoots({ platform, home, env, appDir, drives, list }), ...steam];
+}
+
+function placeRoots({ platform, home, env, appDir, drives, list }) {
   const beside = env.APPIMAGE ? dirname(env.APPIMAGE) : appDir;
   if (platform === 'darwin') return [beside, home, '/Applications', join(home, 'Applications')];
   if (platform === 'win32') {
@@ -166,8 +175,8 @@ function findCopies(rootList, wanted, { platform, home } = {}) {
 }
 
 /** This machine's roots: the app's own place (its .app bundle's folder on macOS; the portable .exe's own folder, not
- * the temporary one it runs from), home, and every fixed drive. */
-function scanForGameFiles(wanted) {
+ * the temporary one it runs from), home, every fixed drive, and `steamLibraries`. */
+function scanForGameFiles(wanted, steamLibraries = []) {
   const { app } = require('electron');
   const exe = app.getPath('exe');
   const appDir =
@@ -176,7 +185,7 @@ function scanForGameFiles(wanted) {
   const drives = process.platform === 'win32' ? 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => `${l}:`).filter((d) => existsSync(`${d}\\`)) : [];
   const platform = process.platform;
   const home = app.getPath('home');
-  return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children }), wanted, { platform, home });
+  return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children, steamLibraries }), wanted, { platform, home });
 }
 
 module.exports = { gameFolderName, missingNames, roots, findCopies, readCopy, scanForGameFiles };

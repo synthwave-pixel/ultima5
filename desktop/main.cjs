@@ -96,6 +96,19 @@ function registrySteamPath() {
 const steamRootsHere = () =>
   steamRoots({ platform: process.platform, home: homedir(), env: process.env, registrySteamPath: registrySteamPath() });
 
+/** Every Steam library on this system (Steam's own folders and those their libraryfolders.vdf list), each once. */
+function steamLibraries() {
+  const read = (path) => {
+    try {
+      return readFileSync(path, 'utf8');
+    } catch {
+      return null;
+    }
+  };
+  const roots = steamRootsHere().filter((r) => existsSync(r));
+  return [...new Set(roots.flatMap((root) => libraryPaths(root, read)))];
+}
+
 let found;
 /**
  * Steam and Ultima V in its libraries, looked for once whether or not Steam launched the app (the page asks again and
@@ -647,7 +660,7 @@ app.whenReady().then(() => {
   // Only the game's own page (the app:// scheme) may ask; a frame from anywhere else is answered with no copies.
   ipcMain.handle('scan-game-files', (event, names) =>
     String(event.senderFrame?.url ?? '').startsWith('app://') && Array.isArray(names) && names.every((n) => typeof n === 'string')
-      ? scanForGameFiles(names)
+      ? scanForGameFiles(names, steamLibraries())
       : [],
   );
   // A Steam launch (preload.cjs u5native.steam), decided here once and answered only to the game's own page: whether

@@ -53,6 +53,37 @@ describe('the desktop scan', () => {
     expect(win).toContain('C:\\Program Files (x86)\\GOG Galaxy\\Games');
   });
 
+  it("looks in every Steam library's games, last, on each platform", () => {
+    const at = { home: '/h', env: {}, appDir: '/app', drives: [] as string[] };
+    const win = roots({
+      ...at,
+      platform: 'win32',
+      home: 'C:\\Users\\a',
+      appDir: 'D:\\u5app',
+      drives: ['C:'],
+      steamLibraries: ['C:\\Program Files (x86)\\Steam', 'E:\\SteamLibrary'],
+    });
+    expect(win.slice(-2)).toEqual(['C:\\Program Files (x86)\\Steam\\steamapps\\common', 'E:\\SteamLibrary\\steamapps\\common']);
+    expect(roots({ ...at, platform: 'darwin', steamLibraries: ['/h/Library/Application Support/Steam'] }).at(-1)).toBe(
+      '/h/Library/Application Support/Steam/steamapps/common',
+    );
+    expect(roots({ ...at, platform: 'linux', steamLibraries: ['/h/.local/share/Steam'] }).at(-1)).toBe(
+      '/h/.local/share/Steam/steamapps/common',
+    );
+  });
+
+  it("finds Steam's copy in a library's games, through the real folders", () => {
+    const library = temp();
+    const game = join(library, 'steamapps', 'common', 'Ultima V');
+    mkdirSync(join(game, 'DOSBOX'), { recursive: true });
+    writeFileSync(join(game, 'DATA.OVL'), 'data');
+    const got = findCopies(
+      roots({ platform: 'linux', home: '/nowhere', env: {}, appDir: '/nowhere', drives: [], steamLibraries: [library] }),
+      ['DATA.OVL'],
+    );
+    expect(got.map((c) => c.where)).toEqual([game]);
+  });
+
   it('takes the Wine prefixes of Lutris and Heroic games as roots on Linux, from the folders it is told are there', () => {
     const at = { platform: 'linux', home: '/h', env: {}, appDir: '/app', drives: [] as string[] };
     const folders: Record<string, string[]> = {
