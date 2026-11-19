@@ -35,7 +35,7 @@ function testLevel(): MapLevel {
   };
 }
 
-function testGame(level: MapLevel | null) {
+function testGame(level: MapLevel | null, more: Partial<DungeonMapSource> = {}) {
   const p = new FakePlatform();
   const g = new GameCore(p);
   const source: DungeonMapSource = {
@@ -44,6 +44,7 @@ function testGame(level: MapLevel | null) {
     compact: () => false,
     leader: () => null,
     level: () => level,
+    ...more,
   };
   useDungeonMap(g, source);
   const fills: [number, number, number, number, number][] = [];
@@ -102,5 +103,20 @@ describe('the dungeon map, for any game', () => {
     const level = source.level()!;
     expect([level.scene, level.x, level.y, level.facing]).toEqual(['33:0', 2, 3, 1]);
     expect([level.kind(4, 3), level.kind(5, 3), level.joins(5, 3)]).toEqual(['up', 'rock', true]);
+  });
+
+  it('puts the Standard look’s small map over the log’s rows the source names: 9 to 17 unless it says', () => {
+    const standard = { standard: () => true, compact: () => true };
+    const lower = testGame(testLevel(), { ...standard, slotRow: 11 });
+    lower.g.options.dungeonView = 'mini';
+    drawDungeonMap(lower.g);
+    // The log's rows 11-19 emptied black, the grid of five cells of twelve inside the slot from y 91 (and its frame).
+    expect(lower.fills[0]).toEqual([0xc0, 88, 0x13f, 159, 0]);
+    expect(lower.fills.slice(1).every(([, y1, , y2]) => y1 >= 91 - 2 && y2 <= 91 + 64)).toBe(true);
+    const ultima5 = testGame(testLevel(), standard);
+    ultima5.g.options.dungeonView = 'mini';
+    drawDungeonMap(ultima5.g);
+    expect(ultima5.fills[0]).toEqual([0xc0, 72, 0x13f, 143, 0]);
+    expect(ultima5.fills.slice(1).every(([, y1, , y2]) => y1 >= 75 - 2 && y2 <= 75 + 64)).toBe(true);
   });
 });

@@ -36,20 +36,31 @@ const LOG = 2;
 
 /**
  * The log's cells the Standard look's small map (or small view) lies over: under the party panel's band, nine rows of
- * the log's fifteen, the rest of it going on below.
+ * the log, the rest of it going on below - from row 9 under Ultima V's six-line panel, or the row a game's taller panel
+ * leaves it (DungeonMapSource.slotRow).
  */
-const LOG_COVER = { c1: 0x18, r1: 9, c2: 0x27, r2: 17 };
+const SLOT_ROWS = 9;
+const SLOT_ROW = 9;
+const logCover = (src: DungeonMapSource): { c1: number; r1: number; c2: number; r2: number } => {
+  const r1 = src.slotRow ?? SLOT_ROW;
+  return { c1: 0x18, r1, c2: 0x27, r2: r1 + SLOT_ROWS - 1 };
+};
 
-/** Where in them, in EGA pixels: a square centred in the right-hand column, a frame's room round it. */
-const SLOT = { x: 0xc0 + (128 - 64) / 2, y: 75, size: 64 };
+/** Where in them, in EGA pixels: a square centred in the right-hand column, a frame's room round it (y 75 at row 9). */
+const SLOT_SIZE = 64;
+const slotOf = (src: DungeonMapSource): { x: number; y: number; size: number } => ({
+  x: 0xc0 + (128 - SLOT_SIZE) / 2,
+  y: (src.slotRow ?? SLOT_ROW) * 8 + 3,
+  size: SLOT_SIZE,
+});
 
 /**
  * The small map's cells a side, the party in the middle one; each cell as many pixels as fit (twelve: its tiles drawn
  * at three quarters of their size), the map centred in the square.
  */
 const AROUND = 5;
-const SMALL_CELL = Math.floor(SLOT.size / AROUND);
-const SMALL_AT = (SLOT.size - SMALL_CELL * AROUND) >> 1;
+const SMALL_CELL = Math.floor(SLOT_SIZE / AROUND);
+const SMALL_AT = (SLOT_SIZE - SMALL_CELL * AROUND) >> 1;
 
 /**
  * What a cell is: what the party knows of it, a hidden thing as it looks. Orbs, altars and traps are Ultima IV's
@@ -114,6 +125,11 @@ export interface DungeonMapSource {
   standard(): boolean;
   /** Whether the party panel is compact, the small map's room under it over the log (frame.ts compactPanel). */
   compact(): boolean;
+  /**
+   * The log's first row the Standard look's small map (or small view) lies over, nine rows of it: unset, row 9, under
+   * Ultima V's six-line panel; a game whose panel is taller says where its log begins.
+   */
+  readonly slotRow?: number;
   /** The party's leader's tile in the Standard look (world.ts partyFigures), or null. */
   leader(): number | null;
   /** The level the party is on, or null outside a dungeon. */
@@ -534,12 +550,14 @@ function aroundParty(g: GameCore, src: DungeonMapSource, lv: MapLevel, seen: Uin
 
 /**
  * The Standard look's first-person view made small beside the whole-level map, in EGA pixels (x1, y1, x2, y2,
- * inclusive): its whole picture fitted to the square SLOT, centred in it.
+ * inclusive): its whole picture fitted to the square slot, centred in it.
  */
-function smallViewOf(view: Box): [number, number, number, number] {
-  const w = Math.round(((view.x2 - view.x1 + 1) * SLOT.size) / (view.y2 - view.y1 + 1));
-  const x = SLOT.x + ((SLOT.size - w) >> 1);
-  return [x, SLOT.y, x + w - 1, SLOT.y + SLOT.size - 1];
+function smallViewOf(src: DungeonMapSource): [number, number, number, number] {
+  const view = src.view;
+  const slot = slotOf(src);
+  const w = Math.round(((view.x2 - view.x1 + 1) * slot.size) / (view.y2 - view.y1 + 1));
+  const x = slot.x + ((slot.size - w) >> 1);
+  return [x, slot.y, x + w - 1, slot.y + slot.size - 1];
 }
 
 /**
@@ -549,7 +567,7 @@ function smallViewOf(view: Box): [number, number, number, number] {
 export function smallView(g: GameCore): [number, number, number, number] | null {
   const src = dungeonMapSource(g);
   if (!src || !byCompass(g) || !src.compact()) return null;
-  const [x1, y1, x2, y2] = smallViewOf(src.view);
+  const [x1, y1, x2, y2] = smallViewOf(src);
   return [x1 - 1, y1 - 1, x2 + 1, y2 + 1];
 }
 
@@ -572,7 +590,8 @@ export function mapCell(g: GameCore, x: number, y: number): [number, number, num
     const half = AROUND >> 1;
     const [i, j] = [(x - s.x + half) & 7, (y - s.y + half) & 7];
     const n = SMALL_CELL;
-    return i < AROUND && j < AROUND ? [SLOT.x + SMALL_AT + i * n, SLOT.y + SMALL_AT + j * n, n] : null;
+    const slot = slotOf(src);
+    return i < AROUND && j < AROUND ? [slot.x + SMALL_AT + i * n, slot.y + SMALL_AT + j * n, n] : null;
   }
   if (g.options.dungeonMap === 'off') return null;
   const at = g.options.dungeonMap === 'full' ? egaWhole(src.view) : egaCorner(src.view);
@@ -661,18 +680,20 @@ function drawMap(g: GameCore, src: DungeonMapSource, s: MapLevel, seen: Uint8Arr
   }
   // Beside the view, over the log's top rows: not while the party panel is at its full height over them (layout.ts).
   if (!src.compact()) return cells;
+  const cover = logCover(src);
+  const slot = slotOf(src);
   if (!g.mapOverLog) {
-    g.text.cover(LOG, LOG_COVER.c1, LOG_COVER.r1, LOG_COVER.c2, LOG_COVER.r2);
+    g.text.cover(LOG, cover.c1, cover.r1, cover.c2, cover.r2);
     g.mapOverLog = true;
   }
   d.pen = Colour.black;
-  d.fill(LOG_COVER.c1 * 8, LOG_COVER.r1 * 8, LOG_COVER.c2 * 8 + 7, LOG_COVER.r2 * 8 + 7);
+  d.fill(cover.c1 * 8, cover.r1 * 8, cover.c2 * 8 + 7, cover.r2 * 8 + 7);
   if (!full) {
-    grid(g, src, s, seen, SLOT.x + SMALL_AT, SLOT.y + SMALL_AT, SMALL_CELL, AROUND, s.x & 7, s.y & 7);
+    grid(g, src, s, seen, slot.x + SMALL_AT, slot.y + SMALL_AT, SMALL_CELL, AROUND, s.x & 7, s.y & 7);
     return cells;
   }
   // The first-person view, small: its whole picture fitted to the square, a frame against it.
-  const [x, y, x2, y2] = smallViewOf(view);
+  const [x, y, x2, y2] = smallViewOf(src);
   const [w, h] = [x2 - x + 1, y2 - y + 1];
   g.p.fx.transferScaled?.(1, 0, view.x1, view.y1, view.x2, view.y2, x, y, w, h);
   d.pen = Colour.lightGray;
