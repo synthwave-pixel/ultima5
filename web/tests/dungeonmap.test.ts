@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dungeonSight } from '../src/game/dungeon.ts';
-import { drawDungeonMap, DUNGEON_CREATURES, liftDungeonMap, mapCell, unrolled } from '../src/game/dungeonMap.ts';
+import { drawDungeonMap, liftDungeonMap, mapCell, unrolled } from '../src/game/dungeonMap.ts';
+import { DUNGEON_CREATURES } from '../src/game/ultima5DungeonMap.ts';
 import { creatureSeen, revealCells } from '../src/game/fog.ts';
 import { Win } from '../src/game/frame.ts';
 import { K, Pad } from '../src/game/io.ts';

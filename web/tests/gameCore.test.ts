@@ -73,3 +73,15 @@ describe('words and speech', () => {
       expect(from.filter((f) => /(^|\/)(game|frame|cmds)\.ts$|ultima5(Saves|Lexicon|Speaker)\.ts$/.test(f))).toEqual([]);
     });
 });
+
+/**
+ * The dungeon map (dungeonMap.ts) is every game's: it reads the dungeon through the game's DungeonMapSource (Ultima V's:
+ * ultima5DungeonMap.ts), never Ultima V's save, fog, frame, world or tiles.
+ */
+describe('the dungeon map', () => {
+  it("dungeonMap.ts imports none of Ultima V's game", () => {
+    const src = readFileSync(new URL('../src/game/dungeonMap.ts', import.meta.url), 'utf8');
+    const from = [...src.matchAll(/(?:^import\s[^;]*?from\s+|import\()'([^']+)'/gms)].map(([, f]) => f);
+    expect(from.filter((f) => /(^|\/)(game|frame|world|fog|tiles)\.ts$|ultima5\w*\.ts$/.test(f))).toEqual([]);
+  });
+});

@@ -259,16 +259,6 @@ const solid = (cell: number): boolean => (cell & 0xf0) >= 0xa0;
 export const inTheDark = (g: Game): boolean => g.s.d58a6 === 0 && g.s.d58a7 === 0;
 
 /**
- * Underground, the party's cell and the eight round it, which it knows even in the dark (the port's, as the ultima3
- * port maps its dungeons: felt for, not seen, and so never kept on the map - dungeonMap.ts shows them while the party
- * stands there). `seen` is the level's record to add them to; a dungeon's grid is eight by eight and wraps.
- */
-export function feltCells(g: Game, seen: Uint8Array): void {
-  const s = g.s;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) seen[((s.y + dy) & 7) * 8 + ((s.x + dx) & 7)] = 1;
-}
-
-/**
  * Underground, the cells the party sees from where it stands, with a light: the cell it stands in and the eight round
  * it, and as far down each passage leading off it as the walls allow, with the walls to either hand - the party need
  * only turn on the spot to look. In the grid's places (0-7), which wrap.
@@ -301,7 +291,7 @@ export function cellsInSight(g: Game): [number, number][] {
 
 /**
  * Underground, what the party sees kept (cellsInSight), with a light. Nothing in the dark: what the party finds by
- * feel is not kept (feltCells).
+ * feel is not kept (dungeonMap.ts feltCells).
  */
 export function revealCells(g: Game): void {
   const s = g.s;
@@ -340,7 +330,7 @@ function creatureSight(g: Game): [number, number][] {
 /**
  * Whether the party sees the level's creature (actor 1, the one that wanders it) where it stands: where the view could
  * show it with a light (creatureSight), or in the dark on one of the eight round the party, felt for as they are
- * (feltCells).
+ * (dungeonMap.ts feltCells).
  */
 export function creatureSeen(g: Game): boolean {
   const s = g.s;
