@@ -101,7 +101,7 @@ export async function loadSkin(kind: Tiles): Promise<Skin | null> {
  * The border's caps (standard-caps.png: the ultima3 port's Standard UI sheet's, 64 by 32), in memory order; null if
  * they cannot be had, and the frame's blue is cut to a wedge instead.
  */
-async function loadCaps(): Promise<Uint32Array | null> {
+export async function loadCaps(): Promise<Uint32Array | null> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}graphics/standard-caps.png`);
     if (!res.ok) return null;

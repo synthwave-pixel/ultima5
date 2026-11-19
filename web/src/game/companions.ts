@@ -12,55 +12,15 @@
  * known there by the name their conversation begins with.
  */
 
-import { type Appearance, HAIR, type Hue, HUES, LADY, PEOPLE_SKIN } from './appearance.ts';
+import { type Appearance, LADY } from './appearance.ts';
+import { preset } from './companionLooks.ts';
 import { CF, type Game } from './game.ts';
 import type { Dressing } from './io.ts';
 import { CLASSES } from './zstats.ts';
 
-/** Clothes, trim and hair: the hues by name (appearanceMenu.ts), the hair by HAIR's. */
-type Preset = [Hue, Hue, string];
-const H = (name: string): number =>
-  ['red', 'orange', 'yellow', 'lime', 'green', 'jade', 'teal', 'azure', 'blue', 'violet', 'magenta', 'rose'].indexOf(name) * 30;
-
-/**
- * Each companion's colours to begin with. Honesty blue, Compassion yellow, Valour red, Justice green, Sacrifice orange,
- * Honour purple, Spirituality white, Humility black, as Ultima IV's virtues were; the others by their places and ways.
- */
-export const PRESETS: Readonly<Record<string, Preset>> = {
-  Mariah: [H('blue'), 'white', 'black'], // Honesty; the Lycaeum
-  Iolo: [H('yellow'), H('green'), 'white'], // Compassion; the old bard
-  Geoffrey: [H('red'), H('yellow'), 'brown'], // Valour
-  Jaana: [H('green'), H('orange'), 'auburn'], // Justice; the woods of Yew
-  Julia: [H('orange'), H('red'), 'brunette'], // Sacrifice
-  Dupre: [H('violet'), H('yellow'), 'blonde'], // Honour
-  Shamino: ['white', H('green'), 'brown'], // Spirituality; the ranger
-  Katrina: ['black', H('orange'), 'blonde'], // Humility; the shepherdess
-  Gwenno: [H('rose'), H('yellow'), 'blonde'], // Britain; Iolo's wife
-  Johne: ['grey', H('violet'), 'white'], // Ararat; the hermit gone strange
-  Sentri: [H('teal'), 'white', 'black'], // Bordermarch
-  Gorn: [H('orange'), H('red'), 'auburn'], // the barbarian in Blackthorn's cells
-  Maxwell: [H('azure'), H('red'), 'brunette'], // Serpent's Hold
-  Toshi: [H('blue'), H('yellow'), 'black'], // Empath Abbey
-  Saduj: ['black', H('red'), 'black'], // Lord British's castle, Blackthorn's spy
-};
-
-/** The mages' figure: their hair shows whatever they wear; a fighter's helm or a bard's hat is kept as drawn. */
-const MAGE = 'M'.charCodeAt(0);
-
-/** The companion's look as they begin: their preset's colours (hair for a mage), the people's skin. */
-export function preset(name: string, cls: number): Appearance {
-  const p = PRESETS[name];
-  const hue = (h: Hue): number => Math.max(0, HUES.indexOf(h));
-  if (!p) return { figure: 0, skin: PEOPLE_SKIN, hair: 0, main: 0, trim: 0 };
-  const hair =
-    cls === MAGE
-      ? Math.max(
-          0,
-          HAIR.findIndex((x) => x.name === p[2]),
-        )
-      : 0;
-  return { figure: 0, skin: PEOPLE_SKIN, hair, main: hue(p[0]), trim: hue(p[1]) };
-}
+// Each companion's colours to begin with (companionLooks.ts: apart from this module's Game, so another game can dress
+// its own people in them).
+export { PRESETS, preset } from './companionLooks.ts';
 
 /** The figure roster member `m` walks as (its first frame, an actor tile): their trade's, as the party is drawn. */
 export function figureOf(g: Game, m: number): number {

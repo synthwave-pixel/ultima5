@@ -15,14 +15,14 @@ import type { Game } from './game.ts';
 /** A towne a Shadowlord is in. */
 const SHADOWLORD: ChromeTone = { hue: 285, sat: 1, value: 1.05 };
 /** Out in Britannia by day: the copper's blue. */
-const OVERWORLD: ChromeTone = { hue: 215, sat: 1, value: 1.1 };
+export const OVERWORLD: ChromeTone = { hue: 215, sat: 1, value: 1.1 };
 /** The title's dialogs over its copper (menu.ts): the overworld's blue by day; a question that warns, the Shadowlord's purple. */
 export const TITLE_DIALOG: ChromeTone = OVERWORLD;
 export const TITLE_WARNING: ChromeTone = SHADOWLORD;
 /** How much darker the blue is at the darkest of the night. */
 const NIGHT = 0.25;
 /** A shrine, the Codex: a soft gold. */
-const SHRINE: ChromeTone = { hue: 42, sat: 0.8, value: 1.12 };
+export const SHRINE: ChromeTone = { hue: 42, sat: 0.8, value: 1.12 };
 /** The dungeons' grey on their first level and their eighth, and the Underworld's. */
 const DUNGEON_TOP = 0.62;
 const DUNGEON_FOOT = 0.46;
@@ -68,9 +68,12 @@ export function chromeTone(g: Game): ChromeTone | null {
     return { ...OVERWORLD, value: OVERWORLD.value * (1 - NIGHT * dark) };
   }
   if (map <= 0x20) return map <= 8 && s.shadowlords.slice(0, 3).includes(map) ? SHADOWLORD : null;
-  if (map <= 0x28) {
-    const level = Math.max(0, Math.min(7, s.level));
-    return { sat: 0, value: DUNGEON_TOP + ((DUNGEON_FOOT - DUNGEON_TOP) * level) / 7 };
-  }
+  if (map <= 0x28) return dungeonTone(s.level);
   return null;
+}
+
+/** A dungeon's grey on level `level` (0 the first, 7 the eighth and below): darker on each level down. */
+export function dungeonTone(level: number): ChromeTone {
+  const l = Math.max(0, Math.min(7, level));
+  return { sat: 0, value: DUNGEON_TOP + ((DUNGEON_FOOT - DUNGEON_TOP) * l) / 7 };
 }

@@ -628,9 +628,15 @@ export class StandardArt implements TileArt {
     return o;
   }
 
-  /** Whether `tile` is drawn with its outline now: an actor, the outlines on. */
+  /**
+   * Cells past the actors' that are things that stand, not figures: never outlined. None of Ultima V's; another game's
+   * own tiles, drawn in cells past the sheet's (the Ultima IV port's hull pieces and plates), say which are.
+   */
+  readonly furniture = new Set<number>();
+
+  /** Whether `tile` is drawn with its outline now: an actor (not furniture), the outlines on. */
   private isOutlined(tile: number): boolean {
-    return this.outlined && tile >= ACTORS && tile < this.cells;
+    return this.outlined && tile >= ACTORS && tile < this.cells && !this.furniture.has(tile);
   }
 
   setClock(hour: number, minute: number): void {
