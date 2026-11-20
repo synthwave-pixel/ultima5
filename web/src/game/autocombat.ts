@@ -128,7 +128,9 @@ async function keysPressed(g: Game, interrupt?: AutoInterrupt): Promise<boolean>
       return g.options.autoCombat === 'off' || !autoPlaysTurn(g);
     }
     if (what !== 'back') continue;
-    const now = g.p.now?.() ?? 0;
+    // Timed by its press, not by when it is read: two Bs pressed quickly while the foes moved, the first read before
+    // they did and the second after, are a double press all the same (issue #40).
+    const now = g.p.pressedAt?.() ?? g.p.now?.() ?? 0;
     if (now - g.autoBackAt < BACK_TWICE_MS) {
       g.autoBackAt = -Infinity;
       setAutoCombat(g, 'off');
@@ -140,6 +142,20 @@ async function keysPressed(g: Game, interrupt?: AutoInterrupt): Promise<boolean>
     g.autoBackAt = now;
   }
   return false;
+}
+
+/**
+ * The player's keys heeded between turns (combat.ts combatLoop, after each turn - the foes' as well), where auto
+ * combat plays every turn on the party's side - All, or Allies with the Avatar fallen - so a Pause, or B twice, acts as
+ * soon as the turn in progress ends, not at the party's next turn, a fight with many foes later (issue #40). With
+ * Allies and the Avatar standing the keys are left waiting, for the Avatar's own turn.
+ */
+export async function heedKeys(g: Game, interrupt: AutoInterrupt): Promise<void> {
+  const mode = g.options.autoCombat;
+  const avatar = avatarAt(g);
+  const standing = avatar >= 0 && (g.combat[avatar].flags & CF.Dead) === 0;
+  if (mode === 'off' || (mode === 'allies' && standing)) return;
+  await keysPressed(g, interrupt);
 }
 
 /**

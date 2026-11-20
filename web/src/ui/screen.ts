@@ -184,6 +184,9 @@ export class Screen implements Platform {
   /** The canvas's size in the display's own pixels, as last fitted to the window. */
   private wanted: [number, number] = [HI_WIDTH, HI_HEIGHT];
   private readonly keys: number[] = [];
+  /** When each key waiting was pushed (performance.now), in step with `keys`; and when the key last taken was. */
+  private readonly keyTimes: number[] = [];
+  private takenAt = 0;
   private waiter: ((k: number) => void) | null = null;
   /** Called on every key (audio unlocks from a gesture). */
   onKey: (() => void) | null = null;
@@ -1317,9 +1320,11 @@ export class Screen implements Platform {
     if (this.waiter) {
       const w = this.waiter;
       this.waiter = null;
+      this.takenAt = performance.now();
       w(k);
     } else if (this.keys.length < 16 && !(held && this.keys.length > 0)) {
       this.keys.push(k);
+      this.keyTimes.push(performance.now());
     }
   }
 
@@ -1582,7 +1587,18 @@ export class Screen implements Platform {
   }
 
   pollKey(): number {
-    return this.keys.shift() ?? 0;
+    return this.take() ?? 0;
+  }
+
+  /** The first key waiting, and when it was pushed noted (pressedAt). */
+  private take(): number | undefined {
+    const k = this.keys.shift();
+    if (k !== undefined) this.takenAt = this.keyTimes.shift() ?? performance.now();
+    return k;
+  }
+
+  pressedAt(): number {
+    return this.takenAt;
   }
 
   breakHolds(): void {
@@ -1591,6 +1607,7 @@ export class Screen implements Platform {
 
   flushKeys(): void {
     this.keys.length = 0;
+    this.keyTimes.length = 0;
   }
 
   /** When the last key or button came (push): the wait's idle rests a while after it (restAfter). */
@@ -1603,7 +1620,7 @@ export class Screen implements Platform {
   restAfter: () => number | null = () => null;
 
   async waitKey(idle: () => void | Promise<void>): Promise<number> {
-    const queued = this.keys.shift();
+    const queued = this.take();
     if (queued !== undefined) return queued;
     return new Promise((resolve) => {
       let timer: ReturnType<typeof setTimeout> | null = null;

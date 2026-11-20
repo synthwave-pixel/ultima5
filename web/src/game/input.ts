@@ -528,10 +528,10 @@ async function autoCombatKey(g: Game): Promise<number> {
   return key;
 }
 
-/** autoKey, the player's keys told apart for it: one that holds the game (its Pause menu opened here), B, and the rest. */
-async function autoTurnKey(g: Game): Promise<number> {
-  const { autoKey } = await import('./autocombat.ts');
-  return autoKey(g, async (raw) => {
+/** The player's keys told apart for auto combat: one that holds the game (its Pause menu opened here), B, and the rest. */
+const autoInterrupt =
+  (g: Game) =>
+  async (raw: number): Promise<'pause' | 'back' | 'other'> => {
     const k = asPad(g, raw);
     if (k === Pad.Start || k === Pad.Select || raw === K.Escape || raw === LOST_FOCUS) {
       if (!g.inPlay || g.paused) return 'other';
@@ -540,7 +540,19 @@ async function autoTurnKey(g: Game): Promise<number> {
     }
     // B as a controller gives it, or as the keyboard read as one does (Space, X, B); with Classic input, Space.
     return k === Pad.B || (g.options.input !== 'controller' && raw === 0x20) ? 'back' : 'other';
-  });
+  };
+
+/** autoKey, the player's keys told apart for it (autoInterrupt). */
+async function autoTurnKey(g: Game): Promise<number> {
+  const { autoKey } = await import('./autocombat.ts');
+  return autoKey(g, autoInterrupt(g));
+}
+
+/** Between a fight's turns, the player's keys heeded where auto combat plays every turn on the party's side (autocombat.ts heedKeys). */
+export async function heedAutoKeys(g: Game): Promise<void> {
+  if (g.options.autoCombat === 'off' || g.s.mapId !== 0xff) return;
+  const { heedKeys } = await import('./autocombat.ts');
+  await heedKeys(g, autoInterrupt(g));
 }
 
 /**

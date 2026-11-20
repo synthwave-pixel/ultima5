@@ -490,6 +490,11 @@ export interface Platform {
   /** The page's clock, in milliseconds (performance.now); absent where nothing runs in time (the tests' platform). */
   now?(): number;
   /**
+   * When the key `pollKey` or `waitKey` last gave was pressed, by `now`: a key read late (one waiting while the
+   * fight went on) is timed by its press, not its reading. Absent where nothing runs in time.
+   */
+  pressedAt?(): number;
+  /**
    * `draw` done unseen, `shown` standing for each frame it would show: what a first showing costs (a picture's
    * restyling, a shape of the frame's copper) paid now rather than as the frame comes. Both pages blank after.
    */

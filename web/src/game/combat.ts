@@ -21,7 +21,7 @@ import { borderTitle, clearBorderTitle, commandPrompt, drawVitals, invertMember,
 import { liftDungeonMap } from './dungeonMap.ts';
 import { CF, Game } from './game.ts';
 import { bumpCommand, corpseBlocks, foesAbout, isLoot, NOT_NOW } from './bumpAct.ts';
-import { bumpInto, getChar, getCharYN, getCommandKey, getHours, queueKeys, selectDirection, upOrDown } from './input.ts';
+import { bumpInto, getChar, getCharYN, getCommandKey, getHours, heedAutoKeys, queueKeys, selectDirection, upOrDown } from './input.ts';
 import { restOutcome, restTimer } from './rest.ts';
 import { K, Pad, SOLO, SOLO_OFF } from './io.ts';
 import { earnedLevel, Status } from './save.ts';
@@ -3178,6 +3178,7 @@ export async function combatLoop(g: Game): Promise<boolean> {
       s.blink = 1;
       if (onMonsterSide(g, s.combatTurn)) await monsterTurn(g);
       else await playerTurn(g);
+      await heedAutoKeys(g);
       s.d58a8[s.combatTurn] = 0xff;
       if (easedRules(g)) await shakeCharm(g, s.combatTurn);
       await castOut(g);
