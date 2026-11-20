@@ -35,6 +35,8 @@ import {
   type Rules,
   SOUND_CHOICES,
   type SoundChoice,
+  musicNote,
+  soundNote,
 } from './settings.ts';
 import { CENTRE, TALK_WIDTH } from './speech.ts';
 import { Colour } from '../ui/colours.ts';
@@ -1067,7 +1069,7 @@ function musicLine(g: GameCore): Setting {
   const o = g.options;
   return {
     label: `Music level: ${percent(o.musicLevel)}`,
-    note: "The Upgrade's music: Off, or 10% to 100%.",
+    note: musicNote() ?? "The Upgrade's music: Off, or 10% to 100%.",
     listen: true,
     act: () => dialLevel(g, 'Music level', o.musicLevel, (n) => void (o.musicLevel = n)),
   };
@@ -1080,7 +1082,7 @@ const SOUND_NAMES: Record<SoundChoice, string> = {
   ambient: 'Ambient',
   upgrade: 'Upgrade (2001)',
 };
-/** What each Sound choice is, under its line: its music, and its effects with it. */
+/** What each Sound choice is, under its line: its music, and its effects with it - Ultima V's words, a game's own first (soundNote). */
 const SOUND_NOTES: Record<SoundChoice, string> = {
   classical: 'Classical (2026): orchestra, consort, piano; effects to match.',
   electronic: 'Electronic (2026): analog synths and keys; effects to match.',
@@ -1093,7 +1095,7 @@ function soundLine(g: GameCore): Setting {
   const o = g.options;
   return {
     label: `Sound: ${SOUND_NAMES[o.soundChoice]}`,
-    note: SOUND_NOTES[o.soundChoice],
+    note: soundNote(o.soundChoice) ?? SOUND_NOTES[o.soundChoice],
     listen: true,
     act: () => void (o.soundChoice = SOUND_CHOICES[(SOUND_CHOICES.indexOf(o.soundChoice) + 1) % SOUND_CHOICES.length]),
   };

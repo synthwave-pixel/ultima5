@@ -41,8 +41,8 @@ import { identify, type Kind, type WordSource } from '../audio/effects.ts';
 import { cueKey, sfxKey, soften, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { noiseRuns, pulseRuns, renderRuns, runsLength, sweepRuns, toneRuns } from '../audio/speaker.ts';
 import type { Hold } from '../game/io.ts';
-import { TUNE_FILES } from '../game/music.ts';
-import { MUSIC, MusicPlayer } from './music.ts';
+import { tuneSet, type TuneSet } from '../audio/tuneSet.ts';
+import { MusicPlayer } from './music.ts';
 import { bankRate, SFX_MANIFEST, SfxBank, type Slice } from './sfxBank.ts';
 
 /**
@@ -133,9 +133,34 @@ const UNDUCKED = new Set([
   'cue:TorchIgnite',
   'cue:MountHorse',
 ]);
-/** Whether effect `name`, `played` seconds long, lowers the music: a long one does, but for the ones heard often. */
-export function ducks(name: string, played: number): boolean {
-  return played >= DUCK_SECONDS && !UNDUCKED.has(name);
+/**
+ * Whether effect `name`, `played` seconds long, lowers the music: a long one does, but for the ones heard often
+ * (`unducked`: Ultima V's, or a game's own, GameEffects).
+ */
+export function ducks(name: string, played: number, unducked: ReadonlySet<string> = UNDUCKED): boolean {
+  return played >= DUCK_SECONDS && !unducked.has(name);
+}
+
+/**
+ * A game's own effects, played by name (PcSound.named) where Ultima V's are known by their routine's numbers: what each
+ * is, as the game says.
+ */
+export interface GameEffects {
+  /**
+   * Effect `name` (called with `arg`) as the game's PC speaker sounded it - 44.1 kHz, full scale - for Upgrade (2001),
+   * and softened where a suite has no sound of its own for it; null where the speaker had none. Its length is the
+   * game's pace.
+   */
+  speaker(name: string, arg?: number): Float32Array | null;
+  /**
+   * What the suites play for it: a key of their sounds (audio/sfxKeys.ts: 'blocked', 'cue:Attack'), varied in pitch
+   * where it is one a turn repeats (chip.ts REPEATED); null for the speaker's, softened; 'silent' for nothing.
+   */
+  suite(name: string, arg?: number): string | null;
+  /** The names whose sound is the timing (the picture follows it): waited out. In place of Ultima V's (TIMED). */
+  timed: ReadonlySet<string>;
+  /** The names heard too often to lower the music for. In place of Ultima V's (UNDUCKED). */
+  unducked: ReadonlySet<string>;
 }
 /**
  * Water in the suites - a waterfall, a fountain - not heard again for this long (ms) - the party gone from it, or
@@ -215,7 +240,22 @@ export class PcSound implements Sound {
   /** When each file that would not load last failed (performance clock, ms); a success clears it. */
   private readonly failedAt = new Map<string, number>();
 
-  constructor(private readonly data: WordSource) {}
+  /**
+   * `data`, where Ultima V's effects' notes are read (audio/effects.ts); `game`, a game's own effects by name (named),
+   * whose timed and unducked names then stand in for Ultima V's.
+   */
+  constructor(
+    private readonly data: WordSource,
+    private readonly game?: GameEffects,
+  ) {}
+
+  /** The effects whose sound is the timing, and those heard too often to lower the music for: the game's, or Ultima V's. */
+  private get timed(): ReadonlySet<string> {
+    return this.game?.timed ?? TIMED;
+  }
+  private get unducked(): ReadonlySet<string> {
+    return this.game?.unducked ?? UNDUCKED;
+  }
 
   /** Make the audio context (from a key press or tap). */
   unlock(): void {
@@ -269,10 +309,34 @@ export class PcSound implements Sound {
     const length = runsLength(runs);
     const effect = identify(this.data, kind, args);
     const name = effect?.name ?? `${kind}:${args.join(',')}`;
-    const wait = TIMED.has(name) ? length : Math.min(length, PACE);
+    const wait = this.timed.has(name) ? length : Math.min(length, PACE);
     const ctx = this.ctx;
     if (ctx && this.out && this.effectsLevel > 0) this.start(ctx, kind, args, name);
     await this.wait(wait * 1000);
+  }
+
+  /**
+   * A game's own effect `name`, called with `arg` (GameEffects): in Upgrade (2001) its speaker's sound; in a suite the
+   * suite's sound the game names, or the speaker's softened. It starts at once; the game waits the speaker's sound out
+   * where it is the timing (the game's timed), else a moment at most - and not at all where the speaker had none. A
+   * game that names no effects (Ultima V) plays nothing.
+   */
+  async named(name: string, arg?: number): Promise<void> {
+    const game = this.game;
+    if (!game) return;
+    const pcm = game.speaker(name, arg);
+    const length = pcm ? pcm.length / RATE : 0;
+    const ctx = this.ctx;
+    if (ctx && this.out && this.effectsLevel > 0) {
+      if (this.effects === 'original') {
+        if (pcm) this.play(ctx, pcm, name);
+      } else {
+        const key = game.suite(name, arg);
+        if (key !== 'silent')
+          this.play(ctx, () => this.inSuite(key, key && REPEATED.has(key) ? 0 : null, () => pcm ?? new Float32Array(1)), name);
+      }
+    }
+    await this.wait((this.timed.has(name) ? length : Math.min(length, PACE)) * 1000);
   }
 
   /**
@@ -359,8 +423,8 @@ export class PcSound implements Sound {
     src.connect(this.out!);
     if (pcm instanceof Float32Array) src.start(start);
     else src.start(start, pcm.at, pcm.length);
-    if (played >= LONG && !TIMED.has(name)) this.ends.set(name, start + played);
-    if (ducks(name, played)) this.player.duck(start, start + played);
+    if (played >= LONG && !this.timed.has(name)) this.ends.set(name, start + played);
+    if (ducks(name, played, this.unducked)) this.player.duck(start, start + played);
   }
 
   /**
@@ -438,15 +502,15 @@ export class PcSound implements Sound {
     return pcm;
   }
 
-  /** Arrangement `arrangement`'s file of tune `name`, decoded; null where there is none, or it will not load. */
-  private decode(ctx: AudioContext, arrangement: Arrangement, name: string): Promise<AudioBuffer | null> {
-    const key = `${arrangement}/${name}`;
+  /** Arrangement `arrangement`'s file of tune `name` of `set`, decoded; null where there is none, or it will not load. */
+  private decode(ctx: AudioContext, set: TuneSet, arrangement: Arrangement, name: string): Promise<AudioBuffer | null> {
+    const key = `${set.folder}/${arrangement}/${name}`;
     let got = this.decoded.get(key);
     if (!got) {
       if (performance.now() - (this.failedAt.get(key) ?? -Infinity) < RETRY_AFTER) return Promise.resolve(null);
-      const entry = MUSIC[name]?.[arrangement];
+      const entry = set.manifest[name]?.[arrangement];
       const made = entry
-        ? fetch(`${import.meta.env.BASE_URL}music/${entry.file}`)
+        ? fetch(`${import.meta.env.BASE_URL}${set.folder}/${entry.file}`)
             .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(res.statusText))))
             .then((bytes) => ctx.decodeAudioData(bytes))
             .catch(() => null)
@@ -471,7 +535,7 @@ export class PcSound implements Sound {
   }
 
   /**
-   * Tune `tune` (game/music.ts Tune; 0 for none) played on `occasion`: in an arrangement the soundtrack chosen plays
+   * Tune `tune` of the game's music (audio/tuneSet.ts: Ultima V's game/music.ts Tune; 0 for none) played on `occasion`: in an arrangement the soundtrack chosen plays
    * there (audio/soundtracks.ts) - one picked at random where it has several, not the one the tune played in last -
    * or, where that file cannot be had (offline before its first fetch, a decode that fails), another of them, then the
    * Remastered's, then the Original's, else none. The same tune asked for again plays on, as does one asked for on
@@ -481,7 +545,8 @@ export class PcSound implements Sound {
   music(tune: number, occasion?: Occasion): void {
     this.wanted = tune;
     this.occasion = occasion;
-    const name = TUNE_FILES[tune - 1];
+    const set = tuneSet();
+    const name = tune > 0 ? set.names[tune - 1] : undefined;
     const ctx = this.ctx;
     if (!this.musicOn || !name || !ctx) {
       this.asked = '';
@@ -489,23 +554,24 @@ export class PcSound implements Sound {
       return;
     }
     const voice = this.voice;
-    const ask = `${voice}|${name}|${occasion ?? ''}`;
+    const ask = `${voice}|${set.folder}/${name}|${occasion ?? ''}`;
     if (ask === this.asked) return;
     this.asked = ask;
-    const choices = arrangementsFor(voice, name, occasion).filter((a) => MUSIC[name]?.[a]);
+    const files = set.manifest[name] ?? {};
+    const choices = arrangementsFor(voice, name, occasion, set.picks).filter((a) => files[a]);
     if (choices.some((a) => this.player.playing === `${a}/${name}`)) return;
     const first = choices.length ? pick(choices, this.lastPlayed.get(name), this.random) : undefined;
     const order = [...new Set([first, ...choices, 'remastered', 'original'])].filter(
-      (a): a is Arrangement => !!a && !!MUSIC[name]?.[a as Arrangement],
+      (a): a is Arrangement => !!a && !!files[a as Arrangement],
     );
     void (async () => {
       for (const arrangement of order) {
-        const buffer = await this.decode(ctx, arrangement, name);
+        const buffer = await this.decode(ctx, set, arrangement, name);
         // Asked for something else meanwhile, or the music turned off: this one is not wanted now.
         if (this.asked !== ask || !this.musicOn) return;
         if (!buffer) continue;
         this.lastPlayed.set(name, arrangement);
-        const { loopStart, loopEnd } = MUSIC[name][arrangement]!;
+        const { loopStart, loopEnd } = files[arrangement]!;
         this.player.play(`${arrangement}/${name}`, buffer, loopStart, loopEnd);
         return;
       }

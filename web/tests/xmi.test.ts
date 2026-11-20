@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { readXmiEvents } from '../src/audio/xmi.ts';
+import { readXmiEvents, xmiSequenceCount } from '../src/audio/xmi.ts';
 import { TUNE_FILES } from '../src/game/music.ts';
 
 const file = (name: string): Uint8Array => new Uint8Array(readFileSync(`public/music/${name}`));
@@ -46,6 +46,26 @@ describe('the Upgrade’s tunes read as a synthesizer takes them', () => {
     const xmi = new Uint8Array([...tag('FORM'), ...be32(evnt.length + 4), ...tag('XMID'), ...evnt]);
     const order = readXmiEvents(xmi).events.map((e) => (e.kind === 'controller' ? `controller ${e.controller}` : e.kind));
     expect(order).toEqual(['controller 0', 'controller 32', 'program', 'on', 'off']);
+  });
+
+  it('reads each sequence of a file of several, by its place', () => {
+    // FORM XDIR (saying two), then CAT XMID holding two FORM XMID, each an EVNT of one note: 60, then 64.
+    const be32 = (n: number): number[] => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+    const tag = (t: string): number[] => [...t].map((c) => c.charCodeAt(0));
+    const chunk = (id: string, body: number[]): number[] => [...tag(id), ...be32(body.length), ...body, ...(body.length & 1 ? [0] : [])];
+    const xmid = (note: number): number[] => chunk('FORM', [...tag('XMID'), ...chunk('EVNT', [0x90, note, 100, 10])]);
+    const both = new Uint8Array([
+      ...chunk('FORM', [...tag('XDIR'), ...chunk('INFO', [2, 0])]),
+      ...chunk('CAT ', [...tag('XMID'), ...xmid(60), ...xmid(64)]),
+    ]);
+    const note = (sequence: number): number[] => readXmiEvents(both, sequence).events.flatMap((e) => (e.kind === 'on' ? [e.note] : []));
+    expect(xmiSequenceCount(both)).toBe(2);
+    expect(note(0)).toEqual([60]);
+    expect(readXmiEvents(both).events).toEqual(readXmiEvents(both, 0).events);
+    expect(note(1)).toEqual([64]);
+    expect(() => readXmiEvents(both, 2)).toThrow('no sequence 2');
+    // Each of the Upgrade's files holds one.
+    for (const name of TUNE_FILES) expect(xmiSequenceCount(file(name)), name).toBe(1);
   });
 
   it('refuses what is no XMI', () => {

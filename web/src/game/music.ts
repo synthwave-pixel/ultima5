@@ -14,7 +14,9 @@
  * they are done (MID.DRV 0299, 0293).
  */
 
-import type { Occasion } from '../audio/soundtracks.ts';
+import manifest from '../audio/musicManifest.json';
+import { PICKS, type Occasion } from '../audio/soundtracks.ts';
+import type { TuneSet } from '../audio/tuneSet.ts';
 import { nightOf } from './chromeTone.ts';
 import { Game } from './game.ts';
 
@@ -64,6 +66,19 @@ export const TUNE_FILES = [
  * through and played again after a rest, as a player may stay on their screens; every other is heard over and over.
  */
 export const HEARD_ONCE = ['AMIGA.XMI', 'REUNION.XMI', 'RULEBRIT.XMI'];
+
+/**
+ * Ultima V's music (audio/tuneSet.ts), the set every game plays unless its entry gives its own: the sixteen, each its
+ * own file in public/music, their picks (audio/soundtracks.ts) and the render's manifest.
+ */
+export const ULTIMA5_TUNES: TuneSet = {
+  names: TUNE_FILES,
+  heardOnce: HEARD_ONCE,
+  picks: PICKS,
+  manifest,
+  folder: 'music',
+  manifestFile: 'src/audio/musicManifest.json',
+};
 
 /** MID.DRV 016d: the tune for where the party is. */
 export function mapTune(g: Game): number {

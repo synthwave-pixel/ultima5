@@ -10,7 +10,7 @@
 
 import { OfflineAudioContext } from 'node-web-audio-api';
 import type { XmiSequence } from '../../../src/audio/xmi.ts';
-import { HEARD_ONCE } from '../../../src/game/music.ts';
+import { heardOnce } from '../../../src/audio/tuneSet.ts';
 import { easeToTarget } from '../ease.ts';
 import { renderOriginal } from '../original.ts';
 import { assertBounded, type Stereo } from '../pcm.ts';
@@ -73,7 +73,7 @@ export async function renderInStyle(
     seq = prepare(SERENE.includes(tune) ? slowed(source, CALMER) : source, style as Style);
     pcm = await offline(seq.length + ring, rate, (ctx) =>
       playStyle(ctx, ctx.destination, seq, style as Style, {
-        gentle: !HEARD_ONCE.includes(tune),
+        gentle: !heardOnce(tune),
         ominous,
         mellow: MELLOW.includes(tune),
         serene: SERENE.includes(tune),
@@ -81,7 +81,7 @@ export async function renderInStyle(
     );
   }
   assertBounded(pcm, `${style} ${tune}`);
-  if (HEARD_ONCE.includes(tune)) return { pcm, length: seq.length, dip: 0, over: false };
+  if (heardOnce(tune)) return { pcm, length: seq.length, dip: 0, over: false };
   const eased = easeToTarget(pcm, rate);
   return { pcm: eased.pcm, length: seq.length, dip: eased.dip, over: eased.over };
 }

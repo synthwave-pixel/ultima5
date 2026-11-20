@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TUNE_FILES } from '../src/game/music.ts';
 import type { Arrangement } from '../src/audio/soundtracks.ts';
+import { useTunes, type TuneSet } from '../src/audio/tuneSet.ts';
 import type { MusicVoice } from '../src/game/settings.ts';
 import { MUSIC } from '../src/ui/music.ts';
 import { PcSound } from '../src/ui/sound.ts';
@@ -350,5 +351,44 @@ describe('the soundtracks chosen from', () => {
     await flush();
     await settle('remastered', BRITANNIA, true);
     expect(playing()).toEqual([tag('remastered', BRITANNIA)]);
+  });
+});
+
+describe('a second game’s tunes (audio/tuneSet.ts)', () => {
+  /** Another game's two tunes, invented: the first rendered in the Remastered, the second not yet. */
+  const OTHER: TuneSet = {
+    names: ['ONE', 'TWO'],
+    heardOnce: [],
+    picks: {},
+    manifest: { ONE: { remastered: { file: 'remastered/ONE.0000abcd.ogg', loopStart: 0.5, loopEnd: 9 } } },
+    folder: 'other',
+    manifestFile: 'src/other.json',
+  };
+  afterEach(() => useTunes(null));
+
+  it('are fetched from its own folder, by its own manifest, and played', async () => {
+    useTunes(OTHER);
+    const s = sound();
+    s.music(1);
+    await flush();
+    expect(fetchCalls).toEqual(['/other/remastered/ONE.0000abcd.ogg']);
+    const at = decodes.findIndex((p) => (p as Pending & { name: string }).name === '/other/remastered/ONE.0000abcd.ogg');
+    expect(at).toBeGreaterThanOrEqual(0);
+    decodes.splice(at, 1)[0].resolve({ tag: 'ONE', duration: 10 });
+    await flush();
+    expect(playing()).toEqual(['ONE']);
+    s.music(2); // not rendered: nothing to play
+    await flush();
+    expect(fetchCalls).toHaveLength(1);
+    expect(playing()).toEqual([]);
+  });
+
+  it('give way to Ultima V’s again, from its folder', async () => {
+    useTunes(OTHER);
+    useTunes(null);
+    const s = sound();
+    s.music(BRITANNIA);
+    await flush();
+    expect(fetchCalls).toEqual([`/music/${file('remastered', BRITANNIA)}`]);
   });
 });

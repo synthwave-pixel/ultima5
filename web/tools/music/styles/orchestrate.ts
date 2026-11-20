@@ -16,7 +16,7 @@
  *   celtic      fiddle and whistle, harp and guitar, cello, a bodhran
  *   piano       one piano, both hands written anew, pedalled
  *
- * A tune heard over and over (all but HEARD_ONCE) is arranged gentler, to be
+ * A tune heard over and over (all but those heard once: tuneSet.ts heardOnce) is arranged gentler, to be
  * easy on the ear for hours: its melody settled down to sit no higher than
  * the middle of the treble, mellower instruments where a bright one would
  * have taken it (horns, not a trumpet; a violin, not a fiddle; nylon
@@ -30,7 +30,7 @@
  */
 
 import { notesOf, REMASTER, type Note } from '../../../src/audio/remaster.ts';
-import { HEARD_ONCE } from '../../../src/game/music.ts';
+import { heardOnce } from '../../../src/audio/tuneSet.ts';
 import type { XmiEvent, XmiSequence } from '../../../src/audio/xmi.ts';
 import { findGrid, findRoles, type Role } from './analysis.ts';
 import {
@@ -187,7 +187,7 @@ export function orchestrate(seq: XmiSequence, tune: string, style: Sampled, omin
   const notes = notesOf(seq.events);
   const grid = findGrid(notes);
   const roles = findRoles(notes);
-  const gentle = !HEARD_ONCE.includes(tune);
+  const gentle = !heardOnce(tune);
   const of = (role: Role): Note[] => notes.filter((n) => roles.get(n.channel) === role);
   const melody = ominous ? settled(of('melody'), LOW) : gentle ? settled(of('melody')) : of('melody');
   const bass = of('bass');

@@ -439,6 +439,12 @@ export interface Sound {
    */
   cue?(name: string, whole?: boolean): Promise<void>;
   /**
+   * A game's own effect by name, called with `arg` (ui/sound.ts GameEffects), where a game names its effects rather
+   * than calling Ultima V's routines by their numbers: as its PC speaker sounded it in Upgrade (2001), as the suite has
+   * it in the others; waited as the game says. Absent where there is no such set; nothing for a game that names none.
+   */
+  named?(name: string, arg?: number): Promise<void>;
+  /**
    * How near what the next ambient call sounds is - a waterfall, a fountain, a clock - in squares, squared (frame.ts
    * ambientSound), told just before it; where its level follows it. Absent where nothing does.
    */
