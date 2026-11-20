@@ -225,7 +225,8 @@ describe('the story pages set in the Standard look', () => {
   });
 
   it('sets the choice where a game’s layout puts it: the question across the band, each answer under its card', () => {
-    // Ultima IV's: the cards at 8-103 and 216-311 above, the band under them clear.
+    // A game whose pictures leave the band at the screen's foot clear, its two cards at 8-103 and 216-311 above (the
+    // words here invented).
     const layout: ChoiceLayout = {
       columns: [
         [4, 108],
@@ -236,16 +237,16 @@ describe('the story pages set in the Standard look', () => {
       clear: [0, 152, 319, 199],
     };
     const runs = setChoice(
-      'Entrusted to deliver an uncounted purse of gold, thou dost meet a poor beggar. Dost thou',
-      'deliver the gold knowing the Trust in thee was well placed,',
-      'show Compassion, giving the beggar a coin, knowing it won’t be missed?',
+      'A traveller far from home asks thee the way to a town many leagues off, and the road is long. Dost thou',
+      'walk beside the traveller the whole of the way,',
+      'point out the road, and hasten on to thine own errand?',
       1,
       measure,
       layout,
     );
     const words = runs.filter((r) => !r.panel);
     const width = (r: Run): number => measure(r.text, r.size, 'mono');
-    const asked = 'Entrusted to deliver an uncounted purse of gold, thou dost meet a poor beggar. Dost thou...';
+    const asked = 'A traveller far from home asks thee the way to a town many leagues off, and the road is long. Dost thou...';
     const question = words.filter((r) => asked.includes(r.text));
     expect(question.length).toBeGreaterThan(0);
     for (const r of question) {
