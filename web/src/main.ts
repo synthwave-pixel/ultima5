@@ -96,7 +96,7 @@ async function start(): Promise<void> {
       ? loadAppleArt(tiles, modern)
       : kind === 'pc-ega'
         ? Promise.resolve(egaTileArt(tiles, modern))
-        : kind === 'modern-pc'
+        : kind === 'modern-pc' || kind === 'pc-vga' // (Upgrade VGA: never Ultima V's, settings.ts TILES)
           ? Promise.resolve(null)
           : loadSheetArt(kind, tiles, modern);
   // Each set's skin (skins.ts): its dungeon and frame, made when its set is first chosen.
