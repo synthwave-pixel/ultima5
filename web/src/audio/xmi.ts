@@ -9,7 +9,7 @@
  * rendered from, and nothing else reads them.
  *
  * XMI is an IFF file (FORM XDIR, then CAT XMID, FORM XMID with TIMB and
- * EVNT chunks). EVNT is MIDI without note-offs: a note-on carries its own
+ * EVNT chunks), one FORM XMID a sequence: a file may hold several tunes. EVNT is MIDI without note-offs: a note-on carries its own
  * duration (a MIDI variable-length number) after the velocity, and the
  * time between events is a run of bytes under 0x80, summed. Time counts at
  * 120 ticks a second whatever the tempo events say, as Miles' driver played
@@ -34,14 +34,16 @@ export interface XmiSequence {
   length: number;
 }
 
+/** An IFF chunk's four-letter id at `at`, and a big-endian size. */
+const tag = (b: Uint8Array, at: number): string => String.fromCharCode(b[at], b[at + 1], b[at + 2], b[at + 3]);
+const be32 = (b: Uint8Array, at: number): number => ((b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3]) >>> 0;
+
 /** An IFF chunk's contents by id, searched through FORM and CAT containers. */
 function chunk(b: Uint8Array, id: string, start = 0, end = b.length): Uint8Array | null {
-  const tag = (at: number): string => String.fromCharCode(b[at], b[at + 1], b[at + 2], b[at + 3]);
-  const be32 = (at: number): number => ((b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3]) >>> 0;
   let at = start;
   while (at + 8 <= end) {
-    const t = tag(at);
-    const size = be32(at + 4);
+    const t = tag(b, at);
+    const size = be32(b, at + 4);
     const body = at + 8;
     if (t === id) return b.subarray(body, Math.min(end, body + size));
     if (t === 'FORM' || t === 'CAT ') {
@@ -51,6 +53,26 @@ function chunk(b: Uint8Array, id: string, start = 0, end = b.length): Uint8Array
     at = body + size + (size & 1);
   }
   return null;
+}
+
+/** Each sequence of a file - every FORM XMID, in order, searched through FORM and CAT containers - by its contents. */
+function sequences(b: Uint8Array, start = 0, end = b.length, found: Uint8Array[] = []): Uint8Array[] {
+  let at = start;
+  while (at + 8 <= end) {
+    const t = tag(b, at);
+    const size = be32(b, at + 4);
+    const body = at + 8;
+    const stop = Math.min(end, body + size);
+    if (t === 'FORM' && body + 4 <= stop && tag(b, body) === 'XMID') found.push(b.subarray(body + 4, stop));
+    else if (t === 'FORM' || t === 'CAT ') sequences(b, body + 4, stop, found);
+    at = body + size + (size & 1);
+  }
+  return found;
+}
+
+/** How many sequences an XMI file holds: the Ultima V Upgrade's one each; a file of a game's whole score, several. */
+export function xmiSequenceCount(file: Uint8Array): number {
+  return sequences(file).length;
 }
 
 /**
@@ -72,9 +94,14 @@ function rank(e: XmiEvent): number {
   }
 }
 
-/** An XMI file's first sequence, as timed events. Throws where it is no XMI. */
-export function readXmiEvents(file: Uint8Array): XmiSequence {
-  const ev = chunk(file, 'EVNT');
+/**
+ * An XMI file's sequence `sequence` - its first unless told (the Ultima V Upgrade's files hold one each) - as timed
+ * events. Throws where it is no XMI, or has no such sequence.
+ */
+export function readXmiEvents(file: Uint8Array, sequence = 0): XmiSequence {
+  const all = sequences(file);
+  if (sequence > 0 && sequence >= all.length) throw new Error(`no sequence ${sequence}`);
+  const ev = chunk(all[sequence] ?? file, 'EVNT');
   if (!ev) throw new Error('not an XMI file');
   const events: XmiEvent[] = [];
   let tick = 0;

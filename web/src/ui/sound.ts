@@ -41,8 +41,8 @@ import { identify, type Kind, type WordSource } from '../audio/effects.ts';
 import { cueKey, sfxKey, soften, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { noiseRuns, pulseRuns, renderRuns, runsLength, sweepRuns, toneRuns } from '../audio/speaker.ts';
 import type { Hold } from '../game/io.ts';
-import { TUNE_FILES } from '../game/music.ts';
-import { MUSIC, MusicPlayer } from './music.ts';
+import { tuneSet, type TuneSet } from '../audio/tuneSet.ts';
+import { MusicPlayer } from './music.ts';
 import { bankRate, SFX_MANIFEST, SfxBank, type Slice } from './sfxBank.ts';
 
 /**
@@ -438,15 +438,15 @@ export class PcSound implements Sound {
     return pcm;
   }
 
-  /** Arrangement `arrangement`'s file of tune `name`, decoded; null where there is none, or it will not load. */
-  private decode(ctx: AudioContext, arrangement: Arrangement, name: string): Promise<AudioBuffer | null> {
-    const key = `${arrangement}/${name}`;
+  /** Arrangement `arrangement`'s file of tune `name` of `set`, decoded; null where there is none, or it will not load. */
+  private decode(ctx: AudioContext, set: TuneSet, arrangement: Arrangement, name: string): Promise<AudioBuffer | null> {
+    const key = `${set.folder}/${arrangement}/${name}`;
     let got = this.decoded.get(key);
     if (!got) {
       if (performance.now() - (this.failedAt.get(key) ?? -Infinity) < RETRY_AFTER) return Promise.resolve(null);
-      const entry = MUSIC[name]?.[arrangement];
+      const entry = set.manifest[name]?.[arrangement];
       const made = entry
-        ? fetch(`${import.meta.env.BASE_URL}music/${entry.file}`)
+        ? fetch(`${import.meta.env.BASE_URL}${set.folder}/${entry.file}`)
             .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(res.statusText))))
             .then((bytes) => ctx.decodeAudioData(bytes))
             .catch(() => null)
@@ -471,7 +471,7 @@ export class PcSound implements Sound {
   }
 
   /**
-   * Tune `tune` (game/music.ts Tune; 0 for none) played on `occasion`: in an arrangement the soundtrack chosen plays
+   * Tune `tune` of the game's music (audio/tuneSet.ts: Ultima V's game/music.ts Tune; 0 for none) played on `occasion`: in an arrangement the soundtrack chosen plays
    * there (audio/soundtracks.ts) - one picked at random where it has several, not the one the tune played in last -
    * or, where that file cannot be had (offline before its first fetch, a decode that fails), another of them, then the
    * Remastered's, then the Original's, else none. The same tune asked for again plays on, as does one asked for on
@@ -481,7 +481,8 @@ export class PcSound implements Sound {
   music(tune: number, occasion?: Occasion): void {
     this.wanted = tune;
     this.occasion = occasion;
-    const name = TUNE_FILES[tune - 1];
+    const set = tuneSet();
+    const name = tune > 0 ? set.names[tune - 1] : undefined;
     const ctx = this.ctx;
     if (!this.musicOn || !name || !ctx) {
       this.asked = '';
@@ -489,23 +490,24 @@ export class PcSound implements Sound {
       return;
     }
     const voice = this.voice;
-    const ask = `${voice}|${name}|${occasion ?? ''}`;
+    const ask = `${voice}|${set.folder}/${name}|${occasion ?? ''}`;
     if (ask === this.asked) return;
     this.asked = ask;
-    const choices = arrangementsFor(voice, name, occasion).filter((a) => MUSIC[name]?.[a]);
+    const files = set.manifest[name] ?? {};
+    const choices = arrangementsFor(voice, name, occasion, set.picks).filter((a) => files[a]);
     if (choices.some((a) => this.player.playing === `${a}/${name}`)) return;
     const first = choices.length ? pick(choices, this.lastPlayed.get(name), this.random) : undefined;
     const order = [...new Set([first, ...choices, 'remastered', 'original'])].filter(
-      (a): a is Arrangement => !!a && !!MUSIC[name]?.[a as Arrangement],
+      (a): a is Arrangement => !!a && !!files[a as Arrangement],
     );
     void (async () => {
       for (const arrangement of order) {
-        const buffer = await this.decode(ctx, arrangement, name);
+        const buffer = await this.decode(ctx, set, arrangement, name);
         // Asked for something else meanwhile, or the music turned off: this one is not wanted now.
         if (this.asked !== ask || !this.musicOn) return;
         if (!buffer) continue;
         this.lastPlayed.set(name, arrangement);
-        const { loopStart, loopEnd } = MUSIC[name][arrangement]!;
+        const { loopStart, loopEnd } = files[arrangement]!;
         this.player.play(`${arrangement}/${name}`, buffer, loopStart, loopEnd);
         return;
       }

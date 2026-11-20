@@ -11,6 +11,12 @@ npm run music -- remastered                    # one arrangement
 npm run music -- strings piano BRITLAND.XMI STONES.XMI
 ```
 
+**A game's own tunes.** What is rendered is a game's tune set (`web/src/audio/tuneSet.ts` `TuneSet`): its tunes'
+names, where each one's notes are (a file in its folder, and which of the file's sequences: an XMI may hold several),
+the ones heard once, its picks, its folder under `web/public/` and its manifest's path. `npm run music` renders
+Ultima V's (`game/music.ts` `ULTIMA5_TUNES`); another game's render is a script of a few lines passing its own set to
+`renderTunes` (`render.ts`), with the same arguments.
+
 The styles (`styles/`: `orchestrate.ts` for the sampled ones, `engine.ts` for the synthesized, `arrange.ts` for how
 each tune is treated) are Electronic's and Classical's; `node --import ./tools/node-ts.mjs tools/music/styles/render.ts` renders any of
 them to `screenshots/styles-v2/` to listen to, and `fatigue.ts` measures every render for what tires the ear.

@@ -46,8 +46,11 @@ const ALL_CLASSICAL: Arrangement[] = ['celtic', 'consort', 'orchestra', 'piano',
 const BUT_PIANO: Arrangement[] = ['celtic', 'consort', 'orchestra', 'strings'];
 const ALL_ELECTRONIC: Arrangement[] = ['grid', 'newwave', 'upsidedown'];
 
-/** Electronic's and Classical's arrangements of each tune (game/music.ts TUNE_FILES), as chosen. */
-export const PICKS: Record<string, Record<'classical' | 'electronic', Choices>> = {
+/** A game's Electronic and Classical arrangements of each of its tunes, by name (audio/tuneSet.ts TuneSet picks). */
+export type Picks = Readonly<Record<string, Record<'classical' | 'electronic', Choices>>>;
+
+/** Electronic's and Classical's arrangements of each of Ultima V's tunes (game/music.ts TUNE_FILES), as chosen. */
+export const PICKS: Picks = {
   // The character's making, the reunion with Lord British, the proclamation of victory: heard once, each one.
   'AMIGA.XMI': { classical: { usual: ['original'] }, electronic: { usual: ['remastered'] } },
   'REUNION.XMI': { classical: { usual: ['piano'] }, electronic: { usual: ['remastered'] } },
@@ -106,19 +109,19 @@ export const PICKS: Record<string, Record<'classical' | 'electronic', Choices>> 
   'WRLDBLW.XMI': { classical: { usual: BUT_PIANO }, electronic: { usual: ['remastered', ...ALL_ELECTRONIC] } },
 };
 
-/** The arrangements soundtrack `soundtrack` may play of tune `name` on `occasion`. */
-export function arrangementsFor(soundtrack: Soundtrack, name: string, occasion?: Occasion): Arrangement[] {
+/** The arrangements soundtrack `soundtrack` may play of tune `name` on `occasion`, by a game's `picks` (Ultima V's). */
+export function arrangementsFor(soundtrack: Soundtrack, name: string, occasion?: Occasion, picks: Picks = PICKS): Arrangement[] {
   if (soundtrack === 'original' || soundtrack === 'remastered') return [soundtrack];
-  const choices = PICKS[name]?.[soundtrack];
+  const choices = picks[name]?.[soundtrack];
   if (!choices) return ['remastered'];
   return (occasion && choices[occasion]) || choices.usual;
 }
 
-/** Every arrangement of tune `name` some soundtrack plays: what the render makes of it. */
-export function arrangementsOf(name: string): Arrangement[] {
+/** Every arrangement of tune `name` some soundtrack plays, by a game's `picks` (Ultima V's): what the render makes of it. */
+export function arrangementsOf(name: string, picks: Picks = PICKS): Arrangement[] {
   const all = new Set<Arrangement>(['original', 'remastered']);
   for (const soundtrack of ['classical', 'electronic'] as const)
-    for (const list of Object.values(PICKS[name]?.[soundtrack] ?? {})) for (const a of list ?? []) all.add(a);
+    for (const list of Object.values(picks[name]?.[soundtrack] ?? {})) for (const a of list ?? []) all.add(a);
   return ARRANGEMENTS.filter((a) => all.has(a));
 }
 
