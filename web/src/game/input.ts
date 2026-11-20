@@ -420,7 +420,7 @@ export async function getCommandKey(g: Game, where: Game['commandPrompt'], idle?
   const menu = await import('./menu.ts');
   const { musicForMap } = await import('./music.ts');
   noteScene(g);
-  g.commandPrompt = where;
+  g.commandPrompt = g.lastCommandPrompt = where;
   // Out of the dungeon's view, the log is all the log again (the Standard look's small map lay over it).
   if (where !== 'dungeon') liftDungeonMap(g);
   g.autoAim = false;

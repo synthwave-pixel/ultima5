@@ -7,7 +7,8 @@
  * has broken the hold, until it is let go); A, B, X, Y, Start (Menu) and Select (View) as the
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
  * TURN_RIGHT), which only a dungeon heeds. Every connected pad is read (pads.ts): a button down on any is down, and
- * the stick pushed furthest is the one taken. A stick's axis counts only once that pad's has been seen at rest, near
+ * the stick pushed furthest is the one taken. Two neighbouring ways held on the d-pad where `diagonals` says (the world
+ * map's command prompt), the two go in turn at the game's pace, as two arrow keys held do (issue #40). A stick's axis counts only once that pad's has been seen at rest, near
  * its middle: one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests
  * at -1 - would otherwise hold a way, or a turn, for as long as the pad is plugged in. The right stick is read only in
  * the standard mapping, the one that says which axes it is. Read at every refresh of the display; or, where reading is
@@ -56,6 +57,9 @@ export class GamepadInput {
   private nextTurn = 0;
   /** Each pad's axes seen at rest: only these are read. */
   private rest = new Rest();
+  /** Two neighbouring ways held in turn (`diagonals`): the pair, the one to send next; null for one way. */
+  private pair: [number, number] | null = null;
+  private turnNext = 0;
 
   /** Whether a frame is asked for, to read the pad in. */
   private reading = false;
@@ -66,6 +70,8 @@ export class GamepadInput {
     private readonly lazy: () => boolean = () => false,
     /** The keyboard's holds: their pace, whether the game waits for a key, and the holds broken. */
     private readonly holds: Pick<Holds, 'pace' | 'breaks' | 'waiting'> = { pace: INPUT_PACES.medium, breaks: 0, waiting: () => true },
+    /** Whether two neighbouring ways held on the d-pad go in turn (the world map's command prompt). */
+    private readonly diagonals: () => boolean = () => false,
   ) {
     // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh, and
     // kept as seen, so a Steam Deck's note on Steam's controller layout is not said again (boot.ts steamNote).
@@ -108,7 +114,22 @@ export class GamepadInput {
       } else if (!down) this.held.delete(i);
     }
     let dir = 0;
-    for (const pad of pads) for (const [i, code] of DPAD) if (pad.buttons[i]?.pressed) dir = code;
+    const held = new Set<number>();
+    for (const pad of pads)
+      for (const [i, code] of DPAD)
+        if (pad.buttons[i]?.pressed) {
+          dir = code;
+          held.add(code);
+        }
+    // One way up or down and one across, held together, where they go in turn.
+    const upright = [K.Up, K.Down].filter((c) => held.has(c));
+    const across = [K.Left, K.Right].filter((c) => held.has(c));
+    // Asked as a pair begins: one under way goes on (the game says no while busy with a step; a new scene breaks it).
+    const going = this.pair !== null && this.pair[0] === upright[0] && this.pair[1] === across[0];
+    if (upright.length === 1 && across.length === 1 && (going || this.diagonals())) {
+      this.inTurn(upright[0], across[0], now, waiting);
+      return;
+    }
     // Of every pad, the left stick pushed furthest; and the right stick (axes 2 and 3, in the standard mapping alone).
     let [ax, ay, rx, ry] = [0, 0, 0, 0];
     pads.forEach((pad, place) => {
@@ -133,6 +154,9 @@ export class GamepadInput {
       this.send(turn, true);
       this.nextTurn = now + TURN_MS;
     }
+    // One of a pair still held, the other let go: it goes on as it was, with no step of its own for the letting go.
+    if (this.pair && this.pair.includes(dir)) this.direction = dir;
+    this.pair = null;
     if (dir !== this.direction) {
       this.direction = dir;
       this.spent = false;
@@ -144,5 +168,30 @@ export class GamepadInput {
       this.send(dir, true);
       this.last = now;
     }
+  }
+
+  /**
+   * `upright` and `across` held together: a pair new from nothing, the up or down way at once and the other a pace
+   * later; the second of the two pressed, a press, the first next; then the two in turn, a pace apart, each only
+   * while the game waits.
+   */
+  private inTurn(upright: number, across: number, now: number, waiting: boolean): void {
+    const was = this.pair;
+    if (!was || was[0] !== upright || was[1] !== across) {
+      this.pair = [upright, across];
+      this.spent = false;
+      // The one of the two not already held (the press just made), or, both new, the up or down way.
+      const first = this.direction === upright ? across : upright;
+      this.send(first);
+      this.turnNext = first === upright ? across : upright;
+      this.direction = first;
+      this.since = this.last = now;
+      return;
+    }
+    if (this.spent || !waiting || now - this.last < this.holds.pace) return;
+    this.send(this.turnNext, true);
+    this.direction = this.turnNext;
+    this.turnNext = this.turnNext === upright ? across : upright;
+    this.last = now;
   }
 }

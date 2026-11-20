@@ -370,6 +370,9 @@ describes how the Enhanced interface and the Remastered look are drawn.
   of the party has someone or something to act on.
   "Which way?" and "Aim" stand on the border while a direction or the
   crosshair is wanted.
+  On the world map, two neighbouring ways held on the d-pad (up and
+  right, say) go in turn at the Max input pace, as two arrow keys held
+  do on a keyboard: a near diagonal, with no rocking the d-pad.
 - **A harpsichord has a keyboard.** Play (beside one, on any side) or
   walking into it opens nine keys in a box over the map: left and right
   move along them, A plays the key, B gets up, and the number keys 1-9

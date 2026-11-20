@@ -323,6 +323,8 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     },
     () => g.options.batterySaver,
     screen.holds,
+    // Two neighbouring ways held go in turn on the world map alone - Britannia's and the Underworld's (issue #40).
+    () => g.inPlay && g.lastCommandPrompt === 'outdoors',
   );
   wakeInput = () => gamepad.wake();
   const touch = new TouchPad({

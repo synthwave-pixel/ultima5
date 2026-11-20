@@ -187,6 +187,8 @@ export class GameCore {
   options: Options = { ...DEFAULTS };
   /** Which command prompt is waiting, if any: controller buttons and the menus depend on it. */
   commandPrompt: '' | 'town' | 'outdoors' | 'dungeon' | 'combat' = '';
+  /** The command prompt last asked for, kept while its command is carried out (a gamepad's diagonals: pageHooks.ts). */
+  lastCommandPrompt: '' | 'town' | 'outdoors' | 'dungeon' | 'combat' = '';
   /** The command prompt is waiting for its key this moment (no menu of its own up): where a lost focus opens the Pause menu. */
   awaitingCommand = false;
   /** The menu on screen, if one is (menu.ts choose): its title, its lines and where the bar is - for the tests, which play by it as a player does. */
