@@ -234,23 +234,37 @@ export type TileSet = 'standard' | 'original';
  * computers it was made for, tile by tile on black: Apple Color, the Apple II's in its six colours (appleArt.ts);
  * Apple //e and Apple //c, the same on a green and a white monitor; Sharp X68k, the Japanese X68000 release's; C64,
  * the Commodore 64's (sheetArt.ts). Remastered (once Modern PC; 'modern-pc') is the Enhanced interface's alone: Retro
- * (tileSet 'original') offers the rest (PcTiles).
+ * (tileSet 'original') offers the rest (PcTiles). Upgrade VGA ('pc-vga'): a fan-made VGA upgrade's tiles, for a game
+ * that has one and offers it (useLooks) - not one of Ultima V's eight (TILES), which never offers it.
  */
-export type Tiles = 'modern-pc' | 'pc-ega' | 'pc-cga' | 'apple2' | 'apple2e' | 'apple2c' | 'x68k' | 'c64';
+export type Tiles = 'modern-pc' | 'pc-ega' | 'pc-cga' | 'pc-vga' | 'apple2' | 'apple2e' | 'apple2c' | 'x68k' | 'c64';
+/** Ultima V's eight looks, the ones it offers. */
 export const TILES: readonly Tiles[] = ['modern-pc', 'pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
+/** Every look a game may offer (useLooks): Ultima V's eight and Upgrade VGA. A saved look is kept if it is one of these. */
+export const ALL_TILES: readonly Tiles[] = [...TILES, 'pc-vga'];
 /** The Retro interface's tiles: every set but Remastered, which is drawn for the Enhanced screen alone. */
 export type PcTiles = Exclude<Tiles, 'modern-pc'>;
+/** Ultima V's Retro tiles: its eight but Remastered. */
 export const PC_TILES: readonly PcTiles[] = ['pc-ega', 'pc-cga', 'apple2', 'apple2e', 'apple2c', 'x68k', 'c64'];
 
 /** The looks the game offers, as its entry sets them (useLooks): Ultima V's eight unless it says otherwise. */
 let offered: readonly Tiles[] = TILES;
+/** What the game says of its looks on Appearance's Look line, where it says other than Ultima V (useLooks). */
+let notes: Partial<Record<Tiles, string>> = {};
 
 /**
  * The Looks this game offers in Appearance (its entry's, as useSaves and useGameSpec are): a port whose art is not
- * yet made offers fewer - the Ultima IV port PC EGA alone until its Remastered is baked. Null, Ultima V's eight.
+ * yet made offers fewer - the Ultima IV port PC EGA alone until its Remastered is baked; and what its Look line says
+ * of each, where the game's own words differ from Ultima V's (`ownNotes`, lookNote). Null, Ultima V's eight and words.
  */
-export function useLooks(looks: readonly Tiles[] | null): void {
+export function useLooks(looks: readonly Tiles[] | null, ownNotes: Partial<Record<Tiles, string>> = {}): void {
   offered = looks ?? TILES;
+  notes = looks ? ownNotes : {};
+}
+
+/** What the game's Look line says of look `t` in its own words (useLooks); undefined for Ultima V's (menu.ts). */
+export function lookNote(t: Tiles): string | undefined {
+  return notes[t];
 }
 
 /** The looks offered under the interface `tileSet`: Retro never Remastered, which is drawn for the Enhanced screen. */
@@ -262,6 +276,7 @@ export const TILES_NAMES: Record<Tiles, string> = {
   'modern-pc': 'Remastered',
   'pc-ega': 'PC EGA',
   'pc-cga': 'PC CGA',
+  'pc-vga': 'Upgrade VGA',
   apple2: 'Apple Color',
   apple2e: 'Apple //e',
   apple2c: 'Apple //c',
@@ -359,8 +374,9 @@ export function normaliseOptions(from: Saved): Partial<Options> {
   const old = saved as Record<string, unknown>;
   for (const key of ['poison', 'effects', 'starvation', 'balancedXp', 'throwing', 'combat']) delete old[key];
   if (saved.rules !== undefined && !RULES.includes(saved.rules)) delete saved.rules;
-  // A set this build does not have (Modern U3, gone 2026-09-30): the default.
-  if (saved.tiles !== undefined && !TILES.includes(saved.tiles)) delete saved.tiles;
+  // A set this build does not have (Modern U3, gone 2026-09-30): the default. One a game offers not (useLooks) is put
+  // to its first when loaded (lookOffered).
+  if (saved.tiles !== undefined && !ALL_TILES.includes(saved.tiles)) delete saved.tiles;
   // Outlines no setting now (2026-11-14): Remastered's people and creatures always have them.
   delete (saved as Record<string, unknown>).outlines;
   // One Tiles setting now, for either interface (2026-11-14): a player on Retro keeps the set they see (once their

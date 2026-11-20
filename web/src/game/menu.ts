@@ -24,6 +24,7 @@ import {
   type FontChoice,
   RULES,
   LEVELS,
+  lookNote,
   looksOffered,
   saveOptions,
   TILES_NAMES,
@@ -1145,11 +1146,12 @@ export function settingLines(g: GameCore, title = false): Setting[] {
   ];
 }
 
-/** What each look is, as Appearance's Look line says it (three rows at most). */
+/** What each look is, as Appearance's Look line says it (three rows at most): Ultima V's words, a game's own first (lookNote). */
 const TILES_NOTES: Record<Tiles, string> = {
   'modern-pc': "Remastered: 1988's art redrawn for the Enhanced interface.",
   'pc-ega': "PC EGA: the 1988 PC game's own tiles.",
   'pc-cga': "PC CGA: the 1988 PC game's four-colour tiles.",
+  'pc-vga': "Upgrade VGA: the fan-made VGA upgrade's tiles.",
   apple2: "Apple Color: the Apple II's own tiles, in colour.",
   apple2e: "Apple //e: the Apple II's, on a green monitor.",
   apple2c: "Apple //c: the Apple II's, on a white monitor.",
@@ -1180,7 +1182,7 @@ export function appearanceLines(g: GameCore): Setting[] {
       // The look, one set after another - its tiles, its frame and its dungeon (skins.ts): every set the game offers
       // under Enhanced (settings.ts looksOffered), all but Remastered under Retro; one choice for either interface.
       label: `Look: ${TILES_NAMES[o.tiles]}`,
-      note: TILES_NOTES[o.tiles],
+      note: lookNote(o.tiles) ?? TILES_NOTES[o.tiles],
       act: () => {
         const offered = looksOffered(o.tileSet);
         o.tiles = offered[(offered.indexOf(o.tiles) + 1) % offered.length];
