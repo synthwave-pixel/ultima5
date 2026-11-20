@@ -1180,6 +1180,12 @@ settled on the original Apple II disks - is told in
   paid for now leave no more than five of all held: enough for a prisoner
   taken to Yew's jail, keys gone, to open the cell, as he waits by its door
   each morning and evening. One who pays gets five each time.
+- **An arrest says where the party wakes.** Coming quietly, the party
+  is struck down and wakes in Yew's jail, as in 1988, which said no more
+  than "Thou dost awaken to..." - in a town across the sea from the one it
+  was taken in, its ship left there. The log now says "You are knocked out
+  and awaken in an unknown location..." the first time, and "You find
+  yourself in the Yew jail again..." every time after (kept with the save).
 - **A prisoner freed has a word of thanks.** Freed from the stocks or
   manacles ("I thank thee!", 2 karma), a prisoner loses their
   conversation and wanders the town, as in 1988, which then answered

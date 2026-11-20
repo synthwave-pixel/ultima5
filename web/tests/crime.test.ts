@@ -5,7 +5,8 @@ import { K } from '../src/game/io.ts';
 import { moveNpcs, placeNpcs, putNpc, scheduleSlot } from '../src/game/npc.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { T } from '../src/game/tiles.ts';
-import { attackInTown, callGuards, enterTown, npcKilled, setNpcKilled, townLoop } from '../src/game/town.ts';
+import { attackInTown, callGuards, enterTown, JAILED, npcKilled, setNpcKilled, townLoop } from '../src/game/town.ts';
+import { Fog, type FogData } from '../src/game/fog.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { fighter, keys, newGame } from './helpers.ts';
 import type { FakePlatform } from './helpers.ts';
@@ -176,6 +177,32 @@ describe('crime and the people of a town', () => {
     expect(s.hour).toBe(8);
     expect(s.keys).toBe(0);
     expect(s.level).toBe(0);
+  });
+
+  it('says, the first time, that the party wakes it knows not where; and kept in the save', async () => {
+    const { g, p } = await britain();
+    callGuards(g);
+    besideParty(g, 9);
+    p.keys.push(...keys(' ', 'Y'));
+    await play(g);
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('You are knocked out and awaken in an unknown location...');
+    expect(said).not.toContain('Yew jail again');
+    expect(g.s.mapId).toBe(4);
+    // Kept with the game (issue #43): a game saved and taken up again knows the jail.
+    expect(Fog.decode(JSON.parse(JSON.stringify(g.fog.encode())) as FogData).named.has(JAILED)).toBe(true);
+  });
+
+  it('says, every time after, that the party is in the Yew jail again', async () => {
+    const { g, p } = await britain();
+    g.fog.named.add(JAILED); // jailed before
+    callGuards(g);
+    besideParty(g, 9);
+    p.keys.push(...keys(' ', 'Y'));
+    await play(g);
+    const said = p.log.replace(/\s+/g, ' ');
+    expect(said).toContain('You find yourself in the Yew jail again...');
+    expect(said).not.toContain('unknown location');
   });
 
   it('turns to a fight when the party will not come quietly', async () => {

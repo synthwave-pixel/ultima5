@@ -778,6 +778,9 @@ function playTownMusic(g: Game): void {
   void import('./music.ts').then((m) => m.musicForMap(g)).catch(() => undefined);
 }
 
+/** Kept with the game (Fog.named, saved) once the party has woken in the Yew jail: the arrest's word after says so. */
+export const JAILED = 'jailed';
+
 /** TOWN_12ae: a guard's arrest, or Blackthorn's; true if the party chose to fight. */
 async function arrest(g: Game): Promise<boolean> {
   const s = g.s;
@@ -811,6 +814,14 @@ async function arrest(g: Game): Promise<boolean> {
     while (s.hour !== 8) passTime(g, 0x14);
     s.level = s.keys = 0;
     await enterTown(g, true);
+    // The port's (issue #43): where the party has woken, said - for one who never read "awaken to..." as the jail
+    // across the sea, its ship left behind.
+    g.print(
+      g.fog.named.has(JAILED)
+        ? 'You find yourself in the Yew jail again...\n'
+        : 'You are knocked out and awaken in an unknown location...\n',
+    );
+    g.fog.named.add(JAILED);
     return false;
   }
   callGuards(g);
