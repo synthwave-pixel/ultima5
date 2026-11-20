@@ -12,6 +12,8 @@ import {
   WHITE,
   type Measure,
   type Run,
+  ULTIMA5_CHOICE,
+  type ChoiceLayout,
 } from '../src/ui/storyText';
 
 /**
@@ -156,7 +158,14 @@ describe('the story pages set in the Standard look', () => {
   });
 
   it("sets the gypsy's question between the bowls on a panel, the answers under them, in the game's lettering", () => {
-    const runs = setChoice('Thou art sworn to a Lord. Dost thou', 'break thine oath by speaking;', 'uphold Honor by silence?', 0, measure);
+    const runs = setChoice(
+      'Thou art sworn to a Lord. Dost thou',
+      'break thine oath by speaking;',
+      'uphold Honor by silence?',
+      0,
+      measure,
+      ULTIMA5_CHOICE,
+    );
     const words = runs.filter((r) => !r.panel);
     expect(words.every((r) => r.face === 'mono')).toBe(true); // the game's own lettering
     const lit = runs.find((r) => r.text.startsWith('Break'))!;
@@ -188,12 +197,12 @@ describe('the story pages set in the Standard look', () => {
     expect(runs.indexOf(runs.find((r) => r.panel)!)).toBeLessThan(runs.indexOf(question[0])); // drawn under them
     expect(Math.min(lit.y, right.y) - lit.size).toBeGreaterThanOrEqual(150 * 4);
     expect(
-      setChoice('Q', 'a', 'b', -1, measure)
+      setChoice('Q', 'a', 'b', -1, measure, ULTIMA5_CHOICE)
         .filter((r) => r.colour === WHITE)
         .map((r) => r.text),
     ).toEqual(['Q...']);
     // A question that ends as a sentence does keeps its own stop.
-    expect(setChoice('Which?', 'a', 'b', -1, measure).find((r) => r.colour === WHITE)?.text).toBe('Which?');
+    expect(setChoice('Which?', 'a', 'b', -1, measure, ULTIMA5_CHOICE).find((r) => r.colour === WHITE)?.text).toBe('Which?');
   });
 
   it("fits the longest of the gypsy's questions, and answers on two lines, in their bands", () => {
@@ -205,6 +214,7 @@ describe('the story pages set in the Standard look', () => {
       'sacrifice thyself to slow the pursuing enemy, so others can escape?',
       1,
       measure,
+      ULTIMA5_CHOICE,
     );
     const words = runs.filter((r) => !r.panel);
     expect(words.map((r) => r.text).join(' ')).toContain('dost thou...'); // running on into the answers: trailing off
@@ -212,5 +222,54 @@ describe('the story pages set in the Standard look', () => {
     const answer = words.filter((r) => r.y > 150 * 4);
     expect(answer.length).toBeGreaterThanOrEqual(3); // an answer of more than one line
     expect(words[0].size).toBeGreaterThan(14); // not given up on: set at a size that fits
+  });
+
+  it('sets the choice where a game’s layout puts it: the question across the band, each answer under its card', () => {
+    // A game whose pictures leave the band at the screen's foot clear, its two cards at 8-103 and 216-311 above (the
+    // words here invented).
+    const layout: ChoiceLayout = {
+      columns: [
+        [4, 108],
+        [212, 316],
+      ],
+      answers: [178, 199],
+      question: [4, 152, 316, 176],
+      clear: [0, 152, 319, 199],
+    };
+    const runs = setChoice(
+      'A traveller far from home asks thee the way to a town many leagues off, and the road is long. Dost thou',
+      'walk beside the traveller the whole of the way,',
+      'point out the road, and hasten on to thine own errand?',
+      1,
+      measure,
+      layout,
+    );
+    const words = runs.filter((r) => !r.panel);
+    const width = (r: Run): number => measure(r.text, r.size, 'mono');
+    const asked = 'A traveller far from home asks thee the way to a town many leagues off, and the road is long. Dost thou...';
+    const question = words.filter((r) => asked.includes(r.text));
+    expect(question.length).toBeGreaterThan(0);
+    for (const r of question) {
+      expect(r.x).toBeGreaterThanOrEqual(4 * 4);
+      expect(r.x + width(r)).toBeLessThanOrEqual(316 * 4);
+      expect(r.y - r.size).toBeGreaterThanOrEqual(152 * 4);
+      expect(r.y).toBeLessThanOrEqual(176 * 4);
+    }
+    const left = words.filter((r) => r.colour === GREY);
+    const right = words.filter((r) => r.colour === WHITE && !question.includes(r));
+    expect(left.length).toBeGreaterThan(0);
+    expect(right.length).toBeGreaterThan(0);
+    for (const [col, rs] of [
+      [layout.columns[0], left],
+      [layout.columns[1], right],
+    ] as const)
+      for (const r of rs) {
+        expect(r.x).toBeGreaterThanOrEqual(col[0] * 4);
+        expect(r.x + width(r)).toBeLessThanOrEqual(col[1] * 4);
+        expect(r.y - r.size).toBeGreaterThanOrEqual(178 * 4);
+      }
+    const panel = runs.find((r) => r.panel)!.panel!;
+    expect(panel[1]).toBeGreaterThanOrEqual(152 * 4 - 3 * 4);
+    expect(panel[3]).toBeLessThanOrEqual(176 * 4 + 3 * 4);
   });
 });

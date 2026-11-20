@@ -13,6 +13,7 @@
 
 import type { Occasion } from '../audio/soundtracks.ts';
 import type { ChromeTone } from '../ui/framebuffer.ts';
+import type { ChoiceLayout } from '../ui/storyText.ts';
 import type { Text } from '../ui/text.ts';
 import type { Appearance } from './appearance.ts';
 
@@ -359,10 +360,11 @@ export interface Effects {
   /** The step before the one on show of the page last set by prose, in its place: its words, or null at the first. */
   proseBack?(): string | null;
   /**
-   * The gypsy's question set the Standard look's way on page 0: each answer under its bowl, grey, or white for the
-   * one `lit` (0 the left, 1 the right, -1 neither), the question under them. False as for prose.
+   * The gypsy's question set the Standard look's way on page 0, where the game's `layout` puts it (ui/storyText.ts
+   * ChoiceLayout; Ultima V's ULTIMA5_CHOICE: each answer under its bowl, the question between them): each answer
+   * grey, or white for the one `lit` (0 the left, 1 the right, -1 neither). False as for prose.
    */
-  choice?(question: string, left: string, right: string, lit: number): boolean;
+  choice?(question: string, left: string, right: string, lit: number, layout: ChoiceLayout): boolean;
   /**
    * A figure (an actor's tile, at EGA pixel x, y, fitted by all its frames into a square of `size` EGA pixels, 16 if
    * not given) and a fire's shimmer (a rectangle of EGA pixels) drawn over page 0 as it stood when the first scene was

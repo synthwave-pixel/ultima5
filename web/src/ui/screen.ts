@@ -972,15 +972,16 @@ export class Screen implements Platform {
       proseMore: () => this.proseAt < this.proseSteps.length - 1,
       proseNext: () => this.proseStep(this.proseAt + 1) ?? '',
       proseBack: () => this.proseStep(this.proseAt - 1),
-      choice: (question, left, right, lit) => {
+      choice: (question, left, right, lit, layout) => {
         const story = this.story;
         if (!story) return false;
         const was = fb.page;
         fb.page = 0;
-        // The band under the bowls, as the picture leaves it: black.
-        fb.fill(0, 149, WIDTH - 1, HEIGHT - 1, 0);
+        // The band the game's layout clears (Ultima V's: under the bowls, as the picture leaves it): black.
+        const [x1, y1, x2, y2] = layout.clear;
+        fb.fill(x1, y1, Math.min(x2, WIDTH - 1), Math.min(y2, HEIGHT - 1), 0);
         fb.page = was;
-        this.drawRuns(story.measure, setChoice(question, left, right, lit, story.measure), 0);
+        this.drawRuns(story.measure, setChoice(question, left, right, lit, story.measure, layout), 0);
         return true;
       },
       stage: (scene) => {

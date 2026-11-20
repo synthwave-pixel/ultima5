@@ -10,6 +10,7 @@
 
 import { loadResource } from '../data/images.ts';
 import { Colour } from '../ui/colours.ts';
+import { ULTIMA5_CHOICE } from '../ui/storyText.ts';
 import { blinker, waitMark } from './waitMark.ts';
 import { leftArrow, rightArrow } from './frame.ts';
 import { Game } from './game.ts';
@@ -750,7 +751,7 @@ export class Intro {
     const split = splitQuestion(words.replace(/_/g, ''));
     page();
     let k: number;
-    if (split && fx.choice?.(split.question, split.a, split.b, -1)) {
+    if (split && fx.choice?.(split.question, split.a, split.b, -1, ULTIMA5_CHOICE)) {
       // The Standard look: the Avatar walked to a bowl, and A taken there.
       k = (await this.chooseBowl(split.question, split.a, split.b)) === 0 ? 0x41 : 0x42;
     } else {
@@ -792,7 +793,7 @@ export class Intro {
       const there = side >= 0 && x === to ? side : -1;
       if (there !== lit) {
         lit = there;
-        fx.choice?.(question, left, right, lit);
+        fx.choice?.(question, left, right, lit, ULTIMA5_CHOICE);
       }
       const now = performance.now();
       fx.stage?.({ figure: { tile: walking(now), x, y: STAGE.y }, fire: lit >= 0 ? STAGE.fires[lit] : null, now });

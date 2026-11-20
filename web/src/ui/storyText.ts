@@ -289,24 +289,33 @@ export function setProse(texts: string[], lit: Uint8Array, measure: Measure): Ru
 }
 
 /**
- * The gypsy's bowls' columns (EGA pixels), left and right: the answers are set under them, each centred on its
- * brazier (the braziers' rims span 35-97 and 219-281: centres 66 and 250), as wide as the screen's edge allows.
+ * Where a game's choice is set (EGA pixels): each answer's column, left and right, and the band they go in (its top
+ * and bottom); the question's box (left, top, right, bottom); and the band the screen clears before setting them.
  */
-export const CHOICE_COLUMNS: [number, number][] = [
-  [6, 126],
-  [190, 310],
-];
-/** The band under the bowls the answers go in (EGA pixels). */
-const CHOICE_TOP = 150;
-const CHOICE_BOTTOM = 197;
+export interface ChoiceLayout {
+  readonly columns: readonly [readonly [number, number], readonly [number, number]];
+  readonly answers: readonly [number, number];
+  readonly question: readonly [number, number, number, number];
+  readonly clear: readonly [number, number, number, number];
+}
+
 /**
- * The column between the bowls' smoke the question goes in, and its band above the Avatar (EGA pixels): a little
- * wider than the gap between the smoke, its dark panel just over the smoke's inner edges (the port's).
+ * Ultima V's gypsy: the answers under the bowls, each centred on its brazier (the braziers' rims span 35-97 and
+ * 219-281: centres 66 and 250), as wide as the screen's edge allows, in the band under the bowls; the question in the
+ * column between the bowls' smoke, above the Avatar - a little wider than the gap between the smoke, its dark panel
+ * just over the smoke's inner edges (the port's); the band from the bowls down cleared first.
  */
-const QUESTION_LEFT = 106;
-const QUESTION_RIGHT = 214;
-const QUESTION_TOP = 4;
-const QUESTION_BOTTOM = 104;
+export const ULTIMA5_CHOICE: ChoiceLayout = {
+  columns: [
+    [6, 126],
+    [190, 310],
+  ],
+  answers: [150, 197],
+  question: [106, 4, 214, 104],
+  clear: [0, 149, 319, 199],
+};
+/** Ultima V's gypsy's bowls' columns (EGA pixels), left and right: ULTIMA5_CHOICE's. */
+export const CHOICE_COLUMNS: [number, number][] = ULTIMA5_CHOICE.columns.map(([a, b]): [number, number] => [a, b]);
 /** The panel's margin about the question's lines (EGA pixels). */
 const PANEL_MARGIN = 3;
 /** The largest the choices are set in the game's lettering, and the smallest before they give up (colour page pixels). */
@@ -333,17 +342,21 @@ const trailing = (t: string): string => (/[.?!:]$/.test(t.trimEnd()) ? t : `${t.
 const answer = (t: string): string => t.replace(/[\s?;,.]+$/, '').replace(/^./, (c) => c.toUpperCase());
 
 /**
- * The gypsy's question as the Standard look sets it, in the game's own lettering: the question in the column between
- * the bowls, above the Avatar, on a dark panel over the smoke's inner edges; and each answer centred under its bowl -
- * grey, or white for the one the Avatar stands at (`lit`: 0 the left, 1 the right, -1 neither) - all at the one
+ * The gypsy's question as the Standard look sets it, in the game's own lettering, where the game's `layout` puts it
+ * (Ultima V's, ULTIMA5_CHOICE: the question in the column between the bowls, above the Avatar, on a dark panel over
+ * the smoke's inner edges; each answer under its bowl): the question in its box on a dark panel, each answer centred
+ * in its column - grey, or white for the one chosen (`lit`: 0 the left, 1 the right, -1 neither) - all at the one
  * size, the largest at which each fits its band.
  */
-export function setChoice(question: string, left: string, right: string, lit: number, measure: Measure): Run[] {
+export function setChoice(question: string, left: string, right: string, lit: number, measure: Measure, layout: ChoiceLayout): Run[] {
+  const columns = layout.columns;
+  const [CHOICE_TOP, CHOICE_BOTTOM] = layout.answers;
+  const [QUESTION_LEFT, QUESTION_TOP, QUESTION_RIGHT, QUESTION_BOTTOM] = layout.question;
   const answers = [left, right].map((t) => ({ indent: false, words: words(answer(t)) }));
   const q = { indent: false, words: words(trailing(question)) };
   for (let size = CHOICE_LARGEST; ; size--) {
     const lh = size * LEADING;
-    const cols = answers.map((a, i) => balanced(measure, size, a, (CHOICE_COLUMNS[i][1] - CHOICE_COLUMNS[i][0]) * K, 'mono'));
+    const cols = answers.map((a, i) => balanced(measure, size, a, (columns[i][1] - columns[i][0]) * K, 'mono'));
     const ql = balanced(measure, size, q, (QUESTION_RIGHT - QUESTION_LEFT - 2 * PANEL_MARGIN) * K, 'mono');
     const answerLines = Math.max(...cols.map((c) => c.length));
     const fits =
@@ -373,9 +386,7 @@ export function setChoice(question: string, left: string, right: string, lit: nu
     // Each answer under its bowl, at the top of its band.
     const top = CHOICE_TOP * K;
     cols.forEach((lines, i) =>
-      lines.forEach((ln, j) =>
-        centred(ln.pieces.join(' '), CHOICE_COLUMNS[i][0], CHOICE_COLUMNS[i][1], top + j * lh + size, lit === i ? WHITE : GREY),
-      ),
+      lines.forEach((ln, j) => centred(ln.pieces.join(' '), columns[i][0], columns[i][1], top + j * lh + size, lit === i ? WHITE : GREY)),
     );
     return runs;
   }
