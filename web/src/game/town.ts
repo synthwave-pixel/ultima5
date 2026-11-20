@@ -19,7 +19,7 @@ import { HARPSICHORD_TILE, openTheWay, strike } from './harpsichord.ts';
 import { freedKey } from './items.ts';
 import * as modern from './modernKarma.ts';
 import { moongateTravel } from './moongate.ts';
-import { loadNpcs, moveNpcs, placeNpcs, putNpc, scheduleSlot } from './npc.ts';
+import { loadNpcs, moveNpcs, passAside, placeNpcs, putNpc, scheduleSlot } from './npc.ts';
 import { Status } from './save.ts';
 import { blackthornCapture, death } from './story.ts';
 import { counter, talkToNpc } from './talk.ts';
@@ -746,6 +746,7 @@ export async function enterTown(g: Game, fresh: boolean): Promise<void> {
   const s = g.s;
   g.sound.music(0);
   g.a9bc = g.viewDirty = 1;
+  g.passedBeside = null;
   if (fresh) {
     for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
     s.drunk = 0;
@@ -938,7 +939,9 @@ export async function townLoop(g: Game): Promise<void> {
       }
       if (peopleMove && s.icon !== 0x54) {
         horses(g);
-        if (result < 2) moveNpcs(g, s.hour);
+        // Two Passes in a row, someone beside the party both times steps aside (issue #40).
+        const aside = passAside(g, key === K.Space && result === 1);
+        if (result < 2) moveNpcs(g, s.hour, aside);
         if (s.d65bf !== 0 || result === 2) await npcActs(g, result - 1);
       }
     }

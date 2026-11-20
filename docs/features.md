@@ -390,7 +390,9 @@ describes how the Enhanced interface and the Remastered look are drawn.
 - **Each button means one thing everywhere.** A (or Tab) opens a command
   menu with what is at hand first, and chooses; B passes or backs out -
   the answer "none" to any question - and a command backed out of spends
-  no turn. X (Q or C on a keyboard; the keyboard's X is B) attacks: in a
+  no turn. Held at the command prompt (outside a fight), B passes again
+  and again at the Max input pace, as Space held does; nowhere else does
+  it repeat. X (Q or C on a keyboard; the keyboard's X is B) attacks: in a
   fight, with Snap attacks on, the foe marked in reach (LB and RB, or [
   and ], pick another); aboard
   a frigate it fires the broadside, and beside a castle's cannon, the
@@ -472,6 +474,14 @@ describes how the Enhanced interface and the Remastered look are drawn.
   passed again folds the same way, "Pass (x3)". A line too long to take
   its count is cut at its last whole word that fits ("Slow (x2)" for "Slow
   progress!"). Anything else said again is said again in full.
+- **Someone in the way steps aside.** In a settlement, one of its
+  people who wanders (not one posted, asleep, on the way somewhere,
+  keeping away or hostile, nor a creature, a horse or a daemon), standing
+  beside the party at two Passes in a row, takes one step at the second
+  to a square not beside the party - within their usual wandering where
+  they can, else just beyond it, and back of their own accord - or stays
+  where there is nowhere to go. Under every rules setting: it changes
+  nothing of the game but the waiting.
 - **In a fight**, walking into a foe strikes it with everything that
   strikes - a spiked helm and each hand's weapon - without asking where:
   at that foe while it stands, then at the nearest foe the blow reaches.

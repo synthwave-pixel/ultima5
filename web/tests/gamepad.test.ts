@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../src/game/io.ts';
 import { GamepadInput } from '../src/ui/gamepad.ts';
+import { HOLD_FIRST_MS } from '../src/ui/holds.ts';
 
 /** A pad as the Gamepad API reports it: its mapping, its axes, no button pressed. */
 const padOf = (mapping: string, axes: number[]) => ({
@@ -284,5 +285,118 @@ describe('a diagonal held on the d-pad', () => {
     );
     expect(out.filter((o) => o.ms > 0 && o.ms < 600)).toEqual([]);
     expect(codes(out)).toEqual(codes(out).map((_, i) => (i % 2 === 0 ? K.Up : K.Right)));
+  });
+});
+
+/**
+ * B held at the command prompt passes again and again, at the game's pace, as Space held does on a keyboard (issue
+ * #40: one waiting for a townsperson to move on pressed it fifty times). Only there: B backs out of a menu and says No
+ * to a question, never twice for one press; and A, X, Y and the rest never repeat.
+ */
+describe('B held at the command prompt', () => {
+  const [A, B] = [0, 1];
+  const run = (down: (ms: number) => number[], prompt: (ms: number) => boolean, busy: (ms: number) => boolean = () => false) => {
+    const out: { code: number; ms: number; held: boolean }[] = [];
+    let now = 0;
+    let pressed = down(0);
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    vi.stubGlobal('navigator', {
+      getGamepads: () => [
+        {
+          connected: true,
+          mapping: 'standard',
+          axes: [0, 0, 0, 0],
+          buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: pressed.includes(i) })),
+        },
+      ],
+    });
+    const holds = { pace: 150, breaks: 0, waiting: () => !busy(now) };
+    const input = new GamepadInput(
+      (code, held = false) => out.push({ code, ms: now, held }),
+      () => false,
+      holds,
+      () => false,
+      () => prompt(now),
+    ) as unknown as { poll(now: number): void };
+    for (; now <= 1000; now += 16) {
+      pressed = down(now);
+      input.poll(now);
+    }
+    return { out, holds };
+  };
+
+  it('passes once at the press, again after a moment, then at the pace', () => {
+    const { out } = run(
+      () => [B],
+      () => true,
+    );
+    expect(out[0]).toEqual({ code: Pad.B, ms: 0, held: false });
+    expect(out.length).toBeGreaterThan(4);
+    expect(out.every((o) => o.code === Pad.B)).toBe(true);
+    expect(out[1].ms).toBeGreaterThanOrEqual(HOLD_FIRST_MS);
+    for (let i = 2; i < out.length; i++) expect(out[i].ms - out[i - 1].ms).toBeGreaterThanOrEqual(150);
+    expect(out.slice(1).every((o) => o.held)).toBe(true);
+  });
+
+  it('sends B once away from the command prompt: a menu, a question, a fight', () => {
+    expect(
+      run(
+        () => [B],
+        () => false,
+      ).out,
+    ).toEqual([{ code: Pad.B, ms: 0, held: false }]);
+  });
+
+  it('sends nothing while anything but the prompt waits - a menu, a conversation - and passes again once it is back', () => {
+    const { out } = run(
+      () => [B],
+      (ms) => ms < 500 || ms >= 700,
+    );
+    expect(out.filter((o) => o.ms >= 500 && o.ms < 700)).toEqual([]);
+    expect(out.filter((o) => o.ms >= 700).length).toBeGreaterThan(0);
+  });
+
+  it('stops at a new scene until let go and pressed again', () => {
+    const out: { ms: number; held: boolean }[] = [];
+    let now = 0;
+    vi.stubGlobal('requestAnimationFrame', () => 0);
+    vi.stubGlobal('navigator', {
+      getGamepads: () => [
+        { connected: true, mapping: 'standard', axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, (_, i) => ({ pressed: i === B })) },
+      ],
+    });
+    const holds = { pace: 150, breaks: 0, waiting: () => true };
+    const input = new GamepadInput(
+      (_code, held = false) => out.push({ ms: now, held }),
+      () => false,
+      holds,
+      () => false,
+      () => true,
+    ) as unknown as { poll(now: number): void };
+    for (; now <= 1000; now += 16) {
+      if (now === 512) holds.breaks++; // a town entered, a fight begun
+      input.poll(now);
+    }
+    expect(out.length).toBeGreaterThan(1);
+    expect(out.filter((o) => o.ms >= 512)).toEqual([]);
+  });
+
+  it('waits while the game is busy', () => {
+    const { out } = run(
+      () => [B],
+      () => true,
+      (ms) => ms > 0 && ms < 700,
+    );
+    expect(out.filter((o) => o.ms > 0 && o.ms < 700)).toEqual([]);
+    expect(out.filter((o) => o.ms >= 700).length).toBeGreaterThan(0);
+  });
+
+  it('never repeats A, even at the prompt', () => {
+    expect(
+      run(
+        () => [A],
+        () => true,
+      ).out,
+    ).toEqual([{ code: Pad.A, ms: 0, held: false }]);
   });
 });

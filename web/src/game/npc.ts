@@ -463,8 +463,89 @@ export function putNpc(g: Game, npc: number, x: number, y: number, z: number): v
   me.f0 = 1;
 }
 
-/** NPC_0db4: one turn for every NPC in the settlement. */
-export function moveNpcs(g: Game, hour: number): void {
+/**
+ * Whether NPC `npc` would step aside for the party (the port's, issue #40): one of the place's people (a person's
+ * tile - not a creature, a horse, a daemon or a Shadowlord), at their place on the party's level, and friendly and
+ * wandering this hour: kind 1 (near their place) or 2 (anywhere). Posted (0), keeping away (3), coming to the party (4
+ * to 7, the hostile among them) or walking somewhere, nobody moves for it.
+ */
+function movesAside(g: Game, npc: number): boolean {
+  const s = g.s;
+  const me = s.npcs[npc];
+  const tile = s.npcTypes[npc];
+  if (tile < 0x40 || tile >= 0x80 || me.f0 !== 1 || me.z !== s.level || me.actor === 0) return false;
+  const kind = s.schedules[npc].type(scheduleSlot(g, npc, s.hour));
+  return kind === 1 || kind === 2;
+}
+
+/** The NPCs who would step aside (movesAside) standing beside the party: on one of the four squares a step reaches. */
+export function besideParty(g: Game): number[] {
+  const s = g.s;
+  const party = s.actors[0];
+  const out: number[] = [];
+  for (let i = 1; i < 0x20; i++) {
+    const me = s.npcs[i];
+    if (s.npcTypes[i] !== 0 && movesAside(g, i) && manhattan(party.x, party.y, me.x, me.y) === 1) out.push(i);
+  }
+  return out;
+}
+
+/**
+ * NPC `npc` beside the party, a step aside (the port's, issue #40): one step, as its own wandering takes one (NPC_0c50,
+ * by NPC_0b9e's rules: onto nobody, onto what a person may stand on), to a square that is not beside the party - one in
+ * its wandering's reach of its place where there is one (kind 1: three squares; kind 2: anywhere), else one beyond
+ * it, which it wanders back from of its own accord. Which, of those open, by chance. False, nothing moved, where none
+ * is open.
+ */
+export function stepAside(g: Game, npc: number): boolean {
+  const s = g.s;
+  const me = s.npcs[npc];
+  const party = s.actors[0];
+  const slot = scheduleSlot(g, npc, s.hour);
+  const sch = s.schedules[npc];
+  const near = sch.type(slot) === 1;
+  const inReach: [number, number][] = [];
+  const beyond: [number, number][] = [];
+  for (let dir = 1; dir < 5; dir++) {
+    s.dx = me.x;
+    s.dy = me.y;
+    step(g, dir);
+    const [nx, ny] = [s.dx, s.dy];
+    if (manhattan(party.x, party.y, nx, ny) < 2 || npcCanStep(g, nx, ny, npc, slot) === 0) continue;
+    (!near || manhattan(sch.x(slot), sch.y(slot), nx, ny) <= 3 ? inReach : beyond).push([nx, ny]);
+  }
+  const open = inReach.length !== 0 ? inReach : beyond;
+  if (open.length === 0) return false;
+  const [nx, ny] = open[open.length === 1 ? 0 : g.random(0, open.length - 1)];
+  const a = s.actors[me.actor];
+  a.x = me.x = nx;
+  a.y = me.y = ny;
+  g.viewDirty |= 2;
+  return true;
+}
+
+/**
+ * A turn in a settlement, `passed` if it was a Pass (the port's, issue #40): at the second Pass in a row, each who
+ * stood beside the party at both (besideParty, as each Pass was taken) steps aside (stepAside); anything else between
+ * starts the count over. The NPCs that stepped aside, whose move for the turn that was (moveNpcs `still`).
+ */
+export function passAside(g: Game, passed: boolean): Set<number> {
+  const moved = new Set<number>();
+  if (!passed) {
+    g.passedBeside = null;
+    return moved;
+  }
+  const beside = besideParty(g);
+  if (g.passedBeside) for (const i of beside) if (g.passedBeside.includes(i) && stepAside(g, i)) moved.add(i);
+  g.passedBeside = beside;
+  return moved;
+}
+
+/**
+ * NPC_0db4: one turn for every NPC in the settlement. Those `still` (stepped aside this turn: passAside) keep to their
+ * schedule - an hour that sends them elsewhere sends them - but take no step of their own besides.
+ */
+export function moveNpcs(g: Game, hour: number, still: ReadonlySet<number> = new Set()): void {
   const s = g.s;
   let searched = 0;
   s.d65be = 0;
@@ -475,7 +556,7 @@ export function moveNpcs(g: Game, hour: number): void {
     const me = s.npcs[i];
     const sch = s.schedules[i];
     if (me.f0 <= 1 && scheduleChange(g, i, hour) === 0) {
-      if (me.z === s.level) behave(g, i, slot);
+      if (me.z === s.level && !still.has(i)) behave(g, i, slot);
     } else if (me.f0 > 3) {
       if (me.f0 === 4 || me.f0 === 5) {
         if (searched !== 1) {

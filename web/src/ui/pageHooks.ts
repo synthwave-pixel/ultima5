@@ -325,6 +325,8 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     screen.holds,
     // Two neighbouring ways held go in turn on the world map alone - Britannia's and the Underworld's (issue #40).
     () => g.inPlay && g.lastCommandPrompt === 'outdoors',
+    // B held passes again while the command prompt waits for its key, outside a fight (issue #40).
+    () => g.inPlay && g.awaitingCommand && g.commandPrompt !== '' && g.commandPrompt !== 'combat',
   );
   wakeInput = () => gamepad.wake();
   const touch = new TouchPad({

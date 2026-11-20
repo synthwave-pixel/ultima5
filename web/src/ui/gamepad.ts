@@ -8,7 +8,9 @@
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
  * TURN_RIGHT), which only a dungeon heeds. Every connected pad is read (pads.ts): a button down on any is down, and
  * the stick pushed furthest is the one taken. Two neighbouring ways held on the d-pad where `diagonals` says (the world
- * map's command prompt), the two go in turn at the game's pace, as two arrow keys held do (issue #40). A stick's axis counts only once that pad's has been seen at rest, near
+ * map's command prompt), the two go in turn at the game's pace, as two arrow keys held do (issue #40). B held passes
+ * again and again where `passes` says (the command prompt waiting, outside a fight), as Space held does; no other
+ * button repeats, nor B anywhere else, where it backs out or says No. A stick's axis counts only once that pad's has been seen at rest, near
  * its middle: one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests
  * at -1 - would otherwise hold a way, or a turn, for as long as the pad is plugged in. The right stick is read only in
  * the standard mapping, the one that says which axes it is. Read at every refresh of the display; or, where reading is
@@ -60,6 +62,10 @@ export class GamepadInput {
   /** Two neighbouring ways held in turn (`diagonals`): the pair, the one to send next; null for one way. */
   private pair: [number, number] | null = null;
   private turnNext = 0;
+  /** B held: when it went down and last counted, and whether a new scene has spent it. */
+  private bSince = 0;
+  private bLast = 0;
+  private bSpent = false;
 
   /** Whether a frame is asked for, to read the pad in. */
   private reading = false;
@@ -72,6 +78,8 @@ export class GamepadInput {
     private readonly holds: Pick<Holds, 'pace' | 'breaks' | 'waiting'> = { pace: INPUT_PACES.medium, breaks: 0, waiting: () => true },
     /** Whether two neighbouring ways held on the d-pad go in turn (the world map's command prompt). */
     private readonly diagonals: () => boolean = () => false,
+    /** Whether B held passes again now: the command prompt waiting for its key, outside a fight. */
+    private readonly passes: () => boolean = () => false,
   ) {
     // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh, and
     // kept as seen, so a Steam Deck's note on Steam's controller layout is not said again (boot.ts steamNote).
@@ -103,7 +111,7 @@ export class GamepadInput {
     if (pads.length === 0) return;
     if (this.holds.breaks !== this.breaks) {
       this.breaks = this.holds.breaks;
-      this.spent = this.turnSpent = true;
+      this.spent = this.turnSpent = this.bSpent = true;
     }
     const waiting = this.holds.waiting();
     for (const [i, code] of BUTTONS) {
@@ -111,7 +119,23 @@ export class GamepadInput {
       if (down && !this.held.has(i)) {
         this.held.set(i, now);
         this.send(code);
+        if (code === Pad.B) {
+          this.bSince = this.bLast = now;
+          this.bSpent = false;
+        }
       } else if (!down) this.held.delete(i);
+      else if (
+        code === Pad.B &&
+        !this.bSpent &&
+        waiting &&
+        now - this.bSince >= HOLD_FIRST_MS &&
+        now - this.bLast >= this.holds.pace &&
+        this.passes()
+      ) {
+        // Held at the command prompt: Pass again, as Space held does (issue #40).
+        this.send(code, true);
+        this.bLast = now;
+      }
     }
     let dir = 0;
     const held = new Set<number>();

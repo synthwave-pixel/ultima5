@@ -160,6 +160,8 @@ export class Game extends GameCore {
   clockAt = -Infinity;
   /** Where the party stood at the last command asked for, and on what map and level (input.ts noteScene). */
   stood: { map: number; level: number; x: number; y: number } | null = null;
+  /** The NPCs beside the party at the last Pass in a settlement, when the turn before was one; else null (npc.ts passAside). */
+  passedBeside: number[] | null = null;
   clockTock = false;
   /** D_6a08: the bard's banjo tune's note. */
   banjoNote = 0;
