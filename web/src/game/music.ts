@@ -16,7 +16,7 @@
 
 import manifest from '../audio/musicManifest.json';
 import { PICKS, type Occasion } from '../audio/soundtracks.ts';
-import type { MusicManifest, TuneSet } from '../audio/tuneSet.ts';
+import type { TuneSet } from '../audio/tuneSet.ts';
 import { nightOf } from './chromeTone.ts';
 import { Game } from './game.ts';
 
@@ -75,7 +75,7 @@ export const ULTIMA5_TUNES: TuneSet = {
   names: TUNE_FILES,
   heardOnce: HEARD_ONCE,
   picks: PICKS,
-  manifest: manifest as unknown as MusicManifest,
+  manifest,
   folder: 'music',
   manifestFile: 'src/audio/musicManifest.json',
 };

@@ -19,7 +19,7 @@ const SPEAKER: Record<string, Float32Array> = {
   boom: tone(RATE, 0.75), // 1 s
   bump: tone(2205, 0.375),
 };
-const SUITE: Record<string, string | null | 'silent'> = {
+const SUITE: Record<string, string | null> = {
   zap: null,
   ping: 'silent',
   hum: 'nosuch',

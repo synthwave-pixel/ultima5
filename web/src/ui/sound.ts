@@ -156,7 +156,7 @@ export interface GameEffects {
    * What the suites play for it: a key of their sounds (audio/sfxKeys.ts: 'blocked', 'cue:Attack'), varied in pitch
    * where it is one a turn repeats (chip.ts REPEATED); null for the speaker's, softened; 'silent' for nothing.
    */
-  suite(name: string, arg?: number): string | null | 'silent';
+  suite(name: string, arg?: number): string | null;
   /** The names whose sound is the timing (the picture follows it): waited out. In place of Ultima V's (TIMED). */
   timed: ReadonlySet<string>;
   /** The names heard too often to lower the music for. In place of Ultima V's (UNDUCKED). */

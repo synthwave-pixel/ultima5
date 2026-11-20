@@ -209,6 +209,25 @@ export function soundtrackOf(c: SoundChoice): Soundtrack {
 export function effectsOf(c: SoundChoice): Suite | 'original' {
   return c === 'upgrade' ? 'original' : c;
 }
+/** What the Audio lines say, in a game's own words where they differ from Ultima V's: a Sound choice's note, the Music level's. */
+export interface AudioWords {
+  sound?: Partial<Record<SoundChoice, string>>;
+  music?: string;
+}
+/** The game's own words for the Audio lines (useAudioWords); none, Ultima V's. */
+let audioWords: AudioWords = {};
+/** The Audio lines' words this game says otherwise than Ultima V (its entry's, as useLooks); null, Ultima V's. */
+export function useAudioWords(words: AudioWords | null): void {
+  audioWords = words ?? {};
+}
+/** What the game's Sound line says of choice `c` in its own words; undefined for Ultima V's (menu.ts). */
+export function soundNote(c: SoundChoice): string | undefined {
+  return audioWords.sound?.[c];
+}
+/** What the game's Music level line says in its own words; undefined for Ultima V's (menu.ts). */
+export function musicNote(): string | undefined {
+  return audioWords.music;
+}
 /** The Sound choice a soundtrack of an earlier build's Music setting becomes. */
 const CHOICE_OF: Record<string, SoundChoice> = {
   classical: 'classical',
