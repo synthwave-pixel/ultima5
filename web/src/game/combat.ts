@@ -344,6 +344,77 @@ export function armourClass(g: Game, m: number): number {
   return n;
 }
 
+/** ULTIMA_6936's figures: a member's on the arena, by class letter (a fighter's for any other). */
+const FIGHTER_TILES: Record<number, number> = {
+  0x41: 0x4c,
+  0x46: 0x48,
+  0x50: 0x48,
+  0x52: 0x48,
+  0x44: 0x40,
+  0x4d: 0x40,
+  0x42: 0x44,
+  0x53: 0x44,
+  0x54: 0x44,
+};
+const fighterTile = (cls: number): number => FIGHTER_TILES[cls] ?? 0x48;
+
+/**
+ * The nearest square on the arena to (x, y) a member could stand on, nobody standing there (the square itself first,
+ * then each ring out); null if there is none.
+ */
+function freeSquareNear(g: Game, tile: number, x: number, y: number): { x: number; y: number } | null {
+  for (let r = 0; r <= 10; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const [nx, ny] = [x + dx, y + dy];
+        if (nx < 0 || ny < 0 || nx > 0xa || ny > 0xa) continue;
+        if (arenaFree(g, tile, nx, ny) && combatantAt(g, nx, ny) < 0) return { x: nx, y: ny };
+      }
+  return null;
+}
+
+/**
+ * Member `m`, dead, back on its feet in this fight (the port's, for Full restore: cheats.ts): one fallen in it rises
+ * where it fell - or, a foe standing there, on the nearest square free - and one dead before it began is placed
+ * beside the first of the party standing. Its turns come again from now. False, nothing changed, where there is no
+ * square to stand on or no figure free to draw it: it stays dead, rather than whole on the list and nowhere on the
+ * field (issue #40). The member's own status is the caller's to set.
+ */
+export function raiseInFight(g: Game, m: number): boolean {
+  const s = g.s;
+  const p = s.members[m];
+  const tile = fighterTile(p.cls);
+  const i = g.combat.findIndex((c) => (c.flags & CF.Player) !== 0 && c.who === m);
+  if (i >= 0) {
+    const c = g.combat[i];
+    const at = freeSquareNear(g, tile, c.x, c.y);
+    if (!at) return false;
+    c.flags = CF.Player;
+    c.dex = p.dex;
+    c.timer = 36 - c.dex;
+    Object.assign(c, at);
+    const a = s.actors[c.actor];
+    Object.assign(a, at);
+    a.tile = a.anim = tile;
+    a.b7 = 0xff;
+    return true;
+  }
+  const by = g.combat.find((c) => (c.flags & (CF.Player | CF.Dead)) === CF.Player);
+  const at = by ? freeSquareNear(g, tile, by.x, by.y) : freeSquareNear(g, tile, 5, 5);
+  if (!at) return false;
+  // Placed as the party is (placeParty), the member taken for alive for the while: placeCombatant passes over the dead.
+  const was = p.status;
+  p.status = Status.Good;
+  const j = placeCombatant(g, m, 1, at.x, at.y, s.level);
+  p.status = was;
+  if (j < 0) return false;
+  const a = s.actors[g.combat[j].actor];
+  a.b7 = 0xff;
+  a.tile = a.anim = tile;
+  return true;
+}
+
 /** ULTIMA_6936: the party onto the arena (a ring may vanish as they go), and a moongate's guardian. */
 export async function placeParty(g: Game): Promise<void> {
   liftDungeonMap(g); // a fight's log is the whole log
@@ -357,17 +428,6 @@ export async function placeParty(g: Game): Promise<void> {
   const ys = g.combatMap.subarray(3 * 32 + 17, 3 * 32 + 23);
   const px = [...xs];
   const py = [...ys];
-  const classTiles: Record<number, number> = {
-    0x41: 0x4c,
-    0x46: 0x48,
-    0x50: 0x48,
-    0x52: 0x48,
-    0x44: 0x40,
-    0x4d: 0x40,
-    0x42: 0x44,
-    0x53: 0x44,
-    0x54: 0x44,
-  };
   let ring = 0;
   for (let m = 0; m < s.partySize; m++) {
     const p = s.members[m];
@@ -386,7 +446,7 @@ export async function placeParty(g: Game): Promise<void> {
     if (i < 0) continue;
     const a = s.actors[g.combat[i].actor];
     a.b7 = 0xff;
-    a.tile = classTiles[p.cls] ?? 0x48;
+    a.tile = fighterTile(p.cls);
     a.anim = a.tile;
     if (p.status === Status.Sleeping) putToSleep(g, i);
     else ringTurn(g, i);

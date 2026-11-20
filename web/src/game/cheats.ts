@@ -96,15 +96,19 @@ export const CHEATS: Cheat[] = [
     penalty: 1,
     available: () => true,
     async apply(g) {
+      // In a fight the fallen rise on the field (combat.ts raiseInFight) - where they cannot, they stay fallen: whole
+      // on the list and dead on the field, they were skipped, walked over, and alive once the rest fell (issue #40).
+      const raise = g.s.mapId > 0x7f ? (await import('./combat.ts')).raiseInFight : null;
       for (const m of members(g)) {
         const p = g.s.members[m];
+        if (p.status === Status.Dead && raise && !raise(g, m)) continue;
         p.status = Status.Good;
         p.hp = p.maxHp;
         p.mp = fullMp(g, m);
       }
       // In a fight, a sleep or a charm is the fighter's as well as the member's (combat.ts CF): woken, and the charm
       // broken, as the Awaken potion and An Ex Xen do, or the member whole again would still sleep, or fight for
-      // the foe. (One fallen in the fight stays fallen until it is over.)
+      // the foe.
       if (g.s.mapId > 0x7f) {
         const { released, wake } = await import('./combat.ts');
         g.combat.forEach((c, i) => {
