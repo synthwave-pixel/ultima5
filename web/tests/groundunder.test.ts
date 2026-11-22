@@ -87,3 +87,48 @@ describe('the floor under a thing that stands', () => {
     expect(drawn.get('5,5')).toEqual([g.cycles.shown[0xa6], g.cycles.shown[0x40]]);
   });
 });
+
+/**
+ * Issue #44: a fence at the edge of the view was drawn on cobbles in the grass round Iolo's hut - its ground chosen
+ * from the squares round it in the view alone, those beyond the edge left out, and with too few left a towne's
+ * cobbles taken. The squares beyond the view are read from the towne's map.
+ */
+describe('the ground under a thing at the edge of the view', () => {
+  it('is the ground round it on the map, at every edge and corner of the view, at Iolo’s hut', async () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    const s = g.s;
+    s.mapId = 0x0d; // Iolo's hut
+    s.level = 0;
+    const { enterTown } = await import('../src/game/town.ts');
+    await enterTown(g, true);
+    const { groundAmong, tileAt } = await import('../src/game/world.ts');
+    const wrong: string[] = [];
+    let checked = 0;
+    for (let fy = 0; fy < 32; fy++)
+      for (let fx = 0; fx < 32; fx++) {
+        const t = tileAt(g, fx, fy);
+        if (t !== 0xca && t !== 0xcb) continue; // a wooden fence
+        const onMap = groundAmong(t, (dx, dy) => (fx + dx < 0 || fy + dy < 0 || fx + dx > 31 || fy + dy > 31 ? undefined : tileAt(g, fx + dx, fy + dy)), 0x44);
+        for (const [vx, vy] of [
+          [0, 5],
+          [10, 5],
+          [5, 0],
+          [5, 10],
+          [0, 0],
+          [10, 10],
+        ]) {
+          // The party placed so that the fence is at view square (vx, vy); the view as the game would show it.
+          s.x = fx + 5 - vx;
+          s.y = fy + 5 - vy;
+          if (s.x < 0 || s.y < 0 || s.x > 31 || s.y > 31) continue; // the party off the towne's map
+          for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) setView(g, x, y, tileAt(g, s.x - 5 + x, s.y - 5 + y));
+          checked++;
+          const shown = groundAround(g, vx, vy);
+          if (shown !== onMap) wrong.push(`(${fx},${fy}) at view (${vx},${vy}): ${shown.toString(16)}, not ${onMap.toString(16)}`);
+        }
+      }
+    expect(checked).toBeGreaterThan(0);
+    expect(wrong).toEqual([]);
+  });
+});

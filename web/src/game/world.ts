@@ -537,12 +537,20 @@ export function groundAmong(t: number, at: (dx: number, dy: number) => number | 
   return best;
 }
 
-/** The ground most of the squares round view square (x, y) show (those beside it counting twice those at its corners). */
+/**
+ * The ground most of the squares round view square (x, y) show (those beside it counting twice those at its corners).
+ * In a towne, a square beyond the view is read from its map: left out, a fence at the edge in the grass had too few
+ * squares round it to go by, and stood on the cobbles a towne falls back to (issue #44).
+ */
 export function groundAround(g: Game, x: number, y: number): number {
+  const s = g.s;
   return groundAmong(
     -1,
     (dx, dy) => {
-      if (x + dx < 0 || x + dx > 10 || y + dy < 0 || y + dy > 10) return undefined;
+      if (x + dx < 0 || x + dx > 10 || y + dy < 0 || y + dy > 10) {
+        const [mx, my] = [s.x - 5 + x + dx, s.y - 5 + y + dy];
+        return g.inTown && mx >= 0 && my >= 0 && mx < 32 && my < 32 ? tileAt(g, mx, my) : undefined;
+      }
       const v = viewAt(g, x + dx, y + dy);
       return v !== 0 ? v : g.groundMap[(y + dy) * 16 + x + dx];
     },
