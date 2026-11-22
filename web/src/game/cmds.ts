@@ -23,7 +23,7 @@ import { musicForMap } from './music.ts';
 import { moveNpcs } from './npc.ts';
 import { stepParty } from './outdoors.ts';
 import { Status } from './save.ts';
-import { damageMembers, damageParty, endTurn, passTime } from './time.ts';
+import { damageParty, endTurn, hurtAtOnce, passTime } from './time.ts';
 import { T } from './tiles.ts';
 import { callGuards, hourTiles, npcOfActor, removeNpc, setNpcKilled, placeAllNpcs } from './town.ts';
 import { setTileAt, setTownTile, tileAt } from './world.ts';
@@ -729,8 +729,8 @@ export async function klimbOutdoors(g: Game): Promise<number> {
   } else if (t !== 12) {
     g.say(0x903a); // "Not climbable!\n"
   } else {
-    // Each who fails their dexterity falls, 1 to 5 hit points: all of them hurt together under one hit (the port's,
-    // time.ts damageMembers), where 1988 flashed each in turn.
+    // Each who fails their dexterity falls, 1 to 5 hit points: all of them hurt together under one hit, the climb not
+    // waiting on its sound or flash (the port's, time.ts hurtAtOnce), where 1988 flashed and sounded each in turn.
     const fell: number[] = [];
     const hurt: number[] = [];
     for (let i = 0; i < s.partySize; i++) {
@@ -741,7 +741,7 @@ export async function klimbOutdoors(g: Game): Promise<number> {
         hurt.push(g.random(1, 5));
       }
     }
-    await damageMembers(g, fell, hurt);
+    await hurtAtOnce(g, fell, hurt);
     stepParty(g, dx, dy);
   }
   return 1;

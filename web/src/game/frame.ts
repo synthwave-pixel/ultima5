@@ -735,6 +735,7 @@ export function drawVitals(g: Game, marking = true): void {
   if (standard && partyTitle(g) !== g.partyTitle) clearBorderTitle(g);
   const quiet = standard && (g.panelMana || g.panelXp || g.panelTitle !== '');
   t.select(Win.stats);
+  g.flashingRows.clear(); // every row drawn afresh: a flash under way is over (time.ts flashRows)
   for (let i = 0; i < 6; i++) memberLine(g, i, marking);
   t.moveTo(0, compact ? 6 : 7); // food and gold: straight under the party (Standard), or under the 1988 divider
   if (quiet) g.print(' '.repeat(15));

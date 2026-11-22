@@ -463,7 +463,8 @@ describes how the Enhanced interface and the Remastered look are drawn.
   sailed into, "Blocked" says why ("Blocked - dismount!", "Blocked - off
   the carpet!", "Blocked - go ashore!"). Those who fall climbing, and the
   poisoned at a turn's end, are hurt together under one flash and one hit,
-  where 1988 flashed each in turn. A bumped
+  where 1988 flashed each in turn - and the game goes on as it plays, so
+  the next step is taken at once. A bumped
   command is made by whoever suits it: a chest searched by the cleverest,
   jimmied by the most dexterous and opened by the hardiest. While foes are
   about (a monster within five squares, or in a fight one still standing),

@@ -167,6 +167,11 @@ export class GameCore {
   readonly covers = new Map<'menu' | 'speech', [number, number, number, number]>();
   /** A spell is being cast: its aim is marked as a spell's, not a weapon's (combat.ts crosshair). */
   casting = false;
+  /**
+   * The party rows flashed and not yet put back (time.ts flashRows): drawing the panel again (drawVitals) puts them
+   * back itself, and empties this, so the flash's end leaves a row drawn since as it was drawn.
+   */
+  readonly flashingRows = new Set<number>();
 
   constructor(readonly p: Platform) {
     // The message window's repeated turns fold (text.ts): "North (x5)" rather than five lines of it.

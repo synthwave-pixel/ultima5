@@ -70,7 +70,7 @@ describe('a mountain walked into with the grapple', () => {
     let hits = 0;
     const noise = g.sound.noise.bind(g.sound);
     g.sound.noise = (...a: Parameters<typeof noise>) => {
-      if (a.join() === '10,1600,2000') hits++; // the damage hit (time.ts damageMembers)
+      if (a.join() === '10,1600,2000') hits++; // the damage hit (time.ts hurtAtOnce)
       return noise(...a);
     };
     const before = g.s.members.slice(0, g.s.partySize).map((m) => m.hp);
@@ -81,6 +81,19 @@ describe('a mountain walked into with the grapple', () => {
     const lost = g.s.members.slice(0, g.s.partySize).map((m, i) => before[i] - m.hp);
     for (const n of lost) expect(n >= 1 && n <= 5).toBe(true);
     expect(hits).toBe(1);
+  });
+
+  it("climbs on as they fall, not waiting for the hit's sound", async () => {
+    const { g, p, at } = beside(0x1c, 1);
+    g.s.members.forEach((m) => (m.dex = 0)); // every one falls
+    g.soundOff = false;
+    const noise = g.sound.noise.bind(g.sound);
+    g.sound.noise = (...a: Parameters<typeof noise>) => (a.join() === '10,1600,2000' ? new Promise<void>(() => {}) : noise(...a));
+    await walk(g, p);
+    const climbed = await Promise.race([walk(g, p).then(() => 'climbed'), new Promise((r) => setTimeout(() => r('waited'), 50))]);
+    expect(climbed).toBe('climbed');
+    expect(g.s.x).toBe(at[0] + 1);
+    expect(p.log.match(/Fell!/g)).toHaveLength(g.s.partySize);
   });
 
   it('says to dismount on horseback, and to leave the carpet', async () => {

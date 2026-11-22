@@ -123,12 +123,21 @@ export async function damageMember(g: Game, i: number, damage: number, floor = 0
  * poison at a turn's end and falls from a mountain climbed): their rows flashed together under one hit, where 1988 flashed and sounded each in turn - a whole party poisoned held every step outdoors for most of
  * a second.
  */
-export async function damageMembers(g: Game, who: number[], damage: number | number[], floor = 0): Promise<void> {
+export async function damageMembers(
+  g: Game,
+  who: number[],
+  damage: number | number[],
+  floor = 0,
+  /** Whether the rows flash and the hit sounds here, the game waiting on them (else the caller's: hurtAtOnce). */
+  shown = true,
+): Promise<void> {
   if (!who.length) return;
   const s = g.s;
-  for (const i of who) invertMember(g, i);
-  if (!g.soundOff) await g.sound.noise(10, 0x640, 2000);
-  for (const i of who) invertMember(g, i);
+  if (shown) {
+    for (const i of who) invertMember(g, i);
+    if (!g.soundOff) await g.sound.noise(10, 0x640, 2000);
+    for (const i of who) invertMember(g, i);
+  }
   for (const [k, i] of who.entries()) {
     const m = s.members[i];
     if ((typeof damage === 'number' ? damage : (damage[k] ?? 0)) > 0) soloHurt(g, m.name); // Solo Mode ends (solo.ts)
@@ -141,6 +150,36 @@ export async function damageMembers(g: Game, who: number[], damage: number | num
     }
   }
   drawVitals(g);
+}
+
+/** How long the rows hurt flash (hurtAtOnce): the hit's own length, as the game once waited it out. */
+const FLASH_MS = 100;
+
+/**
+ * Members `who` flashed for a moment without holding the game up: their rows inverted now and put back by a timer -
+ * unless the panel is drawn again first (drawVitals), which puts them back itself.
+ */
+function flashRows(g: Game, who: number[]): void {
+  for (const i of who) {
+    invertMember(g, i);
+    g.flashingRows.add(i);
+  }
+  void g.p.sleep(FLASH_MS).then(() => {
+    for (const i of who) if (g.flashingRows.delete(i)) invertMember(g, i);
+  });
+}
+
+/**
+ * Members `who` hurt as they go (the port's: poison at a turn's end, falls from a mountain climbed): each by `damage`
+ * (or each their own, by place), never below `floor`, the hit sounded once for all of them and their rows flashed -
+ * neither waited for, so the party's next move is taken as it comes (a whole party poisoned once held every step
+ * outdoors for the hit's length).
+ */
+export async function hurtAtOnce(g: Game, who: number[], damage: number | number[], floor = 0): Promise<void> {
+  if (!who.length) return;
+  if (!g.soundOff) void g.sound.noise(10, 0x640, 2000);
+  await damageMembers(g, who, damage, floor, false);
+  flashRows(g, who);
 }
 
 /** ULTIMA_2aa8: everyone standing takes 1-8 damage. */
@@ -188,8 +227,8 @@ export async function endTurn(g: Game): Promise<void> {
       awake++;
     }
   }
-  // The poisoned hurt together: one flash and one hit for all of them (damageMembers).
-  await damageMembers(g, poisoned, 1, spare);
+  // The poisoned hurt together: one flash and one hit for all of them, the game not waiting on either (hurtAtOnce).
+  await hurtAtOnce(g, poisoned, 1, spare);
   if (s.hour !== s.lastHour) {
     if (s.food === 0) {
       await starve(g);
