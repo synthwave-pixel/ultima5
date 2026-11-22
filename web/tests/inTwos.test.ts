@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { K } from '../src/game/io.ts';
+import { GameCore } from '../src/game/gameCore.ts';
+import { asPad } from '../src/game/input.ts';
+import { K, type Platform } from '../src/game/io.ts';
 import { InTwos } from '../src/ui/inTwos.ts';
 
 const PACE = 150;
@@ -67,6 +69,41 @@ describe('two ways held on a ship go two at a time', () => {
   });
 });
 
+/**
+ * W, A, S and D are the d-pad in Controller input (input.ts asPad), and held they repeat as the arrows do: read as ways
+ * only after the rule had run, two of them held on a ship only turned it, "Head North", "Head East", as the arrows
+ * did before it. Read as ways first, they go two at a time too. A key is given on as it came but where the rule puts
+ * another way in its place, so a letter stays a letter wherever a prompt reads it as one (W, A, S, D in Classic input).
+ */
+describe('W, A, S and D held, the keyboard read as a controller', () => {
+  const [W, D] = [0x77, 0x64];
+  const keyboard = (input: 'controller' | 'letters', on = true): { g: GameCore; twos: InTwos } => {
+    const g = new GameCore({ text: {} } as unknown as Platform);
+    g.options.input = input;
+    return {
+      g,
+      twos: new InTwos(
+        () => on,
+        () => PACE,
+        (k) => asPad(g, k),
+      ),
+    };
+  };
+
+  it('turn, then sail, as the arrows do: W and D held on a ship in Controller input', () => {
+    const { g, twos } = keyboard('controller');
+    const sent = inTurn(W, D, 8).map(([k, held, ms]) => twos.take(k, held, ms));
+    expect(sent.map((k) => asPad(g, k))).toEqual([K.Up, K.Up, K.Right, K.Right, K.Up, K.Up, K.Right, K.Right]);
+    expect(sent[0]).toBe(W); // a press as pressed
+  });
+
+  it('are letters with letter commands (Classic input), and go as typed off a ship', () => {
+    expect(inTurn(W, D, 6).map(([k, held, ms]) => keyboard('letters').twos.take(k, held, ms))).toEqual([W, D, W, D, W, D]);
+    const { twos } = keyboard('controller', false);
+    expect(inTurn(W, D, 6).map(([k, held, ms]) => twos.take(k, held, ms))).toEqual([W, D, W, D, W, D]);
+  });
+});
+
 describe('aboard a ship (Game.aboardShip)', () => {
   it('is a ship on the world map, with sails or without - not the rowing boat, nor a ship in port', async () => {
     const { newGame } = await import('./helpers.ts');
@@ -86,5 +123,33 @@ describe('aboard a ship (Game.aboardShip)', () => {
     g.s.partyTile = 0x20;
     g.s.mapId = 2;
     expect(g.aboardShip).toBe(false);
+  });
+});
+
+/**
+ * What Ultima V says the page's controller features ask (GameCore.pairsWays, passRepeats, sailsInTwos): as the page
+ * asked its prompt by name before they were the game's to say - the world map's pairs, B held at a prompt outside a
+ * fight, a ship at the world map's prompt.
+ */
+describe("Ultima V's answers to the page", () => {
+  it('pairs on the world map, passes again at a prompt outside a fight, sails in twos on a ship there', async () => {
+    const { newGame } = await import('./helpers.ts');
+    const { g } = newGame();
+    g.s.mapId = 0;
+    g.s.partyTile = 0x20; // a ship
+    g.inPlay = true;
+    const at = (last: typeof g.lastCommandPrompt, now: typeof g.commandPrompt, waiting: boolean): boolean[] => {
+      [g.lastCommandPrompt, g.commandPrompt, g.awaitingCommand] = [last, now, waiting];
+      return [g.pairsWays, g.passRepeats, g.sailsInTwos];
+    };
+    expect(at('outdoors', 'outdoors', true)).toEqual([true, true, true]);
+    expect(at('outdoors', '', false)).toEqual([true, false, true]); // the prompt's command carried out: a step, a menu
+    expect(at('town', 'town', true)).toEqual([false, true, false]);
+    expect(at('dungeon', 'dungeon', true)).toEqual([false, true, false]);
+    expect(at('combat', 'combat', true)).toEqual([false, false, false]);
+    g.s.partyTile = 0x10; // on foot
+    expect(at('outdoors', 'outdoors', true)).toEqual([true, true, false]);
+    g.inPlay = false; // the title
+    expect(at('outdoors', 'outdoors', true)).toEqual([false, false, false]);
   });
 });

@@ -363,6 +363,18 @@ export class Game extends GameCore {
   override get aboardShip(): boolean {
     return this.s.mapId === 0 && (this.s.partyTile & 0xf8) === 0x20;
   }
+  /** The d-pad's two ways in turn on the world map alone - Britannia's and the Underworld's (issue #40). */
+  override get pairsWays(): boolean {
+    return this.inPlay && this.lastCommandPrompt === 'outdoors';
+  }
+  /** B held passes again while the command prompt waits for its key, outside a fight (issue #40). */
+  override get passRepeats(): boolean {
+    return this.inPlay && this.awaitingCommand && this.commandPrompt !== '' && this.commandPrompt !== 'combat';
+  }
+  /** Two ways held go two at a time on a ship, at the world map's prompt (issue #40). */
+  override get sailsInTwos(): boolean {
+    return this.inPlay && this.lastCommandPrompt === 'outdoors' && this.aboardShip;
+  }
   /** A dungeon (33-40). */
   get inDungeon(): boolean {
     return this.s.mapId > 0x20 && this.s.mapId < 0x80;

@@ -8,9 +8,10 @@
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
  * TURN_RIGHT), which only a dungeon heeds. Every connected pad is watched, and the one played last is read (pads.ts
  * Played): another pad listed - a remote, a Steam Deck's own controls, or a pad the browser keeps listed though it
- * reports no more, frozen with a way held - holds nothing while it sits unchanged. Two neighbouring ways held on the d-pad where `diagonals` says (the world
- * map's command prompt), the two go in turn at the game's pace, as two arrow keys held do (issue #40). B held passes
- * again and again where `passes` says (the command prompt waiting, outside a fight), as Space held does; no other
+ * reports no more, frozen with a way held - holds nothing while it sits unchanged. Two neighbouring ways held on the
+ * d-pad where `diagonals` says (the game's GameCore.pairsWays: Ultima V's world map), the two go in turn at the game's
+ * pace, as two arrow keys held do (issue #40). B held passes again and again where `passes` says (GameCore.passRepeats:
+ * Ultima V's command prompt waiting, outside a fight), as Space held does; no other
  * button repeats, nor B anywhere else, where it backs out or says No. A stick's axis counts only once that pad's has been seen at rest, near
  * its middle: one that rests off it - a stick that drifts, or a trigger, which some pads report as an axis that rests
  * at -1 - would otherwise hold a way, or a turn, for as long as the pad is plugged in. The right stick is read only in
@@ -80,9 +81,9 @@ export class GamepadInput {
     private readonly lazy: () => boolean = () => false,
     /** The keyboard's holds: their pace, whether the game waits for a key, and the holds broken. */
     private readonly holds: Pick<Holds, 'pace' | 'breaks' | 'waiting'> = { pace: INPUT_PACES.medium, breaks: 0, waiting: () => true },
-    /** Whether two neighbouring ways held on the d-pad go in turn (the world map's command prompt). */
+    /** Whether two neighbouring ways held on the d-pad go in turn (the game's pairsWays: Ultima V's world map). */
     private readonly diagonals: () => boolean = () => false,
-    /** Whether B held passes again now: the command prompt waiting for its key, outside a fight. */
+    /** Whether B held passes again now (the game's passRepeats: Ultima V's command prompt, outside a fight). */
     private readonly passes: () => boolean = () => false,
     /** Whether the window has the focus: only then is the pad's state sent (windowFocus.ts). */
     private readonly focused: () => boolean = windowFocused,
