@@ -5,9 +5,12 @@
 // Each folder found is read for the files the page asks for and the Upgrade's music; the page checks them and installs.
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { basename, dirname, join, sep } = require('node:path');
+const brand = require('./brand.cjs');
 
-/** A folder named like the game: u5, ultima5, Ultima 5, Ultima V, with a trademark sign, an extension or more after. */
-const GAME = /^(u5|ultima[\s_-]*(5|v))(?![a-z0-9])/i;
+/** A folder named like the game (brand.cjs: u5, ultima5, Ultima 5, Ultima V, with a trademark sign, an extension or more after). */
+const GAME = brand.scan.folder;
+/** The file a copy is known by (brand.cjs: DATA.OVL). */
+const MARKER = brand.scan.marker.toUpperCase();
 const gameFolderName = (name) => GAME.test(name);
 
 /**
@@ -63,20 +66,20 @@ const children = (dir) => {
     return [];
   }
 };
-const hasDataOvl = (dir) => {
+const hasMarker = (dir) => {
   try {
-    return readdirSync(dir).some((n) => n.toUpperCase() === 'DATA.OVL');
+    return readdirSync(dir).some((n) => n.toUpperCase() === MARKER);
   } catch {
     return false;
   }
 };
 
-/** Folders under `dir`, `dir` included, holding DATA.OVL, at most `depth` levels down; nearest first. */
+/** Folders under `dir`, `dir` included, holding the marker, at most `depth` levels down; nearest first. */
 function gameFolders(dir, depth) {
   const out = [];
   let level = [dir];
   for (let d = 0; d <= depth && level.length; d++) {
-    for (const f of level) if (hasDataOvl(f)) out.push(f);
+    for (const f of level) if (hasMarker(f)) out.push(f);
     level = level.flatMap(children);
   }
   return out;

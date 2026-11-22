@@ -48,6 +48,7 @@ const { mask, report: steamReport } = require('./steamReport.cjs');
 const { lineState } = require('./launchCheck.cjs');
 const { clashMessage, noteMode } = require('./instanceMode.cjs');
 const steamSetup = require('./steamSetup.cjs');
+const brand = require('./brand.cjs');
 
 // The portable .exe's data beside it, set before anything (the single-instance lock, the page's storage) uses it - and
 // before anything asks for the data folder, which Electron makes as it is asked (portable.cjs).
@@ -340,11 +341,11 @@ async function fixSync(options, launch) {
     return cloudRuleMessage(await steamSetup.linuxCloudSetup(cloudWhere()));
   }
   if (s.rules === 'unreadable')
-    return `Steam's settings for Ultima V couldn't be read (${s.why}), so this can't be fixed here. Copy report, and report an issue.`;
+    return `Steam's settings for ${brand.name} couldn't be read (${s.why}), so this can't be fixed here. Copy report, and report an issue.`;
   if ((s.stuck ?? 0) > 0) {
     const n = steamSetup.resendSaves(fs, steamRootsHere());
     return n > 0
-      ? `Done: ${n} ${n === 1 ? 'save goes' : 'saves go'} to Steam Cloud again, for a Mac too, when Ultima V next closes in Steam.`
+      ? `Done: ${n} ${n === 1 ? 'save goes' : 'saves go'} to Steam Cloud again, for a Mac too, when ${brand.name} next closes in Steam.`
       : "Nothing could be changed: those saves aren't as Steam last synced them here.";
   }
   return cloudRuleMessage('done');
@@ -408,7 +409,7 @@ const macWhere = () => ({
   steamRoot: steamRoots({ platform: 'darwin', home: homedir(), env: process.env })[0],
   appExe: process.execPath,
   packaged: app.isPackaged,
-  keptOriginal: join(app.getPath('userData'), 'steam-appinfo-3067520.bin'),
+  keptOriginal: join(app.getPath('userData'), `steam-appinfo-${brand.steam.appId}.bin`),
   noteFile: join(app.getPath('userData'), 'steam-setup.json'),
   steamRunning,
   quitSteam,
@@ -473,7 +474,7 @@ function reportFacts(options, launch, page) {
   let cloudCharacters = null;
   if (cloud && launch.dir) {
     try {
-      const ids = JSON.parse(loadAll(launch.dir)?.['ultima5.characters'] ?? '').ids;
+      const ids = JSON.parse(loadAll(launch.dir)?.[`${brand.id}.characters`] ?? '').ids;
       cloudCharacters = Array.isArray(ids) ? ids.length : 0;
     } catch {
       cloudCharacters = 0;
@@ -547,7 +548,7 @@ function createWindow() {
     // macOS altogether (the green button, Window > Enter Full Screen, F11), so it is left unsaid otherwise.
     fullscreenable: true,
     ...(startsFullScreen(process.argv, process.env, saved) ? { fullscreen: true } : {}),
-    title: `Ultima V Enhanced Edition ${app.getVersion()}`,
+    title: `${brand.edition} ${app.getVersion()}`,
     icon: join(__dirname, 'build', 'icons', '256x256.png'), // the window's (packaged: package.json build.files)
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
   });
@@ -637,7 +638,7 @@ app.whenReady().then(() => {
     if (clash !== null) {
       // Started by Steam, the app is not the active one, and its message would open behind Steam's window.
       if (process.platform === 'darwin') app.focus({ steal: true });
-      dialog.showMessageBoxSync({ type: 'info', title: 'Ultima V', message: clash });
+      dialog.showMessageBoxSync({ type: 'info', title: brand.name, message: clash });
       app.quit();
     }
     return;
@@ -903,7 +904,10 @@ app.whenReady().then(() => {
       const until = Date.now() + 30_000;
       const look = async () => {
         try {
-          const ok = await win.webContents.executeJavaScript("!!(window.u5 || document.getElementById('installer'))");
+          // The game running (the global its page sets, brand.cjs: window.u5), or the installer, waiting for its files.
+          const ok = await win.webContents.executeJavaScript(
+            `!!(window[${JSON.stringify(brand.global)}] || document.getElementById('installer'))`,
+          );
           if (!ok && Date.now() < until) {
             setTimeout(() => void look(), 500);
             return;

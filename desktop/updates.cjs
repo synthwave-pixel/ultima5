@@ -27,9 +27,11 @@
 const fs = require('node:fs');
 const { readFileSync, writeFileSync } = fs;
 const flatpakUpdates = require('./flatpakUpdates.cjs');
+const brand = require('./brand.cjs');
 
-const OWNER = 'synthwave-pixel';
-const REPO = 'ultima5';
+/** The repository the releases are on (brand.cjs). */
+const OWNER = brand.owner;
+const REPO = brand.repoName;
 const RELEASES = `https://github.com/${OWNER}/${REPO}/releases/latest`;
 const LATEST_API = `https://api.github.com/repos/${OWNER}/${REPO}/releases/latest`;
 

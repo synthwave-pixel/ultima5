@@ -13,15 +13,19 @@ const { createHash } = require('node:crypto');
 const { dirname, join } = require('node:path');
 const { appEntry, cloudPatch, cloudRules, macPatch, readAppinfo, writeAppinfo } = require('./appinfo.cjs');
 const { APP_ID, findGame, parseVdf } = require('./steam.cjs');
+const brand = require('./brand.cjs');
 
-const FLATPAK_ID = 'com.synthwavepixel.ultima5';
-const TOOL = 'ultima5_sp';
+const FLATPAK_ID = brand.appId;
+const TOOL = brand.steam.tool;
 // The names Steam and the Dock show; the launcher's files keep the names they were first written by ("SP", once the
 // edition's), so a setup made before is found and replaced, not left beside a new one.
-const TOOL_NAME = 'Ultima V Enhanced Edition';
-const LAUNCHER = 'Ultima V SP.app';
-const LAUNCHER_EXE = 'Ultima V SP';
-const INSTALLDIR = 'Ultima V';
+const TOOL_NAME = brand.edition;
+const LAUNCHER = `${brand.steam.launcher}.app`;
+const LAUNCHER_EXE = brand.steam.launcher;
+const INSTALLDIR = brand.steam.installDir;
+const GAME = brand.name;
+/** The saves folder, as Steam's record of the cloud names a file in it. */
+const SAVES = `${brand.steam.saves}/`;
 const OVERRIDE = 'flatpak override --user --talk-name=org.freedesktop.Flatpak com.valvesoftware.Steam';
 
 /** A string as one word to a POSIX shell, whatever is in it. */
@@ -84,7 +88,7 @@ const toolManifestVdf = `"manifest"
 function launchScript({ flatpak, appImage }) {
   const target = flatpak ? `flatpak run ${FLATPAK_ID}` : `${shellQuote(appImage)} --no-sandbox`;
   return `#!/bin/sh
-# ${TOOL_NAME}: written by the Ultima V app so that Steam's Ultima V plays with its engine.
+# ${TOOL_NAME}: written by the ${GAME} app so that Steam's ${GAME} plays with its engine.
 case "$1" in
   run|waitforexitandrun) ;;
   *) exit 0 ;;
@@ -93,16 +97,16 @@ esac
 case "${APP_ID}" in
   "$SteamAppId"|"$SteamGameId"|"$STEAM_COMPAT_APP_ID") ;;
   *)
-    echo "${TOOL_NAME} only plays Ultima V (Steam app ${APP_ID})." >&2
+    echo "${TOOL_NAME} only plays ${GAME} (Steam app ${APP_ID})." >&2
     echo "Choose another compatibility tool for this game in its Properties, under Compatibility." >&2
     exit 1
     ;;
 esac
-# The engine reads the app id from the environment: say it is Ultima V's, whichever name Steam gave it by.
+# The engine reads the app id from the environment: say it is ${GAME}'s, whichever name Steam gave it by.
 export SteamAppId=${APP_ID}
 # Steam's runtime libraries hang the engine, and its overlay crashes it: the engine brings its own libraries.
 unset LD_LIBRARY_PATH LD_PRELOAD
-# Of what Steam passes on (Ultima V's own DOS command, and the player's launch options), only the app's update flags.
+# Of what Steam passes on (${GAME}'s own DOS command, and the player's launch options), only the app's update flags.
 flags=
 for a in "$@"; do
   case "$a" in
@@ -111,7 +115,7 @@ for a in "$@"; do
 done
 if [ "$FLATPAK_ID" = "com.valvesoftware.Steam" ]; then
   if ! flatpak-spawn --host true >/dev/null 2>&1; then
-    echo "Steam from Flathub needs leave to start Ultima V. Run this once, then restart Steam:" >&2
+    echo "Steam from Flathub needs leave to start ${GAME}. Run this once, then restart Steam:" >&2
     echo "  ${OVERRIDE}" >&2
     exit 1
   fi
@@ -210,9 +214,9 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 \t<key>CFBundleExecutable</key>
 \t<string>${LAUNCHER_EXE}</string>
 \t<key>CFBundleIdentifier</key>
-\t<string>com.synthwavepixel.ultima5.steam</string>
+\t<string>${brand.launcherId}</string>
 \t<key>CFBundleName</key>
-\t<string>Ultima V</string>
+\t<string>${GAME}</string>
 \t<key>CFBundleDisplayName</key>
 \t<string>${TOOL_NAME}</string>
 \t<key>CFBundleIconFile</key>
@@ -231,10 +235,10 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
  */
 function launcherScript(appExe) {
   return `#!/bin/sh
-# Steam's macOS launch of Ultima V: runs the Ultima V app, written by it when Steam was set up.
+# Steam's macOS launch of ${GAME}: runs the ${GAME} app, written by it when Steam was set up.
 APP=${shellQuote(appExe)}
 if [ ! -x "$APP" ]; then
-  echo "Ultima V's engine app is not at $APP: reinstall it, or remove Steam setup" >&2
+  echo "${GAME}'s engine app is not at $APP: reinstall it, or remove Steam setup" >&2
   exit 1
 fi
 exec "$APP" "$@"
@@ -357,8 +361,8 @@ function patchCache(fs, steamRoot, keptOriginal, found) {
 /** The cache with Ultima V's entry as `kv`, written beside itself and renamed into place. */
 function writeCache(fs, steamRoot, info, header, kv) {
   const file = cacheFile(steamRoot);
-  fs.writeFileSync(`${file}.ultima5`, writeAppinfo(info, Number(APP_ID), header, kv));
-  fs.renameSync(`${file}.ultima5`, file);
+  fs.writeFileSync(`${file}.${brand.id}`, writeAppinfo(info, Number(APP_ID), header, kv));
+  fs.renameSync(`${file}.${brand.id}`, file);
 }
 
 /** Steam closed, quitting it if need be; false when it would not go. */
@@ -514,7 +518,7 @@ function cloudCheck(fs, roots) {
       rules = cloudRules(entry.kv);
       if (cloudPatch(entry.kv).changed) return { state: 'needed', why: null, rules };
     } catch (e) {
-      unreadable(`Ultima V's entry: ${e instanceof Error ? e.message : e}`);
+      unreadable(`${GAME}'s entry: ${e instanceof Error ? e.message : e}`);
       continue;
     }
     if (state === 'not-owned') state = 'ready';
@@ -556,7 +560,7 @@ function remarkSaves(fs, root) {
     const files = text === null ? null : parseVdf(text)?.[APP_ID];
     if (!files || typeof files !== 'object') continue;
     for (const [name, file] of Object.entries(files)) {
-      if (!name.startsWith('ultima5-sp/') || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
+      if (!name.startsWith(SAVES) || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
       if (file.root !== '1' || (Number(file.platformstosync2) & FOR_MAC) !== 0) continue;
       const path = join(game.folder, ...name.split('/'));
       let bytes;
@@ -591,7 +595,7 @@ function stuckSaves(fs, roots, account, mac) {
     const game = mac ? null : findGame([root], read, (p) => fs.existsSync(p));
     let stuck = 0;
     for (const [name, file] of Object.entries(files)) {
-      if (!name.startsWith(`ultima5-sp/${account}/`) || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
+      if (!name.startsWith(`${SAVES}${account}/`) || name.split('/').includes('..') || !file || typeof file !== 'object') continue;
       if ((Number(file.platformstosync2) & FOR_MAC) !== 0) continue;
       if (!mac) {
         if (!game || !('folder' in game)) continue;

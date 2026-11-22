@@ -22,9 +22,6 @@
     "electron-builder": "^26.17.0"
   },
   "build": {
-    "appId": "com.synthwavepixel.ultima5",
-    "productName": "Ultima V",
-    "artifactName": "Ultima-V-${version}-${os}-${arch}.${ext}",
     "directories": {
       "buildResources": "build",
       "output": "dist"
@@ -46,17 +43,10 @@
       "steamSetup.cjs",
       "launchCheck.cjs",
       "appinfo.cjs",
+      "brand.cjs",
       "build/icons/256x256.png",
       "build/steam/*.png",
       "app/**/*"
-    ],
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "synthwave-pixel",
-        "repo": "ultima5",
-        "releaseType": "release"
-      }
     ],
     "asar": true,
     "electronFuses": {
@@ -84,13 +74,7 @@
         }
       ],
       "identity": "-",
-      "hardenedRuntime": false,
-      "extendInfo": {
-        "NSMicrophoneUsageDescription": "Ultima V never uses the microphone. macOS can ask when the game's sound plays through a device that is also a microphone, such as a USB microphone or a headset. Choose Don't Allow: the game and its sound play on as before.",
-        "NSAudioCaptureUsageDescription": "Ultima V never records any sound. Choose Don't Allow: the game and its sound play on as before.",
-        "NSCameraUsageDescription": "Ultima V never uses the camera. Choose Don't Allow: the game plays on as before.",
-        "NSAppleEventsUsageDescription": "Play from Steam asks Steam to quit before it changes Steam's settings for Ultima V."
-      }
+      "hardenedRuntime": false
     },
     "win": {
       "target": [
@@ -110,11 +94,7 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "artifactName": "Ultima-V-${version}-${os}-${arch}-setup.${ext}"
-    },
-    "portable": {
-      "artifactName": "Ultima-V-${version}-${os}-${arch}-portable.${ext}"
+      "allowToChangeInstallationDirectory": true
     },
     "linux": {
       "category": "Game",
@@ -126,24 +106,9 @@
             "x64"
           ]
         }
-      ],
-      "desktop": {
-        "entry": {
-          "Name": "Ultima V",
-          "Comment": "Ultima V: Warriors of Destiny"
-        }
-      }
-    },
-    "appImage": {
-      "artifactName": "ultima5-sp-${arch}.${ext}"
+      ]
     },
     "flatpak": {
-      "files": [
-        [
-          "build-meta/com.synthwavepixel.ultima5.metainfo.xml",
-          "/share/metainfo/com.synthwavepixel.ultima5.metainfo.xml"
-        ]
-      ],
       "runtimeVersion": "25.08",
       "baseVersion": "25.08",
       "finishArgs": [

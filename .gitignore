@@ -1,6 +1,6 @@
 node_modules/
-# A Mac build's settings, written for electron-builder while it runs (desktop/dist.cjs)
-desktop/.mac-build.json
+# A build's settings, written for electron-builder while it runs (desktop/dist.cjs)
+desktop/.build.json
 dist/
 coverage/
 *.log

@@ -2,6 +2,7 @@
 // what the options did, as plain text. `report` takes facts and gives text, so it is all testable; main.cjs gathers
 // the facts. It holds no save and no file contents, and nothing that names the player: the home folder is written ~,
 // user names in paths <user>, the Steam account only as known or not, and SteamUser only as set or not.
+const { name: GAME, edition } = require('./brand.cjs');
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -26,7 +27,7 @@ const RULES = {
   ready: 'include macOS',
   needed: 'lack macOS (saves uploaded here reach Windows and Linux only)',
   unreadable: "couldn't be read",
-  'not-owned': 'not found (Steam has not cached Ultima V here)',
+  'not-owned': `not found (Steam has not cached ${GAME} here)`,
 };
 
 /** macOS Sync's part: whether it is on, Steam's cloud rules for the game, and the saves Steam sent to Windows alone. */
@@ -46,7 +47,7 @@ function syncLines(system, sync, options) {
 
 /** The plain-text report for `facts` (steamReport.d.cts). */
 function report(f) {
-  const lines = ['Ultima V Enhanced Edition report', ''];
+  const lines = [`${edition} report`, ''];
   lines.push(`Version: ${f.version}`, `System: ${f.system} (${f.arch})`, `Build: ${f.build}`);
   lines.push(`Started by Steam: ${yesNo(f.bySteam)}`);
   for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID']) lines.push(`${name}: ${f.env[name] ?? 'not set'}`);
@@ -56,11 +57,11 @@ function report(f) {
 
   lines.push(`Steam folder: ${f.steamRoot ?? 'not found'}`);
   for (const library of f.libraries) lines.push(`Library: ${library}`);
-  if (f.game === 'ok') lines.push(`Ultima V: installed in ${f.where}`);
-  else if (f.game === 'missing') lines.push(`Ultima V: listed by Steam, but its folder is missing (${f.where})`);
-  else lines.push('Ultima V: not installed');
+  if (f.game === 'ok') lines.push(`${GAME}: installed in ${f.where}`);
+  else if (f.game === 'missing') lines.push(`${GAME}: listed by Steam, but its folder is missing (${f.where})`);
+  else lines.push(`${GAME}: not installed`);
   if (f.steamMissing !== null) {
-    lines.push(`Ultima V files: ${f.steamMissing === 0 ? 'complete' : `incomplete (${f.steamMissing} missing)`}`);
+    lines.push(`${GAME} files: ${f.steamMissing === 0 ? 'complete' : `incomplete (${f.steamMissing} missing)`}`);
   }
   // Where the engine took its game files from is what the page recorded when it kept them.
   const from = { steam: "Steam's library", installer: 'the installer' }[f.filesFrom] ?? 'unknown';
@@ -84,7 +85,7 @@ function report(f) {
   if (f.cloud !== null) lines.push(`Cloud saves, last result: ${f.options.results.cloud ?? 'none'}`);
   if (f.lineState !== null) lines.push(`Launch line seen in Steam: ${f.lineState}`);
   if (f.system === 'mac') {
-    lines.push(`Ultima V cache entry patched: ${f.macPatched === null ? 'unknown' : yesNo(f.macPatched)}`);
+    lines.push(`${GAME} cache entry patched: ${f.macPatched === null ? 'unknown' : yesNo(f.macPatched)}`);
     lines.push(`Cache entry re-applied at this start: ${f.macReapplied === null ? 'unknown' : yesNo(f.macReapplied)}`);
   }
   if (f.cloud && f.cloudCharacters !== null) lines.push(`Characters in Steam's folder: ${f.cloudCharacters}`);
