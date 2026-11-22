@@ -60,7 +60,7 @@ describe("Ultima V's desktop brand", () => {
       'Ultima V - Warriors of Destiny',
     ])
       expect(gameFolderName(n), n).toBe(true);
-    for (const n of ['Ultima VI', 'Ultima 4', 'u6', 'Documents', 'ultima55', 'u5x']) expect(gameFolderName(n), n).toBe(false);
+    for (const n of ['Ultima VI', 'Ultima 6', 'u6', 'Documents', 'ultima55', 'u5x']) expect(gameFolderName(n), n).toBe(false);
   });
 
   it("fills electron-builder's config as package.json had it before", () => {

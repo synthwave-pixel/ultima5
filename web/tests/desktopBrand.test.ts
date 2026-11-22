@@ -69,17 +69,57 @@ describe('the desktop brand (brand.cjs)', () => {
     expect(c.extraMetadata.version).toBe('1.0.3');
   });
 
+  it('refuses values that would break a file it is written into, and keeps the scan pattern stateless', () => {
+    const ok = {
+      id: 'testgame',
+      name: 'Test Game',
+      title: 'Test Game: A Quest Made Up',
+      appId: 'org.example.testgame',
+      repo: 'someone/testgame',
+      global: 'tg',
+      about: ['A game made up for this test.'],
+      steam: { appId: '1000010', installDir: 'Test Game', saveFile: 'PLAY.DAT' },
+      scan: { folder: /^tg/i, marker: 'START.DAT' },
+    };
+    expect(() => brand.brandOf(ok)).not.toThrow();
+    for (const name of ['Test & Game', 'Test "Game"', 'Test $Game', 'Test `Game`', 'Test: Game', '']) {
+      expect(() => brand.brandOf({ ...ok, name }), name).toThrow(/name/);
+    }
+    for (const id of ['Test', 'test game', 'test/game']) expect(() => brand.brandOf({ ...ok, id }), id).toThrow(/id/);
+    for (const repo of ['testgame', 'a/b/c', '/testgame']) expect(() => brand.brandOf({ ...ok, repo }), repo).toThrow(/repo/);
+    expect(() => brand.brandOf({ ...ok, appId: 'org.example.test game' })).toThrow(/appId/);
+    expect(() => brand.brandOf({ ...ok, title: 'Test\nGame' })).toThrow(/title/);
+    expect(() => brand.brandOf({ ...ok, global: 'window.tg' })).toThrow(/global/);
+    expect(() => brand.brandOf({ ...ok, steam: { ...ok.steam, appId: '10a' } })).toThrow(/steam.appId/);
+    expect(() => brand.brandOf({ ...ok, steam: { ...ok.steam, installDir: 'Test "Game"' } })).toThrow(/installDir/);
+    expect(() => brand.brandOf({ ...ok, steam: { ...ok.steam, saveFile: 'a/PLAY.DAT' } })).toThrow(/saveFile/);
+    expect(() => brand.brandOf({ ...ok, scan: { ...ok.scan, marker: '../START.DAT' } })).toThrow(/marker/);
+    const global = brand.brandOf({ ...ok, scan: { ...ok.scan, folder: /^tg/giy } });
+    expect(global.scan.folder.flags).toBe('i');
+    expect([global.scan.folder.test('tg'), global.scan.folder.test('tg')]).toEqual([true, true]);
+  });
+
+  it("keeps package.json's own Flatpak files beside the metainfo", () => {
+    const c = builderConfig({ ...pkg.build, flatpak: { files: [['a', '/b']] } }, '1.0.3');
+    expect(c.flatpak.files).toEqual([
+      ['a', '/b'],
+      [`build-meta/${brand.appId}.metainfo.xml`, `/share/metainfo/${brand.appId}.metainfo.xml`],
+    ]);
+  });
+
   it('names no game in any module but itself: only the internal names stay', () => {
     // Code, not comments: a line comment, or a comment block, is left out.
     const code = (text: string) =>
       text
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .split('\n')
-        .filter((l) => !/^\s*(\/\/|#)/.test(l))
+        .filter((l) => !/^\s*\/\//.test(l))
         .join('\n');
     const internal = (l: string) => /const HOST = 'ultima5';|ULTIMA5_SMOKE|u5native/.test(l);
     for (const f of readdirSync(DESKTOP).filter((n) => /\.(cjs|sh)$/.test(n) && n !== 'brand.cjs')) {
-      const found = code(readFileSync(join(DESKTOP, f), 'utf8'))
+      // A shell script's comments too; a .cjs file's # lines are the scripts it writes, and are checked.
+      const text = readFileSync(join(DESKTOP, f), 'utf8');
+      const found = code(f.endsWith('.sh') ? text.replace(/^\s*#.*$/gm, '') : text)
         .split('\n')
         .filter((l) => ULTIMA5.test(l) && !internal(l));
       expect(found, f).toEqual([]);

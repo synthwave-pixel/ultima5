@@ -6,9 +6,32 @@
 // saves folder in Steam, its compatibility tool, its Mac launcher, its artifacts' prefix, its site. The internal names
 // no player sees stay as they are whatever the game: u5native (preload.cjs), ULTIMA5_SMOKE, the app:// host (main.cjs).
 
+/**
+ * What each value may hold: each goes into file names, a shell script, a plist, Steam's VDF and ini files unquoted,
+ * so a value outside its pattern is refused here rather than written into something broken.
+ */
+const CHECKS = [
+  ['id', (v) => v.id, /^[a-z0-9][a-z0-9_-]*$/],
+  ['name', (v) => v.name, /^[A-Za-z0-9][A-Za-z0-9 .-]*$/],
+  ['title', (v) => v.title, /^[^\p{Cc}"$`\\]+$/u],
+  ['appId', (v) => v.appId, /^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z][A-Za-z0-9_-]*)+$/],
+  ['repo', (v) => v.repo, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/],
+  ['global', (v) => v.global, /^[A-Za-z_$][A-Za-z0-9_$]*$/],
+  ['steam.appId', (v) => v.steam.appId, /^[0-9]+$/],
+  ['steam.installDir', (v) => v.steam.installDir, /^[^\p{Cc}"$`\\/:]+$/u],
+  ['steam.saveFile', (v) => v.steam.saveFile, /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/],
+  ['scan.marker', (v) => v.scan.marker, /^[A-Za-z0-9_-][A-Za-z0-9._-]*$/],
+];
+
 /** The brand of the game `v` names: its values, and the names derived from them. Frozen. */
 function brandOf(v) {
+  for (const [key, get, ok] of CHECKS) {
+    const value = get(v);
+    if (typeof value !== 'string' || !ok.test(value)) throw new Error(`brand.cjs: ${key} ${JSON.stringify(value)} is not ${ok}`);
+  }
   const [owner, repoName] = v.repo.split('/');
+  // A pattern used for test(): without g or y it keeps no state between folders.
+  const folder = new RegExp(v.scan.folder.source, v.scan.folder.flags.replace(/[gy]/g, ''));
   return Object.freeze({
     ...v,
     steam: Object.freeze({
@@ -20,7 +43,7 @@ function brandOf(v) {
       /** The Mac launcher .app (and its executable) in the game's folder, which Steam's Mac launch runs. */
       launcher: `${v.name} SP`,
     }),
-    scan: Object.freeze({ ...v.scan }),
+    scan: Object.freeze({ ...v.scan, folder }),
     about: Object.freeze([...v.about]),
     /** The window's title (with the version), the Steam tool's and the Mac launch's name, the report's heading. */
     edition: `${v.name} Enhanced Edition`,

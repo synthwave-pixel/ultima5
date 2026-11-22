@@ -22,8 +22,8 @@ function metainfo(version, date) {
   <project_license>MIT</project_license>
   <name>${xml(brand.name)}</name>
   <summary>${xml(brand.summary)}</summary>
-  <developer id="io.github.synthwave-pixel">
-    <name>synthwave-pixel</name>
+  <developer id="io.github.${brand.owner}">
+    <name>${brand.owner}</name>
   </developer>
   <description>
 ${brand.about.map((p) => `    <p>${xml(p)}</p>\n`).join("")}  </description>

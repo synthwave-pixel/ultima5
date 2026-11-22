@@ -29,7 +29,8 @@ fi
 
 ostree init --repo="$work/repo" --mode=archive-z2
 flatpak build-import-bundle --gpg-sign="$FLATPAK_GPG_KEY_ID" "$work/repo" "$bundle"
-flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" --generate-static-deltas --prune --title="$(node "$here/metainfo.cjs" title)" "$work/repo"
+title=$(node "$here/metainfo.cjs" title)
+flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" --generate-static-deltas --prune --title="$title" "$work/repo"
 
 ref=$(ostree refs --repo="$work/repo" | grep '^app/' | head -1) # app/<id>/<arch>/<branch>
 id=$(echo "$ref" | cut -d/ -f2)

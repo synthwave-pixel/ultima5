@@ -28,7 +28,7 @@ function builderConfig(build, version, b = brand) {
   c.portable = { ...c.portable, artifactName: artifact('-portable') };
   c.linux = { ...c.linux, desktop: { ...c.linux?.desktop, entry: { ...c.linux?.desktop?.entry, Name: b.name, Comment: b.title } } };
   c.appImage = { ...c.appImage, artifactName: `${b.appImage}-\${arch}.\${ext}` };
-  c.flatpak = { ...c.flatpak, files: [[`build-meta/${metainfo}`, `/share/metainfo/${metainfo}`]] };
+  c.flatpak = { ...c.flatpak, files: [...(c.flatpak?.files ?? []), [`build-meta/${metainfo}`, `/share/metainfo/${metainfo}`]] };
   return c;
 }
 

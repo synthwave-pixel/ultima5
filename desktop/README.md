@@ -78,8 +78,11 @@ product name, artifact names, `publish`, Mac usage strings, Linux menu
 entry, AppImage name and Flatpak metainfo from them. Another game on this
 engine changes `brand.cjs`'s values, and `package.json`'s `name`,
 `productName`, `description` and `repository` to match
-(`desktopBrand.test.ts` checks they do), and nothing else here;
-`desktopBrand.ultima5.test.ts` pins Ultima V's. The workflows take the
+(`desktopBrand.test.ts` checks they do; `brandOf` refuses a value that
+would break a file it goes into), and no module here; its art is its own
+to replace (`build/icons/`, `build/steam/` and `steamArt.cjs`'s `SHIPPED`
+fingerprints of it), and the metainfo's category and content rating
+stay a role-playing game's. `desktopBrand.ultima5.test.ts` pins Ultima V's. The workflows take the
 site's path and the artifacts' names from the repository's name. The
 internal names no player sees stay whatever the game: `u5native`,
 `ULTIMA5_SMOKE`, and the `app://ultima5` host (the page's origin, which
