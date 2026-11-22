@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { appEntry, cloudPatch, isMacPatched, readAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
+import brand from '../../desktop/brand.cjs';
 import { parseVdf } from '../../desktop/steam.cjs';
 import {
   installCompatTool,
@@ -28,9 +29,14 @@ import {
 const MAP = 0;
 const STR = 1;
 const INT32 = 2;
-const ULTIMA = 3067520;
+// The game's names and ids in Steam (brand.cjs: Ultima V's 3067520, its Ultima V folder, Ultima V SP.app ...).
+const ID = brand.steam.appId;
+const ULTIMA = Number(ID);
+const DIR = brand.steam.installDir;
+const TOOL = brand.steam.tool;
+const GAME = brand.name;
 const OTHER = 22320;
-const LAUNCHER = 'Ultima V SP.app';
+const LAUNCHER = `${brand.steam.launcher}.app`;
 // Every path the tests make has a space and a ' in it (Review focus 1).
 const ODD = "it's a test";
 
@@ -51,7 +57,7 @@ function ultimaKv(name = 'Ultima V: Warriors of Destiny'): KvNode[] {
       [INT32, 'appid', ULTIMA],
       map('common', [str('name', name), str('oslist', 'windows')]),
       map('config', [
-        str('installdir', 'Ultima V'),
+        str('installdir', DIR),
         map('launch', [map('0', [str('executable', 'DOSBOX\\Ultima V.exe'), str('workingdir', 'DOSBOX')])]),
       ]),
       map('ufs', [map('savefiles', [map('0', rule('SAVED.GAM')), map('1', rule('PARTY.SAV'))])]),
@@ -135,7 +141,7 @@ describe('the launch line', () => {
 
   it('runs the Flatpak by its id', () => {
     expect(launchLine({ platform: 'linux', exe: '/app/ultima5', appImage: null, flatpak: true, portable: false })).toBe(
-      'flatpak run com.synthwavepixel.ultima5 %command%',
+      `flatpak run ${brand.appId} %command%`,
     );
   });
 
@@ -185,13 +191,13 @@ describe('the Linux compatibility tool', () => {
 
   it('is written once under each Steam that is there, and parses as Steam reads it', () => {
     const { viaLink, written } = setUp({ flatpak: true, appImage: null });
-    const tool = join(viaLink, 'compatibilitytools.d', 'ultima5_sp');
+    const tool = join(viaLink, 'compatibilitytools.d', TOOL);
     expect(written).toEqual([tool]);
     const compat = parseVdf(fs.readFileSync(join(tool, 'compatibilitytool.vdf'), 'utf8'));
     expect(compat).toEqual({
       compatibilitytools: {
         compat_tools: {
-          ultima5_sp: { install_path: '.', display_name: 'Ultima V Enhanced Edition', from_oslist: 'windows', to_oslist: 'linux' },
+          [TOOL]: { install_path: '.', display_name: brand.edition, from_oslist: 'windows', to_oslist: 'linux' },
         },
       },
     });
@@ -204,7 +210,7 @@ describe('the Linux compatibility tool', () => {
     const { written } = setUp({ flatpak: true, appImage: null });
     const r = run(join(written[0], 'launch.sh'), 'waitforexitandrun', { SteamAppId: '22320' });
     expect(r.status).not.toBe(0);
-    expect(r.stderr).toContain('only plays Ultima V');
+    expect(r.stderr).toContain(`only plays ${GAME}`);
   });
 
   it('runs the AppImage file itself for run and waitforexitandrun, sandbox off, without Steam arguments, and does nothing else', () => {
@@ -213,13 +219,13 @@ describe('the Linux compatibility tool', () => {
     const { written } = setUp({ flatpak: false, appImage: link });
     const script = join(written[0], 'launch.sh');
     for (const verb of ['run', 'waitforexitandrun']) {
-      const r = run(script, verb, { SteamAppId: '3067520' });
+      const r = run(script, verb, { SteamAppId: ID });
       expect(r.status).toBe(0);
       // --no-sandbox on the command line, as the AppImage's own menu entry starts it: given later, by the app, it
       // reaches the page processes but not the zygote that starts them, and on a Steam Deck in Game Mode every one crashed.
-      expect(r.stdout).toBe('ran 3067520: --no-sandbox\n');
+      expect(r.stdout).toBe(`ran ${ID}: --no-sandbox\n`);
     }
-    const other = run(script, 'getcompatpath', { SteamAppId: '3067520' });
+    const other = run(script, 'getcompatpath', { SteamAppId: ID });
     expect(other.status).toBe(0);
     expect(other.stdout).toBe('');
   });
@@ -233,11 +239,11 @@ describe('the Linux compatibility tool', () => {
       [join(written[0], 'launch.sh'), 'waitforexitandrun', 'Z:\\DOSBOX\\Ultima V.exe', '--no-auto-update', '-x'],
       {
         encoding: 'utf8',
-        env: { PATH: '/usr/bin:/bin', SteamAppId: '3067520' },
+        env: { PATH: '/usr/bin:/bin', SteamAppId: ID },
       },
     );
     expect(r.status).toBe(0);
-    expect(r.stdout).toBe('ran 3067520: --no-sandbox --no-auto-update\n');
+    expect(r.stdout).toBe(`ran ${ID}: --no-sandbox --no-auto-update\n`);
   });
 
   it("starts the engine without Steam's runtime libraries or its overlay, which hung and crashed it", () => {
@@ -247,7 +253,7 @@ describe('the Linux compatibility tool', () => {
     fs.writeFileSync(app, '#!/bin/sh\necho "lib=${LD_LIBRARY_PATH-unset} preload=${LD_PRELOAD-unset}"\n', { mode: 0o755 });
     const { written } = setUp({ flatpak: false, appImage: app });
     const r = run(join(written[0], 'launch.sh'), 'waitforexitandrun', {
-      SteamAppId: '3067520',
+      SteamAppId: ID,
       LD_LIBRARY_PATH: '/steam/ubuntu12_32/steam-runtime/pinned_libs_64',
       LD_PRELOAD: '/steam/ubuntu12_64/gameoverlayrenderer.so',
     });
@@ -262,7 +268,7 @@ describe('the Linux compatibility tool', () => {
       expect(r.status).toBe(0);
       expect(r.stdout + r.stderr).toBe('');
     }
-    expect(run(script, 'run', { STEAM_COMPAT_APP_ID: '0' }).stderr).toContain('only plays Ultima V');
+    expect(run(script, 'run', { STEAM_COMPAT_APP_ID: '0' }).stderr).toContain(`only plays ${GAME}`);
   });
 
   it('runs the Flatpak by its id, with no sandbox switch (the Flatpak keeps its own)', () => {
@@ -270,8 +276,8 @@ describe('the Linux compatibility tool', () => {
     const bin = join(home, 'bin');
     fs.mkdirSync(bin);
     fs.writeFileSync(join(bin, 'flatpak'), '#!/bin/sh\necho "flatpak $*"\n', { mode: 0o755 });
-    const r = run(join(written[0], 'launch.sh'), 'run', { SteamAppId: '3067520', PATH: `${bin}:/usr/bin:/bin` });
-    expect(r.stdout).toBe('flatpak run com.synthwavepixel.ultima5\n');
+    const r = run(join(written[0], 'launch.sh'), 'run', { SteamAppId: ID, PATH: `${bin}:/usr/bin:/bin` });
+    expect(r.stdout).toBe(`flatpak run ${brand.appId}\n`);
   });
 
   it('is brought up to date where it is installed, and is not put where it is not', () => {
@@ -279,10 +285,8 @@ describe('the Linux compatibility tool', () => {
     const { written, native } = setUp({ flatpak: false, appImage: app });
     const script = join(written[0], 'launch.sh');
     fs.writeFileSync(script, '#!/bin/sh\nexec /old/engine\n', { mode: 0o755 });
-    expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: app })).toEqual([
-      join(native, 'compatibilitytools.d', 'ultima5_sp'),
-    ]);
-    expect(run(script, 'run', { SteamAppId: '3067520' }).stdout).toBe('ran 3067520: --no-sandbox\n');
+    expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: app })).toEqual([join(native, 'compatibilitytools.d', TOOL)]);
+    expect(run(script, 'run', { SteamAppId: ID }).stdout).toBe(`ran ${ID}: --no-sandbox\n`);
     // A second start changes nothing.
     expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: app })).toEqual([]);
     const bare = temp();
@@ -301,23 +305,23 @@ describe('the Linux compatibility tool', () => {
     const after = program('new', 'after');
     const { written, native } = setUp({ flatpak: false, appImage: before });
     const script = join(written[0], 'launch.sh');
-    const ran = () => run(script, 'run', { SteamAppId: '3067520' }).stdout;
+    const ran = () => run(script, 'run', { SteamAppId: ID }).stdout;
     expect(refreshCompatTool(fs, [native], { flatpak: true, appImage: null })).toEqual([]);
     expect(ran()).toBe('before\n');
     expect(refreshCompatTool(fs, [native], { flatpak: false, appImage: after })).toHaveLength(1);
     expect(ran()).toBe('after\n');
     const flat = setUp({ flatpak: true, appImage: null });
     expect(refreshCompatTool(fs, [flat.native], { flatpak: false, appImage: after })).toEqual([]);
-    expect(fs.readFileSync(join(flat.written[0], 'launch.sh'), 'utf8')).toContain('flatpak run com.synthwavepixel.ultima5');
+    expect(fs.readFileSync(join(flat.written[0], 'launch.sh'), 'utf8')).toContain(`flatpak run ${brand.appId}`);
   });
 
   it("exports Ultima V's app id before starting the engine, so the engine knows it is Steam's game", () => {
     const { written } = setUp({ flatpak: false, appImage: fakeProgram(join(temp(), 'ultima5-sp-x86_64.AppImage')) });
     const script = fs.readFileSync(join(written[0], 'launch.sh'), 'utf8');
-    expect(script).toContain('export SteamAppId=3067520');
+    expect(script).toContain(`export SteamAppId=${ID}`);
     // Steam may name the game only in SteamGameId; the engine still gets SteamAppId.
-    const r = run(join(written[0], 'launch.sh'), 'run', { SteamGameId: '3067520' });
-    expect(r.stdout).toBe('ran 3067520: --no-sandbox\n');
+    const r = run(join(written[0], 'launch.sh'), 'run', { SteamGameId: ID });
+    expect(r.stdout).toBe(`ran ${ID}: --no-sandbox\n`);
   });
 
   it('takes the app id from whichever of its names Steam gives', () => {
@@ -326,7 +330,7 @@ describe('the Linux compatibility tool', () => {
     const { written } = setUp({ flatpak: false, appImage: link });
     const script = join(written[0], 'launch.sh');
     for (const name of ['SteamAppId', 'SteamGameId', 'STEAM_COMPAT_APP_ID']) {
-      expect(run(script, 'run', { [name]: '3067520' }).status, name).toBe(0);
+      expect(run(script, 'run', { [name]: ID }).status, name).toBe(0);
       expect(run(script, 'run', { [name]: '22320' }).status, name).not.toBe(0);
     }
   });
@@ -335,7 +339,7 @@ describe('the Linux compatibility tool', () => {
     const { written, home } = setUp({ flatpak: true, appImage: null });
     const bin = join(home, 'bin');
     fs.mkdirSync(bin);
-    const env = { SteamAppId: '3067520', FLATPAK_ID: 'com.valvesoftware.Steam', PATH: `${bin}:/usr/bin:/bin` };
+    const env = { SteamAppId: ID, FLATPAK_ID: 'com.valvesoftware.Steam', PATH: `${bin}:/usr/bin:/bin` };
     fs.writeFileSync(join(bin, 'flatpak-spawn'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
     const refused = run(join(written[0], 'launch.sh'), 'run', env);
     expect(refused.status).not.toBe(0);
@@ -344,14 +348,14 @@ describe('the Linux compatibility tool', () => {
     const allowed = run(join(written[0], 'launch.sh'), 'run', env);
     expect(allowed.status).toBe(0);
     expect(allowed.stdout).toContain('spawn --host');
-    expect(allowed.stdout).toContain('--env=SteamAppId=3067520');
-    expect(allowed.stdout).toContain('flatpak run com.synthwavepixel.ultima5');
+    expect(allowed.stdout).toContain(`--env=SteamAppId=${ID}`);
+    expect(allowed.stdout).toContain(`flatpak run ${brand.appId}`);
   });
 
   it('is removed from every Steam', () => {
     const { native, absent } = setUp({ flatpak: true, appImage: null });
     removeCompatTool(fs, [native, absent]);
-    expect(fs.existsSync(join(native, 'compatibilitytools.d', 'ultima5_sp'))).toBe(false);
+    expect(fs.existsSync(join(native, 'compatibilitytools.d', TOOL))).toBe(false);
   });
 });
 
@@ -384,8 +388,8 @@ describe("the Mac's cache entry", () => {
       ...where,
       home,
       cacheFile: join(steamRoot, 'appcache', 'appinfo.vdf'),
-      manifest: join(steamRoot, 'steamapps', 'appmanifest_3067520.acf'),
-      launcher: join(steamRoot, 'steamapps', 'common', 'Ultima V', LAUNCHER),
+      manifest: join(steamRoot, 'steamapps', `appmanifest_${ID}.acf`),
+      launcher: join(steamRoot, 'steamapps', 'common', DIR, LAUNCHER),
     };
   }
   const closed = { steamRunning: () => false, quitSteam: () => Promise.resolve() };
@@ -431,14 +435,14 @@ describe("the Mac's cache entry", () => {
     expect(await macSetup({ ...m, ...closed })).toBe('done');
 
     const manifest = parseVdf(fs.readFileSync(m.manifest, 'utf8')) as { AppState: Record<string, string> };
-    expect(manifest.AppState).toEqual({ appid: '3067520', Universe: '1', StateFlags: '1026', installdir: 'Ultima V' });
+    expect(manifest.AppState).toEqual({ appid: ID, Universe: '1', StateFlags: '1026', installdir: DIR });
 
     const plist = fs.readFileSync(join(m.launcher, 'Contents', 'Info.plist'), 'utf8');
     const exeName = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(plist)![1];
     const script = join(m.launcher, 'Contents', 'MacOS', exeName);
     expect(fs.statSync(script).mode & 0o111).toBe(0o111);
-    const ran = spawnSync(script, ['-steam'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin', SteamAppId: '3067520' } });
-    expect(ran.stdout).toBe('ran 3067520: -steam\n');
+    const ran = spawnSync(script, ['-steam'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin', SteamAppId: ID } });
+    expect(ran.stdout).toBe(`ran ${ID}: -steam\n`);
 
     const kept = appEntry(readAppinfo(fs.readFileSync(m.keptOriginal)), ULTIMA)!;
     expect(kept.kv).toEqual(original.kv);
@@ -461,15 +465,15 @@ describe("the Mac's cache entry", () => {
     expect(await macSetup({ ...m, ...closed })).toBe('done');
     const plist = fs.readFileSync(join(m.launcher, 'Contents', 'Info.plist'), 'utf8');
     expect(plist).toMatch(/<key>CFBundleIconFile<\/key>\s*<string>icon<\/string>/);
-    expect(plist).toMatch(/<key>CFBundleDisplayName<\/key>\s*<string>Ultima V Enhanced Edition<\/string>/);
+    expect(plist).toMatch(new RegExp(`<key>CFBundleDisplayName</key>\\s*<string>${brand.edition}</string>`));
     expect(fs.readFileSync(join(m.launcher, 'Contents', 'Resources', 'icon.icns')).equals(icon)).toBe(true);
   });
 
   it("leaves a manifest Steam wrote alone, and puts the launcher in the game's folder", async () => {
     const m = mac();
-    const theirs = '"AppState"\n{\n\t"appid"\t\t"3067520"\n\t"StateFlags"\t\t"4"\n\t"installdir"\t\t"Ultima V"\n}\n';
+    const theirs = `"AppState"\n{\n\t"appid"\t\t"${ID}"\n\t"StateFlags"\t\t"4"\n\t"installdir"\t\t"${DIR}"\n}\n`;
     fs.writeFileSync(m.manifest, theirs);
-    fs.mkdirSync(join(m.steamRoot, 'steamapps', 'common', 'Ultima V'), { recursive: true });
+    fs.mkdirSync(join(m.steamRoot, 'steamapps', 'common', DIR), { recursive: true });
     expect(await macSetup({ ...m, ...closed })).toBe('done');
     expect(fs.existsSync(m.launcher)).toBe(true);
     expect(await macRestore({ ...m, ...closed })).toBe('done');
@@ -485,7 +489,7 @@ describe("the Mac's cache entry", () => {
     const exeName = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(plist)![1];
     const ran = spawnSync(join(m.launcher, 'Contents', 'MacOS', exeName), [], { encoding: 'utf8' });
     expect(ran.status).toBe(1);
-    expect(ran.stderr).toContain(`Ultima V's engine app is not at ${m.appExe}: reinstall it, or remove Steam setup`);
+    expect(ran.stderr).toContain(`${GAME}'s engine app is not at ${m.appExe}: reinstall it, or remove Steam setup`);
   });
 
   it('reports an account without Ultima V, or an entry it does not know, and writes nothing', async () => {
@@ -555,7 +559,7 @@ describe("the Mac's cache entry", () => {
   it('re-applies the cache edit from such a copy, but keeps the launcher on the installed app', async () => {
     const m = mac();
     expect(await macSetup({ ...m, ...closed })).toBe('done');
-    const script = join(m.launcher, 'Contents', 'MacOS', 'Ultima V SP');
+    const script = join(m.launcher, 'Contents', 'MacOS', brand.steam.launcher);
     const aimed = fs.readFileSync(script, 'utf8');
     fs.writeFileSync(
       m.cacheFile,
@@ -639,22 +643,22 @@ describe("Linux's cloud rules", () => {
         { appid: OTHER, kv: otherKv() },
       ]),
     );
-    const folder = join(root, 'steamapps', 'common', 'Ultima V');
+    const folder = join(root, 'steamapps', 'common', DIR);
     fs.mkdirSync(folder, { recursive: true });
-    fs.writeFileSync(join(root, 'steamapps', 'appmanifest_3067520.acf'), '"AppState"\n{\n\t"installdir"\t\t"Ultima V"\n}\n');
+    fs.writeFileSync(join(root, 'steamapps', `appmanifest_${ID}.acf`), `"AppState"\n{\n\t"installdir"\t\t"${DIR}"\n}\n`);
     const entries: string[] = [];
     for (const { key, text, mark, synced = true } of saves) {
-      const name = `ultima5-sp/${ACCOUNT}/${encodeURIComponent(key)}/SAVED.GAM`;
+      const name = `${brand.steam.saves}/${ACCOUNT}/${encodeURIComponent(key)}/${brand.steam.saveFile}`;
       fs.mkdirSync(join(folder, ...name.split('/').slice(0, -1)), { recursive: true });
       fs.writeFileSync(join(folder, ...name.split('/')), text);
       const sha = synced ? sha1(text) : sha1('something else');
       entries.push(`\t"${name}"\n\t{\n\t\t"root"\t\t"1"\n\t\t"sha"\t\t"${sha}"\n\t\t"platformstosync2"\t\t"${mark}"\n\t}`);
     }
-    const remote = join(root, 'userdata', ACCOUNT, '3067520');
+    const remote = join(root, 'userdata', ACCOUNT, ID);
     fs.mkdirSync(remote, { recursive: true });
-    fs.writeFileSync(join(remote, 'remotecache.vdf'), `"3067520"\n{\n\t"ChangeNumber"\t\t"4"\n${entries.join('\n')}\n}\n`);
+    fs.writeFileSync(join(remote, 'remotecache.vdf'), `"${ID}"\n{\n\t"ChangeNumber"\t\t"4"\n${entries.join('\n')}\n}\n`);
     const save = (key: string): string =>
-      fs.readFileSync(join(folder, 'ultima5-sp', ACCOUNT, encodeURIComponent(key), 'SAVED.GAM'), 'utf8');
+      fs.readFileSync(join(folder, brand.steam.saves, ACCOUNT, encodeURIComponent(key), brand.steam.saveFile), 'utf8');
     return { fs, roots: [root, join(root, '..', 'missing')], cacheFile: join(root, 'appcache', 'appinfo.vdf'), save };
   }
   const ultimaIn = (file: string) => appEntry(readAppinfo(fs.readFileSync(file)), ULTIMA)!;

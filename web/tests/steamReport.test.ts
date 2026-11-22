@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { mask, report } from '../../desktop/steamReport.cjs';
 import type { ReportFacts } from '../../desktop/steamReport.cjs';
 
@@ -41,8 +42,8 @@ describe('the Steam report', () => {
     expect(lines).toContain('Steam folder: ~/.local/share/Steam');
     expect(lines).toContain('Library: ~/.local/share/Steam');
     expect(lines).toContain('Library: /run/media/<user>/SD/SteamLibrary');
-    expect(lines).toContain('Ultima V: installed in /run/media/<user>/SD/SteamLibrary/steamapps/common/Ultima V');
-    expect(lines).toContain('Ultima V files: complete');
+    expect(lines).toContain(`${brand.name}: installed in /run/media/<user>/SD/SteamLibrary/steamapps/common/Ultima V`);
+    expect(lines).toContain(`${brand.name} files: complete`);
     expect(lines).toContain("Game files from: Steam's library");
     expect(lines).toContain('Account: known');
     expect(lines).toContain('Play from Steam, launch line: on; last result: done');
@@ -61,7 +62,7 @@ describe('the Steam report', () => {
   it('says the Mac cache entry on a Mac', () => {
     const mac = report({ ...facts, system: 'mac', macPatched: true, macReapplied: false }).split('\n');
     expect(mac).toContain('Play from Steam, Mac launch entry: off; last result: none');
-    expect(mac).toContain('Ultima V cache entry patched: yes');
+    expect(mac).toContain(`${brand.name} cache entry patched: yes`);
     expect(mac).toContain('Cache entry re-applied at this start: no');
     expect(mac).not.toContain('Play from Steam, launch line: on; last result: done');
   });
@@ -83,9 +84,9 @@ describe('the Steam report', () => {
     });
     expect(text).toContain('Started by Steam: no');
     expect(text).toContain('Steam folder: not found');
-    expect(text).toContain('Ultima V: not installed');
+    expect(text).toContain(`${brand.name}: not installed`);
     expect(text).toContain('Game files from: unknown');
-    expect(text).not.toContain('Ultima V files');
+    expect(text).not.toContain(`${brand.name} files`);
     expect(text).toContain('Account: unknown');
     expect(text).toContain('Cloud saves: not available');
     expect(text).not.toContain("Characters in Steam's folder");
@@ -94,7 +95,7 @@ describe('the Steam report', () => {
   it("says where the files came from, and whether Steam's copy is whole", () => {
     expect(report({ ...facts, filesFrom: 'installer' })).toContain('Game files from: the installer');
     expect(report({ ...facts, filesFrom: 'unknown' })).toContain('Game files from: unknown');
-    expect(report({ ...facts, filesFrom: 'steam', steamMissing: 2 })).toContain('Ultima V files: incomplete (2 missing)');
+    expect(report({ ...facts, filesFrom: 'steam', steamMissing: 2 })).toContain(`${brand.name} files: incomplete (2 missing)`);
   });
 
   it('keeps the player out of it', () => {

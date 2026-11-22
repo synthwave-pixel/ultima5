@@ -1,6 +1,7 @@
 // web/tests/appinfo.test.ts
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { appEntry, isMacPatched, macPatch, readAppinfo, writeAppinfo, type KvNode } from '../../desktop/appinfo.cjs';
 
 const MAP = 0;
@@ -8,7 +9,7 @@ const STR = 1;
 const INT32 = 2;
 const ULTIMA = 3067520;
 const OTHER = 22320;
-const LAUNCHER = 'Ultima V SP.app';
+const LAUNCHER = `${brand.steam.launcher}.app`;
 
 const str = (key: string, value: string): KvNode => [STR, key, value];
 const map = (key: string, value: KvNode[]): KvNode => [MAP, key, value];
@@ -130,7 +131,7 @@ describe.each([28, 29] as const)('appinfo v%i', (version) => {
     const mine = launch.filter((n) => (n[2] as KvNode[]).some((c) => c[1] === 'executable' && c[2] === LAUNCHER));
     expect(mine).toHaveLength(1);
     expect(mine[0][2]).toEqual([
-      str('description', 'Ultima V Enhanced Edition'),
+      str('description', brand.edition),
       str('executable', LAUNCHER),
       str('type', 'default'),
       map('config', [str('oslist', 'macos')]),

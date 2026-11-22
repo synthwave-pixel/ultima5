@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import brand from '../../desktop/brand.cjs';
 import { builderConfig } from '../../desktop/builderConfig.cjs';
 import { flatpakRepoFiles, metainfo } from '../../desktop/metainfo.cjs';
+import { gameFolderName } from '../../desktop/scan.cjs';
 
 const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
   build: Record<string, Record<string, unknown>>;
@@ -43,6 +44,23 @@ describe("Ultima V's desktop brand", () => {
     });
     expect(brand.scan.marker).toBe('DATA.OVL');
     expect(String(brand.scan.folder)).toBe('/^(u5|ultima[\\s_-]*(5|v))(?![a-z0-9])/i');
+  });
+
+  it('knows Ultima V by its folders’ names, and no other game', () => {
+    for (const n of [
+      'u5',
+      'U5',
+      'ultima5',
+      'ULTIMA5',
+      'Ultima 5',
+      'Ultima V',
+      'Ultima V™.app',
+      'Ultima_V',
+      'ultima-5',
+      'Ultima V - Warriors of Destiny',
+    ])
+      expect(gameFolderName(n), n).toBe(true);
+    for (const n of ['Ultima VI', 'Ultima 4', 'u6', 'Documents', 'ultima55', 'u5x']) expect(gameFolderName(n), n).toBe(false);
   });
 
   it("fills electron-builder's config as package.json had it before", () => {

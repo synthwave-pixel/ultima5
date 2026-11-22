@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { loadAll, removeKey, writable, writeKey } from '../../desktop/steamSaves.cjs';
 
 const asRoot = process.getuid?.() === 0; // root writes where a mode says no: the permission test means nothing
@@ -25,10 +26,10 @@ describe("Steam launch's save files", () => {
     }
   });
 
-  it('writes a key as SAVED.GAM in a folder of its own and reads it back', () => {
+  it("writes a key as the game's save file (SAVED.GAM) in a folder of its own and reads it back", () => {
     const dir = temp();
     expect(writeKey(dir, 'ultima5.char.k3x.last', '{"a":"é"}')).toBe(true);
-    expect(readFileSync(join(dir, 'ultima5.char.k3x.last', 'SAVED.GAM'), 'utf8')).toBe('{"a":"é"}');
+    expect(readFileSync(join(dir, 'ultima5.char.k3x.last', brand.steam.saveFile), 'utf8')).toBe('{"a":"é"}');
     expect(loadAll(dir)).toEqual({ 'ultima5.char.k3x.last': '{"a":"é"}' });
   });
 
@@ -37,7 +38,7 @@ describe("Steam launch's save files", () => {
     writeKey(dir, 'ultima5.save', 'one');
     writeKey(dir, 'ultima5.save', 'two');
     expect(loadAll(dir)).toEqual({ 'ultima5.save': 'two' });
-    expect(readdirSync(join(dir, 'ultima5.save'))).toEqual(['SAVED.GAM']);
+    expect(readdirSync(join(dir, 'ultima5.save'))).toEqual([brand.steam.saveFile]);
   });
 
   it('makes the folder it is given when it is not there yet', () => {

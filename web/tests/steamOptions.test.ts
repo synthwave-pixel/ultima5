@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import {
   cloudRuleMessage,
   readOptions,
@@ -138,7 +139,7 @@ describe('switching a Steam option', () => {
     expect(r.on).toBe(false);
     expect(r.options.playLine).toBe(false);
     expect(r.options.results.playLine).toBe('on: no launch line');
-    expect(r.message).toContain('installed Ultima V');
+    expect(r.message).toContain(`installed ${brand.name}`);
   });
 
   it('installs and removes the compatibility tool, saying to restart Steam', async () => {

@@ -2,12 +2,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { clashMessage, noteMode } from '../../desktop/instanceMode.cjs';
 
 /** Which way the running copy was started (desktop/instanceMode.cjs). */
 describe('the running copy’s mode', () => {
-  const OUTSIDE = 'Ultima V is already open outside Steam. Close it, then press Play in Steam again.';
-  const THROUGH = 'Ultima V is already open through Steam. Close it there first.';
+  const OUTSIDE = `${brand.name} is already open outside Steam. Close it, then press Play in Steam again.`;
+  const THROUGH = `${brand.name} is already open through Steam. Close it there first.`;
   const withDir = (run: (file: string) => void) => {
     const dir = mkdtempSync(join(tmpdir(), 'u5-instance-'));
     try {
