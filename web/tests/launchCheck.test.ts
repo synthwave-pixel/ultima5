@@ -1,17 +1,18 @@
 // web/tests/launchCheck.test.ts
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { lineState } from '../../desktop/launchCheck.cjs';
 
 const EXE = '/home/me/My Games/ultima5-sp-x86_64.AppImage';
 const EXPECTED = `"${EXE}" %command%`;
 
-/** A localconfig.vdf with Ultima V's entry holding `options`; `key` and `path` let a test vary the case. */
+/** A localconfig.vdf with the game's entry (brand.cjs: Ultima V's) holding `options`; `key` and `path` let a test vary the case. */
 const config = (
   options: string | null,
   { path = ['UserLocalConfigStore', 'Software', 'Valve', 'Steam', 'apps'], opt = 'LaunchOptions' } = {},
 ): string => {
   const escaped = options === null ? '' : `\t"${opt}"\t\t"${options.replace(/[\\"]/g, '\\$&')}"\n`;
-  const inner = `"3067520"\n{\n\t"cloud"\t\t"x"\n${escaped}}\n`;
+  const inner = `"${brand.steam.appId}"\n{\n\t"cloud"\t\t"x"\n${escaped}}\n`;
   return `${path.map((p) => `"${p}"\n{\n`).join('')}${inner}${path.map(() => '}\n').join('')}`;
 };
 

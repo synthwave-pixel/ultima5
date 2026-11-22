@@ -6,9 +6,10 @@
 // copy the lock has refused.
 const { mkdirSync, readFileSync, renameSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
+const { name: GAME } = require('./brand.cjs');
 
-const OUTSIDE = 'Ultima V is already open outside Steam. Close it, then press Play in Steam again.';
-const THROUGH = 'Ultima V is already open through Steam. Close it there first.';
+const OUTSIDE = `${GAME} is already open outside Steam. Close it, then press Play in Steam again.`;
+const THROUGH = `${GAME} is already open through Steam. Close it there first.`;
 
 /** The running copy's mode written to `file` ({ steam }), whole or not at all. A failure to write is not fatal. */
 function noteMode(file, steam) {

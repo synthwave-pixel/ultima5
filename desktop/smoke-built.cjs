@@ -5,7 +5,9 @@ const { spawnSync } = require('node:child_process');
 const { existsSync, readdirSync, rmSync } = require('node:fs');
 const { join } = require('node:path');
 const dist = join(__dirname, 'dist');
-const product = require('./package.json').build.productName;
+const product = require('./brand.cjs').name;
+// The Linux executable is named for the package (electron-builder's executableName).
+const executable = require('./package.json').name;
 const exe = (() => {
   if (process.platform === 'darwin') {
     const dir = readdirSync(dist).find((d) => d.startsWith('mac'));
@@ -14,7 +16,7 @@ const exe = (() => {
   const dir = readdirSync(dist).find((d) => d.endsWith('-unpacked'));
   if (!dir) return undefined;
   const files = readdirSync(join(dist, dir));
-  const name = process.platform === 'win32' ? `${product}.exe` : files.find((f) => f === 'ultima5-desktop' || f === product);
+  const name = process.platform === 'win32' ? `${product}.exe` : files.find((f) => f === executable || f === product);
   return name && join(dist, dir, name);
 })();
 if (!exe || !existsSync(exe)) {

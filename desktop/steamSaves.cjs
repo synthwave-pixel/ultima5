@@ -6,8 +6,10 @@
 const fs = require('node:fs');
 const { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } = fs;
 const { dirname, join } = require('node:path');
+const brand = require('./brand.cjs');
 
-const FILE = 'SAVED.GAM';
+/** The one name every save file has (brand.cjs: Ultima V's SAVED.GAM). */
+const FILE = brand.steam.saveFile;
 
 /** The folder a key lives in, or null for a name that would be the directory itself or its parent. */
 function folderFor(dir, key) {

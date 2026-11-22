@@ -9,8 +9,10 @@
 // the portable .exe would leave an empty Ultima V folder in AppData that it never uses.
 const { cpSync, existsSync, mkdirSync, renameSync, rmSync } = require('node:fs');
 const { basename, join } = require('node:path');
+const brand = require('./brand.cjs');
 
-const DATA = 'Ultima V Data';
+/** The folder beside the .exe: Ultima V Data (brand.cjs). */
+const DATA = brand.portableData;
 
 /** Chromium's own throwaway files: caches, crash reports, the running instance's locks. */
 const throwaway = (name) => /cache/i.test(name) || name === 'Crashpad' || name.startsWith('Singleton') || name === 'lockfile';

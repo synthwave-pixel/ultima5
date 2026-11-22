@@ -9,6 +9,7 @@
 const { mkdirSync, readFileSync, renameSync, writeFileSync } = require('node:fs');
 const { dirname } = require('node:path');
 const { OVERRIDE } = require('./steamSetup.cjs');
+const { name: GAME, edition } = require('./brand.cjs');
 
 const fresh = () => ({
   playLine: false,
@@ -66,16 +67,16 @@ const HAS = { windows: ['playLine', 'macSync'], linux: ['playLine', 'compatTool'
 
 /** The launch line's way into Steam, and on Linux the Proton that makes Steam download a Windows game at all. */
 const pasteLine = (system) =>
-  'Copy the launch line, then in Steam: Ultima V > Properties > General > Launch Options, and paste it.' +
+  `Copy the launch line, then in Steam: ${GAME} > Properties > General > Launch Options, and paste it.` +
   (system === 'linux' ? ' Choose Proton under Compatibility too, so Steam downloads the game.' : '');
 
 /** What giving Linux's cloud rules MacOS came to (steamSetup.cjs linuxCloudSetup, main.cjs), said to the player. */
 const CLOUD_SAYS = {
   done: "Nothing to do: Steam already sends this computer's Cloud saves to a Mac too.",
-  restarted: "Done, and Steam restarted. Steam sends this computer's Cloud saves to a Mac too, from when Ultima V next closes in Steam.",
+  restarted: `Done, and Steam restarted. Steam sends this computer's Cloud saves to a Mac too, from when ${GAME} next closes in Steam.`,
   'steam-running': "Steam didn't quit, so Cloud saves made here don't reach a Mac yet. Quit Steam, then open this app.",
-  'not-owned': "Steam doesn't list Ultima V here.",
-  fixed: "Done. Steam sends this computer's Cloud saves to a Mac too, from when Ultima V next closes in Steam.",
+  'not-owned': `Steam doesn't list ${GAME} here.`,
+  fixed: `Done. Steam sends this computer's Cloud saves to a Mac too, from when ${GAME} next closes in Steam.`,
   'not-here': 'Open this app outside Steam, from the desktop (on a Steam Deck, Desktop Mode), to do this.',
   flatpak: 'Use the AppImage to fix this: the Flatpak cannot close Steam.',
 };
@@ -91,13 +92,13 @@ const cloudRuleMessage = (result) => CLOUD_SAYS[result] ?? `That didn't work: ${
 
 /** What a Mac's setup or removal came to (steamSetup.cjs macSetup, macRestore), said to the player. */
 const MAC_SAYS = {
-  'on:done': 'Done. Open Steam: it downloads Ultima V if it has not yet, and Play starts this engine.',
+  'on:done': `Done. Open Steam: it downloads ${GAME} if it has not yet, and Play starts this engine.`,
   'on:steam-running': STEAM_STILL_RUNNING,
-  'on:not-owned': "Steam doesn't list Ultima V on this Mac. Check this Steam account has it, then try again.",
-  'on:app-not-in-place': 'Move Ultima V to Applications and open it from there, then turn this on again.',
-  'off:done': 'Removed. Ultima V in Steam is as Steam had it.',
+  'on:not-owned': `Steam doesn't list ${GAME} on this Mac. Check this Steam account has it, then try again.`,
+  'on:app-not-in-place': `Move ${GAME} to Applications and open it from there, then turn this on again.`,
+  'off:done': `Removed. ${GAME} in Steam is as Steam had it.`,
   'off:steam-running': STEAM_STILL_RUNNING,
-  'off:kept-unusable': "The copy of Steam's own settings for Ultima V kept at setup is damaged, so they were left as they are.",
+  'off:kept-unusable': `The copy of Steam's own settings for ${GAME} kept at setup is damaged, so they were left as they are.`,
 };
 
 /**
@@ -135,7 +136,7 @@ async function switchOption({ options, name, on, system, account, now, failed, e
     if (name === 'playLine') {
       if (!on) {
         o.lineOnAt = 0;
-        return done(false, 'done', 'In Steam: Ultima V > Properties > General > Launch Options, and clear the line. Nothing else was changed.');
+        return done(false, 'done', `In Steam: ${GAME} > Properties > General > Launch Options, and clear the line. Nothing else was changed.`);
       }
       const line = effects.line();
       if (line === null) {
@@ -143,8 +144,8 @@ async function switchOption({ options, name, on, system, account, now, failed, e
           false,
           'no launch line',
           system === 'windows'
-            ? 'The portable Ultima V has no fixed place for Steam to start it from. Play from Steam with the installed Ultima V.'
-            : "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.",
+            ? `The portable ${GAME} has no fixed place for Steam to start it from. Play from Steam with the installed ${GAME}.`
+            : `Steam can't start this copy of ${GAME}. Use the Flatpak or the AppImage.`,
         );
       }
       // From now until Steam writes its settings again, a line not there is one not seen yet (main.cjs steamLineState).
@@ -154,10 +155,10 @@ async function switchOption({ options, name, on, system, account, now, failed, e
     if (name === 'compatTool') {
       if (!on) {
         effects.removeTool();
-        return done(false, 'done', 'Removed. Restart Steam, and choose another compatibility tool for Ultima V, or none.');
+        return done(false, 'done', `Removed. Restart Steam, and choose another compatibility tool for ${GAME}, or none.`);
       }
       const written = effects.installTool();
-      if (written === null) return done(false, 'no launcher', "Steam can't start this copy of Ultima V. Use the Flatpak or the AppImage.");
+      if (written === null) return done(false, 'no launcher', `Steam can't start this copy of ${GAME}. Use the Flatpak or the AppImage.`);
       if (written.length === 0) return done(false, 'no Steam folder', "Steam isn't here. Install Steam and start it once, then try again.");
       const flathub = written.some((dir) => dir.includes('com.valvesoftware.Steam'));
       // The game's cloud rules given MacOS too, with macOS Sync on, where Steam may be closed from here; the tool is on
@@ -172,7 +173,7 @@ async function switchOption({ options, name, on, system, account, now, failed, e
         true,
         'done',
         (cloud === 'restarted' ? 'Done, and Steam restarted. In' : 'Done. Restart Steam, then in') +
-          ' Ultima V > Properties > Compatibility, choose Ultima V Enhanced Edition. Steam downloads the game, and Play starts this engine.' +
+          ` ${GAME} > Properties > Compatibility, choose ${edition}. Steam downloads the game, and Play starts this engine.` +
           (cloud === 'steam-running' ? ` ${CLOUD_SAYS['steam-running']}` : '') +
           (flathub ? ` Steam from Flathub needs this run once too: ${OVERRIDE}` : ''),
       );

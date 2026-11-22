@@ -2,12 +2,16 @@
 // short list of roots - beside the app, home, where GOG and the Linux launchers install games - and under each the
 // folders named like the game (u5, Ultima 5, Ultima V™.app ...), searched a few levels down for DATA.OVL. Steam's
 // libraries' games (steamapps/common) are roots too, last, so a Steam copy is found whether or not the start took it.
-// Each folder found is read for the files the page asks for and the Upgrade's music; the page checks them and installs.
+// Each folder found is read for the files the page asks for, and those its pattern names (Ultima V's: the Upgrade's
+// music); the page checks them and installs.
 const { readdirSync, readFileSync, statSync, existsSync } = require('node:fs');
 const { basename, dirname, join, sep } = require('node:path');
+const brand = require('./brand.cjs');
 
-/** A folder named like the game: u5, ultima5, Ultima 5, Ultima V, with a trademark sign, an extension or more after. */
-const GAME = /^(u5|ultima[\s_-]*(5|v))(?![a-z0-9])/i;
+/** A folder named like the game (brand.cjs: u5, ultima5, Ultima 5, Ultima V, with a trademark sign, an extension or more after). */
+const GAME = brand.scan.folder;
+/** The file a copy is known by (brand.cjs: DATA.OVL). */
+const MARKER = brand.scan.marker.toUpperCase();
 const gameFolderName = (name) => GAME.test(name);
 
 /**
@@ -63,32 +67,44 @@ const children = (dir) => {
     return [];
   }
 };
-const hasDataOvl = (dir) => {
+const hasMarker = (dir) => {
   try {
-    return readdirSync(dir).some((n) => n.toUpperCase() === 'DATA.OVL');
+    return readdirSync(dir).some((n) => n.toUpperCase() === MARKER);
   } catch {
     return false;
   }
 };
 
-/** Folders under `dir`, `dir` included, holding DATA.OVL, at most `depth` levels down; nearest first. */
+/** Folders under `dir`, `dir` included, holding the marker, at most `depth` levels down; nearest first. */
 function gameFolders(dir, depth) {
   const out = [];
   let level = [dir];
   for (let d = 0; d <= depth && level.length; d++) {
-    for (const f of level) if (hasDataOvl(f)) out.push(f);
+    for (const f of level) if (hasMarker(f)) out.push(f);
     level = level.flatMap(children);
   }
   return out;
 }
 
+/** The page's pattern for the other files to read (gameFiles.ts GameSpec.extra), ignoring case; null for none, or none that parses. */
+function extraPattern(extra) {
+  if (typeof extra !== 'string' || extra === '') return null;
+  try {
+    return new RegExp(extra, 'i');
+  } catch {
+    return null;
+  }
+}
+
 /**
- * The files of copy `dir` the page wants (by name, any case) and the Upgrade's music, one level of folders down. An
- * entry or a folder that cannot be read (a broken link, a folder without permission) is skipped, so the copy is still
- * reported with the files that did read; the page checks what it is given.
+ * The files of copy `dir` the page wants (by name, any case) and those whose path from `dir` (folders joined by `/`)
+ * the page's pattern `extra` matches, one level of folders down. An entry or a folder that cannot be read (a broken
+ * link, a folder without permission) is skipped, so the copy is still reported with the files that did read; the page
+ * checks what it is given.
  */
-function readCopy(dir, wanted) {
+function readCopy(dir, wanted, extra) {
   const want = new Set(wanted.map((n) => n.toUpperCase()));
+  const also = extraPattern(extra);
   const files = [];
   const take = (folder, prefix) => {
     let names;
@@ -101,7 +117,7 @@ function readCopy(dir, wanted) {
       const p = join(folder, n);
       if (isDir(p)) {
         if (!prefix) take(p, `${n}/`);
-      } else if (want.has(n.toUpperCase()) || n.toUpperCase().endsWith('.XMI')) {
+      } else if (want.has(n.toUpperCase()) || also?.test(prefix + n)) {
         try {
           files.push({ path: prefix + n, data: new Uint8Array(readFileSync(p)) });
         } catch {
@@ -153,9 +169,10 @@ function shown(path, home) {
 
 /**
  * Every copy under `roots`: the game-named folders at a root or up to two levels under it, searched four deep. With
- * `home` a copy under it is named ~/...; with `platform` 'darwin' the home folders macOS guards are not listed.
+ * `home` a copy under it is named ~/...; with `platform` 'darwin' the home folders macOS guards are not listed. Each is
+ * read for the `wanted` names and the files `extra` names (readCopy).
  */
-function findCopies(rootList, wanted, { platform, home } = {}) {
+function findCopies(rootList, wanted, { platform, home, extra } = {}) {
   const seen = new Set();
   const copies = [];
   for (const root of rootList) {
@@ -168,15 +185,15 @@ function findCopies(rootList, wanted, { platform, home } = {}) {
       for (const found of gameFolders(folder, 4)) {
         if (seen.has(found)) continue;
         seen.add(found);
-        copies.push({ where: shown(found, home), files: readCopy(found, wanted) });
+        copies.push({ where: shown(found, home), files: readCopy(found, wanted, extra) });
       }
   }
   return copies;
 }
 
 /** This machine's roots: the app's own place (its .app bundle's folder on macOS; the portable .exe's own folder, not
- * the temporary one it runs from), home, every fixed drive, and `steamLibraries`. */
-function scanForGameFiles(wanted, steamLibraries = []) {
+ * the temporary one it runs from), home, every fixed drive, and `steamLibraries`; each copy read as findCopies reads it. */
+function scanForGameFiles(wanted, steamLibraries = [], extra) {
   const { app } = require('electron');
   const exe = app.getPath('exe');
   const appDir =
@@ -185,7 +202,11 @@ function scanForGameFiles(wanted, steamLibraries = []) {
   const drives = process.platform === 'win32' ? 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => `${l}:`).filter((d) => existsSync(`${d}\\`)) : [];
   const platform = process.platform;
   const home = app.getPath('home');
-  return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children, steamLibraries }), wanted, { platform, home });
+  return findCopies(roots({ platform, home, env: process.env, appDir, drives, list: children, steamLibraries }), wanted, {
+    platform,
+    home,
+    extra,
+  });
 }
 
 module.exports = { gameFolderName, missingNames, roots, findCopies, readCopy, scanForGameFiles };

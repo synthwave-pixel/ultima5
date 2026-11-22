@@ -3,6 +3,8 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
+import { builderConfig } from '../../desktop/builderConfig.cjs';
 import {
   applyUpdate,
   checkForUpdates,
@@ -242,10 +244,11 @@ describe('the desktop app’s updates', () => {
 
   it('the AppImage’s file name carries no version, so an update overwrites it in place', () => {
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', '..', 'desktop', 'package.json'), 'utf8')) as {
-      build: { appImage: { artifactName: string } };
+      build: Record<string, unknown>;
     };
-    expect(pkg.build.appImage.artifactName).toBe('ultima5-sp-${arch}.${ext}');
-    expect(pkg.build.appImage.artifactName).not.toContain('${version}');
+    const { appImage } = builderConfig(pkg.build, '1.0.3');
+    expect(appImage.artifactName).toBe(`${brand.appImage}-\${arch}.\${ext}`);
+    expect(appImage.artifactName).not.toContain('${version}');
   });
 
   it('register no appimage-filename-updated handler: the AppImage keeps its path', async () => {

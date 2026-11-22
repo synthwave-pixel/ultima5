@@ -19,6 +19,7 @@
 const { createHash } = require('node:crypto');
 const fsp = require('node:fs/promises');
 const { join } = require('node:path');
+const brand = require('./brand.cjs');
 
 /** The artwork, by the name it has in build/steam/ and the suffix Steam gives it after the shortcut's id. */
 const ART = [
@@ -146,7 +147,7 @@ async function placeNew(file, data) {
   } catch (e) {
     if (e.code !== 'ENOENT') throw e;
   }
-  const aside = `${file}.ultima5-${process.pid}-${Date.now()}.tmp`;
+  const aside = `${file}.${brand.id}-${process.pid}-${Date.now()}.tmp`;
   try {
     await fsp.writeFile(aside, data, { flag: 'wx' });
     try {
@@ -185,7 +186,7 @@ async function replaceOurs(file, data, ours) {
   }
   if (now === fingerprint(data)) return 'current';
   if (!ours.includes(now)) return 'kept';
-  const aside = `${file}.ultima5-${process.pid}-${Date.now()}.tmp`;
+  const aside = `${file}.${brand.id}-${process.pid}-${Date.now()}.tmp`;
   try {
     await fsp.writeFile(aside, data, { flag: 'wx' });
     try {

@@ -6,6 +6,7 @@
 // only ever added to, so every other app's indexes stay right. Nothing here touches a file: callers hand in a buffer
 // and get one back, and edit the cache only while Steam is not running.
 const { createHash } = require('node:crypto');
+const { edition } = require('./brand.cjs');
 
 const V28 = 0x07564428;
 const V29 = 0x07564429;
@@ -246,7 +247,7 @@ function macPatch(kv, launcherName) {
   if (!ours) {
     launch.push(
       map(nextKey(launch), [
-        str('description', 'Ultima V Enhanced Edition'),
+        str('description', edition),
         str('executable', launcherName),
         str('type', 'default'),
         map('config', [str('oslist', 'macos')]),

@@ -106,6 +106,11 @@ export interface GameSpec {
   /** Files read at fixed offsets: one that is none of the known copies is the wrong version, not merely changed. */
   mustBeKnown?: readonly string[];
   keep(path: string, base: string): string | null;
+  /**
+   * The files the app's scans read beside the required names, so that `keep` is given them: a pattern (a RegExp's
+   * source, matched ignoring case) for a file's path from the copy's folder, folders joined by `/`. None: the names alone.
+   */
+  extra?: string;
 }
 
 /** Ultima V: its data files, DATA.OVL's one size, and the Upgrade's MIDI music (*.XMI) kept by name. */
@@ -114,6 +119,7 @@ export const ULTIMA5: GameSpec = {
   exactSize: EXACT_SIZE,
   known: KNOWN,
   keep: (_path, base) => (base.endsWith('.XMI') ? base : null),
+  extra: '\\.XMI$',
 };
 
 let inUse: GameSpec = ULTIMA5;

@@ -7,12 +7,14 @@
 # release it deploys. Without one it is downloaded from the newest full GitHub release (a redeploy).
 #
 # Needs flatpak, ostree and gpg, and gh with GH_TOKEN when downloading; FLATPAK_GPG_KEY (the armoured private key) and
-# FLATPAK_GPG_KEY_ID; and SITE, the site's address without a trailing slash.
+# FLATPAK_GPG_KEY_ID; and SITE, the site's address without a trailing slash. Needs node too: the game's names, and the
+# two files' text, are metainfo.cjs's (from brand.cjs).
 # Usage: flatpak-repo.sh <output directory> [bundle.flatpak]
 set -euo pipefail
 out=${1:?usage: flatpak-repo.sh <output directory> [bundle.flatpak]}
 : "${FLATPAK_GPG_KEY:?}" "${FLATPAK_GPG_KEY_ID:?}" "${SITE:?}"
-repo=${GITHUB_REPOSITORY:-synthwave-pixel/ultima5}
+here=$(cd "$(dirname "$0")" && pwd)
+repo=${GITHUB_REPOSITORY:-$(node -p "require('$here/brand.cjs').repo")}
 work=$(mktemp -d)
 
 gpg --batch --quiet --import <<<"$FLATPAK_GPG_KEY"
@@ -27,7 +29,8 @@ fi
 
 ostree init --repo="$work/repo" --mode=archive-z2
 flatpak build-import-bundle --gpg-sign="$FLATPAK_GPG_KEY_ID" "$work/repo" "$bundle"
-flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" --generate-static-deltas --prune --title="Ultima V" "$work/repo"
+title=$(node "$here/metainfo.cjs" title)
+flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" --generate-static-deltas --prune --title="$title" "$work/repo"
 
 ref=$(ostree refs --repo="$work/repo" | grep '^app/' | head -1) # app/<id>/<arch>/<branch>
 id=$(echo "$ref" | cut -d/ -f2)
@@ -36,25 +39,5 @@ key=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w0)
 
 mkdir -p "$out"
 cp -R "$work/repo/." "$out/"
-cat >"$out/ultima5.flatpakrepo" <<EOF
-[Flatpak Repo]
-Title=Ultima V
-Url=$SITE/flatpak/
-Homepage=$SITE/
-Comment=Ultima V: Warriors of Destiny
-Description=A new engine for Ultima V: Warriors of Destiny; plays the DOS game's files, installed by the player.
-GPGKey=$key
-EOF
-cat >"$out/ultima5.flatpakref" <<EOF
-[Flatpak Ref]
-Title=Ultima V
-Name=$id
-Branch=$branch
-Url=$SITE/flatpak/
-SuggestRemoteName=ultima5
-Homepage=$SITE/
-IsRuntime=false
-RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
-GPGKey=$key
-EOF
+node "$here/metainfo.cjs" repo-files "$out" "$SITE" "$id" "$branch" "$key"
 echo "flatpak repository: $ref from $(basename "$bundle") in $out"

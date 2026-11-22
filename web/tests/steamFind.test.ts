@@ -2,7 +2,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import brand from '../../desktop/brand.cjs';
 import { accountId, APP_ID, findGame, isSteamLaunch, libraryPaths, parseVdf, saveDir, steamRoots } from '../../desktop/steam.cjs';
+
+/** The game's app id and its folder in a library (brand.cjs): Ultima V's 3067520, Ultima V. */
+const ID = brand.steam.appId;
+const DIR = brand.steam.installDir;
 
 // The shape of a Mac's libraryfolders.vdf: the Steam folder itself, then a library on an external disk.
 const LIBRARIES = `"libraryfolders"
@@ -14,7 +19,7 @@ const LIBRARIES = `"libraryfolders"
 \t\t"apps"
 \t\t{
 \t\t\t"22320"\t\t"1142479546"
-\t\t\t"3067520"\t\t"33458335"
+\t\t\t"${ID}"\t\t"33458335"
 \t\t}
 \t}
 \t"1"
@@ -30,7 +35,7 @@ const LIBRARIES = `"libraryfolders"
 `;
 const MAC_ROOT = '/Users/will/Library/Application Support/Steam';
 const EXTERNAL = '/Volumes/Endurance/SteamLibrary';
-const MANIFEST = '"AppState"\n{\n\t"appid"\t\t"3067520"\n\t"installdir"\t\t"Ultima V"\n}\n';
+const MANIFEST = `"AppState"\n{\n\t"appid"\t\t"${ID}"\n\t"installdir"\t\t"${DIR}"\n}\n`;
 const LOGINS = `"users"
 {
 \t"76561197992819951"
@@ -54,9 +59,9 @@ const disk = (files: Record<string, string>, dirs: string[] = []) => ({
 
 describe("Steam's libraries, Ultima V's folder and the account that launched it", () => {
   it('knows a Steam launch of Ultima V and nothing else', () => {
-    expect(APP_ID).toBe('3067520');
-    expect(isSteamLaunch({ SteamAppId: '3067520' })).toBe(true);
-    expect(isSteamLaunch({ SteamGameId: '3067520' })).toBe(true);
+    expect(APP_ID).toBe(ID);
+    expect(isSteamLaunch({ SteamAppId: ID })).toBe(true);
+    expect(isSteamLaunch({ SteamGameId: ID })).toBe(true);
     expect(isSteamLaunch({})).toBe(false);
     expect(isSteamLaunch({ SteamAppId: '22320' })).toBe(false);
     expect(isSteamLaunch({ SteamGameId: '12345678901234567890' })).toBe(false);
@@ -66,7 +71,7 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     const vdf = parseVdf(LIBRARIES) as Record<string, Record<string, Record<string, unknown>>>;
     expect(vdf.libraryfolders['0'].path).toBe(MAC_ROOT);
     expect(vdf.libraryfolders['1'].path).toBe(EXTERNAL);
-    expect((vdf.libraryfolders['0'].apps as Record<string, string>)['3067520']).toBe('33458335');
+    expect((vdf.libraryfolders['0'].apps as Record<string, string>)[ID]).toBe('33458335');
     expect(parseVdf('"a"\n{\n"path"\t"C:\\\\Program Files (x86)\\\\Steam"\n"q"\t"say \\"hi\\""\n}')).toEqual({
       a: { path: 'C:\\Program Files (x86)\\Steam', q: 'say "hi"' },
     });
@@ -100,20 +105,20 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
     const d = disk(
       {
         [`${MAC_ROOT}/steamapps/libraryfolders.vdf`]: LIBRARIES,
-        [`${EXTERNAL}/steamapps/appmanifest_3067520.acf`]: MANIFEST,
+        [`${EXTERNAL}/steamapps/appmanifest_${ID}.acf`]: MANIFEST,
       },
-      [`${EXTERNAL}/steamapps/common/Ultima V`],
+      [`${EXTERNAL}/steamapps/common/${DIR}`],
     );
     expect(findGame([MAC_ROOT], d.read, d.exists)).toEqual({
       library: EXTERNAL,
-      folder: `${EXTERNAL}/steamapps/common/Ultima V`,
+      folder: `${EXTERNAL}/steamapps/common/${DIR}`,
     });
   });
 
   it('says which library was expected when the folder is gone, and null with no manifest', () => {
     const files = {
       [`${MAC_ROOT}/steamapps/libraryfolders.vdf`]: LIBRARIES,
-      [`${EXTERNAL}/steamapps/appmanifest_3067520.acf`]: MANIFEST,
+      [`${EXTERNAL}/steamapps/appmanifest_${ID}.acf`]: MANIFEST,
     };
     const gone = disk(files);
     expect(findGame([MAC_ROOT], gone.read, gone.exists)).toEqual({ missing: EXTERNAL });
@@ -124,10 +129,10 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
 
   it('joins a Windows library with its own separator', () => {
     const lib = 'D:\\Games\\SteamLibrary';
-    const d = disk({ [`${lib}\\steamapps\\appmanifest_3067520.acf`]: MANIFEST }, [`${lib}\\steamapps\\common\\Ultima V`]);
+    const d = disk({ [`${lib}\\steamapps\\appmanifest_${ID}.acf`]: MANIFEST }, [`${lib}\\steamapps\\common\\${DIR}`]);
     expect(findGame([lib], d.read, d.exists)).toEqual({
       library: lib,
-      folder: `${lib}\\steamapps\\common\\Ultima V`,
+      folder: `${lib}\\steamapps\\common\\${DIR}`,
     });
   });
 
@@ -210,7 +215,8 @@ describe("Steam's libraries, Ultima V's folder and the account that launched it"
   });
 
   it('keeps saves in <game folder>/ultima5-sp/<account id>', () => {
-    expect(saveDir('/lib/steamapps/common/Ultima V', '1234')).toBe(join('/lib/steamapps/common/Ultima V', 'ultima5-sp', '1234'));
-    expect(saveDir('/lib/x', '1234')).toMatch(/ultima5-sp[\\/]1234$/);
+    expect(saveDir('/lib/steamapps/common/Ultima V', '1234')).toBe(join('/lib/steamapps/common/Ultima V', brand.steam.saves, '1234'));
+    expect(saveDir('/lib/x', '1234')).toBe(join('/lib/x', brand.steam.saves, '1234'));
+    expect(brand.steam.saves).toBe(`${brand.id}-sp`);
   });
 });

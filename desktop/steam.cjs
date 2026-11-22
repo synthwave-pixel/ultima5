@@ -1,9 +1,10 @@
 // Finding Steam, Ultima V's folder in it, and the account that launched the game. Everything here is pure: the
 // files it needs are read through functions the caller hands in, so it can be tried without a Steam.
 const { join } = require('node:path');
+const brand = require('./brand.cjs');
 
-/** Ultima V's app id in Steam. */
-const APP_ID = '3067520';
+/** The game's app id in Steam (brand.cjs). */
+const APP_ID = brand.steam.appId;
 
 /** A launch from Steam is one where Steam says the game is Ultima V; any other id, or none, is not. */
 function isSteamLaunch(env) {
@@ -132,9 +133,9 @@ function latest(entries, field) {
   return timed[0][0];
 }
 
-/** Where a Steam launch keeps its saves: the game's folder, then ultima5-sp, then the account that launched it. */
+/** Where a Steam launch keeps its saves: the game's folder, then its saves folder (ultima5-sp), then the account that launched it. */
 function saveDir(gameFolder, account) {
-  return join(gameFolder, 'ultima5-sp', account);
+  return join(gameFolder, brand.steam.saves, account);
 }
 
 module.exports = { saveDir, APP_ID, isSteamLaunch, parseVdf, steamRoots, libraryPaths, findGame, accountId };

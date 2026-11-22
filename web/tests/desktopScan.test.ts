@@ -3,7 +3,12 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findCopies, gameFolderName, roots } from '../../desktop/scan.cjs';
+import brand from '../../desktop/brand.cjs';
+import { findCopies, gameFolderName, readCopy, roots } from '../../desktop/scan.cjs';
+
+/** A folder named like the game, and the file a copy is known by (brand.cjs: Ultima V's folder in Steam, DATA.OVL). */
+const G = brand.steam.installDir;
+const M = brand.scan.marker;
 
 describe('the desktop scan', () => {
   const made: string[] = [];
@@ -17,21 +22,10 @@ describe('the desktop scan', () => {
     for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
   });
 
-  it('knows the game by its folders’ names', () => {
-    for (const n of [
-      'u5',
-      'U5',
-      'ultima5',
-      'ULTIMA5',
-      'Ultima 5',
-      'Ultima V',
-      'Ultima V™.app',
-      'Ultima_V',
-      'ultima-5',
-      'Ultima V - Warriors of Destiny',
-    ])
-      expect(gameFolderName(n), n).toBe(true);
-    for (const n of ['Ultima VI', 'Ultima 4', 'u6', 'Documents', 'ultima55', 'u5x']) expect(gameFolderName(n), n).toBe(false);
+  it('knows the game by its folder in Steam (brand.cjs), and nothing else by it', () => {
+    expect(gameFolderName(G)).toBe(true);
+    expect(gameFolderName(`${G}™.app`)).toBe(true);
+    for (const n of ['Documents', 'Other Game', 'notes']) expect(gameFolderName(n), n).toBe(false);
   });
 
   it('looks beside the app, at home, then where GOG and the launchers put games, per platform', () => {
@@ -74,12 +68,12 @@ describe('the desktop scan', () => {
 
   it("finds Steam's copy in a library's games, through the real folders", () => {
     const library = temp();
-    const game = join(library, 'steamapps', 'common', 'Ultima V');
+    const game = join(library, 'steamapps', 'common', G);
     mkdirSync(join(game, 'DOSBOX'), { recursive: true });
-    writeFileSync(join(game, 'DATA.OVL'), 'data');
+    writeFileSync(join(game, M), 'data');
     const got = findCopies(
       roots({ platform: 'linux', home: '/nowhere', env: {}, appDir: '/nowhere', drives: [], steamLibraries: [library] }),
-      ['DATA.OVL'],
+      [M],
     );
     expect(got.map((c) => c.where)).toEqual([game]);
   });
@@ -105,10 +99,10 @@ describe('the desktop scan', () => {
 
   it('finds a copy in a Lutris-style and a Heroic-style Wine prefix, through the real folders', () => {
     const home = temp();
-    const drive = (prefix: string): string => join(home, prefix, 'drive_c', 'GOG Games', 'Ultima 5');
+    const drive = (prefix: string): string => join(home, prefix, 'drive_c', 'GOG Games', G);
     for (const prefix of ['Games/lutris-game', 'Games/Heroic/Prefixes/default/gogprefix', 'Games/Heroic/Prefixes/plainprefix']) {
       mkdirSync(drive(prefix), { recursive: true });
-      writeFileSync(join(drive(prefix), 'DATA.OVL'), 'data');
+      writeFileSync(join(drive(prefix), M), 'data');
     }
     const at = { platform: 'linux', home, env: {}, appDir: join(home, 'app'), drives: [] as string[] };
     const list = (dir: string): string[] => {
@@ -118,7 +112,7 @@ describe('the desktop scan', () => {
         return [];
       }
     };
-    const got = findCopies(roots({ ...at, list }), ['DATA.OVL']);
+    const got = findCopies(roots({ ...at, list }), [M]);
     expect(got.map((c) => c.where).sort()).toEqual(
       ['Games/lutris-game', 'Games/Heroic/Prefixes/default/gogprefix', 'Games/Heroic/Prefixes/plainprefix'].map(drive).sort(),
     );
@@ -127,57 +121,83 @@ describe('the desktop scan', () => {
   it('does not list inside the home folders macOS guards, but does inside the others', () => {
     const home = temp();
     for (const dir of ['Desktop', 'Documents', 'Downloads', 'Library', 'Pictures', 'Movies', 'Music', 'Stuff']) {
-      mkdirSync(join(home, dir, 'u5'), { recursive: true });
-      writeFileSync(join(home, dir, 'u5', 'DATA.OVL'), 'data');
+      mkdirSync(join(home, dir, G), { recursive: true });
+      writeFileSync(join(home, dir, G, M), 'data');
     }
-    mkdirSync(join(home, 'u5'), { recursive: true });
-    writeFileSync(join(home, 'u5', 'DATA.OVL'), 'data');
-    const mac = findCopies([home], ['DATA.OVL'], { platform: 'darwin', home });
-    expect(mac.map((c) => c.where).sort()).toEqual([`~${sep}Stuff${sep}u5`, `~${sep}u5`].sort());
+    mkdirSync(join(home, G), { recursive: true });
+    writeFileSync(join(home, G, M), 'data');
+    const mac = findCopies([home], [M], { platform: 'darwin', home });
+    expect(mac.map((c) => c.where).sort()).toEqual([`~${sep}Stuff${sep}${G}`, `~${sep}${G}`].sort());
     // Elsewhere nothing is guarded, and a root that is not home is listed in full even on macOS.
-    expect(findCopies([home], ['DATA.OVL'], { platform: 'linux', home })).toHaveLength(9);
-    expect(findCopies([join(home, 'Desktop')], ['DATA.OVL'], { platform: 'darwin', home })).toHaveLength(1);
+    expect(findCopies([home], [M], { platform: 'linux', home })).toHaveLength(9);
+    expect(findCopies([join(home, 'Desktop')], [M], { platform: 'darwin', home })).toHaveLength(1);
   });
 
   it('names a copy under home as ~/..., and leaves any other as it is', () => {
     const home = temp();
     const other = temp();
-    for (const dir of [join(home, 'u5'), join(other, 'u5')]) {
+    for (const dir of [join(home, G), join(other, G)]) {
       mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, 'DATA.OVL'), 'data');
+      writeFileSync(join(dir, M), 'data');
     }
-    const got = findCopies([home, other], ['DATA.OVL'], { platform: 'linux', home });
-    expect(got.map((c) => c.where)).toEqual([`~${sep}u5`, join(other, 'u5')]);
-    expect(got[0].files.map((f) => f.path)).toEqual(['DATA.OVL']);
+    const got = findCopies([home, other], [M], { platform: 'linux', home });
+    expect(got.map((c) => c.where)).toEqual([`~${sep}${G}`, join(other, G)]);
+    expect(got[0].files.map((f) => f.path)).toEqual([M]);
   });
 
-  it('finds a copy in a u5 folder at home and in the GOG macOS app, reading only the files wanted', () => {
+  it('finds a copy in a folder named like the game at home and in the GOG macOS app, reading only the files wanted', () => {
     const home = temp();
     const put = (path: string, text = 'x'): void => {
       mkdirSync(join(home, path, '..'), { recursive: true });
       writeFileSync(join(home, path), text);
     };
-    put('u5/DATA.OVL', 'data');
-    put('u5/TILES.16');
-    put('u5/upgrade/MUSIC.XMI');
-    put('u5/SAVED.GAM.bak'); // not wanted
-    put('Apps/Ultima V™.app/Contents/Resources/game/DATA.OVL');
-    put('Apps/Ultima VI.app/Contents/Resources/game/DATA.OVL'); // not the game
-    put('Documents/notes/DATA.OVL'); // not a game folder's name
-    const got = findCopies([home, join(home, 'Apps')], ['DATA.OVL', 'TILES.16']);
-    expect(got.map((c) => c.where)).toEqual([join(home, 'u5'), join(home, 'Apps/Ultima V™.app/Contents/Resources/game')]);
-    expect(got[0].files.map((f) => f.path).sort()).toEqual(['DATA.OVL', 'TILES.16', 'upgrade/MUSIC.XMI']);
-    expect(new TextDecoder().decode(got[0].files.find((f) => f.path === 'DATA.OVL')!.data)).toBe('data');
+    put(`${G}/${M}`, 'data');
+    put(`${G}/TILES.16`);
+    put(`${G}/upgrade/MUSIC.XMI`);
+    put(`${G}/SAVED.GAM.bak`); // not wanted
+    put(`Apps/${G}™.app/Contents/Resources/game/${M}`);
+    put(`Apps/Other Game.app/Contents/Resources/game/${M}`); // not the game
+    put(`Documents/notes/${M}`); // not a game folder's name
+    const got = findCopies([home, join(home, 'Apps')], [M, 'TILES.16'], { extra: '\\.XMI$' });
+    expect(got.map((c) => c.where)).toEqual([join(home, G), join(home, `Apps/${G}™.app/Contents/Resources/game`)]);
+    expect(got[0].files.map((f) => f.path).sort()).toEqual([M, 'TILES.16', 'upgrade/MUSIC.XMI']);
+    expect(new TextDecoder().decode(got[0].files.find((f) => f.path === M)!.data)).toBe('data');
+  });
+
+  it('reads beside the names only the files the page says, by their path in the copy', () => {
+    const home = temp();
+    const put = (path: string): void => {
+      mkdirSync(join(home, path, '..'), { recursive: true });
+      writeFileSync(join(home, path), 'x');
+    };
+    for (const f of ['A.DAT', 'B.DAT', 'sub/C.DAT', 'sub/D.XMI', 'other/E.DAT', 'sub/deeper/F.DAT']) put(f);
+    const read = (extra?: string) =>
+      readCopy(home, ['A.DAT'], extra)
+        .map((f) => f.path)
+        .sort();
+    expect(read('^sub/[^/]+\\.dat$')).toEqual(['A.DAT', 'sub/C.DAT']);
+    expect(read('\\.XMI$')).toEqual(['A.DAT', 'sub/D.XMI']);
+    expect(read()).toEqual(['A.DAT']);
+    expect(read('(')).toEqual(['A.DAT']); // no pattern: the names alone
+    const [copy] = findCopies([home], ['A.DAT'], { extra: '^other/' });
+    expect(copy).toBeUndefined(); // home is no game folder
+    mkdirSync(join(home, G));
+    put(`${G}/${M}`);
+    put(`${G}/upgrade/MUSIC.XMI`);
+    put(`${G}/upgrade/MUSIC.TXT`);
+    const found = findCopies([home], [M], { extra: '\\.XMI$' });
+    expect(found[0].files.map((f) => f.path).sort()).toEqual([M, 'upgrade/MUSIC.XMI']);
+    expect(findCopies([home], [M])[0].files.map((f) => f.path)).toEqual([M]);
   });
 
   it('still reports a copy whose entries cannot be read, with the files that did', () => {
     const home = temp();
-    mkdirSync(join(home, 'u5'), { recursive: true });
-    writeFileSync(join(home, 'u5/DATA.OVL'), 'data');
-    symlinkSync(join(home, 'missing'), join(home, 'u5/BAD.XMI')); // a broken link, named like the music
-    symlinkSync(join(home, 'missing'), join(home, 'u5/TILES.16')); // and like a wanted file
-    const got = findCopies([home], ['DATA.OVL', 'TILES.16']);
-    expect(got.map((c) => c.where)).toEqual([join(home, 'u5')]);
-    expect(got[0].files.map((f) => f.path)).toEqual(['DATA.OVL']);
+    mkdirSync(join(home, G), { recursive: true });
+    writeFileSync(join(home, `${G}/${M}`), 'data');
+    symlinkSync(join(home, 'missing'), join(home, `${G}/BAD.XMI`)); // a broken link, named like the music
+    symlinkSync(join(home, 'missing'), join(home, `${G}/TILES.16`)); // and like a wanted file
+    const got = findCopies([home], [M, 'TILES.16'], { extra: '\\.XMI$' });
+    expect(got.map((c) => c.where)).toEqual([join(home, G)]);
+    expect(got[0].files.map((f) => f.path)).toEqual([M]);
   });
 });

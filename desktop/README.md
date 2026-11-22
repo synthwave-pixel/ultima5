@@ -29,7 +29,10 @@ the same for the web game added to its address.
 The installer's Scan for game files... finds the game on the disk: `scan.cjs`
 looks beside the app, at home and where GOG and the Linux launchers install
 games (folders named like `u5`, `Ultima 5` or `Ultima V™.app`, a few levels
-down), and `preload.cjs` is the page's one bridge to it.
+down, holding `DATA.OVL`: `brand.cjs`'s pattern and marker), and reads the
+files the page names and those its pattern says (`GameSpec.extra` in
+`web/src/install/gameFiles.ts`: Ultima V's, the Upgrade's `*.XMI`);
+`preload.cjs` is the page's one bridge to it.
 
 Playing Steam's Ultima V with this engine (see
 [Steam](../docs/steam.md)) is a few modules:
@@ -57,9 +60,33 @@ run number as the patch in Actions, or a timestamped pre-release
 (`1.0.0-dev.20260915.2214`) for a build made anywhere else;
 `BUILD_VERSION` overrides both. Dev builds use up run numbers as releases
 do, so every build is numbered above the last; the builds must stay in
-this one workflow, as another would count from 1. `npm run dist` passes
-the version to electron-builder as metadata, so `package.json` is never
-edited. macOS builds are Apple Silicon only.
+this one workflow, as another would count from 1. `npm run dist` hands
+electron-builder a config of its own for the build, so `package.json` is
+never edited: its `build`, filled with the game's names and ids
+(`builderConfig.cjs`) and the version. macOS builds are Apple Silicon only.
+
+The game's names and ids are `brand.cjs`'s, in one place: its id (the
+page's storage prefix), name, full title, app id, repository, the global
+its running page sets, the Flatpak's description, its Steam app id,
+install folder and save file, and the scan's folder pattern and marker;
+and the names derived from those as this engine gives them (`Ultima V
+Enhanced Edition`, the AppImage's and the Steam saves' `ultima5-sp`, the
+tool's `ultima5_sp`, the Mac launcher's `Ultima V SP.app` and its bundle
+id, the artifacts' `Ultima-V`, the site's address). Every module reads
+them there, and `builderConfig.cjs` fills electron-builder's app id,
+product name, artifact names, `publish`, Mac usage strings, Linux menu
+entry, AppImage name and Flatpak metainfo from them. Another game on this
+engine changes `brand.cjs`'s values, and `package.json`'s `name`,
+`productName`, `description` and `repository` to match
+(`desktopBrand.test.ts` checks they do; `brandOf` refuses a value that
+would break a file it goes into), and no module here; its art is its own
+to replace (`build/icons/`, `build/steam/` and `steamArt.cjs`'s `SHIPPED`
+fingerprints of it), and the metainfo's category and content rating
+stay a role-playing game's. `desktopBrand.ultima5.test.ts` pins Ultima V's. The workflows take the
+site's path and the artifacts' names from the repository's name. The
+internal names no player sees stay whatever the game: `u5native`,
+`ULTIMA5_SMOKE`, and the `app://ultima5` host (the page's origin, which
+holds a player's storage).
 
 A release's notes are GitHub's generated ones, the compare link with
 the release before it. The release job first runs `release-notes.cjs`,

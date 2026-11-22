@@ -29,7 +29,8 @@
 # app" in docs/advanced.md for what that means on each platform. The APK is signed with the committed sideload key unless the
 # ANDROID_KEYSTORE_* secrets provide a release key. Linux gets a Flatpak
 # bundle as well as an AppImage; the Linux job installs (and caches) the
-# runtimes it needs.
+# runtimes it needs. The site's path, its address and the artifacts' names are the repository's (ultima5: /ultima5/,
+# https://synthwave-pixel.github.io/ultima5, ultima5-<target>), so a fork named for another game builds as itself.
 name: Desktop and Android builds
 
 run-name: ${{ github.event_name == 'push' && 'Release' || inputs.android_only && 'Android dev build' || inputs.kind == 'dev-builds' && 'Dev builds' || inputs.kind == 'prerelease' && 'Pre-release' || 'Release' }} from ${{ github.ref_name }}
@@ -153,7 +154,7 @@ jobs:
         working-directory: desktop
       - uses: actions/upload-artifact@v7
         with:
-          name: ultima5-${{ matrix.target }}
+          name: ${{ github.event.repository.name }}-${{ matrix.target }}
           path: |
             desktop/dist/*.AppImage
             desktop/dist/*.flatpak
@@ -204,7 +205,7 @@ jobs:
         working-directory: mobile
       - uses: actions/upload-artifact@v7
         with:
-          name: ultima5-android
+          name: ${{ github.event.repository.name }}-android
           path: mobile/dist/*.apk
           if-no-files-found: error
 
@@ -232,7 +233,7 @@ jobs:
       # The build's mark: the commit built.
       - run: VITE_BUILD="$(git rev-parse --short=7 HEAD)" npm run build
         env:
-          VITE_BASE: /ultima5/
+          VITE_BASE: /${{ github.event.repository.name }}/
       # The Flatpak repository: this run's bundle, imported into a fresh OSTree repository and signed. A pruned
       # repository holds one commit anyway, so nothing needs keeping between deploys. flatpak and ostree come from the
       # cache kept per runner image, else the mirror (.github/actions/apt-install). Without the signing key the site
@@ -248,7 +249,7 @@ jobs:
       - if: steps.flatpak.outputs.serve == 'yes'
         uses: actions/download-artifact@v8
         with:
-          name: ultima5-linux
+          name: ${{ github.event.repository.name }}-linux
           path: linux
       - if: steps.flatpak.outputs.serve == 'yes'
         timeout-minutes: 20
@@ -261,7 +262,7 @@ jobs:
         env:
           FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
           FLATPAK_GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
-          SITE: https://synthwave-pixel.github.io/ultima5
+          SITE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -284,7 +285,7 @@ jobs:
       # The apps' builds only: the site's artifact (github-pages) is not a release file.
       - uses: actions/download-artifact@v8
         with:
-          pattern: ultima5-*
+          pattern: ${{ github.event.repository.name }}-*
           path: files
           merge-multiple: true
       - run: ls -la files
