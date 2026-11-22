@@ -58,6 +58,16 @@ describe('the page asks the game', () => {
     expect(codes(run.hold([PAD.Up, PAD.Right], 0, 1000)).slice(0, 6)).toEqual([K.Up, K.Up, K.Right, K.Right, K.Up, K.Up]);
   });
 
+  it('reads W and D as the ways they are in Controller input, for the two at a time', async () => {
+    const g = game();
+    g.sails = true;
+    g.options.input = 'controller';
+    const { screen } = await pageHarness(g);
+    const [W, D] = [0x77, 0x64];
+    const sent = [W, D, W, D, W, D].map((k, i) => screen.inTwos!.take(k, i > 0, i * 150));
+    expect(sent).toEqual([W, K.Up, K.Right, D, W, K.Up]);
+  });
+
   it("asks nothing of Ultima V's prompt names: a core game that names them gets none of the three", async () => {
     const g = new GameCore(anything as Platform);
     Object.assign(g, { inPlay: true, awaitingCommand: true, commandPrompt: 'outdoors', lastCommandPrompt: 'outdoors' });

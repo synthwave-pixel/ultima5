@@ -10,6 +10,7 @@
 import { storageKey } from '../brand.ts';
 import { INPUT_PACES } from './holds.ts';
 import type { GameCore } from '../game/gameCore.ts';
+import { asPad } from '../game/input.ts';
 import { LOST_FOCUS, Pad } from '../game/io.ts';
 import { effectsOf, saveOptions, soundtrackOf, type Options } from '../game/settings.ts';
 import { clearInstalled } from '../install/store.ts';
@@ -331,9 +332,11 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
   );
   wakeInput = () => gamepad.wake();
   // Two ways held go two at a time - turn, then sail - where the game says (GameCore.sailsInTwos: a ship, issue #40).
+  // W, A, S and D read as the ways they are in Controller input (input.ts asPad), before the rule.
   screen.inTwos = new InTwos(
     () => g.sailsInTwos,
     () => screen.holds.pace,
+    (k) => asPad(g, k),
   );
   const touch = new TouchPad({
     send,

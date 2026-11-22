@@ -374,7 +374,8 @@ describes how the Enhanced interface and the Remastered look are drawn.
   right, say) go in turn at the Max input pace, as two arrow keys held
   do on a keyboard: a near diagonal, with no rocking the d-pad. On a
   ship, whose turn spends the move, they go two at a time - turn, then
-  sail - on the d-pad and the keyboard alike.
+  sail - on the d-pad and the keyboard alike, the arrows or (in
+  Controller input) W, A, S and D.
 - **A harpsichord has a keyboard.** Play (beside one, on any side) or
   walking into it opens nine keys in a box over the map: left and right
   move along them, A plays the key, B gets up, and the number keys 1-9

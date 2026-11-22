@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { K } from '../src/game/io.ts';
+import { GameCore } from '../src/game/gameCore.ts';
+import { asPad } from '../src/game/input.ts';
+import { K, type Platform } from '../src/game/io.ts';
 import { InTwos } from '../src/ui/inTwos.ts';
 
 const PACE = 150;
@@ -64,6 +66,41 @@ describe('two ways held on a ship go two at a time', () => {
 
   it('leaves them in turn off a ship: on foot, a horse or the rowing boat turns without spending the move', () => {
     expect(through(inTurn(K.Up, K.Right, 6), false)).toEqual([K.Up, K.Right, K.Up, K.Right, K.Up, K.Right]);
+  });
+});
+
+/**
+ * W, A, S and D are the d-pad in Controller input (input.ts asPad), and held they repeat as the arrows do: read as ways
+ * only after the rule had run, two of them held on a ship only turned it, "Head North", "Head East", as the arrows
+ * did before it. Read as ways first, they go two at a time too. A key is given on as it came but where the rule puts
+ * another way in its place, so a letter stays a letter wherever a prompt reads it as one (W, A, S, D in Classic input).
+ */
+describe('W, A, S and D held, the keyboard read as a controller', () => {
+  const [W, D] = [0x77, 0x64];
+  const keyboard = (input: 'controller' | 'letters', on = true): { g: GameCore; twos: InTwos } => {
+    const g = new GameCore({ text: {} } as unknown as Platform);
+    g.options.input = input;
+    return {
+      g,
+      twos: new InTwos(
+        () => on,
+        () => PACE,
+        (k) => asPad(g, k),
+      ),
+    };
+  };
+
+  it('turn, then sail, as the arrows do: W and D held on a ship in Controller input', () => {
+    const { g, twos } = keyboard('controller');
+    const sent = inTurn(W, D, 8).map(([k, held, ms]) => twos.take(k, held, ms));
+    expect(sent.map((k) => asPad(g, k))).toEqual([K.Up, K.Up, K.Right, K.Right, K.Up, K.Up, K.Right, K.Right]);
+    expect(sent[0]).toBe(W); // a press as pressed
+  });
+
+  it('are letters with letter commands (Classic input), and go as typed off a ship', () => {
+    expect(inTurn(W, D, 6).map(([k, held, ms]) => keyboard('letters').twos.take(k, held, ms))).toEqual([W, D, W, D, W, D]);
+    const { twos } = keyboard('controller', false);
+    expect(inTurn(W, D, 6).map(([k, held, ms]) => twos.take(k, held, ms))).toEqual([W, D, W, D, W, D]);
   });
 });
 
