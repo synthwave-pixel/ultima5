@@ -475,7 +475,9 @@ describes how the Enhanced interface and the Remastered look are drawn.
 - **The log folds a move made again.** A step that prints what the step
   before it printed is counted on the line already there - "North (x6)",
   and under it "Blocked! (x6)" - instead of marching down the log; a turn
-  passed again folds the same way, "Pass (x3)". A line too long to take
+  passed again folds the same way, "Pass (x3)". A diagonal walk, two
+  ways in turn, folds into a line for each: "North (x3)" over "East
+  (x3)". A line too long to take
   its count is cut at its last whole word that fits ("Slow (x2)" for "Slow
   progress!"). Anything else said again is said again in full.
 - **Someone in the way steps aside.** In a settlement, one of its

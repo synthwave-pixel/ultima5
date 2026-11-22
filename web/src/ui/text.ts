@@ -13,7 +13,10 @@
  * that prints what the move before it printed folds into it with counts -
  * "North (x5)" over "Blocked! (x5)" - instead of marching down the window,
  * and a count of the steps taken. Only moves fold (the game says which,
- * `moving`); anything else said again is said again in full.
+ * `moving`); anything else said again is said again in full. A diagonal
+ * walk is two ways in turn - North, East, North, East - so a move that
+ * prints what the move two back printed folds into that one, while the two
+ * have gone strictly in turn: "North (x3)" over "East (x3)".
  *
  * The port's own too: a record of every cell the text layer has drawn - its
  * character, font, colours, underline, and the border's caps (printCap) -
@@ -116,6 +119,9 @@ interface Block {
   soft: boolean[];
 }
 
+/** A turn's block once printed: how often each line has repeated, and whether the turn was a move. */
+type Folded = Block & { counts: number[]; moving: boolean };
+
 export class Text {
   readonly windows: TextWindow[];
   current = 0;
@@ -153,7 +159,16 @@ export class Text {
    * Folding: the last turn's block of lines and how often each has repeated; this turn's lines; how many of this
    * turn's lines have folded into the last's so far; whether this turn has already gone its own way.
    */
-  private prev: (Block & { counts: number[]; moving: boolean }) | null = null;
+  private prev: Folded | null = null;
+  /**
+   * The block above the last one, while the two are moves gone strictly in turn (a diagonal walk): a move may fold into
+   * it when the last turn went the other way. Null when they are not.
+   */
+  private before: Folded | null = null;
+  /** Which of the two the last turn went into: true for the upper one (before). */
+  private wentBefore = false;
+  /** The block this turn is folding into (prev or before), chosen at its first line. */
+  private target: Folded | null = null;
   /** This turn is a move (the game says so as it begins one): it may fold into the last, if that was a move too. */
   moving = false;
   private turn: Block = { texts: [], rows: [], soft: [] };
@@ -281,9 +296,23 @@ export class Text {
     const prev = this.prev;
     const was = this.current;
     if (this.foldWindow >= 0) this.current = this.foldWindow;
-    if (this.folded > 0 && prev && this.folded < prev.texts.length) this.unfold(null);
+    const into = this.target;
+    if (this.folded > 0 && into && this.folded < into.texts.length) this.unfold(null);
     this.current = was;
-    if (this.turn.texts.length > 0) this.prev = { ...this.turn, counts: this.turn.texts.map(() => 1), moving: this.moving };
+    if (this.turn.texts.length > 0) {
+      // A turn of its own: the two at the bottom go strictly in turn if they are moves, the upper one a single turn.
+      const block: Folded = { ...this.turn, counts: this.turn.texts.map(() => 1), moving: this.moving };
+      const single = prev !== null && prev.moving && this.moving && prev.counts.every((n) => n === 1);
+      this.before = single ? prev : null;
+      this.prev = block;
+      this.wentBefore = false;
+    } else if (into === this.before) this.wentBefore = true;
+    else if (into === prev) {
+      // Folded into the last one: in turn if the turn before went into the upper one, else a repeat, which ends it.
+      if (!this.wentBefore) this.before = null;
+      this.wentBefore = false;
+    }
+    this.target = null;
     this.moving = false;
     this.turn = { texts: [], rows: [], soft: [] };
     this.folded = 0;
@@ -293,6 +322,8 @@ export class Text {
   /** Nothing to fold into: the window cleared, or the cursor put somewhere of the game's choosing. */
   private forget(): void {
     this.prev = null;
+    this.before = null;
+    this.target = null;
     this.turn = { texts: [], rows: [], soft: [] };
     this.folded = 0;
     this.broken = true;
@@ -368,10 +399,9 @@ export class Text {
    * the letters that fit where not even the first word does - but for a line a long message only wrapped from, whose
    * count is the one on the message's last.
    */
-  private counted(text: string, k: number): string {
-    const prev = this.prev!;
-    const count = prev.counts[k];
-    if (count < 2 || prev.soft[k]) return text;
+  private counted(block: Folded, text: string, k: number): string {
+    const count = block.counts[k];
+    if (count < 2 || block.soft[k]) return text;
     const tail = ` (x${count})`;
     const width = this.win.right - this.win.left + 1;
     const room = Math.max(0, width - tail.length);
@@ -391,13 +421,21 @@ export class Text {
     const w = this.win;
     const raw = this.rowText(w.y);
     const k = this.folded;
-    const prev = this.prev;
-    const below = prev !== null && (k > 0 || prev.rows[prev.rows.length - 1] === w.started - 1);
-    const same = k < (prev?.texts.length ?? 0) && prev!.texts[k] === raw && prev!.soft[k] === soft;
-    if (!this.broken && prev && this.moving && prev.moving && below && raw !== '' && same && this.rowAt(prev.rows[k]) >= 0) {
-      prev.counts[k]++;
+    const same = (b: Folded | null): b is Folded =>
+      b !== null && k < b.texts.length && b.texts[k] === raw && b.soft[k] === soft && this.rowAt(b.rows[k]) >= 0;
+    if (k === 0 && !this.broken && this.moving && raw !== '') {
+      // The last block, straight above; or, the last turn having gone the other way, the block above that one.
+      const last = this.prev;
+      const lastBelow = last !== null && last.moving && last.rows[last.rows.length - 1] === w.started - 1;
+      const up = this.before;
+      if (lastBelow && same(last)) this.target = last;
+      else if (lastBelow && !this.wentBefore && up && up.rows[up.rows.length - 1] === last.rows[0] - 1 && same(up)) this.target = up;
+    }
+    const into = this.target;
+    if (!this.broken && this.moving && raw !== '' && same(into)) {
+      into.counts[k]++;
       this.clearRow(w.y);
-      this.setRow(this.rowAt(prev.rows[k]), this.counted(raw, k));
+      this.setRow(this.rowAt(into.rows[k]), this.counted(into, raw, k));
       this.folded++;
       return true;
     }
@@ -411,14 +449,14 @@ export class Text {
 
   /** Take back the lines folded this turn and print them again as its own, ahead of `pending` (the line on the cursor's row). */
   private unfold(pending: string | null): void {
-    const prev = this.prev!;
+    const prev = this.target!;
     const w = this.win;
     const lines = prev.texts.slice(0, this.folded);
     const soft = prev.soft.slice(0, this.folded);
     lines.forEach((text, i) => {
       prev.counts[i]--;
       const y = this.rowAt(prev.rows[i]);
-      if (y >= 0) this.setRow(y, this.counted(text, i));
+      if (y >= 0) this.setRow(y, this.counted(prev, text, i));
     });
     this.folded = 0;
     lines.forEach((text, i) => {

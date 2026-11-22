@@ -87,7 +87,7 @@ describe('repeated turns', () => {
   it('leaves no empty line between turns', () => {
     const { g, p } = ready();
     turn(g, 'Pass');
-    turn(g, 'Look-North', 'A tree.');
+    other(g, 'Look-North', 'A tree.'); // Look is no move (only moves fold)
     turn(g, 'Pass');
     const rows = p.rows.slice(0xb, 0x18).map((r) => r.slice(0x18).join('').replaceAll('\x02', ' ').trimEnd());
     expect(rows.slice(0, 4)).toEqual([' Pass', ' Look-North', 'A tree.', ' Pass']);
@@ -121,6 +121,51 @@ describe('repeated turns', () => {
     turn(g, 'West', 'Very slow!');
     turn(g, 'West', 'Very slow!');
     expect(shown(p).slice(-2)).toEqual([' West (x2)', 'Very slow! (x2)']); // it fits whole
+  });
+
+  it('folds a diagonal walk, two ways in turn, into a line for each way', () => {
+    const { g, p } = ready();
+    for (let i = 0; i < 3; i++) {
+      turn(g, 'North');
+      turn(g, 'East');
+    }
+    expect(shown(p)).toEqual([' North (x3)', ' East (x3)']);
+    turn(g, 'North'); // part way through a pair: each way's count is its own
+    expect(shown(p)).toEqual([' North (x4)', ' East (x3)']);
+  });
+
+  it('folds a diagonal walk of turns of several lines: Very slow! counted with its way', () => {
+    const { g, p } = ready();
+    for (let i = 0; i < 2; i++) {
+      turn(g, 'North', 'Very slow!');
+      turn(g, 'East', 'Very slow!');
+    }
+    expect(shown(p)).toEqual([' North (x2)', 'Very slow! (x2)', ' East (x2)', 'Very slow! (x2)']);
+  });
+
+  it('folds two ways only while they go strictly in turn, so the log never reorders the walk', () => {
+    const { g, p } = ready();
+    turn(g, 'North');
+    turn(g, 'North');
+    turn(g, 'East');
+    turn(g, 'North'); // North, North, East, North: not one way then the other in turn
+    expect(shown(p)).toEqual([' North (x2)', ' East', ' North']);
+
+    const b = ready();
+    turn(b.g, 'North');
+    turn(b.g, 'East');
+    turn(b.g, 'East'); // a repeat breaks the turns
+    turn(b.g, 'North');
+    expect(shown(b.p)).toEqual([' North', ' East (x2)', ' North']);
+  });
+
+  it('folds two ways in turn only for moves', () => {
+    const { g, p } = ready();
+    turn(g, 'East');
+    other(g, 'Look-North', 'A tree.');
+    turn(g, 'East');
+    other(g, 'Look-North', 'A tree.');
+    expect(shown(p)).toEqual([' East', ' Look-North', 'A tree.', ' East', ' Look-North', 'A tree.']);
   });
 
   it('folds a turn passed again, as a move: Pass (x3)', async () => {
