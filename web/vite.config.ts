@@ -130,6 +130,7 @@ export default defineConfig(({ mode }) => ({
           'frames.html',
           'mapcells.html',
           'runes.html',
+          'controllers.html',
           'debug.html',
           'assets/tiles-*.js',
           'assets/deltas-*.js',
@@ -140,6 +141,7 @@ export default defineConfig(({ mode }) => ({
           'assets/dungeon-*.js',
           'assets/mapcells-*.js',
           'assets/runes-*.js',
+          'assets/controllers-*.js',
           'assets/debug-*.js',
         ],
         runtimeCaching: [
@@ -157,7 +159,7 @@ export default defineConfig(({ mode }) => ({
         ],
         navigateFallbackDenylist: [
           /\/flatpak\//,
-          /\/(tiles|deltas|grass|appearance|sounds|pictures|dungeon|frames|mapcells|runes|debug)\.html(\?|$)/,
+          /\/(tiles|deltas|grass|appearance|sounds|pictures|dungeon|frames|mapcells|runes|controllers|debug)\.html(\?|$)/,
         ],
       },
     }),
@@ -166,7 +168,7 @@ export default defineConfig(({ mode }) => ({
   server: { port: 5173, host: true },
   build: {
     target: 'es2022',
-    // The game, and the test pages (tiles, deltas, grass, appearance, sounds, pictures, dungeon, frames, mapcells, runes) and their index (debug), which nothing links to.
+    // The game, and the test pages (tiles, deltas, grass, appearance, sounds, pictures, dungeon, frames, mapcells, runes, controllers) and their index (debug), which nothing links to.
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
@@ -180,6 +182,7 @@ export default defineConfig(({ mode }) => ({
         frames: fileURLToPath(new URL('frames.html', import.meta.url)),
         mapcells: fileURLToPath(new URL('mapcells.html', import.meta.url)),
         runes: fileURLToPath(new URL('runes.html', import.meta.url)),
+        controllers: fileURLToPath(new URL('controllers.html', import.meta.url)),
         debug: fileURLToPath(new URL('debug.html', import.meta.url)),
       },
     },

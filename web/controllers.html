@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Controllers</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      A test page for a controller that stops answering or holds a button down; the game does not link to it. Every
+      slot of the browser's gamepad list, live, with the pad the game would read marked, and a log of what changed;
+      Copy report puts it all on the clipboard, for an issue. Nothing here needs the game's files.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #111;
+        color: #ddd;
+        font:
+          14px/1.45 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 6px;
+      }
+      p {
+        color: #aaa;
+        margin: 0 0 10px;
+      }
+      .bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        align-items: center;
+        margin: 12px 0;
+      }
+      button {
+        font: inherit;
+        padding: 4px 12px;
+      }
+      #status {
+        color: #e8c870;
+      }
+      #env {
+        font-size: 12px;
+        color: #888;
+      }
+      .slot {
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 10px 12px;
+        margin: 10px 0;
+        background: #181818;
+      }
+      .slot.read {
+        border-color: #e8c870;
+      }
+      .slot.still {
+        border-color: #e05050;
+      }
+      .slot h2 {
+        font-size: 14px;
+        margin: 0 0 4px;
+        overflow-wrap: anywhere;
+      }
+      .meta {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 8px;
+      }
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .buttons span {
+        min-width: 44px;
+        text-align: center;
+        font-size: 12px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        background: #262626;
+        color: #777;
+      }
+      .buttons span.on {
+        background: #e8c870;
+        color: #111;
+        font-weight: 600;
+      }
+      .axes {
+        display: grid;
+        grid-template-columns: 60px 1fr 52px;
+        gap: 2px 8px;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        max-width: 420px;
+      }
+      .track {
+        position: relative;
+        height: 8px;
+        background: #262626;
+        border-radius: 4px;
+      }
+      .track i {
+        position: absolute;
+        top: -2px;
+        width: 4px;
+        height: 12px;
+        margin-left: -2px;
+        background: #e8c870;
+      }
+      pre {
+        background: #0b0b0b;
+        border: 1px solid #262626;
+        padding: 8px;
+        font:
+          12px/1.4 ui-monospace,
+          Menlo,
+          monospace;
+        height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Controllers</h1>
+      <p>
+        Press a button on the controller to wake it, then play with it as usual - this page needs no game. When it stops answering, or a
+        button seems stuck, come back here (or leave this page open beside it), wait a few seconds, then press Copy report and paste the
+        report into the issue. A gold border marks the controller the game reads; a red one, a controller holding something down whose
+        reports have stopped.
+      </p>
+      <div class="bar">
+        <button type="button" id="copy">Copy report</button>
+        <button type="button" id="clear">Clear log</button>
+        <span id="status"></span>
+      </div>
+      <div id="env"></div>
+      <div id="slots"></div>
+      <pre id="log"></pre>
+    </main>
+    <script type="module" src="/src/dev/controllers.ts"></script>
+  </body>
+</html>

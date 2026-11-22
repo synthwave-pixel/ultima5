@@ -19,14 +19,18 @@
  * would otherwise hold a way for good.
  */
 
+/** The browser's list of pads as it gives it, or null where there is none or it may not be asked (a permissions policy). */
+export function browserPadList(): ArrayLike<Gamepad | null> | null {
+  try {
+    return typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The connected pads, in the browser's order. */
 export function connectedPads(): Gamepad[] {
-  let list: ArrayLike<Gamepad | null> | null | undefined;
-  try {
-    list = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : null;
-  } catch {
-    return []; // not allowed here (a permissions policy): no pads
-  }
+  const list = browserPadList();
   const out: Gamepad[] = [];
   for (let i = 0; list && i < list.length; i++) {
     const pad = list[i];
