@@ -1,4 +1,4 @@
-# Installing Ultima V
+# Installing
 
 This page has moved:
 
@@ -6,7 +6,8 @@ This page has moved:
   in the README, for the web, iPhone and iPad, Windows, macOS, the Steam
   Deck, Linux and Android.
 - **Steam**: playing from Steam, Steam Cloud saves, and adding the game to
-  Steam are on [Steam](steam.md).
+  Steam are on the game's Steam page, which the README's
+  [More](../README.md#more) links.
 - **Everything else**: command-line options, how updates work, the desktop
   and Android apps in detail, and hosting the web game yourself are on
   [Advanced](advanced.md).

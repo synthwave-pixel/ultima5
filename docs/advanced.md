@@ -1,7 +1,12 @@
 # Advanced
 
 For players who want more control over the desktop app: the command-line
-options it takes, and how each build keeps itself up to date.
+options it takes, and how each build keeps itself up to date. This page
+serves every game made on this engine; where a name below is the game's own
+(its app, its AppImage, its Flatpak), the README's
+[Installation](../README.md#installation) gives it, and here `<Game>`
+stands for the app's name and `<game>` for its id, the lower-case name in
+its AppImage's file name.
 
 ## Command-line options
 
@@ -17,7 +22,7 @@ The web game takes no options, except `?dev` on its address.
 
 ### Where to put them
 
-- **Steam** (a Non-Steam shortcut, or Ultima V with the compatibility tool):
+- **Steam** (a Non-Steam shortcut, or the game with the compatibility tool):
   Properties → Launch Options, after `%command%`:
 
       %command% --no-auto-update
@@ -26,15 +31,15 @@ The web game takes no options, except `?dev` on its address.
   the end of Target, after the closing quote.
 - **macOS**, from Terminal:
 
-      open -a "Ultima V" --args --no-auto-update
+      open -a "<Game>" --args --no-auto-update
 
 - **AppImage**, from a terminal, or on the `Exec=` line of its menu entry:
 
-      ./ultima5-sp-x86_64.AppImage --no-auto-update
+      ./<game>-sp-x86_64.AppImage --no-auto-update
 
 - **Flatpak**:
 
-      flatpak run com.synthwavepixel.ultima5 --no-auto-update
+      flatpak run com.synthwavepixel.<game> --no-auto-update
 
 ## Updates
 
@@ -58,12 +63,12 @@ With `--no-auto-update`, every desktop build behaves like the last two rows.
   update is played when you start the game again from Steam.
 - **In Steam's Game Mode**, no release page is opened (a browser would
   leave the game). A notice only says how to update.
-- **Flatpak on a Steam Deck**: Flatpak asks once, "Update Ultima V?", and can
+- **Flatpak on a Steam Deck**: Flatpak asks once, "Update <Game>?", and can
   only ask in Desktop Mode. Start the game there once after installing and
   choose Update; after that it updates itself in Game Mode too. If you chose
   Deny, allow it again from Konsole:
 
-      flatpak permission-set flatpak updates com.synthwavepixel.ultima5 yes
+      flatpak permission-set flatpak updates com.synthwavepixel.<game> yes
 
   Discover updates it too, with your other Flatpaks
   ([how the Flatpak updates itself](flatpak-updates.md)).
@@ -94,14 +99,15 @@ With `--no-auto-update`, every desktop build behaves like the last two rows.
 - **Its own saves.** The desktop app keeps its saves apart from the
   browser's; Export and Import move a game between them.
 - **Windows: where saves are kept.** The installed game keeps its saves and
-  settings in `AppData\Roaming\Ultima V`. The portable `.exe` keeps them in
-  an `Ultima V Data` folder beside itself, so the two move together (a
+  settings in `AppData\Roaming\<Game>`. The portable `.exe` keeps them in
+  a `<Game> Data` folder beside itself, so the two move together (a
   portable copy that last ran from AppData brings its save along the first
   time). Where that folder can't be written, as on a read-only drive, it
   falls back to AppData.
-- **macOS**: from 1.1.203 the app is signed and notarized by Apple. Earlier
-  versions were not, and macOS refused their first launch until allowed in
-  System Settings → Privacy & Security → Open Anyway.
+- **macOS**: a published release is signed and notarized by Apple. A build
+  that is not (a development build, or a release from before signing came
+  in) is refused at its first launch until allowed in System Settings →
+  Privacy & Security → Open Anyway.
 - **The AppImage** has no version in its name, so an update replaces it in
   place and its path never changes. Move it if you like, then start it once
   from its new place: Steam's compatibility tool follows the file that was
@@ -127,21 +133,21 @@ on purpose: add the web game to the Home Screen instead.
 
 The desktop app's Scan for game files... looks beside the app, in your
 home folder, and where GOG and the Linux launchers install games, and it
-finds Steam's copy of Ultima V by itself wherever Steam has installed it. The web game's Scan looks for a copy
+finds Steam's copy of the game by itself wherever Steam has installed it. The web game's Scan looks for a copy
 put on the site beside it (see Hosting it yourself below). On Android,
 Choose folder... opens the system's folder picker.
 
 ## Showcase saves
 
-To jump straight to one of the game's sights - Britain, a frigate at sea,
-the Underworld, Doom - import one of the
-[showcase saves](../showcase/README.md) (Manage Saves → Import saved game).
+Where the game has showcase saves - a `showcase/` folder at the
+repository's root, its README saying what each shows - import one (Manage
+Saves → Import saved game) to jump straight to one of the game's sights.
 
 ## How the installer checks your files
 
 The files you give the installer stay in the browser (or the app's own
 storage). Each is checked against the known copies - its size and CRC-32,
-kept in `web/src/install/known.ts` as fingerprints, not the game - and
+kept in the installer's `known.ts` as fingerprints, not the game - and
 against a zip's own checks. A file that differs, edited or damaged, is
 named, and a modded copy is installed if you say so. The copy kept is
 checked again at each start, and one damaged in keeping sends you back to
@@ -151,19 +157,19 @@ the installer, saying which file.
 
 The web game is a static site: `npm run build` in `web/` leaves it in
 `web/dist/`, to be served from any web server (set `VITE_BASE` to the
-path it is served under, `/ultima5/` say, when that is not the root).
+path it is served under, `/<game>/` say, when that is not the root).
 To have Scan for game files... find a copy there, put the game's files
-in a `gamedata/` folder beside the site's `index.html`, loose (`DATA.OVL`,
-`BRIT.DAT` and the rest, and the Upgrade's `*.XMI` music if you have it),
-and beside them an `index.json` naming them, a JSON list of their names
+in a `gamedata/` folder beside the site's `index.html`, loose (the files
+the installer asks for, and the Upgrade's files if you have them), and
+beside them an `index.json` naming them, a JSON list of their names
 relative to `gamedata/`:
 
-    ["DATA.OVL", "BRIT.DAT", "TOWNE.TLK", "TILES.16", ...]
+    ["FIRST.DAT", "SECOND.DAT", "MUSIC.XMI", ...]
 
 The scan reads `gamedata/index.json` and fetches each file it names, then
 checks them as any other copy. A site with no index, or one that answers
 with its own page there, offers nothing to the scan. The dev server
-(`npm run dev`) makes its index itself, from the developer's copy in
-`gamedata/ultima5/` (see [gamedata/README.md](../gamedata/README.md)).
+(`npm run dev`) makes its index itself, from the developer's copy under
+`gamedata/` (see [gamedata/README.md](../gamedata/README.md)).
 Each player's browser still keeps its own copy once installed. Whatever
 is in `gamedata/` is served to anyone who can open the site.
