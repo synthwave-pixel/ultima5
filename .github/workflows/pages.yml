@@ -2,7 +2,8 @@
 # needs putting back. A release deploys the site itself, in the same run as the apps (desktop.yml), so this is only
 # ever a retry: it takes no commit or branch, and builds the newest full release's tag, never anything unreleased.
 # Started by hand: Actions > Redeploy the latest release > Run workflow.
-# The site is served at https://<owner>.github.io/ultima5/, so Vite is told to prefix asset URLs with /ultima5/. The
+# The site is served at https://<owner>.github.io/<repository>/ (ultima5's: /ultima5/), so Vite is told to prefix asset
+# URLs with /<repository>/. The
 # site also serves that release's Flatpak as a signed repository under /flatpak/ (see desktop/flatpak-repo.sh).
 name: Redeploy the latest release
 
@@ -44,7 +45,7 @@ jobs:
       # The build's mark: the commit built.
       - run: VITE_BUILD="$(git rev-parse --short=7 HEAD)" npm run build
         env:
-          VITE_BASE: /ultima5/
+          VITE_BASE: /${{ github.event.repository.name }}/
       # The Flatpak repository: the same release's bundle, downloaded, imported into a fresh OSTree repository and
       # signed. Without the signing key the site goes without it.
       - id: flatpak
@@ -67,7 +68,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FLATPAK_GPG_KEY: ${{ secrets.FLATPAK_GPG_KEY }}
           FLATPAK_GPG_KEY_ID: ${{ secrets.FLATPAK_GPG_KEY_ID }}
-          SITE: https://synthwave-pixel.github.io/ultima5
+          SITE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
