@@ -1,4 +1,4 @@
-# Installing Ultima V
+# Installing
 
 This page has moved:
 
