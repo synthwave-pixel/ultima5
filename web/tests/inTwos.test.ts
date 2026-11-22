@@ -46,8 +46,20 @@ describe('two ways held on a ship go two at a time', () => {
   });
 
   it('leaves every press as pressed, and keys that are no way alone', () => {
-    expect(through([[K.Up, false, 0], [K.Right, false, 10], [K.Left, false, 20]])).toEqual([K.Up, K.Right, K.Left]);
-    expect(through([[K.Up, false, 0], [0x20, true, 150], [K.Right, true, 300]])).toEqual([K.Up, 0x20, K.Up]);
+    expect(
+      through([
+        [K.Up, false, 0],
+        [K.Right, false, 10],
+        [K.Left, false, 20],
+      ]),
+    ).toEqual([K.Up, K.Right, K.Left]);
+    expect(
+      through([
+        [K.Up, false, 0],
+        [0x20, true, 150],
+        [K.Right, true, 300],
+      ]),
+    ).toEqual([K.Up, 0x20, K.Up]);
   });
 
   it('leaves them in turn off a ship: on foot, a horse or the rowing boat turns without spending the move', () => {

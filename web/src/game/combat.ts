@@ -1943,7 +1943,9 @@ export function strikingOrder(g: Game, member: number): number[] {
  */
 export function canStrike(g: Game, i: number, targets: number[]): boolean {
   const c = g.combat[i];
-  const hands = strikingOrder(g, c.who).map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
+  const hands = strikingOrder(g, c.who)
+    .map((h) => g.s.members[c.who].equips[h])
+    .filter((w) => strikes(g, w));
   if (!hands.length) return targets.some((j) => distance(g.combat[j].x, g.combat[j].y, c.x, c.y) <= 1);
   // Attack lets a hand that reaches no foe stand aside only while another reaches one it counts (attackEach,
   // standingFoe: never one of the party). With none - the only foe a friend charmed against the party, with the
@@ -2132,7 +2134,9 @@ export function snapTargets(g: Game, i: number): number[] {
     return nearestFirst(g, i, foes.filter(reaches));
   }
   if (unloaded(g, c.who)) return [];
-  const hands = strikingOrder(g, c.who).map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
+  const hands = strikingOrder(g, c.who)
+    .map((h) => g.s.members[c.who].equips[h])
+    .filter((w) => strikes(g, w));
   if (!hands.length)
     return nearestFirst(
       g,

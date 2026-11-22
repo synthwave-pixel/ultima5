@@ -109,7 +109,11 @@ describe('the ground under a thing at the edge of the view', () => {
       for (let fx = 0; fx < 32; fx++) {
         const t = tileAt(g, fx, fy);
         if (t !== 0xca && t !== 0xcb) continue; // a wooden fence
-        const onMap = groundAmong(t, (dx, dy) => (fx + dx < 0 || fy + dy < 0 || fx + dx > 31 || fy + dy > 31 ? undefined : tileAt(g, fx + dx, fy + dy)), 0x44);
+        const onMap = groundAmong(
+          t,
+          (dx, dy) => (fx + dx < 0 || fy + dy < 0 || fx + dx > 31 || fy + dy > 31 ? undefined : tileAt(g, fx + dx, fy + dy)),
+          0x44,
+        );
         for (const [vx, vy] of [
           [0, 5],
           [10, 5],
