@@ -3,8 +3,9 @@
  *
  * The page's hooks (ui/pageHooks.ts installPageHooks) run in Node, for the tests of what they ask the game: a
  * do-anything stand-in for the page (the window, the document, the canvas, the sound - every property one more of
- * it, every call one too), a gamepad whose buttons a test holds down, and the keys the page pushes to the screen kept
- * as the screen would give them to the game (its two-at-a-time, ui/inTwos.ts, applied as Screen.push applies it).
+ * it, every call one too), a gamepad whose buttons a test holds down, and every key the page pushes to the screen kept,
+ * through the screen's two-at-a-time (ui/inTwos.ts) as Screen.push takes it - but not Screen.push's queue: none is
+ * dropped for a full queue or a held repeat with keys waiting, nor for a box of the page's own up.
  */
 
 import { vi } from 'vitest';
@@ -42,14 +43,9 @@ export interface PageRun {
 
 /**
  * installPageHooks run for `g` in Node, with a pad and a screen of the harness's own; `waiting`, whether the game
- * waits for a key (Holds.waiting), true by default. `then` runs after the hooks are installed - where a game's own
- * start-up sets what it sets after them (a game's main.ts) - with the screen.
+ * waits for a key (Holds.waiting), true by default.
  */
-export async function pageHarness(
-  g: GameCore,
-  then: (screen: PageRun['screen']) => void = () => undefined,
-  waiting: () => boolean = () => true,
-): Promise<PageRun> {
+export async function pageHarness(g: GameCore, waiting: () => boolean = () => true): Promise<PageRun> {
   let down: number[] = [];
   const frames: FrameRequestCallback[] = [];
   vi.stubGlobal('window', anything);
@@ -84,7 +80,6 @@ export async function pageHarness(
   }) as unknown as PageRun['screen'];
   const { installPageHooks } = await import('../src/ui/pageHooks.ts');
   installPageHooks(g, screen as never, anything as never, anything as never);
-  then(screen);
   const frame = (ms: number, held: number[]): void => {
     now = ms;
     down = held;

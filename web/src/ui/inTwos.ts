@@ -2,14 +2,14 @@
  * inTwos.ts
  *
  * Two ways held on a ship go two at a time (issue #40). Held together - up and right on the d-pad (gamepad.ts pairs
- * them on the world map), or two arrow keys each repeating as it is held - two ways go in turn, a step each. On foot,
+ * them where the game says), or two arrow keys each repeating as it is held - two ways go in turn, a step each. On foot,
  * on a horse or in the rowing boat that is a diagonal; but a ship turning spends the move (outdoors.ts turnParty), so
  * one way after the other only turned it, "Head North", "Head East", and it never moved. On a ship, then, a held way's
  * repeat goes the way the last went until that way has gone twice - turn, then sail - and then the other way held.
  * Every press is the player's own and goes as pressed; so does any key that is no way. A key is read as the way it
  * stands for first (`way`: W, A, S and D in Controller input, input.ts asPad), so those held go two at a time as the
- * arrows do; it is given on as it came but where another way is put in its place, a letter left a letter for a prompt
- * that reads it as one.
+ * arrows do. A key is given on as it came but where the rule puts another way in its place, and there as that way: a
+ * letter typed is a letter still, two held on a ship as the arrows they stand for.
  */
 
 import { K } from '../game/io.ts';
@@ -27,7 +27,7 @@ export class InTwos {
   private readonly seen = new Map<number, number>();
 
   constructor(
-    /** Whether two ways held go two at a time now: a ship at the world map's command prompt. */
+    /** Whether two ways held go two at a time now (the game's GameCore.sailsInTwos: Ultima V's ship on the world map). */
     private readonly on: () => boolean,
     /** A held key's pace (holds.ts): how often each way held repeats. */
     private readonly pace: () => number,

@@ -35,7 +35,6 @@ describe('the page asks the game', () => {
     const run = await pageHarness(g);
     const sent = codes(run.hold([PAD.Up, PAD.Right], 0, 1000));
     expect(sent.slice(0, 4)).toEqual([K.Up, K.Right, K.Up, K.Right]);
-    g.pairs = false;
     const one = await pageHarness(game());
     expect(new Set(codes(one.hold([PAD.Up, PAD.Right], 0, 1000)))).toEqual(new Set([K.Right]));
   });
