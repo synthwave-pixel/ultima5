@@ -47,10 +47,10 @@ describe('a fighter set down with no actor free', () => {
 });
 
 describe('auto combat with a friend charmed against the party, by the Classic rules', () => {
-  it('strikes only when the hand Attack asks first reaches: a spiked helm and a throwing axe', () => {
+  it('strikes when the hand Attack asks first reaches: the magic axe, before the spiked helm (issue #45)', () => {
     const g = field('classic');
     const s = g.s;
-    // Shamino (1): the spiked helm strikes, and is asked first; the magic axe in hand is thrown.
+    // Shamino (1): the spiked helm strikes at arm's length; the magic axe in hand is thrown, and is asked first.
     s.members[1].equips.set([0x03, 0xff, 0x26, 0xff, 0xff, 0xff]);
     Object.assign(g.combat[1], { flags: CF.Player, who: 1, x: 5, y: 5, actor: 1 });
     Object.assign(s.actors[1], { tile: 0x48, anim: 0x48, x: 5, y: 5 });
@@ -58,6 +58,9 @@ describe('auto combat with a friend charmed against the party, by the Classic ru
     Object.assign(g.combat[2], { flags: CF.Player | CF.Charmed, who: 2, x: 5, y: 7, actor: 2 });
     Object.assign(s.actors[2], { tile: 0x44, anim: 0x44, x: 5, y: 7 });
     g.charmedBy.set(2, 'bound');
+    expect(canStrike(g, 1, [2])).toBe(true);
+    // A spiked shield in the axe's place: asked after the helm, as far (one square), and neither reaches him.
+    s.members[1].equips.set([0x03, 0xff, 0x06, 0xff, 0xff, 0xff]);
     expect(canStrike(g, 1, [2])).toBe(false); // closes in, rather than backing out of the helm's aim for ever
     Object.assign(g.combat[2], { y: 6 });
     s.actors[2].y = 6;

@@ -1910,6 +1910,18 @@ function foeInReach(g: Game, i: number, weapon: number): boolean {
 }
 
 /**
+ * The helm's and the hands' places (equips 0, 2 and 3) in the order Attack takes them: the furthest reach first - a
+ * last throwing weapon kept in hand, or a weapon of no reach, as one square - and of those as far, the helm, then the
+ * hands, as 1988 took them. A spiked helm taken first, in a room cleared of foes, held its aim to the next square and
+ * ended the Attack before the crossbow beside it was raised at a trigger across the room (issue #45).
+ */
+export function strikingOrder(g: Game, member: number): number[] {
+  const e = g.s.members[member].equips;
+  const reach = (w: number): number => (w === 0xff || keepsLastThrown(g, w) ? 0 : (g.data.bytes(0x1664, 0x38)[w] ?? 0));
+  return [0, 2, 3].sort((a, b) => reach(e[b]) - reach(e[a]));
+}
+
+/**
  * Whether member combatant `i` can strike one of `targets` from where they stand, as Attack would reach it
  * (attackEach): a weapon of theirs reaching it - a shot or a throw only along a clear line - or, with none in hand,
  * a target beside them for the bare hands. Auto combat's choice between striking and moving (autocombat.ts), with
@@ -1917,12 +1929,12 @@ function foeInReach(g: Game, i: number, weapon: number): boolean {
  */
 export function canStrike(g: Game, i: number, targets: number[]): boolean {
   const c = g.combat[i];
-  const hands = [0, 2, 3].map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
+  const hands = strikingOrder(g, c.who).map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
   if (!hands.length) return targets.some((j) => distance(g.combat[j].x, g.combat[j].y, c.x, c.y) <= 1);
   // Attack lets a hand that reaches no foe stand aside only while another reaches one it counts (attackEach,
   // standingFoe: never one of the party). With none - the only foe a friend charmed against the party, with the
-  // Classic rules - each hand is asked in turn, and the first must reach: a spiked helm asked first, a throwing axe
-  // the hand that reached, had its aim backed out of for ever.
+  // Classic rules - each hand is asked in turn (strikingOrder), and the first must reach: one asked first that did not
+  // reach, the hand after it the one that did, had its aim backed out of for ever.
   if (!hands.some((w) => foeInReach(g, i, w))) return targets.some((j) => reachesFoe(g, i, hands[0], j, true));
   return hands.some((w) => targets.some((j) => reachesFoe(g, i, w, j, true)));
 }
@@ -2052,7 +2064,7 @@ async function attackEach(g: Game, i: number, weapons: number): Promise<void> {
   // out of the helm's reach): asked first, its aim could only be backed out of, which ended the command before the
   // bow was ever raised - and auto combat backed out of it for ever.
   const someReach = [0, 2, 3].some((h) => strikes(g, m.equips[h]) && foeInReach(g, i, m.equips[h]));
-  for (const hand of [0, 2, 3]) {
+  for (const hand of strikingOrder(g, g.combat[i].who)) {
     const weapon = m.equips[hand];
     if ((struck || someReach) && strikes(g, weapon) && !foeInReach(g, i, weapon)) continue;
     if ((walkedInto || auto) && strikes(g, weapon)) {
@@ -2106,7 +2118,7 @@ export function snapTargets(g: Game, i: number): number[] {
     return nearestFirst(g, i, foes.filter(reaches));
   }
   if (unloaded(g, c.who)) return [];
-  const hands = [0, 2, 3].map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
+  const hands = strikingOrder(g, c.who).map((h) => g.s.members[c.who].equips[h]).filter((w) => strikes(g, w));
   if (!hands.length)
     return nearestFirst(
       g,
