@@ -410,7 +410,9 @@ describes how the Enhanced interface and the Remastered look are drawn.
   and a held button does not repeat into a second turn. Every connected
   controller is read at once - a Steam Deck's own controls and an
   external pad, or a pad on a TV box beside its remote - so it does not
-  matter which one the system lists first.
+  matter which one the system lists first. Only the window with the
+  focus reads the controller: with the game open in a browser and the
+  desktop app at once, a press moves only the one in front.
 - **The command menu** lists what the surroundings call for first, names
   the weapon in hand ("Attack (Bow)", or "Attack (no arrows)" for a bow
   with nothing to shoot) and leads with it when it reaches,

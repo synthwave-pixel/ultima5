@@ -9,6 +9,7 @@
 
 import { menuUp } from './pageMenu.ts';
 import { connectedPads, pressed as isDown } from './pads.ts';
+import { windowFocused } from './windowFocus.ts';
 
 const STYLE = `
 .u5-notice { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -86,7 +87,8 @@ export function showNotice(title: string, text: string, button = 'OK'): Promise<
     const poll = (): void => {
       const now = pressed();
       if (!menuUp() && [...armed].some((b) => !now.includes(b))) return close();
-      for (const b of now) if (!held.has(b)) armed.add(b);
+      // Out of focus, another window's the press: a button down then is held, not armed (windowFocus.ts).
+      for (const b of now) if (!held.has(b)) (windowFocused() ? armed : held).add(b);
       for (const b of [...held]) if (!now.includes(b)) held.delete(b);
       polling = requestAnimationFrame(poll);
     };

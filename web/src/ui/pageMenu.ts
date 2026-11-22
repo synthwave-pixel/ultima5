@@ -9,6 +9,7 @@
  */
 
 import { readAll, Rest } from './pads.ts';
+import { windowFocused } from './windowFocus.ts';
 
 export type Move = 'up' | 'down' | 'left' | 'right';
 export type Press = Move | 'a' | 'b';
@@ -245,8 +246,11 @@ export function driveMenu(root: HTMLElement, opts: MenuOptions): () => void {
   const state = padStart(readAll(rest));
   let focused: Element | null = null;
   let polling = requestAnimationFrame(function poll(now) {
+    // Read out of focus too, so a button held as the focus comes back is not taken for a press; but only answered
+    // with the focus - another window's the press (windowFocus.ts).
     const presses = padStep(state, readAll(rest), now);
-    if (top()) presses.forEach(press);
+    if (!windowFocused()) state.stale = [...state.down]; // held as the focus comes back: let go, it is no press
+    else if (top()) presses.forEach(press);
     // The focus moved by the page itself (Choose again, the installer's question) is followed too: a window without
     // the focus tells it nothing of that.
     if (document.activeElement !== focused) {

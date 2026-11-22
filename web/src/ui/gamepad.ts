@@ -21,6 +21,7 @@ import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
 import { notePadSeen } from '../game/keyStore.ts';
 import { HOLD_FIRST_MS, INPUT_PACES, type Holds } from './holds.ts';
 import { connectedPads, Rest } from './pads.ts';
+import { windowFocused } from './windowFocus.ts';
 const DEADZONE = 0.5;
 /** A turn held on the right stick repeats slower than a step: a quarter turn is a lot to overshoot. */
 const TURN_FIRST_MS = 450;
@@ -69,6 +70,8 @@ export class GamepadInput {
 
   /** Whether a frame is asked for, to read the pad in. */
   private reading = false;
+  /** Whether the window was out of focus at the last read: nothing sent (poll). */
+  private away = false;
 
   constructor(
     private readonly send: (code: number, held?: boolean) => void,
@@ -80,6 +83,8 @@ export class GamepadInput {
     private readonly diagonals: () => boolean = () => false,
     /** Whether B held passes again now: the command prompt waiting for its key, outside a fight. */
     private readonly passes: () => boolean = () => false,
+    /** Whether the window has the focus: only then is the pad's state sent (windowFocus.ts). */
+    private readonly focused: () => boolean = windowFocused,
   ) {
     // A pad plugged in, or first pressed (where the browser tells of one only then): read from the next refresh, and
     // kept as seen, so a Steam Deck's note on Steam's controller layout is not said again (boot.ts steamNote).
@@ -106,7 +111,22 @@ export class GamepadInput {
     return connectedPads().length > 0;
   }
 
+  /**
+   * The pads read at `now`. Out of focus, nothing is sent - another window's the press - though what is held is kept
+   * as held, and spent: a button or a way held as the focus comes back counts once let go and pressed again.
+   */
   private poll(now: number): void {
+    this.away = !this.focused();
+    this.read(now);
+    if (this.away) this.spent = this.turnSpent = this.bSpent = true;
+  }
+
+  /** What the pad's state sends, the window's focus had (poll). */
+  private emit(code: number, held?: boolean): void {
+    if (!this.away) this.send(code, held);
+  }
+
+  private read(now: number): void {
     const pads = connectedPads();
     if (pads.length === 0) return;
     if (this.holds.breaks !== this.breaks) {
@@ -118,7 +138,7 @@ export class GamepadInput {
       const down = pads.some((pad) => pad.buttons[i]?.pressed ?? false);
       if (down && !this.held.has(i)) {
         this.held.set(i, now);
-        this.send(code);
+        this.emit(code);
         if (code === Pad.B) {
           this.bSince = this.bLast = now;
           this.bSpent = false;
@@ -133,7 +153,7 @@ export class GamepadInput {
         this.passes()
       ) {
         // Held at the command prompt: Pass again, as Space held does (issue #40).
-        this.send(code, true);
+        this.emit(code, true);
         this.bLast = now;
       }
     }
@@ -171,11 +191,11 @@ export class GamepadInput {
       this.turn = turn;
       this.turnSpent = false;
       if (turn !== 0) {
-        this.send(turn);
+        this.emit(turn);
         this.nextTurn = now + TURN_FIRST_MS;
       }
     } else if (turn !== 0 && !this.turnSpent && waiting && now >= this.nextTurn) {
-      this.send(turn, true);
+      this.emit(turn, true);
       this.nextTurn = now + TURN_MS;
     }
     // One of a pair still held, the other let go: it goes on as it was, with no step of its own for the letting go.
@@ -185,11 +205,11 @@ export class GamepadInput {
       this.direction = dir;
       this.spent = false;
       if (dir !== 0) {
-        this.send(dir);
+        this.emit(dir);
         this.since = this.last = now;
       }
     } else if (dir !== 0 && !this.spent && waiting && now - this.since >= HOLD_FIRST_MS && now - this.last >= this.holds.pace) {
-      this.send(dir, true);
+      this.emit(dir, true);
       this.last = now;
     }
   }
@@ -206,14 +226,14 @@ export class GamepadInput {
       this.spent = false;
       // The one of the two not already held (the press just made), or, both new, the up or down way.
       const first = this.direction === upright ? across : upright;
-      this.send(first);
+      this.emit(first);
       this.turnNext = first === upright ? across : upright;
       this.direction = first;
       this.since = this.last = now;
       return;
     }
     if (this.spent || !waiting || now - this.last < this.holds.pace) return;
-    this.send(this.turnNext, true);
+    this.emit(this.turnNext, true);
     this.direction = this.turnNext;
     this.turnNext = this.turnNext === upright ? across : upright;
     this.last = now;
