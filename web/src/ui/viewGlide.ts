@@ -188,10 +188,14 @@ export class ViewGlide {
     const was = this.glided;
     this.glided = shot;
     const sameScene = was !== null && was.view.scene === view.scene && was.view.origin !== null && view.origin !== null;
-    if (!sameScene) this.ring.clear();
+    // A level that wraps within the view and the ring round it (the dungeon's, 8 squares shown 11 wide) has a place
+    // in the view twice: kept by its place, a square slid out on one side was shown at the other's, from across the
+    // view - squares the map shows black (issue #44). There nothing slid out is kept: the edge goes as it was drawn.
+    const keeps = sameScene && (view.wrap === 0 || view.wrap >= SIDE + 2 * RING);
+    if (!keeps) this.ring.clear();
     const o = view.origin;
     const place = (x: number, y: number): Point => (o ? { x: wrapped(o.x + x, view.wrap), y: wrapped(o.y + y, view.wrap) } : { x, y });
-    if (sameScene && was && was.view.origin && o) {
+    if (keeps && was && was.view.origin && o) {
       // What the last view showed that this one does not: kept, for the edge that slides away.
       const wo = was.view.origin;
       for (let i = 0; i < SIDE * SIDE; i++) {

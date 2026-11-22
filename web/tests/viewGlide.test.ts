@@ -211,3 +211,37 @@ describe('Smooth motion over the view (viewGlide.ts)', () => {
     });
   });
 });
+
+/**
+ * Issue #44: the dungeon's whole-level map shows an 8-square level 11 squares wide, the level wrapping within the view.
+ * The squares slid out of view were kept by their place on the level - but a place is in the view twice there, and the
+ * edge sliding away right or down showed squares from across the view: what the map shows black ("random tiles" in
+ * the dark). Where the level wraps within the view, nothing slid out of it is kept: the edge goes as the view drew it.
+ */
+describe('Smooth motion over a level that wraps within the view', () => {
+  // Black where nothing is known; the party's square; and a square seen only at view column `seen`.
+  function wrapped(fb: Framebuffer, origin: { x: number; y: number }, seen: number): ViewDrawn {
+    const cells: ViewCell[] = [];
+    for (let y = 0; y < 11; y++)
+      for (let x = 0; x < 11; x++) fb.tile(x === seen ? WALKER : x === 5 && y === 5 ? GROUND : 0, TILE_X + x * 16, TILE_Y + y * 16);
+    cells[5 * 11 + 5] = { party: true, bare: { tile: GROUND, ground: undefined, place: undefined } };
+    return { scene: 'dungeon', origin, wrap: 8, cells, covered: false };
+  }
+
+  for (const [way, dx] of [
+    ['right', 1],
+    ['left', -1],
+  ] as const) {
+    it(`shows the edge sliding away black moving ${way}, not a square from across the view`, () => {
+      const fb = new Framebuffer(tiles, fonts);
+      const vg = new ViewGlide(fb, () => 150);
+      vg.drawn(wrapped(fb, { x: 0, y: 0 }, 8), 0);
+      vg.moving(0);
+      vg.drawn(wrapped(fb, { x: dx, y: 0 }, 8 - dx), 0);
+      expect(vg.moving(1000)).toBe(true);
+      // Halfway: the half-square at the edge the view slides away from (the left moving right, the right moving left).
+      const x = dx > 0 ? 2 : 11 * CELL - 2;
+      expect(shown(vg, 1085, x, 3 * CELL)).toBe(EGA_RGBA[0]);
+    });
+  }
+});
