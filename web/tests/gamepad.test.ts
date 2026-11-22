@@ -101,8 +101,9 @@ describe('a gamepad read lazily', () => {
 /**
  * Every connected pad is read, not only the browser's first (issue #19): a Shield's remote, or another device the
  * browser lists as a pad ahead of the controller played with, took every press of the controller's for itself; a
- * Steam Deck's own controls and an external pad are both played with. A button is down if down on any pad; the
- * direction is the one pushed furthest; each pad's sticks are read once that pad's own have been seen at rest.
+ * Steam Deck's own controls and an external pad are both played with. The pad played last is read (pads.ts Played):
+ * one sitting unchanged - a remote, or a pad the browser keeps listed though it reports no more - holds nothing; each
+ * pad's sticks are read once that pad's own have been seen at rest.
  */
 describe('several gamepads', () => {
   /** A pad as the Gamepad API reports it, at `index`, with `down` pressed. */
@@ -162,12 +163,25 @@ describe('several gamepads', () => {
     expect(out).toEqual([Pad.A]);
   });
 
-  it('takes the stick pushed furthest, of all the pads', () => {
+  it('takes the stick of the pad played last', () => {
     const out = sentFrom((ms) => [
       padAt(0, 'standard', [ms < 100 ? 0 : 0.6, 0, 0, 0]),
-      padAt(1, 'standard', [0, ms < 100 ? 0 : -0.9, 0, 0]),
+      padAt(1, 'standard', [0, ms < 300 ? 0 : -0.9, 0, 0]),
     ]);
-    expect(out[0]).toBe(K.Up);
+    expect(out[0]).toBe(K.Right);
+    expect(out).toContain(K.Up);
+  });
+
+  it('stops a way held on a pad the browser keeps listed frozen, at the first press of the pad played with (issue #40)', () => {
+    // Listed first, frozen with Up held (a Bluetooth pad dropped and listed again in a new place); the player's own pad
+    // pressed A at 300 ms, then nothing more.
+    const out = sentFrom((ms) => [
+      padAt(0, 'standard', [0, 0, 0, 0], [12]),
+      padAt(1, 'standard', [0, 0, 0, 0], ms >= 300 && ms < 400 ? [0] : []),
+    ]);
+    const a = out.indexOf(Pad.A);
+    expect(a).toBeGreaterThan(0);
+    expect(out.slice(a + 1)).toEqual([]); // no Up after: the frozen pad's way let go
   });
 });
 

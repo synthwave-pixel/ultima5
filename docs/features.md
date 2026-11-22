@@ -408,9 +408,11 @@ describes how the Enhanced interface and the Remastered look are drawn.
   menu wherever the game waits, and the game carries on where it was. A
   press on a gamepad or the touch pad puts the game in controller mode,
   and a held button does not repeat into a second turn. Every connected
-  controller is read at once - a Steam Deck's own controls and an
-  external pad, or a pad on a TV box beside its remote - so it does not
-  matter which one the system lists first. Only the window with the
+  controller is watched - a Steam Deck's own controls and an external
+  pad, or a pad on a TV box beside its remote - and the one last played
+  with is read, so it does not matter which one the system lists first,
+  and a controller the system keeps listing after it has stopped
+  answering, a button stuck down, holds nothing. Only the window with the
   focus reads the controller: with the game open in a browser and the
   desktop app at once, a press moves only the one in front.
 - **The command menu** lists what the surroundings call for first, names

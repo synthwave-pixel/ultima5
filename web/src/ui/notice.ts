@@ -8,7 +8,7 @@
  */
 
 import { menuUp } from './pageMenu.ts';
-import { connectedPads, pressed as isDown } from './pads.ts';
+import { connectedPads, Played, pressed as isDown } from './pads.ts';
 import { windowFocused } from './windowFocus.ts';
 
 const STYLE = `
@@ -81,8 +81,10 @@ export function showNotice(title: string, text: string, button = 'OK'): Promise<
     // then, does not take it for a press of its own. One already held when it came counts only once let go.
     const held = new Set<string>();
     const armed = new Set<string>();
+    // The pad played last (pads.ts Played): one the browser keeps listed, frozen with a button down, holds nothing here.
+    const played = new Played();
     const pressed = (): string[] =>
-      connectedPads().flatMap((pad) => CLOSE_BUTTONS.filter((b) => isDown(pad, b)).map((b) => `${pad.index}:${b}`));
+      played.pick(connectedPads()).flatMap((pad) => CLOSE_BUTTONS.filter((b) => isDown(pad, b)).map((b) => `${pad.index}:${b}`));
     for (const b of pressed()) held.add(b);
     const poll = (): void => {
       const now = pressed();

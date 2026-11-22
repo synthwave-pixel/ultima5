@@ -8,10 +8,15 @@
  * connected; the call may be missing altogether, or throw where the page is not allowed gamepads. A pad's buttons
  * and axes are read by index too, for the same reason. Every one of those is no pad, never an error.
  *
- * Every connected pad is read, not the first alone (issue #19): the browser may list another device as a pad ahead
- * of the one played with - a Shield's remote - and a Steam Deck's own controls and an external pad are both played
- * with. A pad's stick axis counts only once that pad's has been seen at rest, near its middle (Rest): one that rests
- * off it - a drifting stick, a trigger some pads give as an axis resting at -1 - would otherwise hold a way for good.
+ * Every connected pad is watched, not the first alone (issue #19): the browser may list another device as a pad
+ * ahead of the one played with - a Shield's remote - and a Steam Deck's own controls and an external pad are both
+ * played with. Of them, the one played last is read (Played): the pad whose buttons or sticks changed most recently,
+ * whatever it holds. The browser can keep a pad in its list that no longer reports - a Bluetooth pad dropped and
+ * listed again in a new place, its old place left frozen as it was, a way held (issue #40) - and one read with the
+ * others would hold that way for good: the player's own pad never changes the frozen one, so its first press takes
+ * over and the frozen pad is left alone. A pad's stick axis counts only once that pad's has been seen at rest, near
+ * its middle (Rest): one that rests off it - a drifting stick, a trigger some pads give as an axis resting at -1 -
+ * would otherwise hold a way for good.
  */
 
 /** The connected pads, in the browser's order. */
@@ -52,25 +57,71 @@ export class Rest {
   }
 }
 
+/** How far from its middle an axis must go to count as played with (the game's own dead zone: gamepad.ts). */
+const PLAYED = 0.5;
+
+/** A pad in the browser's list: its place there and its name, so another pad in the same place is another. */
+const keyOf = (pad: Gamepad, place: number): string => `${typeof pad.index === 'number' ? pad.index : place}:${pad.id}`;
+
 /**
- * Every connected pad read as one, its sticks only once at rest (`rest` noting them): a button is down if down on any,
- * an axis is the one furthest from its middle. Null with no pad.
+ * The pad played last, of those connected: the one whose buttons down, or sticks pushed past half way (once at rest),
+ * changed most recently. A pad that only sits there - at rest, or frozen as it was left - never takes over; a held
+ * button or way on the one played last stays held. A pad first seen with something down counts as changed, a pad
+ * first seen at rest not. Every pad's sticks are noted at rest (`rest`) as they go, the one read or not.
  */
-export function readAll(rest: Rest): { buttons: boolean[]; axes: number[] } | null {
-  const pads = connectedPads();
-  if (pads.length === 0) return null;
-  const buttons: boolean[] = [];
-  const axes: number[] = [];
-  pads.forEach((pad, place) => {
-    rest.note(pad, place);
-    buttonsOf(pad).forEach((down, i) => (buttons[i] = (buttons[i] ?? false) || down));
+export class Played {
+  /** What each pad had down when last read, by keyOf. */
+  private last = new Map<string, string>();
+  /** The pad played last, by keyOf; null till one is. */
+  private active: string | null = null;
+
+  constructor(readonly rest = new Rest()) {}
+
+  /** Of `all` (connectedPads, in order), the pad to read: the one played last, or none while none has been. */
+  pick(all: Gamepad[]): Gamepad[] {
+    const keys = all.map(keyOf);
+    let changed: string | null = null;
+    let changedDown = false;
+    all.forEach((pad, place) => {
+      this.rest.note(pad, place);
+      const now = this.downOn(pad, place);
+      const before = this.last.get(keys[place]) ?? '';
+      this.last.set(keys[place], now);
+      // Two changed at once: the one with something down now.
+      if (now !== before && (changed === null || (!changedDown && now !== ''))) [changed, changedDown] = [keys[place], now !== ''];
+    });
+    for (const key of [...this.last.keys()]) if (!keys.includes(key)) this.last.delete(key);
+    if (changed !== null) this.active = changed;
+    const at = this.active === null ? -1 : keys.indexOf(this.active);
+    if (at < 0) this.active = null;
+    return at < 0 ? [] : [all[at]];
+  }
+
+  /** What `pad` has down: its buttons, and its sticks' axes pushed past half way, as a string to compare. */
+  private downOn(pad: Gamepad, place: number): string {
+    const out: string[] = [];
+    buttonsOf(pad).forEach((down, i) => down && out.push(`b${i}`));
     for (let i = 0; i < pad.axes.length; i++) {
-      const v = rest.axis(pad, place, i);
-      if (Math.abs(v) > Math.abs(axes[i] ?? 0)) axes[i] = v;
-      else axes[i] ??= 0;
+      const v = this.rest.axis(pad, place, i);
+      if (Math.abs(v) > PLAYED) out.push(`a${i}${v < 0 ? '-' : '+'}`);
     }
-  });
-  return { buttons, axes };
+    return out.join(' ');
+  }
+}
+
+/**
+ * The pad played last (`played`), its sticks only once at rest: its buttons, and its axes. With pads connected but none
+ * played yet, nothing down. Null with no pad.
+ */
+export function readAll(played: Played): { buttons: boolean[]; axes: number[] } | null {
+  const all = connectedPads();
+  if (all.length === 0) return null;
+  const [pad] = played.pick(all);
+  if (!pad) return { buttons: [], axes: [] };
+  const place = all.indexOf(pad);
+  const axes: number[] = [];
+  for (let i = 0; i < pad.axes.length; i++) axes.push(played.rest.axis(pad, place, i));
+  return { buttons: buttonsOf(pad), axes };
 }
 
 /** Whether a pad's button is down, by index (a missing one is up). */

@@ -8,7 +8,7 @@
  * (gamepad.ts) is not running then or is held off (screen.ts push): one reader at a time.
  */
 
-import { readAll, Rest } from './pads.ts';
+import { Played, readAll } from './pads.ts';
 import { windowFocused } from './windowFocus.ts';
 
 export type Move = 'up' | 'down' | 'left' | 'right';
@@ -241,14 +241,14 @@ export function driveMenu(root: HTMLElement, opts: MenuOptions): () => void {
   window.addEventListener('keydown', keydown, true);
   window.addEventListener('keyup', keyup, true);
 
-  // Every connected gamepad, read as one (as gamepad.ts reads them all), its sticks once at rest.
-  const rest = new Rest();
-  const state = padStart(readAll(rest));
+  // The gamepad played last (as gamepad.ts reads it: pads.ts Played), its sticks once at rest.
+  const played = new Played();
+  const state = padStart(readAll(played));
   let focused: Element | null = null;
   let polling = requestAnimationFrame(function poll(now) {
     // Read out of focus too, so a button held as the focus comes back is not taken for a press; but only answered
     // with the focus - another window's the press (windowFocus.ts).
-    const presses = padStep(state, readAll(rest), now);
+    const presses = padStep(state, readAll(played), now);
     if (!windowFocused())
       state.stale = [...state.down]; // held as the focus comes back: let go, it is no press
     else if (top()) presses.forEach(press);

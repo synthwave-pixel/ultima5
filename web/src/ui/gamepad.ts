@@ -6,8 +6,9 @@
  * as a held key does (holds.ts: at the Max input pace, only while the game waits for a key, and not once a new scene
  * has broken the hold, until it is let go); A, B, X, Y, Start (Menu) and Select (View) as the
  * controller codes the game reads (game/io.ts Pad); and the right stick, left or right, as a turn (TURN_LEFT,
- * TURN_RIGHT), which only a dungeon heeds. Every connected pad is read (pads.ts): a button down on any is down, and
- * the stick pushed furthest is the one taken. Two neighbouring ways held on the d-pad where `diagonals` says (the world
+ * TURN_RIGHT), which only a dungeon heeds. Every connected pad is watched, and the one played last is read (pads.ts
+ * Played): another pad listed - a remote, a Steam Deck's own controls, or a pad the browser keeps listed though it
+ * reports no more, frozen with a way held - holds nothing while it sits unchanged. Two neighbouring ways held on the d-pad where `diagonals` says (the world
  * map's command prompt), the two go in turn at the game's pace, as two arrow keys held do (issue #40). B held passes
  * again and again where `passes` says (the command prompt waiting, outside a fight), as Space held does; no other
  * button repeats, nor B anywhere else, where it backs out or says No. A stick's axis counts only once that pad's has been seen at rest, near
@@ -20,7 +21,7 @@
 import { K, Pad, TURN_LEFT, TURN_RIGHT } from '../game/io.ts';
 import { notePadSeen } from '../game/keyStore.ts';
 import { HOLD_FIRST_MS, INPUT_PACES, type Holds } from './holds.ts';
-import { connectedPads, Rest } from './pads.ts';
+import { connectedPads, Played } from './pads.ts';
 import { windowFocused } from './windowFocus.ts';
 const DEADZONE = 0.5;
 /** A turn held on the right stick repeats slower than a step: a quarter turn is a lot to overshoot. */
@@ -58,8 +59,8 @@ export class GamepadInput {
   private breaks = 0;
   private turn = 0;
   private nextTurn = 0;
-  /** Each pad's axes seen at rest: only these are read. */
-  private rest = new Rest();
+  /** The pad played last, and each pad's axes seen at rest: only these are read. */
+  private played = new Played();
   /** Two neighbouring ways held in turn (`diagonals`): the pair, the one to send next; null for one way. */
   private pair: [number, number] | null = null;
   private turnNext = 0;
@@ -127,8 +128,10 @@ export class GamepadInput {
   }
 
   private read(now: number): void {
-    const pads = connectedPads();
-    if (pads.length === 0) return;
+    const all = connectedPads();
+    if (all.length === 0) return;
+    // The pad played last; none yet, nothing down.
+    const pads = this.played.pick(all);
     if (this.holds.breaks !== this.breaks) {
       this.breaks = this.holds.breaks;
       this.spent = this.turnSpent = this.bSpent = true;
@@ -174,14 +177,13 @@ export class GamepadInput {
       this.inTurn(upright[0], across[0], now, waiting);
       return;
     }
-    // Of every pad, the left stick pushed furthest; and the right stick (axes 2 and 3, in the standard mapping alone).
+    // The left stick; and the right stick (axes 2 and 3, in the standard mapping alone).
     let [ax, ay, rx, ry] = [0, 0, 0, 0];
-    pads.forEach((pad, place) => {
-      this.rest.note(pad, place);
-      const axis = (i: number): number => this.rest.axis(pad, place, i);
-      if (Math.max(Math.abs(axis(0)), Math.abs(axis(1))) > Math.max(Math.abs(ax), Math.abs(ay))) [ax, ay] = [axis(0), axis(1)];
-      if (pad.mapping === 'standard' && Math.abs(axis(2)) > Math.abs(rx)) [rx, ry] = [axis(2), axis(3)];
-    });
+    for (const pad of pads) {
+      const axis = (i: number): number => this.played.rest.axis(pad, all.indexOf(pad), i);
+      [ax, ay] = [axis(0), axis(1)];
+      if (pad.mapping === 'standard') [rx, ry] = [axis(2), axis(3)];
+    }
     if (dir === 0 && Math.max(Math.abs(ax), Math.abs(ay)) > DEADZONE) {
       dir = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? K.Left : K.Right) : ay < 0 ? K.Up : K.Down;
     }
