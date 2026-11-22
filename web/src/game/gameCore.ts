@@ -187,7 +187,7 @@ export class GameCore {
   options: Options = { ...DEFAULTS };
   /** Which command prompt is waiting, if any: controller buttons and the menus depend on it. */
   commandPrompt: '' | 'town' | 'outdoors' | 'dungeon' | 'combat' = '';
-  /** The command prompt last asked for, kept while its command is carried out (a gamepad's diagonals: pageHooks.ts). */
+  /** The command prompt last asked for, kept while its command is carried out (Game's pairsWays and sailsInTwos). */
   lastCommandPrompt: '' | 'town' | 'outdoors' | 'dungeon' | 'combat' = '';
   /** The command prompt is waiting for its key this moment (no menu of its own up): where a lost focus opens the Pause menu. */
   awaitingCommand = false;
@@ -212,6 +212,21 @@ export class GameCore {
   inPlay = false;
   /** Whether the party sails a ship on the world map, whose turn spends the move (Game's; ui/inTwos.ts). */
   get aboardShip(): boolean {
+    return false;
+  }
+  /**
+   * The page's controller features (ui/pageHooks.ts, issue #40), each the game's to say by its own prompts - none in
+   * the core. Whether two neighbouring ways held on the d-pad go in turn now (gamepad.ts): asked as a pair begins.
+   */
+  get pairsWays(): boolean {
+    return false;
+  }
+  /** Whether B held passes again now, as Space held does (gamepad.ts): only where one B passes the turn. */
+  get passRepeats(): boolean {
+    return false;
+  }
+  /** Whether two ways held go two at a time now - turn, then sail (ui/inTwos.ts): a ship whose turn spends the move. */
+  get sailsInTwos(): boolean {
     return false;
   }
   /**

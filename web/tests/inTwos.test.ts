@@ -88,3 +88,31 @@ describe('aboard a ship (Game.aboardShip)', () => {
     expect(g.aboardShip).toBe(false);
   });
 });
+
+/**
+ * What Ultima V says the page's controller features ask (GameCore.pairsWays, passRepeats, sailsInTwos): as the page
+ * asked its prompt by name before they were the game's to say - the world map's pairs, B held at a prompt outside a
+ * fight, a ship at the world map's prompt.
+ */
+describe("Ultima V's answers to the page", () => {
+  it('pairs on the world map, passes again at a prompt outside a fight, sails in twos on a ship there', async () => {
+    const { newGame } = await import('./helpers.ts');
+    const { g } = newGame();
+    g.s.mapId = 0;
+    g.s.partyTile = 0x20; // a ship
+    g.inPlay = true;
+    const at = (last: typeof g.lastCommandPrompt, now: typeof g.commandPrompt, waiting: boolean): boolean[] => {
+      [g.lastCommandPrompt, g.commandPrompt, g.awaitingCommand] = [last, now, waiting];
+      return [g.pairsWays, g.passRepeats, g.sailsInTwos];
+    };
+    expect(at('outdoors', 'outdoors', true)).toEqual([true, true, true]);
+    expect(at('outdoors', '', false)).toEqual([true, false, true]); // the prompt's command carried out: a step, a menu
+    expect(at('town', 'town', true)).toEqual([false, true, false]);
+    expect(at('dungeon', 'dungeon', true)).toEqual([false, true, false]);
+    expect(at('combat', 'combat', true)).toEqual([false, false, false]);
+    g.s.partyTile = 0x10; // on foot
+    expect(at('outdoors', 'outdoors', true)).toEqual([true, true, false]);
+    g.inPlay = false; // the title
+    expect(at('outdoors', 'outdoors', true)).toEqual([false, false, false]);
+  });
+});

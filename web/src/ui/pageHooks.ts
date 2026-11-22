@@ -324,15 +324,15 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     },
     () => g.options.batterySaver,
     screen.holds,
-    // Two neighbouring ways held go in turn on the world map alone - Britannia's and the Underworld's (issue #40).
-    () => g.inPlay && g.lastCommandPrompt === 'outdoors',
-    // B held passes again while the command prompt waits for its key, outside a fight (issue #40).
-    () => g.inPlay && g.awaitingCommand && g.commandPrompt !== '' && g.commandPrompt !== 'combat',
+    // Two neighbouring ways held go in turn where the game says (GameCore.pairsWays: Ultima V's world map, issue #40).
+    () => g.pairsWays,
+    // B held passes again where the game says (GameCore.passRepeats: Ultima V's command prompt, outside a fight).
+    () => g.passRepeats,
   );
   wakeInput = () => gamepad.wake();
-  // Two ways held on a ship go two at a time - turn, then sail - a ship's turn spending the move (issue #40).
+  // Two ways held go two at a time - turn, then sail - where the game says (GameCore.sailsInTwos: a ship, issue #40).
   screen.inTwos = new InTwos(
-    () => g.inPlay && g.lastCommandPrompt === 'outdoors' && g.aboardShip,
+    () => g.sailsInTwos,
     () => screen.holds.pace,
   );
   const touch = new TouchPad({
