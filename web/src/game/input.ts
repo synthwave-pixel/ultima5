@@ -519,11 +519,12 @@ function firesHere(g: Game): boolean {
  */
 async function autoCombatKey(g: Game): Promise<number> {
   const key = g.options.autoCombat === 'off' || g.s.mapId !== 0xff ? 0 : await autoTurnKey(g);
-  // The turn the player's, or the fight over: "Auto" taken down from the map's top border, the sky back there. Not in a
-  // dungeon, whose view (its level on the border) is drawn again as the party comes back to it.
+  // The turn the player's, or the fight over: "Auto" taken down from the map's top border, the sky back there - or, in
+  // a dungeon, its level: the dungeon writes only the level's digit as the party walks, which over "Auto" read "Au5o"
+  // (issue #44).
   if (key === 0 && g.autoShown) {
     g.autoShown = false;
-    if (g.s.mapId === 0xff || g.s.mapId < 0x21) autoTitle(g, false);
+    if (g.s.mapId === 0xff || g.s.mapId < 0x29) autoTitle(g, false);
   }
   return key;
 }
