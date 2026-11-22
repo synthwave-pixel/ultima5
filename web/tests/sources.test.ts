@@ -51,16 +51,41 @@ describe("the desktop app's scan", () => {
     const g = globalThis as { u5native?: unknown };
     expect(desktopScan()).toBeNull();
     let asked: string[] = [];
+    let extra: string | undefined;
     g.u5native = {
-      scanForGameFiles: async (names: string[]) => {
+      scanForGameFiles: async (names: string[], also?: string) => {
         asked = names;
+        extra = also;
         return [{ where: '/Users/a/u5', files: [{ path: 'DATA.OVL', data: new Uint8Array([1]) }] }];
       },
     };
     try {
       const got = await desktopScan()!();
       expect(asked).toEqual(REQUIRED);
+      // The files read beside the names: the game's to say (Ultima V's, the Upgrade's music).
+      expect(extra).toBe('\\.XMI$');
       expect(got[0].where).toBe('/Users/a/u5');
+    } finally {
+      delete g.u5native;
+    }
+  });
+});
+
+describe("the Steam folder's files", () => {
+  it('asks the app for the names and the files read beside them', async () => {
+    const { steamFound } = await import('../src/install/sources.ts');
+    const g = globalThis as { u5native?: unknown };
+    const asked: unknown[] = [];
+    g.u5native = {
+      steam: {
+        find: () => ({ steam: true, game: 'ok', where: '~/S' }),
+        gameFiles: async (...args: unknown[]) => (asked.push(...args), null),
+      },
+    };
+    try {
+      await steamFound()!();
+      const { REQUIRED } = await import('../src/install/gameFiles.ts');
+      expect(asked).toEqual([REQUIRED, '\\.XMI$']);
     } finally {
       delete g.u5native;
     }
@@ -74,10 +99,20 @@ describe("the Android app's folder picker", () => {
     expect(androidFolder()).toBeNull();
     g.Capacitor = {
       getPlatform: () => 'android',
-      Plugins: { GameFolder: { pick: async () => ({ where: 'Download/u5', files: [{ path: 'DATA.OVL', data: btoa('\x01\x02') }] }) } },
+      Plugins: {
+        GameFolder: {
+          pick: async (o: unknown) => {
+            asked = o;
+            return { where: 'Download/u5', files: [{ path: 'DATA.OVL', data: btoa('\x01\x02') }] };
+          },
+        },
+      },
     };
+    let asked: unknown;
     try {
       const got = await androidFolder()!();
+      const { REQUIRED } = await import('../src/install/gameFiles.ts');
+      expect(asked).toEqual({ names: REQUIRED, extra: '\\.XMI$' });
       expect(got?.where).toBe('Download/u5');
       expect([...got!.files[0].data]).toEqual([1, 2]);
       (g.Capacitor as { Plugins: { GameFolder: { pick: () => Promise<unknown> } } }).Plugins.GameFolder.pick = async () => ({

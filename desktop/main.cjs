@@ -658,11 +658,16 @@ app.whenReady().then(() => {
     callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write'),
   );
   // The installer's Scan for game files... (preload.cjs): the copies scan.cjs finds, only the files the page names.
-  // Only the game's own page (the app:// scheme) may ask; a frame from anywhere else is answered with no copies.
-  ipcMain.handle('scan-game-files', (event, names) =>
-    String(event.senderFrame?.url ?? '').startsWith('app://') && Array.isArray(names) && names.every((n) => typeof n === 'string')
-      ? scanForGameFiles(names, steamLibraries())
-      : [],
+  // Only the game's own page (the app:// scheme) may ask; a frame from anywhere else is answered with no copies. The
+  // page may name a pattern for other files to read beside the names (scan.cjs readCopy); anything but a string is
+  // refused as the names are.
+  const asked = (event, names, extra) =>
+    String(event.senderFrame?.url ?? '').startsWith('app://') &&
+    Array.isArray(names) &&
+    names.every((n) => typeof n === 'string') &&
+    (extra === undefined || extra === null || typeof extra === 'string');
+  ipcMain.handle('scan-game-files', (event, names, extra) =>
+    asked(event, names, extra) ? scanForGameFiles(names, steamLibraries(), extra ?? undefined) : [],
   );
   // A Steam launch (preload.cjs u5native.steam), decided here once and answered only to the game's own page: whether
   // there is one, where the game's files are, and whether an account is known. The game's files are read from the folder
@@ -687,12 +692,9 @@ app.whenReady().then(() => {
       ? { steam: f.steam, game: f.game, where: f.where }
       : { steam: false, game: 'none', where: '' };
   });
-  ipcMain.handle('steam-game-files', (event, names) =>
-    steamFind().folder &&
-    String(event.senderFrame?.url ?? '').startsWith('app://') &&
-    Array.isArray(names) &&
-    names.every((n) => typeof n === 'string')
-      ? { where: steamFind().folder, files: readCopy(steamFind().folder, names) }
+  ipcMain.handle('steam-game-files', (event, names, extra) =>
+    steamFind().folder && asked(event, names, extra)
+      ? { where: steamFind().folder, files: readCopy(steamFind().folder, names, extra ?? undefined) }
       : null,
   );
   // The saves of a Steam launch (preload.cjs u5native.steam.saves, web/src/game/keyStore.ts), asked for synchronously so

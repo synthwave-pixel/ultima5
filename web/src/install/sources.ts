@@ -38,18 +38,18 @@ export function autoscanAsked(search: string): boolean {
 
 /** The desktop app's bridge (desktop/preload.cjs), where the page has one. */
 interface Native {
-  scanForGameFiles(names: string[]): Promise<FoundCopy[]>;
+  scanForGameFiles(names: string[], extra?: string): Promise<FoundCopy[]>;
 }
 
 /** The desktop app's scan of the disk (desktop/scan.cjs), asked for the game's files; null outside the app. */
 export function desktopScan(): (() => Promise<FoundCopy[]>) | null {
   const native = (globalThis as { u5native?: Native }).u5native;
-  return native ? () => native.scanForGameFiles([...gameSpec().required]) : null;
+  return native ? () => native.scanForGameFiles([...gameSpec().required], gameSpec().extra) : null;
 }
 
 /** The Android app's GameFolder plugin (mobile/.../GameFolderPlugin.java), where the page has it. */
 interface GameFolder {
-  pick(o: { names: string[] }): Promise<{ where: string; files: { path: string; data: string }[] } | { cancelled: true }>;
+  pick(o: { names: string[]; extra?: string }): Promise<{ where: string; files: { path: string; data: string }[] } | { cancelled: true }>;
 }
 
 /** A folder the player picks with Android's own picker, its game files read; null outside the Android app. */
@@ -58,7 +58,8 @@ export function androidFolder(): (() => Promise<FoundCopy | null>) | null {
   const plugin = cap?.getPlatform?.() === 'android' ? cap.Plugins?.GameFolder : undefined;
   if (!plugin) return null;
   return async () => {
-    const got = await plugin.pick({ names: [...gameSpec().required] });
+    const { required, extra } = gameSpec();
+    const got = await plugin.pick(extra === undefined ? { names: [...required] } : { names: [...required], extra });
     if ('cancelled' in got) return null;
     const bytes = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
     return { where: got.where, files: got.files.map((f) => ({ path: f.path, data: bytes(f.data) })) };
@@ -128,7 +129,7 @@ export type SteamOptionsHere = SteamOptions & { account: string | null };
 export interface SteamNative {
   launch(): SteamLaunch;
   find(): SteamFind;
-  gameFiles(names: string[]): Promise<FoundCopy | null>;
+  gameFiles(names: string[], extra?: string): Promise<FoundCopy | null>;
   saves: { all(): Record<string, string> | null; set(key: string, value: string): true | string | false; remove(key: string): boolean };
   /** The Steam (beta) menu's (game.ts SteamHook): what was found, and the launch line, null where this copy has none. */
   status(): Promise<SteamStatus>;
@@ -206,5 +207,5 @@ export function steamFind(): SteamFind {
 /** The game's files from Steam's folder, where Steam has the game; else null (always null outside the desktop app). */
 export function steamFound(): (() => Promise<FoundCopy | null>) | null {
   const steam = steamNative();
-  return steam && steamFind().game === 'ok' ? () => steam.gameFiles([...gameSpec().required]) : null;
+  return steam && steamFind().game === 'ok' ? () => steam.gameFiles([...gameSpec().required], gameSpec().extra) : null;
 }

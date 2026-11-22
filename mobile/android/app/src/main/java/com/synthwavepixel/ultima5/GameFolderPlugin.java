@@ -23,11 +23,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * The installer's Choose folder... on Android (web/src/install/sources.ts androidFolder): the system's own folder
  * picker, which needs no storage permission, and the game's files read out of the folder chosen - the names the page
- * asks for and the Upgrade's music, a few folders down - as base64 for the page to check and install. And Export's
+ * asks for and those its pattern names (Ultima V's: the Upgrade's music), a few folders down - as base64 for the page to check and install. And Export's
  * To a file (web/src/ui/pageHooks.ts androidSave), which a web view cannot do by itself: the system's own picker for
  * where a new file goes, the saved game written there. And a newer release's page, opened in the system's browser
  * (openUrl).
@@ -81,13 +83,25 @@ public class GameFolderPlugin extends Plugin {
       getBridge().releaseCall(call);
       return;
     }
+    // The other files to read beside the names (web/src/install/gameFiles.ts GameSpec.extra): a pattern for a file's
+    // path from the folder chosen, ignoring case. None, or none that parses: the names alone.
+    Pattern extra = null;
+    String also = call.getString("extra");
+    if (also != null && !also.isEmpty()) {
+      try {
+        extra = Pattern.compile(also, Pattern.CASE_INSENSITIVE);
+      } catch (PatternSyntaxException e) {
+        extra = null;
+      }
+    }
+    final Pattern alsoRead = extra;
     // Off the main thread: listing a folder and reading its files goes to the document provider, and a broad folder
     // picked by mistake would otherwise hold up the UI past Android's input timeout.
     getBridge().execute(() -> {
       DocumentFile root = DocumentFile.fromTreeUri(getContext(), tree);
       JSArray files = new JSArray();
       try {
-        walk(root, "", 0, wanted, files);
+        walk(root, "", 0, wanted, alsoRead, files);
       } catch (Exception e) {
         call.reject("Could not read the folder: " + e.getMessage());
         getBridge().releaseCall(call);
@@ -101,17 +115,20 @@ public class GameFolderPlugin extends Plugin {
     });
   }
 
-  /** The wanted files under `dir`, as { path, data } with the path from the folder chosen; four folders down at most. */
-  private void walk(DocumentFile dir, String prefix, int depth, Set<String> wanted, JSArray out) throws Exception {
+  /**
+   * The wanted files under `dir`, and those whose path `extra` matches, as { path, data } with the path from the folder
+   * chosen; four folders down at most.
+   */
+  private void walk(DocumentFile dir, String prefix, int depth, Set<String> wanted, Pattern extra, JSArray out) throws Exception {
     if (dir == null || depth > 4) return;
     for (DocumentFile f : dir.listFiles()) {
       String name = f.getName();
       if (name == null) continue;
       if (f.isDirectory()) {
-        walk(f, prefix + name + "/", depth + 1, wanted, out);
+        walk(f, prefix + name + "/", depth + 1, wanted, extra, out);
       } else {
         String upper = name.toUpperCase(Locale.ROOT);
-        if (!wanted.contains(upper) && !upper.endsWith(".XMI")) continue;
+        if (!wanted.contains(upper) && (extra == null || !extra.matcher(prefix + name).find())) continue;
         JSObject file = new JSObject();
         file.put("path", prefix + name);
         file.put("data", Base64.encodeToString(read(f.getUri()), Base64.NO_WRAP));

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import brand from '../../desktop/brand.cjs';
-import { findCopies, gameFolderName, roots } from '../../desktop/scan.cjs';
+import { findCopies, gameFolderName, readCopy, roots } from '../../desktop/scan.cjs';
 
 /** A folder named like the game, and the file a copy is known by (brand.cjs: Ultima V's folder in Steam, DATA.OVL). */
 const G = brand.steam.installDir;
@@ -158,10 +158,36 @@ describe('the desktop scan', () => {
     put(`Apps/${G}™.app/Contents/Resources/game/${M}`);
     put(`Apps/Other Game.app/Contents/Resources/game/${M}`); // not the game
     put(`Documents/notes/${M}`); // not a game folder's name
-    const got = findCopies([home, join(home, 'Apps')], [M, 'TILES.16']);
+    const got = findCopies([home, join(home, 'Apps')], [M, 'TILES.16'], { extra: '\\.XMI$' });
     expect(got.map((c) => c.where)).toEqual([join(home, G), join(home, `Apps/${G}™.app/Contents/Resources/game`)]);
     expect(got[0].files.map((f) => f.path).sort()).toEqual([M, 'TILES.16', 'upgrade/MUSIC.XMI']);
     expect(new TextDecoder().decode(got[0].files.find((f) => f.path === M)!.data)).toBe('data');
+  });
+
+  it('reads beside the names only the files the page says, by their path in the copy', () => {
+    const home = temp();
+    const put = (path: string): void => {
+      mkdirSync(join(home, path, '..'), { recursive: true });
+      writeFileSync(join(home, path), 'x');
+    };
+    for (const f of ['A.DAT', 'B.DAT', 'sub/C.DAT', 'sub/D.XMI', 'other/E.DAT', 'sub/deeper/F.DAT']) put(f);
+    const read = (extra?: string) =>
+      readCopy(home, ['A.DAT'], extra)
+        .map((f) => f.path)
+        .sort();
+    expect(read('^sub/[^/]+\\.dat$')).toEqual(['A.DAT', 'sub/C.DAT']);
+    expect(read('\\.XMI$')).toEqual(['A.DAT', 'sub/D.XMI']);
+    expect(read()).toEqual(['A.DAT']);
+    expect(read('(')).toEqual(['A.DAT']); // no pattern: the names alone
+    const [copy] = findCopies([home], ['A.DAT'], { extra: '^other/' });
+    expect(copy).toBeUndefined(); // home is no game folder
+    mkdirSync(join(home, G));
+    put(`${G}/${M}`);
+    put(`${G}/upgrade/MUSIC.XMI`);
+    put(`${G}/upgrade/MUSIC.TXT`);
+    const found = findCopies([home], [M], { extra: '\\.XMI$' });
+    expect(found[0].files.map((f) => f.path).sort()).toEqual([M, 'upgrade/MUSIC.XMI']);
+    expect(findCopies([home], [M])[0].files.map((f) => f.path)).toEqual([M]);
   });
 
   it('still reports a copy whose entries cannot be read, with the files that did', () => {
@@ -170,7 +196,7 @@ describe('the desktop scan', () => {
     writeFileSync(join(home, `${G}/${M}`), 'data');
     symlinkSync(join(home, 'missing'), join(home, `${G}/BAD.XMI`)); // a broken link, named like the music
     symlinkSync(join(home, 'missing'), join(home, `${G}/TILES.16`)); // and like a wanted file
-    const got = findCopies([home], [M, 'TILES.16']);
+    const got = findCopies([home], [M, 'TILES.16'], { extra: '\\.XMI$' });
     expect(got.map((c) => c.where)).toEqual([join(home, G)]);
     expect(got[0].files.map((f) => f.path)).toEqual([M]);
   });

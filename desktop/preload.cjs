@@ -6,7 +6,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('u5native', {
   // The app's own version (main.cjs app.getVersion()), for the edition's name in Settings and on the title.
   version: () => ipcRenderer.sendSync('app-version'),
-  scanForGameFiles: (names) => ipcRenderer.invoke('scan-game-files', names),
+  // The names the page asks for, and a pattern for the other files to read beside them (gameFiles.ts GameSpec.extra).
+  scanForGameFiles: (names, extra) => ipcRenderer.invoke('scan-game-files', names, extra),
   // A newer version (updates.cjs; web/src/ui/updates.ts): what it is, taking it up, the player told of it.
   updates: {
     offer: () => ipcRenderer.invoke('update-offer'),
@@ -27,7 +28,7 @@ contextBridge.exposeInMainWorld('u5native', {
     launch: () => ipcRenderer.sendSync('steam-launch'),
     // Steam's libraries and Ultima V in them, found whether or not Steam launched the app (main.cjs steamFind).
     find: () => ipcRenderer.sendSync('steam-find'),
-    gameFiles: (names) => ipcRenderer.invoke('steam-game-files', names),
+    gameFiles: (names, extra) => ipcRenderer.invoke('steam-game-files', names, extra),
     // The Steam (beta) menu (main.cjs steamStatus): what was found of Steam, and the launch line to copy.
     status: () => ipcRenderer.invoke('steam-status'),
     launchLine: () => ipcRenderer.invoke('steam-launch-line'),
