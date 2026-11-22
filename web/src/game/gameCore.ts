@@ -210,6 +210,10 @@ export class GameCore {
   notes: Note[] = [];
   /** Whether a game is in play, rather than the title up (run.ts journeyOnward): what Export takes (transfer.ts). */
   inPlay = false;
+  /** Whether the party sails a ship on the world map, whose turn spends the move (Game's; ui/inTwos.ts). */
+  get aboardShip(): boolean {
+    return false;
+  }
   /**
    * The tips given in the log, once each, kept with the saved game (tips.ts): 'nudge', a new game's pointer to the
    * Tips (run.ts journeyOnward); and a fight's, one a fight (COMBAT_TIPS). A new character's are none.

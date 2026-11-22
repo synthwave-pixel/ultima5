@@ -41,6 +41,7 @@ import { doubled, type PictureKind, restyle, type WallOf } from './standardPictu
 import { frameFor, mapArtFor, pieceFileOf, portDungeon, signRunes, signStyleFor, type Skin, SkinOvers } from './skins.ts';
 import type { FontChoice, Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
+import type { InTwos } from './inTwos.ts';
 import { setChoice, setProse, setSteps, type Measure, type Run, type RunFace } from './storyText.ts';
 import { Text, type TextTarget } from './text.ts';
 
@@ -192,6 +193,8 @@ export class Screen implements Platform {
   onKey: (() => void) | null = null;
   /** Whether a held key's auto-repeat is dropped: a key standing in for a controller's button, which never repeats. */
   dropRepeat: ((k: number) => boolean) | null = null;
+  /** Two ways held on a ship, two at a time (inTwos.ts, issue #40): every key the game is given passes it. */
+  inTwos: InTwos | null = null;
   /**
    * Keys held down, repeating at Max input's pace while the game waits (holds.ts): the keyboard's, and the touch
    * pad's (pageHooks.ts). A new scene breaks them, and drops the keys queued.
@@ -1321,10 +1324,11 @@ export class Screen implements Platform {
       const w = this.waiter;
       this.waiter = null;
       this.takenAt = performance.now();
-      w(k);
+      w(this.inTwos?.take(k, held, this.takenAt) ?? k);
     } else if (this.keys.length < 16 && !(held && this.keys.length > 0)) {
-      this.keys.push(k);
-      this.keyTimes.push(performance.now());
+      const now = performance.now();
+      this.keys.push(this.inTwos?.take(k, held, now) ?? k);
+      this.keyTimes.push(now);
     }
   }
 

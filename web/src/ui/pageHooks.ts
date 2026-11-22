@@ -16,6 +16,7 @@ import { clearInstalled } from '../install/store.ts';
 import { reportArgs, steamLaunch, steamNative } from '../install/sources.ts';
 import { cloudSaves } from '../game/keyStore.ts';
 import { GamepadInput } from './gamepad.ts';
+import { InTwos } from './inTwos.ts';
 import type { CapacitorLike } from './platform.ts';
 import { menuUp } from './pageMenu.ts';
 import { ScanlineOverlay } from './scanlines.ts';
@@ -329,6 +330,11 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     () => g.inPlay && g.awaitingCommand && g.commandPrompt !== '' && g.commandPrompt !== 'combat',
   );
   wakeInput = () => gamepad.wake();
+  // Two ways held on a ship go two at a time - turn, then sail - a ship's turn spending the move (issue #40).
+  screen.inTwos = new InTwos(
+    () => g.inPlay && g.lastCommandPrompt === 'outdoors' && g.aboardShip,
+    () => screen.holds.pace,
+  );
   const touch = new TouchPad({
     send,
     holds: screen.holds,

@@ -359,6 +359,10 @@ export class Game extends GameCore {
   get outdoors(): boolean {
     return this.s.mapId === 0;
   }
+  /** A ship on the world map, with sails or not - not the rowing boat (outdoors.ts turnParty: its turn spends the move). */
+  override get aboardShip(): boolean {
+    return this.s.mapId === 0 && (this.s.partyTile & 0xf8) === 0x20;
+  }
   /** A dungeon (33-40). */
   get inDungeon(): boolean {
     return this.s.mapId > 0x20 && this.s.mapId < 0x80;
