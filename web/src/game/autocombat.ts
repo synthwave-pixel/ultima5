@@ -28,6 +28,7 @@ import {
   onMonsterSide,
   snapTarget,
   snapTargets,
+  aimableFoes,
 } from './combat.ts';
 import { autoTitle } from './frame.ts';
 import { CF, Game } from './game.ts';
@@ -195,8 +196,9 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
     }
     // A creature on the party's side looses at its snap target (combat.ts snapTarget): a foe along a clear line for
     // what it throws, spits or breathes, not the nearest foe the aim starts on - which may stand behind a rock that
-    // takes the shot, turn after turn.
-    const pick = member ? -1 : snapTarget(g, s.combatTurn);
+    // takes the shot, turn after turn. A member at a foe the weapon aimed reaches along a clear line (aimableFoes):
+    // the one it struck last while it is one, else the nearest - not where the aim began (issue #40).
+    const pick = member ? memberAim(g, s.combatTurn, spared) : snapTarget(g, s.combatTurn);
     // Loosed only at a foe: not at a creature summoned or charmed to the party's side the crosshair lies on or passes.
     const on = combatantAt(g, s.crossX, s.crossY);
     if (on >= 0 && on !== s.combatTurn && onMonsterSide(g, on) && !spared(on) && (pick < 0 || on === pick)) return K.Enter;
@@ -354,4 +356,14 @@ function firstStep(g: Game, x: number, y: number, tile: number, foes: { x: numbe
     }
   }
   return 0;
+}
+
+/**
+ * The foe a member's blow is aimed at by auto combat: one the weapon being aimed reaches along a clear line
+ * (aimableFoes), not one spared - the foe last struck while it is one, else the nearest; -1 for none.
+ */
+function memberAim(g: Game, i: number, spared: (j: number) => boolean): number {
+  const list = aimableFoes(g, i, g.s.weapon).filter((j) => !spared(j));
+  if (list.includes(g.snapMemory[i])) return g.snapMemory[i];
+  return list[0] ?? -1;
 }

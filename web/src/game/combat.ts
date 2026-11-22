@@ -1903,6 +1903,20 @@ function reachesFoe(g: Game, i: number, weapon: number, j: number, pointed: bool
   );
 }
 
+/**
+ * The foes member combatant `i`'s `weapon` (0xff bare hands) can strike, aimed by the player: in its reach, and a shot
+ * or a throw along a clear line; the nearest first. Where auto combat aims a member's blow (autocombat.ts): the aim
+ * began on the foe last struck, or the nearest, and was loosed there though rocks stood between (issue #40).
+ */
+export function aimableFoes(g: Game, i: number, weapon: number): number[] {
+  const foes: number[] = [];
+  for (let j = 0; j < 0x20; j++) {
+    if (j === i || !standingFoe(g, j, i)) continue;
+    if (weapon === 0xff ? between(g, i, j) <= 1 : reachesFoe(g, i, weapon, j, true)) foes.push(j);
+  }
+  return nearestFirst(g, i, foes);
+}
+
 /** Whether any foe still standing is within reach of combatant `i`'s `weapon`, aimed by the player. */
 function foeInReach(g: Game, i: number, weapon: number): boolean {
   for (let j = 0; j < 0x20; j++) if (j !== i && standingFoe(g, j, i) && reachesFoe(g, i, weapon, j, true)) return true;
