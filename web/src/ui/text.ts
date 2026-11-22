@@ -30,9 +30,6 @@
  * so nothing the window printed meanwhile is lost. One cover at a time.
  */
 
-/** The border's blue, a cap's colour (frame.ts capArrow: Colour.blue). */
-const CAP_BLUE = 1;
-
 export const CLEAR_WINDOW = 0xff;
 export const TOGGLE_UNDERLINE = 0xfe;
 export const TOGGLE_INVERSE = 0xfd;
@@ -111,9 +108,17 @@ interface Cover {
   under: Cell[][];
 }
 
-/** A turn's lines in the message window: each line's text and the number of the row it is on (TextWindow.started). */
+/**
+ * A turn's lines in the message window: each line's text, its cells as drawn, and the number of the row it is on
+ * (TextWindow.started).
+ */
 interface Block {
   texts: string[];
+  /**
+   * Each line's cells, as drawn: a line taken back or given a count is drawn again from them, in the font, colours and
+   * ink each cell was drawn in (a game's own prompt glyph, a word in its own colour), not in the first font.
+   */
+  cells: Cell[][];
   rows: number[];
   /** Whether each line only wrapped onto the next, the message going on there. */
   soft: boolean[];
@@ -121,6 +126,8 @@ interface Block {
 
 /** A turn's block once printed: how often each line has repeated, and whether the turn was a move. */
 type Folded = Block & { counts: number[]; moving: boolean };
+
+const noLines = (): Block => ({ texts: [], cells: [], rows: [], soft: [] });
 
 export class Text {
   readonly windows: TextWindow[];
@@ -171,8 +178,10 @@ export class Text {
   private target: Folded | null = null;
   /** This turn is a move (the game says so as it begins one): it may fold into the last, if that was a move too. */
   moving = false;
-  private turn: Block = { texts: [], rows: [], soft: [] };
+  private turn: Block = noLines();
   private folded = 0;
+  /** The lines of this turn folded so far, as they were drawn: drawn so again if the fold is taken back (unfold). */
+  private taken: Cell[][] = [];
   private broken = false;
   /** Whether the newline being printed is print's own, wrapping a long message (a soft break). */
   private soft = false;
@@ -314,8 +323,9 @@ export class Text {
     }
     this.target = null;
     this.moving = false;
-    this.turn = { texts: [], rows: [], soft: [] };
+    this.turn = noLines();
     this.folded = 0;
+    this.taken = [];
     this.broken = false;
   }
 
@@ -324,8 +334,9 @@ export class Text {
     this.prev = null;
     this.before = null;
     this.target = null;
-    this.turn = { texts: [], rows: [], soft: [] };
+    this.turn = noLines();
     this.folded = 0;
+    this.taken = [];
     this.broken = true;
   }
 
@@ -361,35 +372,39 @@ export class Text {
     return text;
   }
 
-  /** The text of row `y` of the current window, without its trailing spaces. */
-  private rowText(y: number): string {
+  /** The cells of row `y` of the current window, as drawn (copies). */
+  private rowCells(y: number): Cell[] {
     const w = this.win;
-    let text = '';
-    for (let c = w.left; c <= w.right; c++) text += this.at(w.top + y, c).ch;
-    return text.trimEnd();
+    const cells: Cell[] = [];
+    for (let c = w.left; c <= w.right; c++) cells.push({ ...this.at(w.top + y, c) });
+    return cells;
+  }
+
+  /** `text` as cells in the window's own look - the first font, its colours: a count added to a line (counted). */
+  private plain(text: string): Cell[] {
+    const w = this.win;
+    return [...text].map((ch) => ({ ch, font: 0, fg: w.fg, bg: w.bg, underline: false, cap: 0 }));
   }
 
   /**
-   * Row `y` of the current window made to read `text`: from the first place it differs, so what is kept - the
-   * prompt's arrow, a word in its own colour - stays as it was drawn, and a count is simply added after it.
+   * Row `y` of the current window made to show `line`: from the first place it reads differently, so what is kept -
+   * the prompt's arrow, a word in its own colour - stays as it was drawn, and a count is simply added after it; and
+   * from there each cell drawn as it was drawn (its font, colours, ink, a border's cap: the prompt's arrow in the
+   * border's blue, as frame.ts capArrow prints it - the frame knows its caps by it), a space that looks as the cleared
+   * row does left cleared.
    */
-  private setRow(y: number, text: string): void {
+  private setRow(y: number, line: Cell[]): void {
     const w = this.win;
     const width = w.right - w.left + 1;
-    const want = text.slice(0, width).padEnd(width);
+    const want = (i: number): Cell => line[i] ?? blank(w.bg);
     let from = 0;
-    while (from < width && this.at(w.top + y, w.left + from).ch === want[from]) from++;
+    while (from < width && this.at(w.top + y, w.left + from).ch === want(from).ch) from++;
     if (from >= width) return;
     this.clearCells(w.left + from, w.top + y, w.right, w.top + y, w.bg);
     for (let i = from; i < width; i++) {
-      if (want[i] === ' ') continue;
-      // A prompt's arrow printed again (a fold taken back) is the border's cap it was (printCap): in the border's blue
-      // on black, as frame.ts capArrow prints it - the frame knows its caps by that blue - not a glyph in white.
-      const code = want.charCodeAt(i);
-      const cap = i === 0 && (code === 1 || code === 2) && this.current === this.foldWindow;
-      this.capNext = cap ? code : 0;
-      this.glyph(0, code, w.left + i, w.top + y, cap ? CAP_BLUE : w.fg, cap ? 0 : w.bg);
-      this.capNext = 0;
+      const cell = want(i);
+      if (cell.ch === ' ' && cell.bg === w.bg && !cell.underline) continue;
+      this.put(w.top + y, w.left + i, cell);
     }
   }
 
@@ -397,18 +412,19 @@ export class Text {
    * Line `k` of the last turn's block as it reads: with its count, " (x3)", the text cut short where both would not
    * fit the window - at the last whole word that does ("Slow (x2)" for "Slow progress!", not "Slow progre (x2)"), or
    * the letters that fit where not even the first word does - but for a line a long message only wrapped from, whose
-   * count is the one on the message's last.
+   * count is the one on the message's last. The line's own cells as drawn; the count in the window's own look.
    */
-  private counted(block: Folded, text: string, k: number): string {
+  private counted(block: Folded, k: number): Cell[] {
+    const line = block.cells[k];
     const count = block.counts[k];
-    if (count < 2 || block.soft[k]) return text;
+    if (count < 2 || block.soft[k]) return line;
     const tail = ` (x${count})`;
     const width = this.win.right - this.win.left + 1;
     const room = Math.max(0, width - tail.length);
-    const whole = text.trimEnd();
-    if (whole.length <= room) return whole + tail;
+    const whole = block.texts[k];
     const words = whole.slice(0, room + 1).lastIndexOf(' ');
-    return (words > 0 ? whole.slice(0, words) : whole.slice(0, room)).trimEnd() + tail;
+    const kept = whole.length <= room ? whole : (words > 0 ? whole.slice(0, words) : whole.slice(0, room)).trimEnd();
+    return [...line.slice(0, kept.length), ...this.plain(tail)];
   }
 
   /**
@@ -419,7 +435,11 @@ export class Text {
    */
   private fold(soft: boolean): boolean {
     const w = this.win;
-    const raw = this.rowText(w.y);
+    const drawn = this.rowCells(w.y);
+    const raw = drawn
+      .map((c) => c.ch)
+      .join('')
+      .trimEnd();
     const k = this.folded;
     const same = (b: Folded | null): b is Folded =>
       b !== null && k < b.texts.length && b.texts[k] === raw && b.soft[k] === soft && this.rowAt(b.rows[k]) >= 0;
@@ -434,34 +454,41 @@ export class Text {
     const into = this.target;
     if (!this.broken && this.moving && raw !== '' && same(into)) {
       into.counts[k]++;
+      this.taken.push(drawn);
       this.clearRow(w.y);
-      this.setRow(this.rowAt(into.rows[k]), this.counted(into, raw, k));
+      this.setRow(this.rowAt(into.rows[k]), this.counted(into, k));
       this.folded++;
       return true;
     }
-    if (this.folded > 0) this.unfold(raw);
+    if (this.folded > 0) this.unfold(drawn);
     this.broken = true;
     this.turn.texts.push(raw);
+    this.turn.cells.push(drawn);
     this.turn.rows.push(w.started);
     this.turn.soft.push(soft);
     return false;
   }
 
-  /** Take back the lines folded this turn and print them again as its own, ahead of `pending` (the line on the cursor's row). */
-  private unfold(pending: string | null): void {
+  /**
+   * Take back the lines folded this turn and print them again as its own, as they were drawn, ahead of `pending` (the
+   * line on the cursor's row, as drawn).
+   */
+  private unfold(pending: Cell[] | null): void {
     const prev = this.target!;
     const w = this.win;
-    const lines = prev.texts.slice(0, this.folded);
+    const lines = this.taken;
     const soft = prev.soft.slice(0, this.folded);
-    lines.forEach((text, i) => {
+    this.taken = [];
+    lines.forEach((_, i) => {
       prev.counts[i]--;
       const y = this.rowAt(prev.rows[i]);
-      if (y >= 0) this.setRow(y, this.counted(prev, text, i));
+      if (y >= 0) this.setRow(y, this.counted(prev, i));
     });
     this.folded = 0;
-    lines.forEach((text, i) => {
-      this.setRow(w.y, text);
-      this.turn.texts.push(text);
+    lines.forEach((cells, i) => {
+      this.setRow(w.y, cells);
+      this.turn.texts.push(prev.texts[i]);
+      this.turn.cells.push(cells);
       this.turn.rows.push(w.started);
       this.turn.soft.push(soft[i]);
       this.nextRow();
@@ -579,6 +606,15 @@ export class Text {
     this.out.ink(cell.ink);
     draw();
     this.out.ink(this.ink);
+  }
+
+  /** A cell drawn again where it now goes, as it was drawn (a line folded: setRow), and kept in the record as glyph keeps it. */
+  private put(row: number, column: number, cell: Cell): void {
+    if (cell.font < 0) return this.clearCells(column, row, column, row, cell.bg);
+    this.set(row, column, { ...cell });
+    if (this.staging || this.hidden(row, column)) return;
+    if (cell.cap && this.out.cap) this.out.cap(cell.cap, column, row, cell.fg, cell.bg);
+    else this.inked(cell, () => this.out.glyph(cell.font, cell.ch.charCodeAt(0), column, row, cell.fg, cell.bg, cell.underline));
   }
 
   private glyph(font: number, code: number, column: number, row: number, fg: number, bg: number): void {
