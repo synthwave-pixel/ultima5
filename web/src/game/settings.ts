@@ -316,6 +316,28 @@ function settingsKey(): string {
 export type FontChoice = 'sixtyfour' | 'legible' | 'dyslexic' | 'dos';
 export const FONTS: FontChoice[] = ['sixtyfour', 'legible', 'dyslexic', 'dos'];
 
+/**
+ * What the Gameplay and Appearance lines say, in a game's own words where they differ from Ultima V's (as AudioWords
+ * the Audio lines'): each Rules choice's note, the Interface line's under Enhanced ('standard') and Retro
+ * ('original'), the Status letters line's, each Font's.
+ */
+export interface SettingWords {
+  rules?: Partial<Record<Rules, string>>;
+  interface?: Partial<Record<TileSet, string>>;
+  statusLetters?: string;
+  font?: Partial<Record<FontChoice, string>>;
+}
+/** The game's own words for the settings' notes (useSettingWords); none, Ultima V's. */
+let ownSettingWords: SettingWords = {};
+/** The settings' notes this game says otherwise than Ultima V (its entry's, as useAudioWords); null, Ultima V's. */
+export function useSettingWords(words: SettingWords | null): void {
+  ownSettingWords = words ?? {};
+}
+/** The game's own words for the settings' notes, where it gives them; empty for Ultima V's (menu.ts). */
+export function settingWords(): SettingWords {
+  return ownSettingWords;
+}
+
 export const DEFAULTS: Options = {
   autoCombat: 'off',
   scanlines: false,

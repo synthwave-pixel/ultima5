@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runtimeCaching } from './tools/serviceWorker.ts';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -144,19 +145,8 @@ export default defineConfig(({ mode }) => ({
           'assets/controllers-*.js',
           'assets/debug-*.js',
         ],
-        runtimeCaching: [
-          {
-            // A file is named for what it holds (BRITLAND.3fa9c01d.ogg: tools/music/render.ts), so a tune rendered again
-            // is a new URL and never the old one kept; the old entries age out.
-            urlPattern: /\/music\/[a-z]+\/[A-Z0-9]+\.[0-9a-f]{8}\.ogg$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'music',
-              expiration: { maxEntries: 160, maxAgeSeconds: 90 * 24 * 60 * 60 },
-              rangeRequests: true,
-            },
-          },
-        ],
+        // The music, a tune at a time, in caches named for the game (tools/serviceWorker.ts).
+        runtimeCaching: runtimeCaching(),
         navigateFallbackDenylist: [
           /\/flatpak\//,
           /\/(tiles|deltas|grass|appearance|sounds|pictures|dungeon|frames|mapcells|runes|controllers|debug)\.html(\?|$)/,

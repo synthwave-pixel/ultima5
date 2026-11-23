@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { helpPages } from '../src/game/help.ts';
-import { gameplayLines, PAGE_LINES, PAGE_WIDTH, settingLines, wrap } from '../src/game/menu.ts';
+import { appearanceLines, audioLines, gameplayLines, PAGE_LINES, PAGE_WIDTH, settingLines, wrap } from '../src/game/menu.ts';
+import { FONTS, RULES, SOUND_CHOICES, TILES } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
 
 /** The Help pages (help.ts) and the Settings notes: every line within the panel, every page within its rows. */
@@ -24,11 +25,16 @@ describe('the Help pages and the Settings notes', () => {
   it("says each setting's note in the four rows at the foot of the list", () => {
     const { g } = newGame();
     g.lastSource = 'keyboard'; // the Input line with it
-    for (const tileSet of ['standard', 'original'] as const) {
-      g.options.tileSet = tileSet;
-      for (const s of [...settingLines(g, true), ...gameplayLines(g)])
-        expect(wrap(s.note ?? '').length, `${tileSet} ${s.label}`).toBeLessThanOrEqual(4);
-    }
+    // Every list of settings, Appearance's and Audio's too, in each interface, look, font, Sound and rules.
+    for (const tileSet of ['standard', 'original'] as const)
+      for (const tiles of TILES)
+        for (const font of FONTS)
+          for (const soundChoice of SOUND_CHOICES)
+            for (const rules of RULES) {
+              Object.assign(g.options, { tileSet, tiles, font, soundChoice, rules });
+              for (const s of [...settingLines(g, true), ...gameplayLines(g), ...appearanceLines(g), ...audioLines(g)])
+                expect(wrap(s.note ?? '').length, `${tileSet} ${tiles} ${s.label}: ${s.note}`).toBeLessThanOrEqual(4);
+            }
   });
 
   it('has Auto Pause, off unless turned on', async () => {
