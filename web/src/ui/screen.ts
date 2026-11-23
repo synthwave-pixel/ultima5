@@ -191,7 +191,10 @@ export class Screen implements Platform {
   private waiter: ((k: number) => void) | null = null;
   /** Called on every key (audio unlocks from a gesture). */
   onKey: (() => void) | null = null;
-  /** Whether a held key's auto-repeat is dropped: a key standing in for a controller's button, which never repeats. */
+  /**
+   * Whether a held key's repeat is dropped, asked at each: a key standing in for a controller's button, which repeats
+   * only where the button would (Pass, GameCore.passRepeats).
+   */
   dropRepeat: ((k: number) => boolean) | null = null;
   /** Two ways held on a ship, two at a time (inTwos.ts, issue #40): every key the game is given passes it. */
   inTwos: InTwos | null = null;
@@ -427,7 +430,8 @@ export class Screen implements Platform {
       // held.
       if (e.repeat) return this.holds.seen(`key:${e.code}`);
       this.push(k, true);
-      if (!this.dropRepeat?.(k)) this.holds.hold(`key:${e.code}`, () => this.push(k, true, true), keyUpsLost);
+      // Whether it repeats is asked at each repeat (dropRepeat), as it may change while the key is held.
+      this.holds.hold(`key:${e.code}`, () => void (this.dropRepeat?.(k) || this.push(k, true, true)), keyUpsLost);
     });
     window.addEventListener('keyup', (e) => this.holds.letGo(`key:${e.code}`));
     // Out of the window, its key-ups go elsewhere.

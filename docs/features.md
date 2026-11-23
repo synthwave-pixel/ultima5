@@ -394,7 +394,8 @@ describes how the Enhanced interface and the Remastered look are drawn.
   menu with what is at hand first, and chooses; B passes or backs out -
   the answer "none" to any question - and a command backed out of spends
   no turn. Held at the command prompt (outside a fight), B passes again
-  and again at the Max input pace, as Space held does; nowhere else does
+  and again at the Max input pace, as Space held does - and so do the
+  keys that are B in Controller input (Space, X, B); nowhere else does
   it repeat. X (Q or C on a keyboard; the keyboard's X is B) attacks: in a
   fight, with Snap attacks on, the foe marked in reach (LB and RB, or [
   and ], pick another); aboard
@@ -433,7 +434,10 @@ describes how the Enhanced interface and the Remastered look are drawn.
   party stays in sight above it, and scrolls eight lines at a time; in a
   fight it moves to the top when the one whose turn it is stands low on
   the field. The spells to cast, the items to use and Ready's list sit
-  the same way.
+  the same way. Any other list too long to show whole (a Pause menu
+  list, a box's answers) has a grey arrow at its right on the row above
+  its lines where there are more above, and on the row below where there
+  are more below, so no line is cut for them.
   Get is offered for a thing lying where the party stands - a shard
   Blinked onto, the carpet left there - and A at its "Which way, or
   here?" takes it up from the marked square. Typed commands are

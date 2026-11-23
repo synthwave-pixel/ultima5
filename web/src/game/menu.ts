@@ -405,15 +405,16 @@ export async function amount(
 }
 
 /**
- * The arrows at the right of a list too long for its box, where there are more lines above (on its first line) and
- * below (on its last) - in grey, as the title menu has them (intro.ts).
+ * The arrows at the right of a list too long for its box, on row `up` where there are more lines above and row
+ * `down` where there are more below - in grey, as the title menu has them (intro.ts). A talk's are on its first and
+ * last lines, beside them; any other list's on the rows above and below its lines, which no line is cut for.
  */
-function scrollMarks(g: GameCore, rows: number, above: boolean, below: boolean): void {
+function scrollMarks(g: GameCore, up: number, down: number, above: boolean, below: boolean): void {
   const t = g.text;
   const fg = t.win.fg;
   t.win.fg = Colour.lightGray;
-  put(g, cols - 1, 0, above ? '\x18' : ' ');
-  put(g, cols - 1, rows - 1, below ? '\x19' : ' ');
+  put(g, cols - 1, up, above ? '\x18' : ' ');
+  put(g, cols - 1, down, below ? '\x19' : ' ');
   t.win.fg = fg;
 }
 
@@ -446,6 +447,11 @@ export async function choose(g: GameCore, title: string, items: Item[], start = 
   // A box's notes (the port's): under its lines, after a blank row, as many rows as its longest note wants (three at
   // most), the box as wide as the view's square to hold them.
   const boxNotes = boxed ? Math.min(BOX_NOTE_ROWS, Math.max(0, ...items.map((it) => (it.note ? wrap(it.note).length : 0)))) : 0;
+  // A list longer than it shows, but a talk's (which has its arrows beside its lines): its arrows on rows of their own,
+  // the row above its lines and the row below them (scrollMarks) - a box given the rows it lacks for them.
+  const scrolls = !talking && items.length > rows;
+  const lead = scrolls && boxed && !title ? 1 : 0;
+  const foot = scrolls && boxed && !boxNotes ? 1 : 0;
   let at = Math.max(0, Math.min(start, items.length - 1));
   let top = 0;
   // A list with no letters gives its labels the whole width - and a keyboard read as a controller has no
@@ -457,7 +463,7 @@ export async function choose(g: GameCore, title: string, items: Item[], start = 
         g,
         title,
         boxNotes ? WIDTH : Math.max(title.length, ...items.map((it) => it.label.length + (lettered ? 2 : 0))) + 1,
-        rows + (boxNotes ? boxNotes + 1 : 0),
+        lead + rows + foot + (boxNotes ? boxNotes + 1 : 0),
       );
     // (Two columns more where it scrolls, for the arrows that say there are more lines above or below: drawTalkMarks.)
     else if (talking)
@@ -468,11 +474,12 @@ export async function choose(g: GameCore, title: string, items: Item[], start = 
   const draw = (): void => {
     if (at < top) top = at;
     if (at >= top + rows) top = at - rows + 1;
-    const head = (boxed && !title) || talking ? 0 : 2;
+    const head = ((boxed && !title) || talking ? 0 : 2) + lead;
     // (A talk's list that scrolls keeps its last two columns for the arrows: the bar stops short of them.)
     const marked = talking && items.length > rows;
     for (let r = 0; r < rows; r++) row(g, r + head, items[top + r], top + r === at, lettered, marked ? cols - 2 : cols);
-    if (marked) scrollMarks(g, rows, top > 0, top + rows < items.length);
+    if (marked) scrollMarks(g, 0, rows - 1, top > 0, top + rows < items.length);
+    if (scrolls) scrollMarks(g, head - 1, head + rows, top > 0, top + rows < items.length);
     if (boxNotes) {
       const lines = wrap(items[at]?.note ?? '');
       const fg = t.win.fg;

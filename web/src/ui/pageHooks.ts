@@ -304,10 +304,12 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     }
   };
   window.addEventListener('keydown', () => (g.lastSource = 'keyboard'), true);
-  // Held, a key that stands for a button does not repeat into a second press (and a second turn); the d-pad's do.
+  // Held, a key that stands for a button does not repeat into a second press (and a second turn); the d-pad's do. The
+  // keys that are B (Space, X, B) pass again where B held does (GameCore.passRepeats): asked at each repeat.
   screen.dropRepeat = (k) =>
     g.options.input === 'controller' &&
-    (k === 0x0d || k === 0x1b || k === 0x20 || 'ZXBCVYQE/.'.includes(String.fromCharCode(k).toUpperCase()));
+    (k === 0x0d || k === 0x1b || k === 0x20 || 'ZXBCVYQE/.'.includes(String.fromCharCode(k).toUpperCase())) &&
+    !(asPad(g, k) === Pad.B && g.passRepeats);
   const send = (code: number, held = false): void => {
     // The crash box (ui/crash.ts), over everything, reads the gamepad itself: nothing beneath it is answered.
     if (menuUp()) return;
