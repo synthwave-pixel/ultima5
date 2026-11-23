@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { cacheName, cacheNameFor, MUSIC_FOLDER } from '../src/brand.ts';
+import { ULTIMA5_TUNES } from '../src/game/music.ts';
 import { runtimeCaching } from '../tools/serviceWorker.ts';
 
 /**
@@ -16,6 +17,7 @@ describe("the service worker's caches", () => {
 
   it("keep Ultima V's music in 'music', fetched from its own folder alone", () => {
     expect(MUSIC_FOLDER).toBe('music');
+    expect(MUSIC_FOLDER).toBe(ULTIMA5_TUNES.folder); // the folder the game fetches its tunes from
     expect(cacheName('music')).toBe('music');
     const routes = runtimeCaching();
     expect(routes.map((r) => r.options?.cacheName)).toEqual(['music']);
