@@ -50,6 +50,20 @@ describe('the page asks the game', () => {
     expect(codes(once.hold([PAD.B], 0, 1000))).toEqual([Pad.B]);
   });
 
+  it("repeats the keyboard's Pass - Space, X or B held in Controller input - where the game says B passes again", async () => {
+    const g = game();
+    g.options.input = 'controller';
+    const { screen } = await pageHarness(g);
+    const drop = (screen as unknown as { dropRepeat: (k: number) => boolean }).dropRepeat;
+    const [space, x, X, b, z] = [0x20, 0x78, 0x58, 0x62, 0x7a];
+    // Asked at each repeat: where B passes again, the keys that are B repeat; elsewhere (a fight, a question) they do not.
+    g.passes = true;
+    expect([space, x, X, b].map(drop)).toEqual([false, false, false, false]);
+    expect(drop(z)).toBe(true);
+    g.passes = false;
+    expect([space, x, X, b, z].map(drop)).toEqual([true, true, true, true, true]);
+  });
+
   it('goes two at a time where the game says it sails', async () => {
     const g = game();
     g.pairs = g.sails = true;
