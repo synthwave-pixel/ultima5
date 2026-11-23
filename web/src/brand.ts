@@ -33,3 +33,19 @@ export const storageKey = (rest: string): string => `${GAME_ID}.${rest}`;
 
 /** GAME_ID as it goes into a regular expression. */
 export const GAME_ID_PATTERN = GAME_ID.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The folder under web/public/ (and the site) the game's rendered music lies in (its TuneSet's `folder`): each tune
+ * fetched the first time it plays, then kept by the service worker (tools/serviceWorker.ts).
+ */
+export const MUSIC_FOLDER = 'music';
+
+/**
+ * A cache of the service worker's, as game `id` names it: one Cache Storage holds every game's on a shared origin
+ * (github.io), so each game's are its own - Ultima V's the plain names they have always had, so its players' kept
+ * music stays kept; any other game's its id before them ("ultima4-music").
+ */
+export const cacheNameFor = (id: string, name: string): string => (id === 'ultima5' ? name : `${id}-${name}`);
+
+/** A cache of the service worker's, named for this game (cacheNameFor). */
+export const cacheName = (name: string): string => cacheNameFor(GAME_ID, name);

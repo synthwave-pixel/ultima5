@@ -29,6 +29,7 @@ import {
   saveOptions,
   TILES_NAMES,
   type Tiles,
+  type TileSet,
   type AutoCombat,
   type DungeonMap,
   type InputMode,
@@ -36,6 +37,7 @@ import {
   SOUND_CHOICES,
   type SoundChoice,
   musicNote,
+  settingWords,
   soundNote,
 } from './settings.ts';
 import { CENTRE, TALK_WIDTH } from './speech.ts';
@@ -1007,12 +1009,20 @@ export async function pauseMenu(g: Game, midCommand = false): Promise<number> {
 const onOff = (b: boolean): string => (b ? 'On' : 'Off');
 const MAP_NAMES: Record<DungeonMap, string> = { off: 'Off', small: 'Corner', full: 'Whole view' };
 const RULES_NAMES: Record<Rules, string> = { story: 'Story', modern: 'Modern', classic: 'Classic' };
+/** What each Rules choice is, under its line: Ultima V's words, a game's own first (settingWords). */
 const RULES_NOTES: Record<Rules, string> = {
   story: 'As Modern, never hungry, fights eased more.',
   modern: 'Poison, hunger never kill; XP shared; fights eased; a deeper Path.',
   classic: 'As in 1988, as the Apple II has it: deadly.',
 };
 const INPUT_NAMES: Record<InputMode, string> = { letters: 'Classic', controller: 'Controller' };
+/** The Interface line's note under each interface, the one in use first: Ultima V's words, a game's own first (settingWords). */
+const INTERFACE_NOTES: Record<TileSet, string> = {
+  standard: "Enhanced: smooth motion, combat aids. Retro: 1988's.",
+  original: "Retro: 1988's. Enhanced: smooth motion, combat aids.",
+};
+/** The Status letters line's note: Ultima V's states' letters, a game's own first (settingWords). */
+const STATUS_LETTERS_NOTE = "P, S, D or C on the frame beside a member, as well as their name's colour.";
 
 /** The edition and the app's version as Settings' last lines, greyed: the version where the page has one. */
 function editionLines(g: GameCore): Setting[] {
@@ -1163,6 +1173,7 @@ const TILES_NOTES: Record<Tiles, string> = {
 
 /** The fonts' names in Appearance (Options.font), and what each is. */
 const FONT_NAMES: Record<FontChoice, string> = { sixtyfour: 'SixtyFour', legible: 'Legible', dyslexic: 'Dyslexic', dos: 'DOS' };
+/** Ultima V's words for each font, a game's own first (settingWords). */
 const FONT_NOTES: Record<FontChoice, string> = {
   sixtyfour: "SixtyFour: the Modern look's own letters.",
   legible: 'Legible: Atkinson Hyperlegible Mono. Story pages too.',
@@ -1194,14 +1205,14 @@ export function appearanceLines(g: GameCore): Setting[] {
       // The state's letter on the frame beside a member (P, S, D, C), as well as their name's colour: the Standard
       // look's, the EGA look showing it in the line as 1988 did.
       label: `Status letters: ${onOff(o.statusLetters)}`,
-      note: "P, S, D or C on the frame beside a member, as well as their name's colour.",
+      note: settingWords().statusLetters ?? STATUS_LETTERS_NOTE,
       enabled: o.tileSet === 'standard',
       act: () => void (o.statusLetters = !o.statusLetters),
     },
     {
       // The lettering's font (screen.ts setFont), whatever the UX: SixtyFour, Legible, Dyslexic or DOS.
       label: `Font: ${FONT_NAMES[o.font]}`,
-      note: FONT_NOTES[o.font],
+      note: settingWords().font?.[o.font] ?? FONT_NOTES[o.font],
       act: () => void (o.font = FONTS[(FONTS.indexOf(o.font) + 1) % FONTS.length]),
     },
     {
@@ -1213,7 +1224,7 @@ export function appearanceLines(g: GameCore): Setting[] {
     {
       // Each look its own: the PC (1988) look's on until turned off.
       label: `Scanlines: ${onOff(pc ? o.pcScanlines : o.scanlines)}`,
-      note: 'Dark bands over the picture, as an old monitor had. Each interface keeps its own.',
+      note: 'Dark bands over the picture, as an old monitor had; each interface its own.',
       act: () => void (pc ? (o.pcScanlines = !o.pcScanlines) : (o.scanlines = !o.scanlines)),
     },
     // The Modern look's alone: the PC (1988) look steps from square to square, as 1988 did.
@@ -1294,10 +1305,7 @@ export function gameplayLines(g: GameCore): Setting[] {
       // The interface (settings.ts tileSet, its values the looks' old names): the port's screen and conveniences, or
       // 1988's. Remastered is Enhanced's alone: Retro asks first, then takes PC EGA, the set it is drawn from.
       label: `Interface: ${o.tileSet === 'standard' ? 'Enhanced' : 'Retro'}`,
-      note:
-        o.tileSet === 'standard'
-          ? "Enhanced: smooth motion, combat aids. Retro: 1988's."
-          : "Retro: 1988's. Enhanced: smooth motion, combat aids.",
+      note: settingWords().interface?.[o.tileSet] ?? INTERFACE_NOTES[o.tileSet],
       act: async () => {
         if (o.tileSet === 'original') {
           o.tileSet = 'standard';
@@ -1327,7 +1335,7 @@ export function gameplayLines(g: GameCore): Setting[] {
     },
     {
       label: `Rules: ${RULES_NAMES[o.rules]}`,
-      note: RULES_NOTES[o.rules],
+      note: settingWords().rules?.[o.rules] ?? RULES_NOTES[o.rules],
       act: () => void (o.rules = RULES[(RULES.indexOf(o.rules) + 1) % RULES.length]),
     },
     {

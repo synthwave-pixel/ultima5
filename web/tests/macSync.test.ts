@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { GAME_NAME } from '../src/brand.ts';
 import { Intro } from '../src/game/intro.ts';
 import { K } from '../src/game/io.ts';
 import { fixLabel, fixNote, syncFixable, syncNote, syncProblem, syncText } from '../src/game/macSync.ts';
@@ -48,6 +50,14 @@ describe('macOS Sync', () => {
     expect(syncText(SYNC({ rules: 'needed', canFix: false, deck: true }))).toContain('Desktop Mode');
     expect(syncText(SYNC({ rules: 'needed', canFix: false, flatpak: true }))).toContain('AppImage');
     expect(syncText(SYNC({ rules: 'needed' }))).not.toContain('To fix it');
+  });
+
+  it("names the game by the brand's name, never Ultima V's own", () => {
+    const src = readFileSync(new URL('../src/game/macSync.ts', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/Ultima V\b/);
+    expect(syncText(SYNC({ rules: 'unreadable' }))).toContain(`Steam's settings for ${GAME_NAME} couldn't be read`);
+    expect(syncText(SYNC({ rules: 'needed' }))).toContain(`Steam's settings for ${GAME_NAME} send them`);
+    expect(syncNote(SYNC({ rules: 'not-owned' }), true)).toBe(`Checked: Steam has no ${GAME_NAME} here yet.`);
   });
 
   it("keeps every menu note within the menu's four rows, in the game's 7-bit letters", () => {

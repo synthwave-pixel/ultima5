@@ -8,6 +8,7 @@
  * rules there are given MacOS (Fix Cloud for Mac), and a save already sent that way is re-marked to go up again.
  */
 
+import { GAME_NAME } from '../brand.ts';
 import type { SyncState } from '../install/sources.ts';
 
 /** Whether there is anything to say: macOS Sync on, and Cloud saves made here (on a Mac, elsewhere) not reaching a Mac. */
@@ -44,10 +45,10 @@ export function syncText(s: SyncState): string {
   if (s.system === 'mac')
     return `${saves(n)} can't reach this Mac: Steam on the computer that made them sends them to Windows alone. Fix it there: Steam (beta) > Fix Cloud for Mac.`;
   if (s.rules === 'unreadable')
-    return "Cloud saves made here may not reach a Mac: Steam's settings for Ultima V couldn't be read. Copy report in Steam (beta) and report an issue, or turn macOS Sync off there.";
+    return `Cloud saves made here may not reach a Mac: Steam's settings for ${GAME_NAME} couldn't be read. Copy report in Steam (beta) and report an issue, or turn macOS Sync off there.`;
   const what =
     s.rules === 'needed'
-      ? "Cloud saves made here don't reach a Mac: Steam's settings for Ultima V send them to Windows alone."
+      ? `Cloud saves made here don't reach a Mac: Steam's settings for ${GAME_NAME} send them to Windows alone.`
       : `${saves(n)} made here ${n === 1 ? 'was' : 'were'} sent to Windows alone, and ${n === 1 ? "doesn't" : "don't"} reach a Mac.`;
   return syncFixable(s) ? what : `${what} ${whereToFix(s)}`;
 }
@@ -70,7 +71,7 @@ export function syncNote(s: SyncState | null | undefined, optionOn: boolean): st
   if (s.rules === 'unreadable') return "Steam's settings can't be read: Copy report, report it.";
   if (s.rules === 'needed') return 'Steam sends Cloud saves made here to Windows alone.';
   if (n > 0) return `${n} ${n === 1 ? 'save' : 'saves'} made here went to Windows alone.`;
-  return s.rules === 'ready' ? 'Checked: Cloud saves made here reach a Mac.' : 'Checked: Steam has no Ultima V here yet.';
+  return s.rules === 'ready' ? 'Checked: Cloud saves made here reach a Mac.' : `Checked: Steam has no ${GAME_NAME} here yet.`;
 }
 
 /** Fix Cloud for Mac's note in the menu: what it does, or where it can be done instead - short, as syncNote. */
