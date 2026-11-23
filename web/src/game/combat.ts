@@ -3299,12 +3299,13 @@ export const avatarAt = (g: Game): number => g.combat.findIndex((c) => (c.flags 
 
 /**
  * Whether auto combat (autocombat.ts) plays the turn the fight is on: any of the party's side with All; with Allies,
- * any but the Avatar's, until it is handed back for the fight (Game.autoHeld).
+ * any but the Avatar's; either until it is handed back for the fight (Game.autoHeld).
  */
 export function autoPlaysTurn(g: Game): boolean {
   const mode = g.options.autoCombat;
+  if (g.autoHeld) return false;
   if (mode === 'all') return true;
-  return mode === 'allies' && !g.autoHeld && g.s.combatTurn !== avatarAt(g);
+  return mode === 'allies' && g.s.combatTurn !== avatarAt(g);
 }
 
 /** ULTIMA_5f86: to the arena and back: actors put aside, combat or camping, then everything restored. */

@@ -937,10 +937,10 @@ other hurt in the game kills as it always did.
   shot. Aimed by hand, its crosshair goes as far as that reach and no further.
 - **Auto combat** (Pause menu): Off, Allies or All, a press turning it on
   through them. *All* plays the party, and the creatures summoned or
-  charmed to its side, until a key is pressed. *Allies* plays all of them
+  charmed to its side, until it is turned off (below) or hands the fight
+  back. *Allies* plays all of them
   but the Avatar, whom the player plays: keys are the player's then, and
-  one pressed in an ally's turn is let go rather than handing the party
-  back; once the field is won the allies pass, and the Avatar leaves it
+  one pressed in an ally's turn is let go; once the field is won the allies pass, and the Avatar leaves it
   (Leave combat, Loot and Leave, a room's exit) - or, with the Avatar
   fallen, asleep or charmed, the allies leave it as All does. While it
   plays a turn, in either, "Auto" stands in the middle of the map's top
@@ -963,8 +963,12 @@ other hurt in the game kills as it always did.
   where Attack would reach a foe, a shot or a throw along a clear line -
   and with the hand Attack asks first, where none reaches a creature (a
   spiked helm swung before the axe at a charmed friend), else it closes
-  in. Fights it goes nowhere in for thirty turns are handed back: All is
-  turned off, and Allies held for the rest of that fight alone.
+  in. Fights it goes nowhere in for thirty turns are handed back, and so
+  is a dungeon room once no foe is in sight (its exit the player's to
+  choose): All or Allies is held for the rest of that fight alone, there
+  again for the next - or at once, changed in the Pause menu. It never
+  walks one of the party off the field while foes stand: a member hemmed
+  in at its edge passes rather than step out of the fight.
 - **Gameplay** (Pause menu, and Settings at the title): the Interface (Enhanced or Retro), input, Auto Pause, the
   rules, Snap attacks, Snap targets (small arrows round the foe X would strike) and Max input
   (how fast a held key, button or direction repeats - Very slow, Slow, Medium or Fast, the same on a keyboard, a

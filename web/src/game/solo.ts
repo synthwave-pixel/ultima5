@@ -39,10 +39,14 @@ export function soloHurt(g: Game, name: string, how = 'hit'): void {
   if (soloOn(g)) endSolo(g, name, how);
 }
 
-/** Auto combat set to `mode` (the Pause menu, B twice, auto combat handing the fight back): Solo Mode, if on, ends. */
+/**
+ * Auto combat set to `mode` (the Pause menu, B twice): Solo Mode, if on, ends; and a fight auto combat had handed back
+ * (autocombat.ts handBack) is played again, by the mode now chosen.
+ */
 export function setAutoCombat(g: Game, mode: AutoCombat): void {
   const was = g.options.autoCombat;
   g.options.autoCombat = mode;
+  if (mode !== was) g.autoHeld = false;
   saveOptions(g.options);
   if (mode !== was && soloOn(g)) endSolo(g);
 }

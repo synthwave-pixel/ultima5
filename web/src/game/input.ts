@@ -514,8 +514,8 @@ function firesHere(g: Game): boolean {
 
 /**
  * Auto combat plays a turn (autocombat.ts). A key that holds the game - Start, Select, Escape, the window losing focus -
- * opens the Pause menu in the midst of it, where Auto combat can be turned off or changed, in either mode; with All any
- * other key hands the party back.
+ * opens the Pause menu in the midst of it, where Auto combat can be turned off or changed, in either mode; B twice in
+ * quick succession turns it off; any other key is let go.
  */
 async function autoCombatKey(g: Game): Promise<number> {
   const key = g.options.autoCombat === 'off' || g.s.mapId !== 0xff ? 0 : await autoTurnKey(g);

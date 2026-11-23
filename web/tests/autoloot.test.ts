@@ -182,6 +182,6 @@ describe('auto combat with a friend charmed', () => {
   it('hands the fight back where the charmer stands unseen, rather than passing while the charmed strike on', async () => {
     const g = field(true);
     expect(await autoKey(g)).toBe(0);
-    expect(g.options.autoCombat).toBe('off');
+    expect(g.autoHeld).toBe(true);
   });
 });

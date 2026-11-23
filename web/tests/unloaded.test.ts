@@ -63,7 +63,7 @@ describe('a bow with no arrows', () => {
     g.options.autoCombat = 'all';
     g.commandPrompt = 'combat';
     expect(await autoKey(g)).toBe(0);
-    expect(g.options.autoCombat).toBe('off');
+    expect(g.autoHeld).toBe(true);
     expect(s.members[0].equips[2]).toBe(BOW);
   });
 

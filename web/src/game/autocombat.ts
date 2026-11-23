@@ -6,7 +6,9 @@
  * strike a foe in reach (with the weapon's reach), aim a missile at the
  * nearest in range, else close with the nearest foe, stepping round
  * whatever blocks the way; with the field won, leave it. All plays every
- * such turn, and any key pressed hands the party back. Allies plays every
+ * such turn, until B is pressed twice in quick succession or Auto combat is
+ * changed in the Pause menu (Start, Select, Escape); any other key pressed
+ * meanwhile is let go. Allies plays every
  * one but the Avatar's - the other members, and the creatures summoned or
  * charmed to the party's side - while the player plays the Avatar: keys
  * are the player's then, and one pressed in an ally's turn is let go; the
@@ -96,15 +98,12 @@ function avatarActs(g: Game): boolean {
 }
 
 /**
- * The fight going nowhere, or somewhere only the player can take it: All is turned off (saved so), and the player
- * plays from here; Allies is held for the rest of this fight, and is there for the next.
+ * The fight going nowhere, or somewhere only the player can take it: auto combat, All or Allies, is held for the rest
+ * of this fight, the player playing from here, and is there for the next (issue #49) - changed in the Pause menu, it
+ * plays again at once (solo.ts setAutoCombat).
  */
 function handBack(g: Game): void {
-  if (g.options.autoCombat === 'allies') {
-    g.autoHeld = true;
-    return;
-  }
-  setAutoCombat(g, 'off');
+  g.autoHeld = true;
 }
 
 /** How soon after a B in a turn auto combat played a second B turns it off (ms): a double press. */
@@ -155,7 +154,8 @@ export async function heedKeys(g: Game, interrupt: AutoInterrupt): Promise<void>
   const mode = g.options.autoCombat;
   const avatar = avatarAt(g);
   const standing = avatar >= 0 && (g.combat[avatar].flags & CF.Dead) === 0;
-  if (mode === 'off' || (mode === 'allies' && standing)) return;
+  // Handed back for the fight (handBack): the keys are the player's.
+  if (mode === 'off' || g.autoHeld || (mode === 'allies' && standing)) return;
   await keysPressed(g, interrupt);
 }
 
@@ -167,7 +167,8 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   const s = g.s;
   const allies = g.options.autoCombat === 'allies';
   // With Allies the player plays the Avatar, the keys theirs: nothing is taken from them on the Avatar's turn.
-  if (allies && (s.combatTurn > 0x1f || !autoPlaysTurn(g))) return 0;
+  // Handed back for the fight (handBack), the turns are the player's, All's as Allies'.
+  if (g.autoHeld || (allies && (s.combatTurn > 0x1f || !autoPlaysTurn(g)))) return 0;
   if (await keysPressed(g, interrupt)) return 0;
   if (s.combatTurn > 0x1f) return 0;
   const me = g.combat[s.combatTurn];
@@ -296,12 +297,18 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   stuck = place === lastPlace ? stuck + 1 : 0;
   lastPlace = place;
   // Hemmed in (the party's own on every side, water beyond): each way tried once, a blocked step costing no turn,
-  // then the turn passed - else the same member tries the four ways for ever.
-  if (stuck > 4) {
+  // then the turn passed - else the same member tries the four ways for ever. Never the way off the field, where a
+  // step leaves the fight (combat.ts movePlayer): a member on a dungeon room's edge, its foes behind a wall, walked out
+  // of the room (issue #49).
+  const ways = [K.Up, K.Right, K.Down, K.Left].filter((k) => {
+    const [sx, sy] = STEPS.get(k) ?? [0, 0];
+    return onField(me.x + sx, me.y + sy);
+  });
+  if (stuck > ways.length) {
     stuck = 0;
     return K.Space;
   }
-  if (stuck > 0) return [K.Up, K.Right, K.Down, K.Left][stuck % 4];
+  if (stuck > 0) return ways[stuck % ways.length];
   const dx = Math.sign(f.x - me.x);
   const dy = Math.sign(f.y - me.y);
   return Math.abs(f.y - me.y) >= Math.abs(f.x - me.x) && dy ? (dy < 0 ? K.Up : K.Down) : dx < 0 ? K.Left : K.Right;
@@ -314,6 +321,9 @@ const STEPS = new Map<number, [number, number]>([
   [K.Down, [0, 1]],
   [K.Left, [-1, 0]],
 ]);
+
+/** Whether (x, y) is on the field: a step off it leaves the fight. */
+const onField = (x: number, y: number): boolean => x >= 0 && y >= 0 && x <= 0xa && y <= 0xa;
 
 /** The rocks a fallen gargoyle leaves at (x, y), with no one on them: a member Klimbs onto them (combat.ts klimb). */
 function rubble(g: Game, x: number, y: number): boolean {

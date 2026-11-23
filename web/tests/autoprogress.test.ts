@@ -26,11 +26,12 @@ describe("auto combat's patience", () => {
   it('hands back after 30 party turns with the foes no worse off, though it strikes every turn', async () => {
     const g = fight();
     let turns = 0;
-    while (g.options.autoCombat !== 'off' && turns < 100) {
+    while (!g.autoHeld && turns < 100) {
       await autoKey(g);
       turns++;
     }
-    expect(g.options.autoCombat).toBe('off');
+    expect(g.autoHeld).toBe(true);
+    expect(g.options.autoCombat).toBe('all'); // held for this fight alone (issue #49)
     expect(turns).toBeGreaterThan(30);
     expect(turns).toBeLessThan(40);
   });

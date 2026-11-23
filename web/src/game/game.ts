@@ -338,7 +338,7 @@ export class Game extends GameCore {
    */
   autoProgress = Infinity;
   autoIdle = 0;
-  /** Auto combat (Allies) handed back to the player for the rest of this fight (autocombat.ts handBack). */
+  /** Auto combat (All or Allies) handed back to the player for the rest of this fight (autocombat.ts handBack). */
   autoHeld = false;
   /** Where auto combat last took up other arms in this fight: not again from the same place and hands (autocombat.ts). */
   autoSwitchedAt = '';
