@@ -162,6 +162,103 @@ describe('the shore on the originals’ grid (Modern PC)', () => {
   });
 });
 
+describe('the sea between depths on the originals’ grid (Modern PC)', () => {
+  const N = CELL;
+  // Each water its own ripples, in two colours of its own (none shared, so a pixel says whose it is), dark enough that
+  // the dimming of the ripples' light leaves them be: deep (1), water (2) and shallows (3).
+  const RIPPLES: Record<number, [[number, number, number], [number, number, number]]> = {
+    1: [
+      [0, 0, 90],
+      [20, 30, 150],
+    ],
+    2: [
+      [0, 10, 120],
+      [30, 40, 140],
+    ],
+    3: [
+      [0, 20, 140],
+      [10, 50, 150],
+    ],
+  };
+  const ripple: Record<number, (x: number, y: number) => number> = {
+    1: (x, y) => ((x + 2 * y) >> 3) & 1,
+    2: (x, y) => ((x - y + 64) >> 3) & 1,
+    3: (x, y) => ((x >> 3) + (y >> 2)) & 1,
+  };
+  const rgba = ([r, g, b]: [number, number, number]): number => (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+  const own = (t: number, x: number, y: number): number => rgba(RIPPLES[t][ripple[t](x, y)]);
+  let tick = 0;
+  const sheet = { pixel: own, land: () => undefined, roll: (t: number) => (tick * 2 * t) % N };
+  /** Which water a colour is (1 to 3), or 0 for none. */
+  const whose = (v: number): number => [1, 2, 3].find((t) => RIPPLES[t].some((c) => rgba(c) === v)) ?? 0;
+  /** Water `t`'s pixel at (x, y) of its square, as it has rolled by now. */
+  const rolled = (t: number, x: number, y: number): number => own(t, x, (y - sheet.roll(t) + 4 * N) % N);
+  // Deep, water and the shallows, two squares each, the depths' edges straight down the map.
+  const sea = Array.from({ length: 16 }, () => [1, 1, 2, 2, 3, 3]);
+  const drawn = (shores: Shores, rows: number[][]): { px: Uint32Array; w: number } => {
+    const w = rows[0].length * N;
+    const px = new Uint32Array(w * rows.length * N);
+    rows.forEach((r, y) =>
+      r.forEach((t, x) => {
+        const out = new Uint32Array(N * N).fill(own(t, 0, 0));
+        const around = new Uint8Array(25);
+        for (let dy = -2; dy <= 2; dy++)
+          for (let dx = -2; dx <= 2; dx++) {
+            const row = rows[Math.min(rows.length - 1, Math.max(0, y + dy))];
+            around[(dy + 2) * 5 + dx + 2] = row[Math.min(row.length - 1, Math.max(0, x + dx))];
+          }
+        shores.draw(out, { map: 0, x: 100 + x, y: 100 + y, around });
+        for (let j = 0; j < N; j++) px.set(out.subarray(j * N, j * N + N), (y * N + j) * w + x * N);
+      }),
+    );
+    return { px, w };
+  };
+  const shores = (): Shores => {
+    const s = new Shores(sheet);
+    s.style = { block: 4, sand: null };
+    return s;
+  };
+
+  it('is drawn in the waters’ own pixels, never a colour between two of them', () => {
+    tick = 3;
+    const { px, w } = drawn(shores(), sea);
+    let between = 0;
+    for (let y = 0; y < sea.length * N; y++)
+      for (let x = 0; x < w; x++) {
+        // A block of sixteen is its top-left pixel's.
+        const [lx, ly] = [(x % N) & ~3, (y % N) & ~3];
+        if (![1, 2, 3].some((t) => px[y * w + x] === rolled(t, lx, ly))) between++;
+      }
+    expect(between).toBe(0);
+  });
+
+  it('deepens gradually from one square’s middle to the next, not at their edge', () => {
+    tick = 0;
+    const { px, w } = drawn(shores(), sea);
+    // How much of each column, from the middle of a deep square to the middle of a water one, is the deep's.
+    const deep: number[] = [];
+    for (let x = 1.5 * N; x <= 2.5 * N; x++) {
+      let n = 0;
+      for (let y = 0; y < sea.length * N; y++) if (whose(px[y * w + x]) === 1) n++;
+      deep.push(n / (sea.length * N));
+    }
+    expect(deep[0]).toBe(1);
+    expect(deep[N]).toBe(0);
+    expect(deep[N / 2]).toBeGreaterThan(0.2); // the squares' edge, half way
+    expect(deep[N / 2]).toBeLessThan(0.8);
+    for (let i = 1; i <= N; i++) expect(Math.abs(deep[i] - deep[i - 1])).toBeLessThan(0.25);
+  });
+
+  it('keeps each pixel’s water as the ripples roll through it, so nothing crawls', () => {
+    const s = shores();
+    const which = (): number[] => Array.from(drawn(s, sea).px, whose);
+    tick = 0;
+    const first = which();
+    tick = 5;
+    expect(which()).toEqual(first);
+  });
+});
+
 describe('a bridge over a shore drawn from the map', () => {
   const png = decodePng(readFileSync(new URL('../public/graphics/standard-tiles.png', import.meta.url)));
   const manifest = JSON.parse(readFileSync(new URL('../public/graphics/standard-tiles.json', import.meta.url), 'utf8')) as Manifest;
