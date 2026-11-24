@@ -219,17 +219,29 @@ describe('the sea between depths on the originals’ grid (Modern PC)', () => {
     return s;
   };
 
-  it('is drawn in the waters’ own pixels, never a colour between two of them', () => {
-    tick = 3;
+  /** How many pixels of columns `x0` to `x1` are a colour between two waters, none of their own. */
+  const betweenIn = (x0: number, x1: number): number => {
     const { px, w } = drawn(shores(), sea);
     let between = 0;
     for (let y = 0; y < sea.length * N; y++)
-      for (let x = 0; x < w; x++) {
+      for (let x = x0; x < x1; x++) {
         // A block of sixteen is its top-left pixel's.
         const [lx, ly] = [(x % N) & ~3, (y % N) & ~3];
         if (![1, 2, 3].some((t) => px[y * w + x] === rolled(t, lx, ly))) between++;
       }
-    expect(between).toBe(0);
+    return between;
+  };
+
+  it('draws the deep and the water in their own pixels, never a colour between the two', () => {
+    tick = 3;
+    // From the deep to the middle of the second square of water, where the shallows begin to come in.
+    expect(betweenIn(0, 3.5 * N)).toBe(0);
+  });
+
+  it('still blends the shallows into the water, a soft glow', () => {
+    tick = 3;
+    // From the middle of the second square of water to the middle of the first of the shallows.
+    expect(betweenIn(3.5 * N, 4.5 * N)).toBeGreaterThan(N * N);
   });
 
   it('deepens gradually from one square’s middle to the next, not at their edge', () => {
