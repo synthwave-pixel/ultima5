@@ -173,11 +173,11 @@ describe('the sea between depths on the originals’ grid (Modern PC)', () => {
     ],
     2: [
       [0, 10, 120],
-      [30, 40, 140],
+      [30, 40, 120],
     ],
     3: [
       [0, 20, 140],
-      [10, 50, 150],
+      [10, 50, 130],
     ],
   };
   const ripple: Record<number, (x: number, y: number) => number> = {
@@ -250,12 +250,25 @@ describe('the sea between depths on the originals’ grid (Modern PC)', () => {
   });
 
   it('keeps each pixel’s water as the ripples roll through it, so nothing crawls', () => {
-    const s = shores();
-    const which = (): number[] => Array.from(drawn(s, sea).px, whose);
+    // Each tick's shores worked out afresh, as a square scrolled away and back is.
+    const which = (): number[] => Array.from(drawn(shores(), sea).px, whose);
     tick = 0;
     const first = which();
     tick = 5;
     expect(which()).toEqual(first);
+  });
+
+  it('lays its patches by the world, not by the square: no two squares down the band alike', () => {
+    tick = 0;
+    const { px, w } = drawn(shores(), sea);
+    // Which water each pixel is, from the middle of a deep square to the middle of a water one, square row by row.
+    const band = (row: number): string => {
+      const out: number[] = [];
+      for (let y = row * N; y < (row + 1) * N; y++) for (let x = 1.5 * N; x < 2.5 * N; x++) out.push(whose(px[y * w + x]));
+      return out.join('');
+    };
+    const rows = new Set(Array.from({ length: sea.length }, (_, r) => band(r)));
+    expect(rows.size).toBe(sea.length);
   });
 });
 

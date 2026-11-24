@@ -415,11 +415,11 @@ export class Shores {
       const v = ease(fy - j);
       return (depthOf(i, j) * (1 - u) + depthOf(i + 1, j) * u) * (1 - v) + (depthOf(i, j + 1) * (1 - u) + depthOf(i + 1, j + 1) * u) * v;
     };
-    // On the originals' grid, a depth between two whole ones is the deeper where how far toward it lies past the
-    // world's noise there, else the shallower: so the deeper water comes in patches of whole ripples, wandering, not
+    // On the originals' grid, a depth between two whole ones is the deeper where it lies further toward the deeper than
+    // the world's noise there, else the shallower: so the deeper water comes in patches of whole ripples, wandering, not
     // the two ripples ghosted (nor a lattice of broken ones, as a fixed dither gives). The world's noise, so it stays
-    // put as the ripples roll and the view glides, and squares side by side agree; kept off 0 and 1, so a square's
-    // middle is its own water alone.
+    // put as the ripples roll and the view glides, and squares side by side agree; kept off 0 and 1, so about a
+    // square's middle there is its own water alone.
     const cutA = noise(seed + 33, 24);
     const cutB = noise(seed + 34, 8);
     const whole = (depth: number, wx: number, wy: number): number => {
@@ -502,8 +502,9 @@ export class Shores {
               s.from[i] = river ? RIVER_WATER : -1;
               if (!river) {
                 if (depthB < 0) {
+                  // Both the depth and its cut where the block is taken from, so it shows a block of there.
                   const d = depthAt(src[b * 2], src[b * 2 + 1]);
-                  depthB = coarse ? whole(d, wx, wy) * 127 : Math.round(d * 127.5);
+                  depthB = coarse ? whole(d, ox0 + src[b * 2], oy0 + src[b * 2 + 1]) * 127 : Math.round(d * 127.5);
                 }
                 s.depth[i] = depthB;
                 // The sea's light dimmed in broad patches, out in the world; a town's or an arena's water is left as it
