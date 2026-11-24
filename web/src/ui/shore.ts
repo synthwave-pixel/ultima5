@@ -26,7 +26,13 @@
  * its shore settled a block of sixteen at a time instead, as its tiles'
  * pixels are - the waterline, the shallows, the lines, the damp - and a
  * fringe of sand specks along the grass by the water, thick at the
- * waterline and thinning inland, so every grass coast has its beach.
+ * waterline and thinning inland, so every grass coast has its beach. Its
+ * deep water is not blended with the next: its waters are the originals'
+ * own, each with ripples of its own, and the two at part strength showed
+ * both, ghosted - a smeared band where deep met shallower water. Each block
+ * there is the deep's water or the next's, whole, the deep taking more of
+ * them the nearer its square, in patches wandering by the world's noise.
+ * The shallows still blend into the water, a soft glow.
  *
  * Each square's shore is worked out once (which pixels are land and which
  * water, where each takes its colour from, how far each is from the shore)
@@ -134,7 +140,7 @@ interface Shore {
   from: Int16Array;
   lx: Uint8Array;
   ly: Uint8Array;
-  /** The sea's depth, 0 to 255 for shallow to deep. */
+  /** The sea's depth, 0 to 255 for shallow to deep; on the originals' grid 0 to 127, then 127 or 254 (the deep whole). */
   depth: Uint8Array;
   /** How much of the sea ripples' light shows here, 0 to 255. */
   glint: Uint8Array;
@@ -215,8 +221,9 @@ export class Shores {
         g = (v >> 8) & 0xff;
         b = (v >> 16) & 0xff;
       } else {
-        // The sea: shallow, medium and deep blended by depth; the ripples' light dimmed in broad patches.
-        const d = s.depth[i] / 127.5;
+        // The sea: shallow, medium and deep blended by depth (on the originals' grid, the deep or the medium whole); the
+        // ripples' light dimmed in broad patches.
+        const d = coarse ? s.depth[i] / 127 : s.depth[i] / 127.5;
         const x = s.lx[i];
         const y = s.ly[i];
         const p = d < 1 ? wet(3, x, y) : wet(2, x, y);
@@ -409,6 +416,22 @@ export class Shores {
       const v = ease(fy - j);
       return (depthOf(i, j) * (1 - u) + depthOf(i + 1, j) * u) * (1 - v) + (depthOf(i, j + 1) * (1 - u) + depthOf(i + 1, j + 1) * u) * v;
     };
+    // On the originals' grid, a depth between the medium and the deep is the deep where it lies further toward the deep
+    // than the world's noise there, else the medium: so the deep comes in patches of whole ripples, wandering, not the
+    // two ripples ghosted (nor a lattice of broken ones, as a fixed dither gives). The world's noise, so it stays put as
+    // the ripples roll and the view glides, and squares side by side agree; kept off 0 and 1, so about a square's
+    // middle there is its own water alone. Between the shallows and the medium, the depth is left as it is: their
+    // blend is a soft glow, its ghosting faint, and shallows out at sea are patches of it.
+    const cutA = noise(seed + 33, 24);
+    const cutB = noise(seed + 34, 8);
+    const whole = (depth: number, wx: number, wy: number): number => {
+      if (depth < 1) return depth;
+      const below = Math.floor(depth);
+      const k = depth - below;
+      if (k === 0) return below;
+      const cut = Math.min(0.98, Math.max(0.02, 0.5 + (cutA(wx, wy) * 0.65 + cutB(wx, wy) * 0.35 - 0.5) * 1.8));
+      return k > cut ? below + 1 : below;
+    };
     const glint = noise(seed + 31, 90);
     const glint2 = noise(seed + 32, 36);
     const shelfW = noise(seed + 21, 30);
@@ -481,7 +504,11 @@ export class Shores {
               const river = isRiver(ft);
               s.from[i] = river ? RIVER_WATER : -1;
               if (!river) {
-                if (depthB < 0) depthB = Math.round(depthAt(src[b * 2], src[b * 2 + 1]) * 127.5);
+                if (depthB < 0) {
+                  // Both the depth and its cut where the block is taken from, so it shows a block of there.
+                  const d = depthAt(src[b * 2], src[b * 2 + 1]);
+                  depthB = coarse ? Math.round(whole(d, ox0 + src[b * 2], oy0 + src[b * 2 + 1]) * 127) : Math.round(d * 127.5);
+                }
                 s.depth[i] = depthB;
                 // The sea's light dimmed in broad patches, out in the world; a town's or an arena's water is left as it
                 // is, so it meets the squares of water drawn as tiles (a moat's corners) without a seam.
