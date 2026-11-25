@@ -54,10 +54,12 @@ const ADDRESSED: readonly [string, number][] = [
  * How the Avatar is addressed (the port's words for the original's "Art thou Male or Female?", which only ever chose
  * the words the Avatar is spoken to with - "lady" or "sir" - and nothing of the Avatar's look or powers), in a box of
  * its own above the title's: Lady on the left and Sir on the right, neither chosen until the d-pad chooses one, and A
- * taking it - or typed, L or S, or the original's F or M. The save's gender for the answer, or null for B (back to the
- * name). The screen is put back as it was, the box's copper for the caller to let go.
+ * taking it - or typed, L or S, or the original's F or M. A with neither chosen is refused (the menus' no, the arrows
+ * lit a moment). `start`, the answer given before (the save's gender), come back to from the step after: it is chosen
+ * to begin with. The save's gender for the answer, or null for B (back to the name). The screen is put back as it
+ * was, the box's copper for the caller to let go.
  */
-export async function askAddress(g: GameCore): Promise<number | null> {
+export async function askAddress(g: GameCore, start?: number): Promise<number | null> {
   const t = g.text;
   const was = t.current;
   const back = g.p.fx.keepScreen?.();
@@ -78,7 +80,7 @@ export async function askAddress(g: GameCore): Promise<number | null> {
   const centre = (row: number, text: string): void => put((WIDTH - text.length) >> 1, row, text);
   centre(0, 'How art thou');
   centre(1, 'addressed?');
-  let chosen = -1;
+  let chosen = ADDRESSED.findIndex(([, gender]) => gender === start);
   // The arrows are the font's own (0x1b and 0x1a): the way to press for each.
   const show = (): void => {
     put(0, 3, '\x1b ');
@@ -95,9 +97,16 @@ export async function askAddress(g: GameCore): Promise<number | null> {
       if (k === K.Left || k === K.Right) {
         chosen = k === K.Left ? 0 : 1;
         menuSound(g, 'move');
-      } else if ((k === Pad.A || k === K.Enter) && chosen >= 0) {
-        taken = true;
-        break;
+      } else if (k === Pad.A || k === K.Enter) {
+        if (chosen >= 0) {
+          taken = true;
+          break;
+        }
+        // Nothing chosen to take: the menus' no (their back's low note), and the arrows lit a moment - the way to choose.
+        menuSound(g, 'back');
+        put(0, 3, '\x1b', true);
+        put(WIDTH - 1, 3, '\x1a', true);
+        await g.p.sleep(TICK_MS * 3);
       } else if (k === 0x4c || k === 0x46 || k === 0x53 || k === 0x4d) {
         chosen = k === 0x4c || k === 0x46 ? 0 : 1; // L or the original's F; S or M
         taken = true;

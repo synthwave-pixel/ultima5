@@ -842,6 +842,8 @@ export class Intro {
     g.appearance = { ...DEFAULT_APPEARANCE };
     g.companionLooks.clear();
     let name = '';
+    // How the Avatar is addressed, once answered: chosen again where the question is come back to.
+    let address: number | undefined;
     let step: 'name' | 'address' | 'appearance' = 'name';
     for (;;) {
       if (step === 'name') {
@@ -851,14 +853,14 @@ export class Intro {
         fresh.members[0].name = name;
         step = 'address';
       } else if (step === 'address') {
-        const gender = await askAddress(g);
+        const gender = await askAddress(g, address);
         // Its box's copper let go, the title's box's kept.
         g.draw.chrome?.(true, TITLE_MENU_ROW);
         if (gender === null) {
           step = 'name';
           continue;
         }
-        fresh.members[0].gender = gender;
+        fresh.members[0].gender = address = gender;
         step = 'appearance';
       } else {
         if (customisable(g)) {
