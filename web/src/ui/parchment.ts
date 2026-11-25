@@ -57,19 +57,17 @@ function noise(seed: number): (x: number, y: number, period?: number) => number 
 }
 
 /**
- * The drawn map of a world as RGBA in memory order, MAP_PIXELS square.
- * Deep water and shallows are the sea; everything else is land.
+ * The drawn map of a world as RGBA in memory order, MAP_PIXELS square: the squares whose tile `sea` says is water are
+ * the sea, everything else is land - by default Ultima V's deep water and shallows (tiles 1-3); a game whose tiles are
+ * numbered otherwise gives its own.
  */
-export function drawParchment(map: Uint8Array): Uint32Array {
+export function drawParchment(map: Uint8Array, sea: (t: number) => boolean = (t) => t >= 1 && t <= 3): Uint32Array {
   const n = MAP_PIXELS;
   const out = new Uint32Array(n * n);
   const grain = noise(7);
   const stain = noise(19);
   const wobble = noise(31);
-  const sea = (x: number, y: number): boolean => {
-    const t = map[y * WORLD_SIZE + x];
-    return t >= 1 && t <= 3;
-  };
+  const water = (x: number, y: number): boolean => sea(map[y * WORLD_SIZE + x]);
   // The world wraps, and so does its paper: every pattern on it repeats a whole number of times across the map.
   const clamp = (v: number): number => ((v % WORLD_SIZE) + WORLD_SIZE) % WORLD_SIZE;
   /** Noise at about `size` pixels a unit, the size nudged so the map is a whole number of units across. */
@@ -84,13 +82,13 @@ export function drawParchment(map: Uint8Array): Uint32Array {
       // The square this pixel asks about, nudged so a coast is drawn rather than stepped.
       const wx = clamp(Math.round(px / MAP_SCALE + (at(wobble, 9, px, py) - 0.5) * 2.2));
       const wy = clamp(Math.round(py / MAP_SCALE + (at(wobble, 9, py + 360, px) - 0.5) * 2.2));
-      const water = sea(wx, wy);
+      const wet = water(wx, wy);
       const g = at(grain, 6, px, py) * 0.5 + at(grain, 40, px, py) * 0.5;
       const old = at(stain, 70, px, py);
       let r = PAPER[0] - g * 26 - old * 26;
       let gr = PAPER[1] - g * 30 - old * 30;
       let b = PAPER[2] - g * 34 - old * 22;
-      if (water) {
+      if (wet) {
         // A wash over the sea, and the hatching a mapmaker fills it with.
         const hatch = Math.sin((px + py) * lines + at(wobble, 30, px, py) * 6) > 0.86 ? 10 : 0;
         r -= 26 + hatch;
@@ -108,7 +106,7 @@ export function drawParchment(map: Uint8Array): Uint32Array {
         [0, 1],
         [0, -1],
       ]) {
-        if (sea(clamp(wx + dx), clamp(wy + dy)) !== water) edge = true;
+        if (water(clamp(wx + dx), clamp(wy + dy)) !== wet) edge = true;
       }
       if (edge) {
         const ink = 0.55 + at(wobble, 5, px, py) * 0.35;
