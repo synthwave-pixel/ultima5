@@ -566,6 +566,141 @@ exports[`Ultima V's maps, as they show > Britannia, the party outdoors, in the g
 ]
 `;
 
+exports[`Ultima V's maps, as they show > blinks nothing on the Underworld while the party is on Britannia, and is lit again back there 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "a980e5fab20315dd",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
 exports[`Ultima V's maps, as they show > in a dungeon, in the Standard look 1`] = `
 [
   {
@@ -1188,6 +1323,452 @@ exports[`Ultima V's maps, as they show > inside Britain, in the game tiles 1`] =
   {
     "key 101": {
       "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > takes the keyboard read as a controller: WASD, a modifier alone, C for the other page, X to close 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "d": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "18e1477f301a7966",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "s": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "Shift": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "stopped": 2,
+    },
+  },
+  {
+    "ArrowLeft": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Spiritwood",
+        "width": 184,
+      },
+      "picture 512x512": "af48ec2028e6585c",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+      ],
+    },
+  },
+  {
+    "c": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "w": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "c": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Spiritwood",
+        "width": 184,
+      },
+      "picture 512x512": "af48ec2028e6585c",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+      ],
+    },
+  },
+  {
+    ".": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "Enter": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "stopped": 2,
+    },
+  },
+  {
+    "x": {
+      "open": false,
+      "stopped": 2,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > takes the keyboard's own letters: X the other page, Y home, a letter that is no key of the map's closing it 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "ArrowRight": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "18e1477f301a7966",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "ArrowDown": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "Control": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "stopped": 2,
+    },
+  },
+  {
+    "x": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "ArrowUp": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "024b9598311ff791",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "X": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "y": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "stopped": 2,
+      "view 819x512": [
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    " ": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "stopped": 2,
+    },
+  },
+  {
+    "d": {
+      "open": false,
+      "stopped": 2,
     },
   },
   {

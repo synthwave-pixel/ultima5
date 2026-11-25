@@ -9,7 +9,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { mapKey, showMap } from '../src/ui/mapView.ts';
 import { StandardArt, type Manifest } from '../src/ui/standardArt.ts';
 import { decodePng } from '../tools/png';
-import { fakePage, type FakePage } from './fakeMapDom.ts';
+import { fakePage, type FakeElement, type FakePage } from './fakeMapDom.ts';
 import { newGame } from './helpers.ts';
 
 /**
@@ -136,4 +136,52 @@ describe("Ultima V's maps, as they show", () => {
       expect(shots).toMatchSnapshot();
     });
   }
+
+  it('blinks nothing on the Underworld while the party is on Britannia, and is lit again back there', async () => {
+    const g = game();
+    see(g, false, g.s.x, g.s.y);
+    see(g, true, 60, 60);
+    const { shots, done } = run(g, false, null, [Pad.X, -1, Pad.X, -1, -1, Pad.B]);
+    await done;
+    expect(shots).toMatchSnapshot();
+  });
+
+  /** The map driven from the keyboard (its keydown, not mapKey): `keys` as DOM key names. */
+  const typed = (g: Game, keys: string[]) => {
+    page = fakePage();
+    const p = page;
+    const font = readFont(g.data.files.get('IBM.CH'));
+    const tiles = lzwDecompress(g.data.files.get('TILES.16'));
+    let closed = 0;
+    const done = showMap(g, tiles, false, () => closed++, null, '');
+    const win = window as unknown as FakeElement;
+    const shots: unknown[] = [{ open: p.shot(font) }];
+    for (const key of keys) {
+      let stopped = 0;
+      win.fire('keydown', { key, preventDefault: () => stopped++, stopPropagation: () => stopped++ });
+      p.flush();
+      shots.push({ [key]: { ...p.shot(font), stopped } });
+    }
+    shots.push({ closed });
+    return { shots, done };
+  };
+
+  it('takes the keyboard read as a controller: WASD, a modifier alone, C for the other page, X to close', async () => {
+    const g = game();
+    see(g, false, g.s.x, g.s.y);
+    see(g, true, 60, 60);
+    g.options.input = 'controller';
+    const { shots, done } = typed(g, ['d', 's', 'Shift', 'ArrowLeft', 'c', 'w', 'c', '.', 'Enter', 'x']);
+    await done;
+    expect(shots).toMatchSnapshot();
+  });
+
+  it("takes the keyboard's own letters: X the other page, Y home, a letter that is no key of the map's closing it", async () => {
+    const g = game();
+    see(g, false, g.s.x, g.s.y);
+    see(g, true, 60, 60);
+    const { shots, done } = typed(g, ['ArrowRight', 'ArrowDown', 'Control', 'x', 'ArrowUp', 'X', 'y', ' ', 'd']);
+    await done;
+    expect(shots).toMatchSnapshot();
+  });
 });
