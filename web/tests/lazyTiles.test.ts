@@ -34,6 +34,15 @@ describe('the animated tiles, drawn when wanted', () => {
     a.draw(page, tile, 0, 0, ground, p);
     return page;
   };
+  /**
+   * Where two squares first differ, or -1 where they are the same: a square is 81,920 pixels, and toEqual's walk over
+   * thirty-six pairs of them made this the slowest test of all.
+   */
+  const firstDifference = (a: Uint32Array, b: Uint32Array): number => {
+    if (a.length !== b.length) return Math.min(a.length, b.length);
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i;
+    return -1;
+  };
   /** The animator's turn: each tile's rows rolled one down (the water's way), and a fire's flicker. */
   const animate = (): void => {
     for (const t of [1, 2, 3, 0x60, 0x61, 0xb0, 0xb1, 0x1e8, 0x1e9]) {
@@ -59,10 +68,13 @@ describe('the animated tiles, drawn when wanted', () => {
         [0x60, 5, river],
         [0xb0, 0x44, floor],
       ] as const)
-        expect(square(lazy, tile, ground, p), `tile ${tile.toString(16)} after ${n + 1}`).toEqual(square(eager, tile, ground, p));
+        expect(
+          firstDifference(square(lazy, tile, ground, p), square(eager, tile, ground, p)),
+          `tile ${tile.toString(16)} after ${n + 1}`,
+        ).toBe(-1);
       for (const t of [0x1e8, 0x1e9, 0xb1]) expect(lazy.figure(t)).toEqual(eager.figure(t));
     }
     // And the water drawn is the turned water, not what it was before the ticks.
-    expect(square(lazy, 2, 5, coast)).not.toEqual(before);
+    expect(firstDifference(square(lazy, 2, 5, coast), before)).not.toBe(-1);
   });
 });
