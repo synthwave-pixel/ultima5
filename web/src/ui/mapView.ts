@@ -29,6 +29,12 @@
  * like ("Towne?"). X turns to the next map, B closes. Where the cloth map
  * from the box sits beside the page it is one of the maps too, and Y
  * zooms it.
+ *
+ * The map itself is any game's (showWorldMap): a game gives it a
+ * WorldMapSource - its worlds, each with its tiles, its paper if it has
+ * one, what the party has seen and the marks; the party; the names the
+ * party has learnt; the legend's font; and the cloth map and the place
+ * the party is in where it has them. Ultima V's showMap builds its own.
  */
 
 import { glyphPixel, readFont, type Font } from '../data/font.ts';
@@ -38,13 +44,11 @@ import type { Game } from '../game/game.ts';
 import { asPad } from '../game/input.ts';
 import { K, Pad } from '../game/io.ts';
 import { knowsPlace } from '../game/placeNames.ts';
-import { focusOf, GLYPH_SIZE, GLYPHS, labelOf, marksFor, nearestMark, stepTo, wrapped, type Mark } from './mapMarks.ts';
+import { GLYPH_SIZE, GLYPHS, labelOf, marksFor, nearestMark, stepTo, wrapped, type Mark } from './mapMarks.ts';
 import { CELL_NAMES, cellKind, dungeonPicture, INTERIOR_PIXELS, townPicture } from './interiorMap.ts';
 import { drawParchment, INK, MAP_PIXELS, MAP_SCALE } from './parchment.ts';
 import type { StandardArt } from './standardArt.ts';
 
-/** The cloth map's picture, where the player has put one beside the page. */
-const CLOTH = 'U5map.jpg';
 const ZOOMS = [1, 2, 3];
 /** How many squares a world's map shows across the window's shorter side: a quarter of the world, at twice the size. */
 const VIEW = 128;
@@ -56,15 +60,79 @@ const MARK_INK: RGB = [30, 22, 16];
 const MARK_EDGE: RGB = [247, 238, 214];
 
 export type RGB = [number, number, number];
-/** The maps on offer: where the party is standing, the two worlds, and a cloth map if one is there. */
-type Page = 'here' | 'cloth' | 'brit' | 'under';
-type World = 'brit' | 'under';
+/** The maps on offer: where the party is standing, a world (its place in the source's list), and a cloth map. */
+type Page = 'here' | 'cloth' | number;
+
+/** A tile's figure in the look, CELL pixels square in memory order, or nothing where the look has none (StandardArt). */
+export interface TileFigures {
+  figure(tile: number): Uint32Array | null | undefined;
+}
+
+/** One world a map shows: its squares, its drawn map, what the party has seen of it, its marks, and the party. */
+export interface WorldMapWorld {
+  /** The world's tiles, WORLD_SIZE squares a side, a byte a square. */
+  tiles: Uint8Array;
+  /** Its drawn map (parchment.ts drawParchment), or null where it has none and is dark till walked. */
+  paper: Uint32Array | null;
+  /** What the party has seen of it, WORLD_SIZE squares a side: nonzero where seen (Fog.of). Read as the map draws. */
+  seen: Uint8Array;
+  /** Every mark on it (mapMarks.ts): each shown where seen, on the paper, heard named (`knows`) or the map's focus. */
+  marks: Mark[];
+  /** Where the party is on it - its square, or the square of the place it is inside - or null where it is not. */
+  party: { x: number; y: number } | null;
+  /** Whether X turns to its page (the world the map was opened on by `focus` is turned to all the same). */
+  offered: boolean;
+}
+
+/** The map of the place the party is in (a town's level, a dungeon's), its page first among the maps. */
+export interface WorldMapHere {
+  /** Its picture, `size` pixels a side in memory order, the party drawn on it where `lit` (it blinks). */
+  picture(lit: boolean): Uint32Array;
+  size: number;
+  /** What the legend calls where the party is. */
+  name: string;
+  /** Whether the party's mark on it blinks (a town's), or stands steady (a dungeon's). */
+  blinks: boolean;
+}
+
+/**
+ * What a game gives the map (showWorldMap): its worlds, the party, what the party knows, the font of the legend, and
+ * the pages it has besides - the place the party is in, the cloth map beside the page.
+ */
+export interface WorldMapSource {
+  /** The worlds, in the order X turns through them. */
+  worlds: WorldMapWorld[];
+  /** The world the map opens on (its place in `worlds`), where it opens on neither `here` nor `focus`. */
+  opensOn: number;
+  /** The square the place chosen first is the nearest to, on a world the party is not on. */
+  from: { x: number; y: number };
+  /** The party's own mark's name. */
+  partyName: string;
+  /** Whether the party has learnt the name of the place with this key (Mark.key). */
+  knows: (key: string) => boolean;
+  /** The legend's font. */
+  font: Font;
+  /** The game's own tiles (16 by 16, four bits a pixel, 128 bytes a tile), how many, and the look's figures, if any. */
+  tiles: Uint8Array;
+  tileCount: number;
+  art: TileFigures | null;
+  /** A mark's key the map opens on, chosen and shown though not yet seen (the journal's View); '' or none for none. */
+  focus?: string;
+  /** The cloth map's picture's address, where the game has one: a page of the maps once it loads. */
+  cloth?: string;
+  /** The map of the place the party is in, where it has one. */
+  here?: WorldMapHere;
+  /** A key read from the keyboard as the map takes it (a keyboard read as a controller's buttons); 0 for none. */
+  keyOf?: (code: number) => number;
+  /** The map closed. */
+  onClose: () => void;
+}
 
 /**
  * Each of the first `count` tiles as its four quarters averaged, so a square shows a little of its own shape: from the
  * look's figure where `art` draws one, else from `tiles`, the game's own (16 by 16, four bits a pixel, 128 bytes a tile).
  */
-export function tileQuads(tiles: Uint8Array, count: number, art: StandardArt | null): RGB[][] {
+export function tileQuads(tiles: Uint8Array, count: number, art: TileFigures | null): RGB[][] {
   const out: RGB[][] = [];
   for (let t = 0; t < count; t++) {
     const figure = art?.figure(t);
@@ -167,36 +235,39 @@ function drawBox(px: Uint32Array, mark: Mark): void {
 }
 
 /**
- * One world's picture: the paper (or the dark), what has been seen painted over it, the marks and the party - `party`,
- * its square on this world, or null; drawn where `lit` (it blinks, showMap). The mark `reveal` (its key) is drawn as
- * seen: the place the journal opened the map on, known by name though not yet come to.
+ * How a world's map shows mark `m`: in full ('seen') where the party has seen its square (`seen`, a world's record), or
+ * it is the place the journal's View opened the map on (`focus`); in the paper's ink ('paper') where the mapmaker knew
+ * of it (on a map with `paper`) or the party has heard it named (`knows`); else not at all (null).
  */
-/**
- * How a world's map shows mark `m`: in full ('seen') where the party has seen its square, or it is the place the
- * journal's View opened the map on (`focus`); in the paper's ink ('paper') where the mapmaker knew of it (on a map
- * with `paper`) or the party has heard it named - a dungeon by its Word too, as the journal knows it (the port's:
- * placeNames.ts knowsPlace); else not at all (null).
- */
-export function markInk(g: Game, m: Mark, underworld: boolean, paper: boolean, focus = ''): 'seen' | 'paper' | null {
-  if (g.fog.seen(underworld, m.x, m.y) || (focus !== '' && m.key === focus)) return 'seen';
-  if ((m.onPaper && paper) || (m.key !== undefined && knowsPlace(g, m.key))) return 'paper';
+function inkOf(m: Mark, seen: Uint8Array, paper: boolean, knows: (key: string) => boolean, focus = ''): 'seen' | 'paper' | null {
+  if (seen[(m.y & 0xff) * WORLD_SIZE + (m.x & 0xff)] !== 0 || (focus !== '' && m.key === focus)) return 'seen';
+  if ((m.onPaper && paper) || (m.key !== undefined && knows(m.key))) return 'paper';
   return null;
 }
 
+/**
+ * How Ultima V's map shows mark `m` (inkOf): a place heard named as the journal knows it - a dungeon by its Word too
+ * (the port's: placeNames.ts knowsPlace).
+ */
+export function markInk(g: Game, m: Mark, underworld: boolean, paper: boolean, focus = ''): 'seen' | 'paper' | null {
+  return inkOf(m, g.fog.of(underworld), paper, (key) => knowsPlace(g, key), focus);
+}
+
+/**
+ * One world's picture: the paper (or the dark), what has been seen painted over it, the marks and the party - `party`,
+ * its square on this world, or null; drawn where `lit` (it blinks, showWorldMap). The mark `reveal` (its key) is drawn
+ * as seen: the place the journal opened the map on, known by name though not yet come to.
+ */
 function worldPicture(
-  g: Game,
   quads: RGB[][],
-  world: World,
-  paper: Uint32Array | null,
-  map: Uint8Array,
+  world: WorldMapWorld,
   marks: Mark[],
+  knows: (key: string) => boolean,
   chosen: number,
-  party: { x: number; y: number } | null = null,
   lit = true,
   reveal = '',
 ): ImageData {
-  const underworld = world === 'under';
-  const fog = g.fog.of(underworld);
+  const { paper, seen: fog, tiles: map, party } = world;
   const px = new Uint32Array(MAP_PIXELS * MAP_PIXELS);
   if (paper) px.set(paper);
   else px.fill(0xff0a0a0a);
@@ -212,7 +283,7 @@ function worldPicture(
     }
   }
   const mark = (m: Mark): void => {
-    const ink = markInk(g, m, underworld, paper !== null, reveal);
+    const ink = inkOf(m, fog, paper !== null, knows, reveal);
     if (ink === 'seen') drawMark(px, m, MARK_INK, MARK_EDGE);
     else if (ink === 'paper') drawMark(px, m, INK, null);
   };
@@ -220,7 +291,7 @@ function worldPicture(
     if (i !== chosen) mark(m);
   });
   if (party && lit) {
-    // The party: a white square with a red heart, blinking (showMap), where it stands now.
+    // The party: a white square with a red heart, blinking (showWorldMap), where it stands now.
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const x = party.x * MAP_SCALE + dx;
@@ -350,9 +421,14 @@ export function mapKey(code: number): boolean {
   return true;
 }
 
+/** Ultima V's cloth map's picture, where the player has put one beside the page. */
+const CLOTH = 'U5map.jpg';
+
 /**
- * Show the maps until closed: on the place where the party is, or - `focus`, a mark's key ("place:<id>",
+ * Show Ultima V's maps until closed: on the place where the party is, or - `focus`, a mark's key ("place:<id>",
  * "shrine:<n>": the journal's View) - on that place, chosen, on whichever world has it, shown though not yet seen.
+ * Britannia, drawn on paper, and the Underworld, dark till walked and offered once the party has been down there; the
+ * town, keep, castle or dungeon the party is in; and the cloth map, where the player has put one beside the page.
  */
 export function showMap(
   g: Game,
@@ -362,6 +438,80 @@ export function showMap(
   art: StandardArt | null = null,
   focus = '',
 ): Promise<void> {
+  const brit = readBritannia(g.data.files, g.data.ovl).tiles;
+  const under = readUnderworld(g.data.files).tiles;
+  // Where the party is standing, if that is a place with a map of its own.
+  const inside = g.s.mapId > 0 && g.s.mapId < 0x80;
+  const dungeon = inside && g.s.mapId > SETTLEMENTS;
+  const where = inside && !dungeon ? (readLocations(g.data.ovl).find((l) => l.id === g.s.mapId) ?? null) : null;
+  // The place nearest the party chosen from the start, so a place is always marked: from where the party stands
+  // outdoors, or from the entrance of the town or dungeon it is in.
+  const entrance = inside ? (readLocations(g.data.ovl).find((l) => l.id === g.s.mapId) ?? null) : null;
+  /** Where the party is on Britannia (or the Underworld): its square outdoors, or the square of the place it is inside. */
+  const partyOn = (below: boolean): { x: number; y: number } | null => {
+    const s = g.s;
+    if (s.mapId === 0) return (s.level === 0xff) === below ? { x: s.x, y: s.y } : null;
+    return entrance && !below ? { x: entrance.x, y: entrance.y } : null;
+  };
+  /** Where the party stands, said plainly: the cell it is in underground, the level it is on above. */
+  const hereName = (): string => {
+    if (dungeon) return CELL_NAMES[cellKind(g.s.dungeon[g.s.level * 0x40 + (g.s.y & 7) * 8 + (g.s.x & 7)])];
+    return where ? titled(where.name) : '';
+  };
+  const here: WorldMapHere | undefined =
+    dungeon || where
+      ? {
+          picture: (lit) =>
+            dungeon ? dungeonPicture(g, g.s.mapId, g.s.level, tiles, art) : townPicture(g, where!, g.s.level, tiles, art, lit),
+          size: INTERIOR_PIXELS,
+          name: hereName(),
+          blinks: !dungeon,
+        }
+      : undefined;
+  return showWorldMap({
+    worlds: [
+      {
+        tiles: brit,
+        paper: drawParchment(brit),
+        seen: g.fog.of(false),
+        marks: marksFor(g.data.ovl, g.s, brit, false, g.fog),
+        party: partyOn(false),
+        offered: true,
+      },
+      {
+        tiles: under,
+        paper: null,
+        seen: g.fog.of(true),
+        marks: marksFor(g.data.ovl, g.s, under, true, g.fog),
+        party: partyOn(true),
+        offered: g.fog.knowsUnderworld,
+      },
+    ],
+    opensOn: underworld && g.fog.knowsUnderworld ? 1 : 0,
+    from: entrance ? { x: entrance.x, y: entrance.y } : { x: g.s.x, y: g.s.y },
+    partyName: g.s.members[0].name || 'Avatar',
+    knows: (key) => knowsPlace(g, key),
+    font: readFont(g.data.files.get('IBM.CH')),
+    tiles,
+    tileCount: 0x200,
+    art,
+    focus,
+    cloth: `${import.meta.env.BASE_URL}${CLOTH}`,
+    ...(here ? { here } : {}),
+    // A keyboard read as a controller is one here too (input.ts asPad): Z names, X the other page, a letter that is no
+    // button nothing.
+    keyOf: (code) => (g.options.input === 'controller' ? asPad(g, code) : code),
+    onClose,
+  });
+}
+
+/**
+ * Show a game's maps until closed (`source`, WorldMapSource): opened on the place the party is in, else the world the
+ * source opens on - or `source.focus`'s place, chosen, on whichever world has it, shown though not yet seen.
+ */
+export function showWorldMap(source: WorldMapSource): Promise<void> {
+  const focus = source.focus ?? '';
+  const { here, worlds } = source;
   const overlay = document.createElement('div');
   overlay.style.cssText =
     'position:fixed;inset:0;z-index:20;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;';
@@ -375,23 +525,16 @@ export function showMap(
   overlay.append(frame, legend);
   document.body.appendChild(overlay);
 
-  const quads = tileQuads(tiles, 0x200, art);
-  const font = readFont(g.data.files.get('IBM.CH'));
-  const worlds: Record<World, Uint8Array> = {
-    brit: readBritannia(g.data.files, g.data.ovl).tiles,
-    under: readUnderworld(g.data.files).tiles,
-  };
-  const paper = drawParchment(worlds.brit);
-  const marks: Record<World, Mark[]> = {
-    brit: marksFor(g.data.ovl, g.s, worlds.brit, false, g.fog),
-    under: marksFor(g.data.ovl, g.s, worlds.under, true, g.fog),
-  };
-  const chosen: Record<World, number> = { brit: -1, under: -1 };
+  const quads = tileQuads(source.tiles, source.tileCount, source.art);
+  const font = source.font;
+  // Each world's marks, the party's own to be added to them.
+  const marks: Mark[][] = worlds.map((w) => [...w.marks]);
+  const chosen: number[] = worlds.map(() => -1);
 
   const cloth = document.createElement('img');
   /** The cloth map is a map only once its picture is there: the player may not have put one beside the page. */
   const hasCloth = (): boolean => cloth.naturalWidth > 0;
-  cloth.src = `${import.meta.env.BASE_URL}${CLOTH}`;
+  if (source.cloth) cloth.src = source.cloth;
   cloth.alt = '';
   cloth.draggable = false;
   cloth.style.cssText = 'position:absolute;left:0;top:0;user-select:none;';
@@ -401,82 +544,64 @@ export function showMap(
   const view = document.createElement('canvas');
   view.width = view.height = MAP_PIXELS;
 
-  // Where the party is standing, if that is a place with a map of its own.
-  const inside = g.s.mapId > 0 && g.s.mapId < 0x80;
-  const dungeon = inside && g.s.mapId > SETTLEMENTS;
-  const where = inside && !dungeon ? (readLocations(g.data.ovl).find((l) => l.id === g.s.mapId) ?? null) : null;
-  const hasHere = dungeon || !!where;
-
-  // The place nearest the party chosen from the start, so a place is always marked: from where the party stands
-  // outdoors, or from the entrance of the town or dungeon it is in.
-  const entrance = inside ? (readLocations(g.data.ovl).find((l) => l.id === g.s.mapId) ?? null) : null;
-  const [px, py] = entrance ? [entrance.x, entrance.y] : [g.s.x, g.s.y];
-  /** Where the party is on world `w`: its square outdoors, or the square of the place it is inside. */
-  const partyOn = (w: World): { x: number; y: number } | null => {
-    const s = g.s;
-    if (s.mapId === 0) return (s.level === 0xff) === (w === 'under') ? { x: s.x, y: s.y } : null;
-    return entrance && w === 'brit' ? { x: entrance.x, y: entrance.y } : null;
-  };
+  const { x: px, y: py } = source.from;
   /** The party, a mark of its own on the world it is on, named by the Avatar: where the map opens, and Y returns. */
-  const partyMark: Record<World, Mark | null> = { brit: null, under: null };
-  for (const w of ['brit', 'under'] as World[]) {
-    const at = partyOn(w);
-    if (!at) continue;
-    partyMark[w] = { x: at.x, y: at.y, kind: 'party', name: g.s.members[0].name || 'Avatar', onPaper: true };
-    marks[w].push(partyMark[w]);
-  }
+  const partyMark: (Mark | null)[] = worlds.map((w, i) => {
+    if (!w.party) return null;
+    const m: Mark = { x: w.party.x, y: w.party.y, kind: 'party', name: source.partyName, onPaper: true };
+    marks[i].push(m);
+    return m;
+  });
   /**
-   * The marks the d-pad steps between on world `w`: every one the map shows - a place the party has seen, and on
-   * Britannia's paper every place the mapmaker knew, as the cloth map draws them - no hut, no dungeon - and every
-   * place heard named (the port's; it went only to those seen).
+   * The marks the d-pad steps between on world `w`: every one the map shows - a place the party has seen, and on a
+   * world's paper every place the mapmaker knew, as the cloth map draws them - no hut, no dungeon - and every place
+   * heard named (the port's; it went only to those seen).
    */
-  const shown = (w: World): Mark[] => marks[w].filter((m) => markInk(g, m, w === 'under', w === 'brit', focus) !== null);
+  const shown = (w: number): Mark[] =>
+    marks[w].filter((m) => inkOf(m, worlds[w].seen, worlds[w].paper !== null, source.knows, focus) !== null);
   /** The square each world's map is centred on: the place chosen, which it slides to. */
-  const centre: Record<World, { x: number; y: number }> = { brit: { x: px, y: py }, under: { x: px, y: py } };
-  for (const w of ['brit', 'under'] as World[]) {
+  const centre = worlds.map(() => ({ x: px, y: py }));
+  worlds.forEach((_, w) => {
     const list = shown(w);
     const party = partyMark[w];
     const i = party ? list.indexOf(party) : nearestMark(list, px, py, WORLD_SIZE);
     chosen[w] = i >= 0 ? marks[w].indexOf(list[i]) : -1;
     const at = chosen[w] >= 0 ? marks[w][chosen[w]] : null;
     if (at) centre[w] = { x: at.x + 0.5, y: at.y + 0.5 };
+  });
+  // The place the journal asked for, chosen and centred on the first world that has it, which the map opens on.
+  const focused = focus ? marks.findIndex((list) => list.some((m) => m.key === focus)) : -1;
+  if (focused >= 0) {
+    chosen[focused] = marks[focused].findIndex((m) => m.key === focus);
+    const at = marks[focused][chosen[focused]];
+    centre[focused] = { x: at.x + 0.5, y: at.y + 0.5 };
   }
-  // The place the journal asked for, chosen and centred on its own world, which the map opens on.
-  const target = focusOf(marks, focus);
-  const focused: World | null = target?.world ?? null;
-  if (target) {
-    chosen[target.world] = target.at;
-    const at = marks[target.world][target.at];
-    centre[target.world] = { x: at.x + 0.5, y: at.y + 0.5 };
-  }
-  /** The party's mark lit or dark, by turns (about twice a second, showMap's timer). */
+  /** The party's mark lit or dark, by turns (about twice a second, the blink's timer below). */
   let lit = true;
 
   const pages = (): Page[] => {
     const out: Page[] = [];
-    if (hasHere) out.push('here');
-    out.push('brit');
-    if (g.fog.knowsUnderworld || focused === 'under') out.push('under');
+    if (here) out.push('here');
+    worlds.forEach((w, i) => {
+      if (w.offered || i === focused) out.push(i);
+    });
     if (hasCloth()) out.push('cloth');
     return out;
   };
-  let page: Page = focused ?? (hasHere ? 'here' : underworld && g.fog.knowsUnderworld ? 'under' : 'brit');
+  let page: Page = focused >= 0 ? focused : here ? 'here' : source.opensOn;
   let zoom = 0;
   let cx = 0.5;
   let cy = 0.5;
 
-  const world = (): World => (page === 'under' ? 'under' : 'brit');
-  /** Where the party stands, said plainly: the cell it is in underground, the level it is on above. */
-  const hereName = (): string => {
-    if (dungeon) return CELL_NAMES[cellKind(g.s.dungeon[g.s.level * 0x40 + (g.s.y & 7) * 8 + (g.s.x & 7)])];
-    return where ? titled(where.name) : '';
-  };
+  /** The world on show: the page's, or the first world's on a page of another kind. */
+  const world = (): number => (typeof page === 'number' ? page : 0);
+  const onWorld = (): boolean => typeof page === 'number';
   /** The name under the map, always shown: where the party is on its own map, else the place chosen. */
   const nameNow = (): string => {
-    if (page === 'here') return hereName();
+    if (page === 'here') return here?.name ?? '';
     const w = world();
     // (The place the journal opened the map on goes by the name the journal gave it: a shrine is its virtue's.)
-    return chosen[w] >= 0 ? labelOf(marks[w][chosen[w]], (key) => knowsPlace(g, key) || key === focus) : '';
+    return chosen[w] >= 0 ? labelOf(marks[w][chosen[w]], (key) => source.knows(key) || key === focus) : '';
   };
   const seenMarks = (): Mark[] => shown(world());
 
@@ -484,7 +609,7 @@ export function showMap(
   let span = { cols: VIEW, rows: VIEW };
   /** The world's picture through the window, about its centre, joined across the world's edges as often as it takes. */
   const present = (): void => {
-    if (page !== 'brit' && page !== 'under') return;
+    if (!onWorld()) return;
     const c = centre[world()];
     const ctx = view.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
@@ -552,7 +677,7 @@ export function showMap(
     // A picture of a set size (a town's level, a dungeon's, the cloth map) as large as the window has room for.
     const room = Math.max(240, window.innerHeight);
     const size = Math.min(window.innerWidth, room);
-    frame.style.border = page === 'brit' || page === 'under' ? 'none' : '2px solid #7a401f';
+    frame.style.border = onWorld() ? 'none' : '2px solid #7a401f';
     if (page === 'cloth') {
       const ratio = (cloth.naturalHeight || 1571) / (cloth.naturalWidth || 1500);
       const w = Math.min(window.innerWidth * 0.94, room / ratio);
@@ -571,22 +696,15 @@ export function showMap(
       showLegend('');
       return;
     }
-    if (page === 'here') {
-      const px = dungeon ? dungeonPicture(g, g.s.mapId, g.s.level, tiles, art) : townPicture(g, where!, g.s.level, tiles, art, lit);
-      const img = new ImageData(INTERIOR_PIXELS, INTERIOR_PIXELS);
-      new Uint32Array(img.data.buffer).set(px);
-      inner.width = inner.height = INTERIOR_PIXELS;
+    if (page === 'here' && here) {
+      const img = new ImageData(here.size, here.size);
+      new Uint32Array(img.data.buffer).set(here.picture(lit));
+      inner.width = inner.height = here.size;
       inner.getContext('2d')!.putImageData(img, 0, 0);
     } else {
       const w = world();
       inner.width = inner.height = MAP_PIXELS;
-      inner
-        .getContext('2d')!
-        .putImageData(
-          worldPicture(g, quads, w, w === 'under' ? null : paper, worlds[w], marks[w], chosen[w], partyOn(w), lit, focus),
-          0,
-          0,
-        );
+      inner.getContext('2d')!.putImageData(worldPicture(quads, worlds[w], marks[w], source.knows, chosen[w], lit, focus), 0, 0);
     }
     if (page === 'here') {
       inner.style.cssText = `width:${size}px;height:${size}px;image-rendering:pixelated;display:block;`;
@@ -618,8 +736,8 @@ export function showMap(
     // The party's mark blinks: the world's picture drawn again, lit and dark by turns.
     // On the map of the town, keep or castle the party is in, too - not a dungeon's, where it stays steady.
     const blink = setInterval(() => {
-      if (page === 'cloth' || (page === 'here' && dungeon)) return;
-      if (page !== 'here' && !partyOn(world())) return;
+      if (page === 'cloth' || (page === 'here' && !here?.blinks)) return;
+      if (page !== 'here' && !worlds[world()].party) return;
       lit = !lit;
       layout();
     }, 450);
@@ -631,7 +749,7 @@ export function showMap(
       window.removeEventListener('keydown', key, true);
       window.removeEventListener('resize', layout);
       activeMap = null;
-      onClose();
+      source.onClose();
       resolve();
     };
     const move = (dx: number, dy: number): void => {
@@ -727,9 +845,8 @@ export function showMap(
       e.preventDefault();
       e.stopPropagation();
       if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return; // a modifier on its own is no key
-      // A keyboard read as a controller is one here too (input.ts asPad): Z names, X the other page, a letter that
-      // is no button nothing.
-      const code = g.options.input === 'controller' ? asPad(g, codeOf(e)) : codeOf(e);
+      // A key as the game's map takes it (WorldMapSource.keyOf): a keyboard read as a controller is one here too.
+      const code = source.keyOf ? source.keyOf(codeOf(e)) : codeOf(e);
       if (code !== 0) act(actionOf(code));
     };
     window.addEventListener('keydown', key, true);
@@ -741,14 +858,13 @@ export function showMap(
       frame.setPointerCapture(e.pointerId);
     });
     frame.addEventListener('pointermove', (e) => {
-      const onWorld = page === 'brit' || page === 'under';
-      if (!drag || !(onWorld || (page === 'cloth' && ZOOMS[zoom] > 1))) return;
+      if (!drag || !(onWorld() || (page === 'cloth' && ZOOMS[zoom] > 1))) return;
       const dx = e.clientX - drag.x;
       const dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
       drag.x = e.clientX;
       drag.y = e.clientY;
-      if (onWorld) {
+      if (onWorld()) {
         // A world's map dragged about, round its edges as the world goes.
         const per = view.clientWidth / span.cols;
         const c = centre[world()];
