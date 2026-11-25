@@ -455,6 +455,29 @@ describe('the title’s Manage Saves', () => {
     expect(loadOptions().scanlines).toBe(true);
   });
 
+  it('goes back to the top, not on to Remove game files, once the last character is deleted', async () => {
+    make('Iolo', 7);
+    chooseCharacter(null);
+    // Manage Saves; Delete Character; Iolo; Yes - then Manage Saves again, waiting.
+    const { g } = await atTitleWith(
+      (g) => {
+        g.hooks.transfer = {} as Transfer;
+        g.hooks.uninstall = async () => {};
+      },
+      K.Up,
+      Pad.A,
+      K.Down,
+      K.Down,
+      Pad.A,
+      Pad.A,
+      K.Down,
+      Pad.A,
+    );
+    expect(characters()).toEqual([]);
+    expect(g.menuShown?.title).toBe('Manage Saves');
+    expect(g.menuShown?.labels[g.menuShown.at]).toBe('Import saved game');
+  });
+
   it('takes up the next one’s settings when the latest is deleted', async () => {
     three();
     chooseCharacter(null);

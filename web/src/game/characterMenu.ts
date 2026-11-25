@@ -158,6 +158,9 @@ export async function manageSavesMenu(g: GameCore, redraw: () => Promise<void>):
       },
     ];
     await box();
+    // A line greyed since it was chosen (Delete Character, the last one gone): the bar from the top again (choose then
+    // takes it to the first line it may be on), not on to the line after - Remove game files.
+    if (lines[at]?.enabled === false) at = 0;
     at = await choose(g, 'Manage Saves', lines, at, true);
     if (at === -2) continue; // to be drawn anew
     if (at < 0) return deleted ? 'deleted' : null;
