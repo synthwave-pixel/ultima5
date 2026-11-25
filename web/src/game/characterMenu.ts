@@ -19,20 +19,44 @@ const LINES = 3;
 /** A character's name, or what stands for none. */
 const nameOf = (c: Character): string => saveCodec().avatarName(c.data) || 'The nameless';
 
-/** A save as a character's card: their name and level, to be chosen; where they are and when they saved, in grey. */
+/**
+ * A save as a character's card: their name (and the game's word for them, where it has one: SaveCodec cardDetail) and
+ * level, to be chosen; where they are and when they saved, in grey.
+ */
 export function cardOf(g: GameCore, stored: StoredSave): Item[] {
   const codec = saveCodec();
   const level = codec.level(stored);
   const where = codec.where(g, stored);
+  const detail = codec.cardDetail?.(stored);
   return [
-    { label: `${codec.avatarName(stored) || 'The nameless'}, level ${level}` },
+    { label: `${codec.avatarName(stored) || 'The nameless'}${detail ? `, ${detail}` : ''}, level ${level}` },
     { label: where.charAt(0).toUpperCase() + where.slice(1), enabled: false },
     { label: savedWhen(stored.written), enabled: false },
   ];
 }
 
-/** A character's lines: their last save's card. */
-const linesOf = (g: GameCore, c: Character): Item[] => cardOf(g, c.data);
+/**
+ * The cards of `saves`, one after another: where a card would read just as one before it, word for word, its first
+ * line ends "(2)", "(3)"... that the two can be told apart (two Avatars of one name made in the same minute).
+ */
+export function cardsOf(g: GameCore, saves: StoredSave[]): Item[] {
+  const seen = new Map<string, number>();
+  return saves.flatMap((stored) => {
+    const card = cardOf(g, stored);
+    const text = card.map((it) => it.label).join('\n');
+    const n = (seen.get(text) ?? 0) + 1;
+    seen.set(text, n);
+    if (n > 1) card[0] = { ...card[0], label: `${card[0].label} (${n})` };
+    return card;
+  });
+}
+
+/** The characters' lines: each one's last save's card. */
+const linesOf = (g: GameCore, all: Character[]): Item[] =>
+  cardsOf(
+    g,
+    all.map((c) => c.data),
+  );
 
 /** A box drawn after the first has the title put back under it first (`redraw`), so none shows round a smaller one. */
 function boxes(redraw: () => Promise<void>): () => Promise<void> {
@@ -49,13 +73,7 @@ function boxes(redraw: () => Promise<void>): () => Promise<void> {
  */
 async function deleteOne(g: GameCore, all: Character[], box: () => Promise<void>): Promise<boolean> {
   await box();
-  const d = await choose(
-    g,
-    'Delete whom?',
-    all.flatMap((c) => linesOf(g, c)),
-    0,
-    true,
-  );
+  const d = await choose(g, 'Delete whom?', linesOf(g, all), 0, true);
   if (d < 0) return false;
   const c = all[Math.floor(d / LINES)];
   await box();
@@ -84,7 +102,7 @@ export async function pickCharacter(g: GameCore, redraw: () => Promise<void>): P
     const all = characters();
     if (all.length < 2) return null;
     await box();
-    const items: Item[] = [...all.flatMap((c) => linesOf(g, c)), { label: '', enabled: false }, { label: 'Delete a character...' }];
+    const items: Item[] = [...linesOf(g, all), { label: '', enabled: false }, { label: 'Delete a character...' }];
     const i = await choose(g, 'Whose journey?', items, 0, true);
     if (i === -2) continue; // to be drawn anew
     if (i < 0) return null;
@@ -140,6 +158,9 @@ export async function manageSavesMenu(g: GameCore, redraw: () => Promise<void>):
       },
     ];
     await box();
+    // A line greyed since it was chosen (Delete Character, the last one gone): the bar from the top again (choose then
+    // takes it to the first line it may be on), not on to the line after - Remove game files.
+    if (lines[at]?.enabled === false) at = 0;
     at = await choose(g, 'Manage Saves', lines, at, true);
     if (at === -2) continue; // to be drawn anew
     if (at < 0) return deleted ? 'deleted' : null;

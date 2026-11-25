@@ -324,6 +324,31 @@ describe('the Pause menu, Gameplay and Settings', () => {
     expect(applied.at(-1)).toBe(0);
   });
 
+  it('steps a level a tenth with left and right, as with up and down: one press never runs it from Off to 100%', async () => {
+    for (const [line, level] of [
+      ['Music level', 'musicLevel'],
+      ['Sound FX level', 'effectsLevel'],
+    ] as const) {
+      const { g, p } = newGame();
+      g.options.input = 'controller';
+      g.options[level] = 0;
+      const dial = [K.Right, K.Right, K.Left, Pad.A];
+      let dialled = false;
+      p.next = () => {
+        const m = g.menuShown!;
+        if (m.title === line) {
+          dialled = true;
+          return dial.shift()!;
+        }
+        const want = m.labels.findIndex((l) => (m.title === 'Paused' ? l === 'Audio' : l.startsWith(line)));
+        if (!dialled && m.at !== want) return K.Down;
+        return dialled ? Pad.B : Pad.A;
+      };
+      await pauseMenu(g);
+      expect(g.options[level], line).toBe(1);
+    }
+  });
+
   it("keeps the music paused under the Sound FX level's dial, the effects it plays heard, the menu held throughout", async () => {
     const { g, p } = newGame();
     g.options.input = 'controller';

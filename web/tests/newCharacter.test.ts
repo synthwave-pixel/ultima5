@@ -42,4 +42,21 @@ describe('a new character', () => {
     expect(m.int).toBeGreaterThan(0);
     expect(m.mp).toBe(m.int);
   });
+
+  it('comes back from the mirror to how the Avatar is addressed with the answer given still chosen', async () => {
+    const { g, p } = newGame();
+    Object.assign(g.options, { tileSet: 'standard', tiles: 'modern-pc', input: 'controller' });
+    // Continue with the name suggested; Sir; B at the mirror; A at the question again, taking Sir as it stands.
+    p.keys.push(K.Down, Pad.A, K.Right, Pad.A, Pad.B, Pad.A);
+    let waiting: string | undefined;
+    p.next = () => {
+      waiting = g.menuShown?.title;
+      return undefined;
+    };
+    await expect((new Intro(g) as unknown as { createCharacter(): Promise<boolean> }).createCharacter()).rejects.toThrow(
+      'script ran out of keys',
+    );
+    expect(waiting).toBe('Appearance'); // at the mirror again, not still at the question
+    expect(g.s.members[0].gender).toBe(0x0b);
+  });
 });

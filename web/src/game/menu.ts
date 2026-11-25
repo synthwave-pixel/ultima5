@@ -71,8 +71,16 @@ export function titleShown(): void {
   titlePanel = false;
 }
 
-/** At the title, the rows above the menu's box a dialog is kept to, a row clear of its border (box). */
-const TITLE_ABOVE = 14;
+/**
+ * At the title, the rows above the menu's box a dialog is kept to, a row clear of its border (box): the game's, from
+ * its title's content (titleRoom); Ultima V's fourteen until one is given.
+ */
+let titleAbove = 14;
+
+/** The rows a dialog at the title is kept to, above the menu's box (titleMenu.ts, from the game's TitleContent). */
+export function titleRoom(rows: number): void {
+  titleAbove = rows;
+}
 
 export interface Item {
   label: string;
@@ -182,7 +190,7 @@ export function framedBox(g: GameCore, title: string, width: number, rows: numbe
   cols = Math.max(6, Math.min(WIDTH, width));
   const head = title ? 2 : 0;
   const tall = rows + head + 2;
-  const [left, top] = [(40 - cols) >> 1, 1 + (tall <= TITLE_ABOVE ? (TITLE_ABOVE - tall) >> 1 : Math.max(0, (25 - tall) >> 1))];
+  const [left, top] = [(40 - cols) >> 1, 1 + (tall <= titleAbove ? (titleAbove - tall) >> 1 : Math.max(0, (25 - tall) >> 1))];
   framed(g, (left - 1) * 8, (top - 1) * 8, (left + cols + 1) * 8 - 1, (top + rows + head + 1) * 8 - 1);
   t.setWindow(WIN, left, top, left + cols - 1, top + rows + head - 1);
   t.select(WIN);
@@ -334,6 +342,7 @@ export async function askYesNo(g: GameCore): Promise<boolean> {
  * wide as the longest of them; with a label there are no digits to type.
  * `onChange` is told each new number as it is dialled, and the first again
  * when B leaves it, so a level is heard as it turns and is as it was after.
+ * Left and right go `bigStep` at a press (ten, unless told otherwise).
  */
 export async function amount(
   g: GameCore,
@@ -345,11 +354,14 @@ export async function amount(
     caption,
     shown,
     onChange,
+    bigStep = 10,
   }: {
     title?: string;
     caption?: ((n: number) => string) | undefined;
     shown?: ((n: number) => string) | undefined;
     onChange?: ((n: number) => void) | undefined;
+    /** How far left and right go at a press (up and down go one): ten, or a level's one (dialLevel). */
+    bigStep?: number;
   } = {},
 ): Promise<number> {
   // What was said for the Dialog setting's box shown first, a page at a time, as choose has it: the dial drawn after,
@@ -386,8 +398,8 @@ export async function amount(
     const before = n;
     if (k === K.Up) n = Math.min(high, n + 1);
     else if (k === K.Down) n = Math.max(low, n - 1);
-    else if (k === K.Right) n = Math.min(high, n + 10);
-    else if (k === K.Left) n = Math.max(low, n - 10);
+    else if (k === K.Right) n = Math.min(high, n + bigStep);
+    else if (k === K.Left) n = Math.max(low, n - bigStep);
     else if (!shown && k >= 0x30 && k <= 0x39) n = Math.max(low, Math.min(high, (n * 10 + k - 0x30) % 10 ** width));
     else if (k === K.Enter || k === Pad.A) {
       result = n;
@@ -419,14 +431,27 @@ function scrollMarks(g: GameCore, up: number, down: number, above: boolean, belo
 }
 
 /**
+ * Where a list opened at line `at` starts: there, if the bar may be on it (a line to choose, or one it may rest on);
+ * else the next such line after it, round from the top - or `at` still, where there is none (Manage Saves with no
+ * character kept: Export greyed, the bar on Import).
+ */
+function firstChoosable(items: Item[], at: number): number {
+  for (let i = 0; i < items.length; i++) {
+    const next = (at + i) % items.length;
+    if (items[next].enabled !== false || items[next].rest) return next;
+  }
+  return at;
+}
+
+/** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
+export const LEFT_FOR_HOOK = -3;
+
+/**
  * A list to choose from, over the map. Up and down move (and wrap), left
  * and right a page where the list is longer than it shows (else as up and
  * down), Enter or A chooses, Escape, B or Space goes back; a letter
  * chooses the item it stands for. The index chosen, or -1 (-2: to be drawn anew, Game.choiceSeen).
  */
-/** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
-export const LEFT_FOR_HOOK = -3;
-
 export async function choose(g: GameCore, title: string, items: Item[], start = 0, boxed = false, talkRows?: TalkRows): Promise<number> {
   // What was said for the Dialog setting's box shown first: the box drawn before the menu, not over it - and a list
   // low in the view, as a townsman's talk has it, the merchant's words in sight above it (merchantSpeech.ts).
@@ -452,7 +477,7 @@ export async function choose(g: GameCore, title: string, items: Item[], start = 
   const scrolls = !talking && items.length > rows;
   const lead = scrolls && boxed && !title ? 1 : 0;
   const foot = scrolls && boxed && !boxNotes ? 1 : 0;
-  let at = Math.max(0, Math.min(start, items.length - 1));
+  let at = firstChoosable(items, Math.max(0, Math.min(start, items.length - 1)));
   let top = 0;
   // A list with no letters gives its labels the whole width - and a keyboard read as a controller has no
   // letter commands, so the column would promise keys that do nothing.
@@ -621,7 +646,7 @@ export async function chooseTwoColumns(g: GameCore, title: string, items: Item[]
     t.inverse = false;
     t.win.fg = fg;
   };
-  let at = Math.max(0, Math.min(start, items.length - 1));
+  let at = firstChoosable(items, Math.max(0, Math.min(start, items.length - 1)));
   let result = -1;
   for (;;) {
     for (let r = 0; r < rows; r++) {
@@ -1077,7 +1102,8 @@ async function dialLevel(g: GameCore, title: string, start: number, set: (n: num
     g.hooks.applyOptions?.(g.options);
     sample?.();
   };
-  const n = await amount(g, 0, LEVELS, start, { title, shown: percent, onChange: hear });
+  // Left and right a tenth too, as up and down: a step of ten would run a level from Off to 100% at a press.
+  const n = await amount(g, 0, LEVELS, start, { title, shown: percent, onChange: hear, bigStep: 1 });
   if (n >= 0) set(n);
 }
 

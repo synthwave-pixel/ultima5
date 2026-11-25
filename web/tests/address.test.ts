@@ -39,4 +39,31 @@ describe('how the Avatar is addressed', () => {
     expect((await ask('F'.charCodeAt(0))).gender).toBe(0x0c);
     expect((await ask('M'.charCodeAt(0))).gender).toBe(0x0b);
   });
+
+  it("refuses A with nothing chosen: the menus' no, and the arrows flash", async () => {
+    const { g, p } = newGame();
+    g.options.soundChoice = 'classical';
+    const asked: string[] = [];
+    p.sound = { ...p.sound, cue: async (name: string) => void asked.push(name) };
+    const flashed: number[] = [];
+    const print = g.text.printChar.bind(g.text);
+    g.text.printChar = (ch: number) => {
+      if (g.text.inverse && (ch === 0x1b || ch === 0x1a)) flashed.push(ch);
+      print(ch);
+    };
+    p.keys.push(Pad.A, K.Right, Pad.A);
+    expect(await askAddress(g)).toBe(0x0b);
+    expect(asked).toEqual(['Back']);
+    expect(flashed).toEqual([0x1b, 0x1a]);
+  });
+
+  it('starts on the answer given before, come back to', async () => {
+    const { g, p } = newGame();
+    p.keys.push(Pad.A);
+    expect(await askAddress(g, 0x0b)).toBe(0x0b);
+    p.keys.push(Pad.A);
+    expect(await askAddress(g, 0x0c)).toBe(0x0c);
+    p.keys.push(K.Left, Pad.A);
+    expect(await askAddress(g, 0x0b)).toBe(0x0c);
+  });
 });
