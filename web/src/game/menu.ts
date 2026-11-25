@@ -334,6 +334,7 @@ export async function askYesNo(g: GameCore): Promise<boolean> {
  * wide as the longest of them; with a label there are no digits to type.
  * `onChange` is told each new number as it is dialled, and the first again
  * when B leaves it, so a level is heard as it turns and is as it was after.
+ * Left and right go `bigStep` at a press (ten, unless told otherwise).
  */
 export async function amount(
   g: GameCore,
@@ -345,11 +346,14 @@ export async function amount(
     caption,
     shown,
     onChange,
+    bigStep = 10,
   }: {
     title?: string;
     caption?: ((n: number) => string) | undefined;
     shown?: ((n: number) => string) | undefined;
     onChange?: ((n: number) => void) | undefined;
+    /** How far left and right go at a press (up and down go one): ten, or a level's one (dialLevel). */
+    bigStep?: number;
   } = {},
 ): Promise<number> {
   // What was said for the Dialog setting's box shown first, a page at a time, as choose has it: the dial drawn after,
@@ -386,8 +390,8 @@ export async function amount(
     const before = n;
     if (k === K.Up) n = Math.min(high, n + 1);
     else if (k === K.Down) n = Math.max(low, n - 1);
-    else if (k === K.Right) n = Math.min(high, n + 10);
-    else if (k === K.Left) n = Math.max(low, n - 10);
+    else if (k === K.Right) n = Math.min(high, n + bigStep);
+    else if (k === K.Left) n = Math.max(low, n - bigStep);
     else if (!shown && k >= 0x30 && k <= 0x39) n = Math.max(low, Math.min(high, (n * 10 + k - 0x30) % 10 ** width));
     else if (k === K.Enter || k === Pad.A) {
       result = n;
@@ -1090,7 +1094,8 @@ async function dialLevel(g: GameCore, title: string, start: number, set: (n: num
     g.hooks.applyOptions?.(g.options);
     sample?.();
   };
-  const n = await amount(g, 0, LEVELS, start, { title, shown: percent, onChange: hear });
+  // Left and right a tenth too, as up and down: a step of ten would run a level from Off to 100% at a press.
+  const n = await amount(g, 0, LEVELS, start, { title, shown: percent, onChange: hear, bigStep: 1 });
   if (n >= 0) set(n);
 }
 

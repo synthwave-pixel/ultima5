@@ -117,6 +117,18 @@ describe('the dial', () => {
     expect(heard).toEqual([5, 4, 6]);
   });
 
+  it('goes ten at a time with left and right where it is not told otherwise (How many?)', async () => {
+    const { g, p } = newGame();
+    p.keys.push(K.Right, K.Right, K.Left, Pad.A);
+    expect(await amount(g, 0, 99, 0)).toBe(10);
+  });
+
+  it('goes the steps it is told with left and right', async () => {
+    const { g, p } = newGame();
+    p.keys.push(K.Right, K.Right, K.Left, Pad.A);
+    expect(await amount(g, 0, 10, 0, { shown: percent, bigStep: 1 })).toBe(1);
+  });
+
   it('shows Off at none, and stops at the ends', async () => {
     const { g, p } = newGame();
     p.keys.push(K.Down, K.Left, K.Down, Pad.A);
