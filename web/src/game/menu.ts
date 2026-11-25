@@ -71,8 +71,16 @@ export function titleShown(): void {
   titlePanel = false;
 }
 
-/** At the title, the rows above the menu's box a dialog is kept to, a row clear of its border (box). */
-const TITLE_ABOVE = 14;
+/**
+ * At the title, the rows above the menu's box a dialog is kept to, a row clear of its border (box): the game's, from
+ * its title's content (titleRoom); Ultima V's fourteen until one is given.
+ */
+let titleAbove = 14;
+
+/** The rows a dialog at the title is kept to, above the menu's box (titleMenu.ts, from the game's TitleContent). */
+export function titleRoom(rows: number): void {
+  titleAbove = rows;
+}
 
 export interface Item {
   label: string;
@@ -182,7 +190,7 @@ export function framedBox(g: GameCore, title: string, width: number, rows: numbe
   cols = Math.max(6, Math.min(WIDTH, width));
   const head = title ? 2 : 0;
   const tall = rows + head + 2;
-  const [left, top] = [(40 - cols) >> 1, 1 + (tall <= TITLE_ABOVE ? (TITLE_ABOVE - tall) >> 1 : Math.max(0, (25 - tall) >> 1))];
+  const [left, top] = [(40 - cols) >> 1, 1 + (tall <= titleAbove ? (titleAbove - tall) >> 1 : Math.max(0, (25 - tall) >> 1))];
   framed(g, (left - 1) * 8, (top - 1) * 8, (left + cols + 1) * 8 - 1, (top + rows + head + 1) * 8 - 1);
   t.setWindow(WIN, left, top, left + cols - 1, top + rows + head - 1);
   t.select(WIN);

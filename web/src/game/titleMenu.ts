@@ -17,7 +17,7 @@ import { TICK_MS } from './effects.ts';
 import type { GameCore } from './gameCore.ts';
 import { asPad, upper } from './input.ts';
 import { K, Pad } from './io.ts';
-import { menuSound } from './menu.ts';
+import { menuSound, titleRoom } from './menu.ts';
 import { loadOptions } from './settings.ts';
 import { characters, currentCharacter, localSave, roomForCharacter } from './storage.ts';
 import { saveCodec } from './saveCodec.ts';
@@ -35,6 +35,11 @@ export interface TitleContent {
   readonly idleKey: string;
   /** The row, in pixels, from which the menu's box is drawn in the Standard look's copper. */
   readonly menuRow: number;
+  /**
+   * The row, in pixels, of the menu's box's top border, where it is not the text row under menuRow (Ultima V's: its
+   * copper begins a row above the border). A dialog at the title keeps a row clear above it (menu.ts framedBox).
+   */
+  readonly boxTop?: number;
   /** A game line's column and its text; undefined for the port's lines. */
   gameLine(key: string): [number, string] | undefined;
   /** The opening, once as the title first comes up; whether it ran its course (the idle scenes then follow). */
@@ -64,7 +69,10 @@ export class TitleMenu {
   constructor(
     private readonly g: GameCore,
     private readonly content: TitleContent,
-  ) {}
+  ) {
+    // The dialogs over the title kept above its box, a row clear of its border (Ultima V: 14 rows).
+    titleRoom(((content.boxTop ?? content.menuRow + 8) >> 3) - 1);
+  }
 
   /** The choices, one highlighted (Ultima V: INTRO_06bc). */
   menu(sel: number): void {
