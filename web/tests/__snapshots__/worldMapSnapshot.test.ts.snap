@@ -1,0 +1,2433 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Ultima V's maps, as they show > Britannia, the party outdoors, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "be8ac8b956bcb7fe",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "a5e36604976a064d",
+      "shows": "canvas",
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Spiritwood",
+        "width": 184,
+      },
+      "picture 512x512": "c7806459edaba0c6",
+      "shows": "canvas",
+      "view 819x512": [
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lost River",
+        "width": 184,
+      },
+      "picture 512x512": "201e6a996a5f16d4",
+      "shows": "canvas",
+      "view 819x512": [
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+        "-792,-118,1024,1024",
+        "232,-118,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "The Deep Forest",
+        "width": 264,
+      },
+      "picture 512x512": "2cab51a3a4e4a8ec",
+      "shows": "canvas",
+      "view 819x512": [
+        "-792,-118,1024,1024",
+        "232,-118,1023,1024",
+        "-824,-1002,1024,1024",
+        "-824,22,1024,1024",
+        "200,-1002,1023,1024",
+        "200,22,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-824,-1002,1024,1024",
+        "-824,22,1024,1024",
+        "200,-1002,1023,1024",
+        "200,22,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "f078c1cfdab7c36b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "be8ac8b956bcb7fe",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "be8ac8b956bcb7fe",
+      "shows": "canvas",
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > Britannia, the party outdoors, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "18e1477f301a7966",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Spiritwood",
+        "width": 184,
+      },
+      "picture 512x512": "af48ec2028e6585c",
+      "shows": "canvas",
+      "view 819x512": [
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lost River",
+        "width": 184,
+      },
+      "picture 512x512": "2c6b9d69c258b51c",
+      "shows": "canvas",
+      "view 819x512": [
+        "-792,-290,1024,1024",
+        "232,-290,1023,1024",
+        "-792,-118,1024,1024",
+        "232,-118,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "The Deep Forest",
+        "width": 264,
+      },
+      "picture 512x512": "05f3cd281dca52a2",
+      "shows": "canvas",
+      "view 819x512": [
+        "-792,-118,1024,1024",
+        "232,-118,1023,1024",
+        "-824,-1002,1024,1024",
+        "-824,22,1024,1024",
+        "200,-1002,1023,1024",
+        "200,22,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-824,-1002,1024,1024",
+        "-824,22,1024,1024",
+        "200,-1002,1023,1024",
+        "200,22,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "a980e5fab20315dd",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "18e1477f301a7966",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lord British's Castle?",
+        "width": 376,
+      },
+      "picture 512x512": "18e1477f301a7966",
+      "shows": "canvas",
+      "view 819x512": [
+        "-960,-174,1024,1024",
+        "64,-174,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > in a dungeon, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "f7ffd33599691236",
+      "shows": "canvas",
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "f7ffd33599691236",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "f7ffd33599691236",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "8495933b42e881c7",
+      "shows": "canvas",
+      "view 819x512": [
+        "-552,-38,1023,1024",
+        "471,-38,1024,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Shrine?",
+        "width": 136,
+      },
+      "picture 512x512": "b4dbb123b2cdb549",
+      "shows": "canvas",
+      "view 819x512": [
+        "-552,-38,1023,1024",
+        "471,-38,1024,1024",
+        "-524,-10,1023,1024",
+        "499,-10,1024,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "f7ffd33599691236",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > in a dungeon, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "0f054c6824edc7af",
+      "shows": "canvas",
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "0f054c6824edc7af",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "0f054c6824edc7af",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "8495933b42e881c7",
+      "shows": "canvas",
+      "view 819x512": [
+        "-552,-38,1023,1024",
+        "471,-38,1024,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Shrine?",
+        "width": 136,
+      },
+      "picture 512x512": "b4dbb123b2cdb549",
+      "shows": "canvas",
+      "view 819x512": [
+        "-552,-38,1023,1024",
+        "471,-38,1024,1024",
+        "-524,-10,1023,1024",
+        "499,-10,1024,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "A ladder up",
+        "width": 200,
+      },
+      "picture 512x512": "0f054c6824edc7af",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > inside Britain, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "a31bdfa1f7b80888",
+      "shows": "canvas",
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "1190261088c626ef",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "1190261088c626ef",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "be75bc79574aa2c8",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Village?",
+        "width": 152,
+      },
+      "picture 512x512": "e9647c246cc52522",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+        "-952,-162,1024,1024",
+        "72,-162,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "be75bc79574aa2c8",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-162,1024,1024",
+        "72,-162,1023,1024",
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "98aeef4f934fdd4b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "a31bdfa1f7b80888",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "98aeef4f934fdd4b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > inside Britain, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "f1ad557378db952a",
+      "shows": "canvas",
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "e2d26de5db2b555a",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "e2d26de5db2b555a",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "179e5d6872790427",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Village?",
+        "width": 152,
+      },
+      "picture 512x512": "6e2e0a9bfbd47526",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+        "-952,-162,1024,1024",
+        "72,-162,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "179e5d6872790427",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-162,1024,1024",
+        "72,-162,1023,1024",
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "48f432739991098b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "800px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Britain",
+        "width": 136,
+      },
+      "picture 512x512": "f1ad557378db952a",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "48f432739991098b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-940,-170,1024,1024",
+        "84,-170,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > the Underworld, the party below, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "b5b0215dd7b0df3a",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "6cccba8b94579bd5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "6cccba8b94579bd5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "b5b0215dd7b0df3a",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "439bea8bd90be029",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "439bea8bd90be029",
+      "shows": "canvas",
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "b5b0215dd7b0df3a",
+      "shows": "canvas",
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e1ac17bc77490809",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "b5b0215dd7b0df3a",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Moongate",
+        "width": 152,
+      },
+      "picture 512x512": "7eda93bba0165e9f",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1000,-154,1024,1024",
+        "24,-154,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Shrine?",
+        "width": 136,
+      },
+      "picture 512x512": "9d903a6803f69e02",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1000,-154,1024,1024",
+        "24,-154,1023,1024",
+        "-104,-114,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "b5b0215dd7b0df3a",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > the Underworld, the party below, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "7e7e3eb4761cb566",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "3f81da31a597316e",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "3f81da31a597316e",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 1": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "7e7e3eb4761cb566",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "ee88ae44b9b7ad1f",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 3": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Cave?",
+        "width": 104,
+      },
+      "picture 512x512": "ee88ae44b9b7ad1f",
+      "shows": "canvas",
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "7e7e3eb4761cb566",
+      "shows": "canvas",
+      "view 819x512": [
+        "-980,-14,1024,1024",
+        "44,-14,1023,1024",
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "6206684a71b0b52f",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "blink": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "7e7e3eb4761cb566",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Moongate",
+        "width": 152,
+      },
+      "picture 512x512": "9376d30ffa2c4bbc",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1000,-154,1024,1024",
+        "24,-154,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Shrine?",
+        "width": 136,
+      },
+      "picture 512x512": "eecb3e037763d193",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1000,-154,1024,1024",
+        "24,-154,1023,1024",
+        "-104,-114,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "7e7e3eb4761cb566",
+      "shows": "canvas",
+      "view 819x512": [
+        "-1016,-146,1024,1024",
+        "8,-146,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > the journal's View of a place below, the Underworld unseen, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "a5e36604976a064d",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > the journal's View of a place below, the Underworld unseen, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 2": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 103": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 4": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Lighthouse?",
+        "width": 200,
+      },
+      "picture 512x512": "ce87ec6e7b4d5a7e",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-968,-226,1024,1024",
+        "56,-226,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Doom",
+        "width": 88,
+      },
+      "picture 512x512": "e67333bd62f04cb0",
+      "shows": "canvas",
+      "view 819x512": [
+        "-104,-258,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > with the cloth map beside the page, in the Standard look 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-381.9223424570338px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 2": {
+      "cloth": {
+        "at": "translate(-572.8835136855506px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 4": {
+      "cloth": {
+        "at": "translate(-572.8835136855506px, -600px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 2d": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-381.9223424570338px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-763.8446849140677px, -800px)",
+        "height": "2400px",
+        "src": "/U5map.jpg",
+        "width": "2291.534054742203px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "img",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "aac4f47b6d9941f5",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
+
+exports[`Ultima V's maps, as they show > with the cloth map beside the page, in the game tiles 1`] = `
+[
+  {
+    "open": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 102": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-381.9223424570338px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 2": {
+      "cloth": {
+        "at": "translate(-572.8835136855506px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 4": {
+      "cloth": {
+        "at": "translate(-572.8835136855506px, -600px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 2d": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-381.9223424570338px, -400px)",
+        "height": "1600px",
+        "src": "/U5map.jpg",
+        "width": "1527.689369828135px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(-763.8446849140677px, -800px)",
+        "height": "2400px",
+        "src": "/U5map.jpg",
+        "width": "2291.534054742203px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 103": {
+      "cloth": {
+        "at": "translate(0px, 0px)",
+        "height": "800px",
+        "src": "/U5map.jpg",
+        "width": "763.8446849140676px",
+      },
+      "frame": {
+        "border": "2px solid #7a401f",
+        "cursor": "pointer",
+        "height": "800px",
+        "width": "763.8446849140676px",
+      },
+      "legend": null,
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "img",
+    },
+  },
+  {
+    "key 102": {
+      "frame": {
+        "border": "none",
+        "cursor": "grab",
+        "height": "800px",
+        "width": "1280px",
+      },
+      "legend": {
+        "height": 32,
+        "text": "Tester",
+        "width": 120,
+      },
+      "picture 512x512": "e22e526ab1520a2b",
+      "shows": "canvas",
+      "view 819x512": [
+        "-952,-178,1024,1024",
+        "72,-178,1023,1024",
+      ],
+    },
+  },
+  {
+    "key 101": {
+      "open": false,
+    },
+  },
+  {
+    "closed": 1,
+  },
+]
+`;
