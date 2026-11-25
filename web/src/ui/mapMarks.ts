@@ -191,7 +191,7 @@ export function marksFor(ovl: DataOvl, save: Save, map: Uint8Array, underworld: 
  * place to its far end, if there is one close by, so the gate table
  * writes itself one trip at a time.
  */
-function named(marks: Mark[]): void {
+export function named(marks: Mark[]): void {
   for (const gate of marks) {
     if (!gate.leadsTo) continue;
     const [tx, ty] = gate.leadsTo;
@@ -239,7 +239,7 @@ function isPlace(tile: number): boolean {
  * and the castle, the huts on the Verity isle), so any that touch are
  * eased apart along the line between them, the first left where it is.
  */
-function spread(marks: Mark[]): Mark[] {
+export function spread(marks: Mark[]): Mark[] {
   const near = 3;
   for (let pass = 0; pass < 4; pass++) {
     let moved = false;

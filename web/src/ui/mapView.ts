@@ -55,15 +55,18 @@ const SLIDE_MS = 150;
 const MARK_INK: RGB = [30, 22, 16];
 const MARK_EDGE: RGB = [247, 238, 214];
 
-type RGB = [number, number, number];
+export type RGB = [number, number, number];
 /** The maps on offer: where the party is standing, the two worlds, and a cloth map if one is there. */
 type Page = 'here' | 'cloth' | 'brit' | 'under';
 type World = 'brit' | 'under';
 
-/** Each tile as its four quarters averaged, so a square shows a little of its own shape. */
-function tileQuads(tiles: Uint8Array, art: StandardArt | null): RGB[][] {
+/**
+ * Each of the first `count` tiles as its four quarters averaged, so a square shows a little of its own shape: from the
+ * look's figure where `art` draws one, else from `tiles`, the game's own (16 by 16, four bits a pixel, 128 bytes a tile).
+ */
+export function tileQuads(tiles: Uint8Array, count: number, art: StandardArt | null): RGB[][] {
   const out: RGB[][] = [];
-  for (let t = 0; t < 0x200; t++) {
+  for (let t = 0; t < count; t++) {
     const figure = art?.figure(t);
     const cell = figure ? Math.round(Math.sqrt(figure.length)) : 0;
     const quads: RGB[] = [];
@@ -372,7 +375,7 @@ export function showMap(
   overlay.append(frame, legend);
   document.body.appendChild(overlay);
 
-  const quads = tileQuads(tiles, art);
+  const quads = tileQuads(tiles, 0x200, art);
   const font = readFont(g.data.files.get('IBM.CH'));
   const worlds: Record<World, Uint8Array> = {
     brit: readBritannia(g.data.files, g.data.ovl).tiles,
