@@ -50,7 +50,7 @@ import { desktopModeWay } from '../ui/updates.ts';
 const WIN = 3;
 const LEFT = 1;
 const TOP = 1;
-const WIDTH = 21;
+export const WIDTH = 21;
 const HEIGHT = 22;
 /** At the title, the menus' window's left: the map's square centred on the screen (panel). */
 const TITLE_LEFT = 9;

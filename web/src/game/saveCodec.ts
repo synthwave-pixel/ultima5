@@ -33,8 +33,8 @@ export interface SaveCodec {
   /** The Avatar's level in a save (a character's card: characterMenu.ts cardOf). */
   level(d: StoredSave): number;
   /**
-   * A word for a character's card after the name ("Kestrel, Bard, level 2": characterMenu.ts cardOf), or undefined
-   * for none. Ultima V gives none; the plain list of characters (avatarName) is not touched by it.
+   * A word for a character's card, before where they are on its grey line ("Bard, Britannia": characterMenu.ts
+   * cardOf), or undefined for none. Ultima V gives none; the plain list of characters (avatarName) is not touched by it.
    */
   cardDetail?(d: StoredSave): string | undefined;
   /** Where a save was made, in words (the list of saves to go back to). */
