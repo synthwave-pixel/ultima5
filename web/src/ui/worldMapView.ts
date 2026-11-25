@@ -103,7 +103,7 @@ export interface WorldMapSource {
    */
   tiles: Uint8Array;
   tileCount: number;
-  /** The colours the tiles' pixels index, each 0xRRGGBB; EGA's sixteen (data/ega.ts EGA_PALETTE) where none is given. */
+  /** The 16 colours the tiles' pixels index, each 0xRRGGBB; EGA's (data/ega.ts EGA_PALETTE) where none is given. */
   palette?: readonly number[];
   art: TileFigures | null;
   /** A mark's key the map opens on, chosen and shown though not yet seen (the journal's View); '' or none for none. */
@@ -121,7 +121,7 @@ export interface WorldMapSource {
 /**
  * Each of the first `count` tiles as its four quarters averaged, so a square shows a little of its own shape: from the
  * look's figure where `art` draws one, else from `tiles`, the game's own (16 by 16, four bits a pixel, 128 bytes a tile,
- * each pixel an index into `palette`, 0xRRGGBB colours: EGA's where none is given).
+ * each pixel an index into `palette`, 16 colours as 0xRRGGBB: EGA's where none is given).
  */
 export function tileQuads(tiles: Uint8Array, count: number, art: TileFigures | null, palette: readonly number[] = EGA_PALETTE): RGB[][] {
   const out: RGB[][] = [];

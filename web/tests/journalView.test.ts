@@ -15,16 +15,17 @@ import { newGame } from './helpers.ts';
 const page = (lines: JournalLine[], name: string): JournalLine[] => lines.find((l) => l.label.startsWith(name))!.open!.lines;
 
 /**
- * X on a line of the journal that names a place - a shrine, a dungeon, a towne, castle, keep, lighthouse or hut - opens
- * the map on it (menu.ts, mapView.ts showMap's focus); not on one still a mystery.
- */
-
-/**
  * How Ultima V's map inks mark `m` on Britannia or the Underworld: worldMapView.ts inkOf, as showWorldMap calls it with
- * the world's sight and the `knows` showMap gives it (placeNames.ts knowsPlace).
+ * the world's sight and the `knows` showMap gives it (mapView.ts showMap's `knows:`, placeNames.ts knowsPlace - keep
+ * the two alike).
  */
 const markInk = (g: Game, m: Mark, underworld: boolean, paper: boolean, focus = ''): 'seen' | 'paper' | null =>
   inkOf(m, g.fog.of(underworld), paper, (key) => knowsPlace(g, key), focus);
+
+/**
+ * X on a line of the journal that names a place - a shrine, a dungeon, a towne, castle, keep, lighthouse or hut - opens
+ * the map on it (menu.ts, mapView.ts showMap's focus); not on one still a mystery.
+ */
 describe("the journal's View", () => {
   it('is offered for every shrine, and for a dungeon or a place once it is no mystery', () => {
     const { g } = newGame();
