@@ -40,7 +40,7 @@ describe('how the Avatar is addressed', () => {
     expect((await ask('M'.charCodeAt(0))).gender).toBe(0x0b);
   });
 
-  it('refuses A with nothing chosen: the menus\' no, and the arrows flash', async () => {
+  it("refuses A with nothing chosen: the menus' no, and the arrows flash", async () => {
     const { g, p } = newGame();
     g.options.soundChoice = 'classical';
     const asked: string[] = [];
