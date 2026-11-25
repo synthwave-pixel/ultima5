@@ -431,12 +431,6 @@ function scrollMarks(g: GameCore, up: number, down: number, above: boolean, belo
 }
 
 /**
- * A list to choose from, over the map. Up and down move (and wrap), left
- * and right a page where the list is longer than it shows (else as up and
- * down), Enter or A chooses, Escape, B or Space goes back; a letter
- * chooses the item it stands for. The index chosen, or -1 (-2: to be drawn anew, Game.choiceSeen).
- */
-/**
  * Where a list opened at line `at` starts: there, if the bar may be on it (a line to choose, or one it may rest on);
  * else the next such line after it, round from the top - or `at` still, where there is none (Manage Saves with no
  * character kept: Export greyed, the bar on Import).
@@ -452,6 +446,12 @@ function firstChoosable(items: Item[], at: number): number {
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
+/**
+ * A list to choose from, over the map. Up and down move (and wrap), left
+ * and right a page where the list is longer than it shows (else as up and
+ * down), Enter or A chooses, Escape, B or Space goes back; a letter
+ * chooses the item it stands for. The index chosen, or -1 (-2: to be drawn anew, Game.choiceSeen).
+ */
 export async function choose(g: GameCore, title: string, items: Item[], start = 0, boxed = false, talkRows?: TalkRows): Promise<number> {
   // What was said for the Dialog setting's box shown first: the box drawn before the menu, not over it - and a list
   // low in the view, as a townsman's talk has it, the merchant's words in sight above it (merchantSpeech.ts).
