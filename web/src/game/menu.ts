@@ -424,6 +424,19 @@ function scrollMarks(g: GameCore, up: number, down: number, above: boolean, belo
  * down), Enter or A chooses, Escape, B or Space goes back; a letter
  * chooses the item it stands for. The index chosen, or -1 (-2: to be drawn anew, Game.choiceSeen).
  */
+/**
+ * Where a list opened at line `at` starts: there, if the bar may be on it (a line to choose, or one it may rest on);
+ * else the next such line after it, round from the top - or `at` still, where there is none (Manage Saves with no
+ * character kept: Export greyed, the bar on Import).
+ */
+function firstChoosable(items: Item[], at: number): number {
+  for (let i = 0; i < items.length; i++) {
+    const next = (at + i) % items.length;
+    if (items[next].enabled !== false || items[next].rest) return next;
+  }
+  return at;
+}
+
 /** What choose returns where the opener's key hook (Game.choiceKey) left the list, to show something over it. */
 export const LEFT_FOR_HOOK = -3;
 
@@ -452,7 +465,7 @@ export async function choose(g: GameCore, title: string, items: Item[], start = 
   const scrolls = !talking && items.length > rows;
   const lead = scrolls && boxed && !title ? 1 : 0;
   const foot = scrolls && boxed && !boxNotes ? 1 : 0;
-  let at = Math.max(0, Math.min(start, items.length - 1));
+  let at = firstChoosable(items, Math.max(0, Math.min(start, items.length - 1)));
   let top = 0;
   // A list with no letters gives its labels the whole width - and a keyboard read as a controller has no
   // letter commands, so the column would promise keys that do nothing.
@@ -621,7 +634,7 @@ export async function chooseTwoColumns(g: GameCore, title: string, items: Item[]
     t.inverse = false;
     t.win.fg = fg;
   };
-  let at = Math.max(0, Math.min(start, items.length - 1));
+  let at = firstChoosable(items, Math.max(0, Math.min(start, items.length - 1)));
   let result = -1;
   for (;;) {
     for (let r = 0; r < rows; r++) {
