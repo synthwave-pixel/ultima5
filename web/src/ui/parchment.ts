@@ -5,11 +5,17 @@
  * paper, made at run time from the player's own BRIT.DAT. It says where
  * the land is and marks what the mapmaker knew was there, and nothing
  * else - no forests, no roads, no names. What the party sees for itself
- * is painted over it (mapView), and the Underworld has no such map at
+ * is painted over it (worldMapView.ts), and the Underworld has no such map at
  * all: down there the dark is the map until it is walked.
  */
 
-import { WORLD_SIZE } from '../data/maps.ts';
+/**
+ * A world's squares a side, which every world map here is: a square's x and y are a byte each, and the world wraps at
+ * its edges (`& 0xff`). Ultima V's Britannia and Underworld (data/maps.ts reads them at this size) and Ultima IV's
+ * Britannia alike. Declared here, not taken from maps.ts, so the map (worldMapView.ts) brings none of Ultima V's
+ * readers with it.
+ */
+export const WORLD_SIZE = 256;
 
 /** Two map pixels a square. */
 export const MAP_SCALE = 2;
@@ -22,7 +28,7 @@ export const PAPER: [number, number, number] = [226, 203, 160];
 /**
  * Value noise over a few octaves: paper grain, the wobble of a drawn line, an old stain. Asked with a `period` (how
  * many units the whole map is, at the coarsest octave), it repeats across the map's edges, so the paper joins where
- * the world wraps (mapView.ts).
+ * the world wraps (worldMapView.ts).
  */
 function noise(seed: number): (x: number, y: number, period?: number) => number {
   const at = (x: number, y: number): number => {

@@ -2,13 +2,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { Font } from '../src/data/font.ts';
 import { WORLD_SIZE } from '../src/data/maps.ts';
 import { K, Pad } from '../src/game/io.ts';
-import { named, spread, type Mark } from '../src/ui/mapMarks.ts';
-import { mapKey, showWorldMap, tileQuads, type WorldMapSource } from '../src/ui/mapView.ts';
 import { drawParchment } from '../src/ui/parchment.ts';
+import { mapKey, showWorldMap, tileQuads, type WorldMapSource } from '../src/ui/worldMapView.ts';
+import { named, spread, type Mark } from '../src/ui/worldMarks.ts';
 import { fakePage, type FakePage } from './fakeMapDom.ts';
 
 /**
- * The world map's seam, for a game other than Ultima V (mapView.ts showWorldMap): its own sea on the paper, as many
+ * The world map's seam, for a game other than Ultima V (worldMapView.ts showWorldMap): its own sea on the paper, as many
  * tiles as its sheet has, and the marks eased apart and gates named as Ultima V's are.
  */
 describe("the drawn map's sea", () => {
@@ -78,7 +78,7 @@ describe("the marks, eased apart and named, for another game's map", () => {
 });
 
 /**
- * The neutral map fed by another game (mapView.ts showWorldMap): one world, no Underworld, no cloth map, no page of
+ * The neutral map fed by another game (worldMapView.ts showWorldMap): one world, no Underworld, no cloth map, no page of
  * the place the party is in, a font of its own, its own record of sight and of names learnt.
  */
 describe("a world map from another game's source", () => {

@@ -15,7 +15,7 @@ import { newGame } from './helpers.ts';
 /**
  * Ultima V's maps, as they show, kept: each page and each step of the d-pad, X and Y over a fixed record of what the
  * party has seen - the pictures (hashed), where the world's picture is placed on the view, and the legend's words. Taken
- * before the map was split into a game's source and the neutral map (mapView.ts showWorldMap), and held after.
+ * before the map was split into a game's source and the neutral map (worldMapView.ts showWorldMap), and held after.
  */
 describe("Ultima V's maps, as they show", () => {
   let page: FakePage | null = null;

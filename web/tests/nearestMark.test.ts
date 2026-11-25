@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearestMark, stepTo, wrapped, type Mark } from '../src/ui/mapMarks.ts';
+import { nearestMark, stepTo, wrapped, type Mark } from '../src/ui/worldMarks.ts';
 
 const mark = (x: number, y: number): Mark => ({ x, y, kind: 'towne', onPaper: true });
 

@@ -1,7 +1,7 @@
 /**
  * fakeMapDom.ts
  *
- * Just enough of a page for the world map (ui/mapView.ts) to run in Node: elements that keep their styles and
+ * Just enough of a page for the world map (ui/worldMapView.ts) to run in Node: elements that keep their styles and
  * children, canvases whose pictures are kept (every putImageData, every drawImage), a window of a set size whose
  * timeouts wait for the test to run them, frames that never come, and the party's blink held for the test to fire. A
  * test reads back what the map put on the screen with `shot()`: a short hash of each picture, the view's placings,
