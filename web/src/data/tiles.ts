@@ -13,11 +13,8 @@ export const TILE_COUNT = 512;
 /** The first actor tile: actor tile t is drawn as tile ACTOR_BASE + t. */
 export const ACTOR_BASE = 0x100;
 
-/** The 16 EGA colours as 0xRRGGBB (u5d graphics/grap_sdl.c). */
-export const EGA_PALETTE = [
-  0x000000, 0x0000aa, 0x00aa00, 0x00aaaa, 0xaa0000, 0xaa00aa, 0xaa5500, 0xaaaaaa, 0x555555, 0x5555ff, 0x55ff55, 0x55ffff, 0xff5555,
-  0xff55ff, 0xffff55, 0xffffff,
-];
+/** The 16 EGA colours as 0xRRGGBB (ega.ts), the colours the tiles' pixels index. */
+export { EGA_PALETTE } from './ega.ts';
 
 /** Every tile as EGA colour indices, one byte per pixel: tile t starts at t * 256. */
 export function readTiles(tiles16: Uint8Array): Uint8Array {

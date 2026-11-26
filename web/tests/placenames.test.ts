@@ -4,7 +4,8 @@ import { Fog } from '../src/game/fog.ts';
 import { enterCommand } from '../src/game/outdoors.ts';
 import { enteredPlace, heardPlaces, knowsPlace } from '../src/game/placeNames.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { labelOf, marksFor, REGIONS } from '../src/ui/mapMarks.ts';
+import { marksFor, REGIONS } from '../src/ui/mapMarks.ts';
+import { labelOf } from '../src/ui/worldMarks.ts';
 import { newGame } from './helpers.ts';
 
 const TLK = ['TOWNE.TLK', 'DWELLING.TLK', 'CASTLE.TLK', 'KEEP.TLK'];
@@ -30,7 +31,7 @@ function everythingSaid(g: ReturnType<typeof newGame>['g']): string[] {
   return out;
 }
 
-/** The map's places named, and called what they look like till then (mapMarks.ts labelOf, placeNames.ts). */
+/** The map's places named, and called what they look like till then (worldMarks.ts labelOf, placeNames.ts). */
 describe("the map's names for places", () => {
   const marks = (made = newGame()) => {
     const { g } = made;

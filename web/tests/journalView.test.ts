@@ -1,15 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { readBritannia, readUnderworld } from '../src/data/maps.ts';
+import type { Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journalTop, type JournalLine } from '../src/game/journal.ts';
 import { journalScreen } from '../src/game/journalScreen.ts';
+import { knowsPlace } from '../src/game/placeNames.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { focusOf, marksFor } from '../src/ui/mapMarks.ts';
-import { markInk } from '../src/ui/mapView.ts';
+import { marksFor } from '../src/ui/mapMarks.ts';
+import { inkOf } from '../src/ui/worldMapView.ts';
+import { focusOf, type Mark } from '../src/ui/worldMarks.ts';
 import { newGame } from './helpers.ts';
 
 /** A part of the journal's top whose line begins `name`, and the lines it opens. */
 const page = (lines: JournalLine[], name: string): JournalLine[] => lines.find((l) => l.label.startsWith(name))!.open!.lines;
+
+/**
+ * How Ultima V's map inks mark `m` on Britannia or the Underworld: worldMapView.ts inkOf, as showWorldMap calls it with
+ * the world's sight and the `knows` showMap gives it (mapView.ts showMap's `knows:`, placeNames.ts knowsPlace - keep
+ * the two alike).
+ */
+const markInk = (g: Game, m: Mark, underworld: boolean, paper: boolean, focus = ''): 'seen' | 'paper' | null =>
+  inkOf(m, g.fog.of(underworld), paper, (key) => knowsPlace(g, key), focus);
 
 /**
  * X on a line of the journal that names a place - a shrine, a dungeon, a towne, castle, keep, lighthouse or hut - opens
@@ -69,15 +80,16 @@ describe("the journal's View", () => {
 
   it('opens a dungeon on the world its entrance is on: Doom in the Underworld, a shrine on Britannia', () => {
     const { g } = newGame();
-    const marks = {
-      brit: marksFor(g.data.ovl, g.s, readBritannia(g.data.files, g.data.ovl).tiles, false, g.fog),
-      under: marksFor(g.data.ovl, g.s, readUnderworld(g.data.files).tiles, true, g.fog),
-    };
-    expect(focusOf(marks, 'place:40')?.world).toBe('under');
-    expect(focusOf(marks, 'place:33')?.world).toBe('brit'); // Deceit
+    // Britannia first, the Underworld second, as showMap gives them to the map (worldMarks.ts focusOf, showWorldMap).
+    const marks = [
+      marksFor(g.data.ovl, g.s, readBritannia(g.data.files, g.data.ovl).tiles, false, g.fog),
+      marksFor(g.data.ovl, g.s, readUnderworld(g.data.files).tiles, true, g.fog),
+    ];
+    expect(focusOf(marks, 'place:40')?.world).toBe(1); // Doom, below
+    expect(focusOf(marks, 'place:33')?.world).toBe(0); // Deceit
     const shrine = focusOf(marks, 'shrine:0')!;
-    expect(shrine.world).toBe('brit');
-    expect(marks.brit[shrine.at].key).toBe('shrine:0');
+    expect(shrine.world).toBe(0);
+    expect(marks[0][shrine.at].key).toBe('shrine:0');
     expect(focusOf(marks, 'place:200')).toBeNull();
     expect(focusOf(marks, '')).toBeNull();
   });

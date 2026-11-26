@@ -1,7 +1,7 @@
 /**
  * placeNames.ts
  *
- * The places whose names the party has learnt, for the map (mapMarks.ts labelOf): a place is learnt when the party
+ * The places whose names the party has learnt, for the map (worldMarks.ts labelOf): a place is learnt when the party
  * goes in (Enter, outdoors), or when someone names it in the party's hearing. Till then the map calls it only what
  * the cloth map shows of it - "Towne?" - as the box's map drew a towne there without saying which.
  *
