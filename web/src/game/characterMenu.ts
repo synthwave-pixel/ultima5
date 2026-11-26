@@ -9,7 +9,7 @@
 
 import { GAME_NAME } from '../brand.ts';
 import type { GameCore } from './gameCore.ts';
-import { choose, confirm, transferLines, type Item, type Setting } from './menu.ts';
+import { choose, confirm, transferLines, WIDTH, type Item, type Setting } from './menu.ts';
 import { characters, deleteCharacter, savedWhen, type Character } from './storage.ts';
 import { saveCodec, type StoredSave } from './saveCodec.ts';
 
@@ -20,17 +20,19 @@ const LINES = 3;
 const nameOf = (c: Character): string => saveCodec().avatarName(c.data) || 'The nameless';
 
 /**
- * A save as a character's card: their name (and the game's word for them, where it has one: SaveCodec cardDetail) and
- * level, to be chosen; where they are and when they saved, in grey.
+ * A save as a character's card: their name and level, to be chosen; in grey, where they are and when they saved.
+ * The game's word for them (SaveCodec cardDetail), where it has one, stands before where they are ("Bard, Britain"),
+ * off the first line so a long name still fits; it is left off where the two would run past the box.
  */
 export function cardOf(g: GameCore, stored: StoredSave): Item[] {
   const codec = saveCodec();
   const level = codec.level(stored);
   const where = codec.where(g, stored);
   const detail = codec.cardDetail?.(stored);
+  const place = where.charAt(0).toUpperCase() + where.slice(1);
   return [
-    { label: `${codec.avatarName(stored) || 'The nameless'}${detail ? `, ${detail}` : ''}, level ${level}` },
-    { label: where.charAt(0).toUpperCase() + where.slice(1), enabled: false },
+    { label: `${codec.avatarName(stored) || 'The nameless'}, level ${level}` },
+    { label: detail && `${detail}, ${place}`.length <= WIDTH ? `${detail}, ${place}` : place, enabled: false },
     { label: savedWhen(stored.written), enabled: false },
   ];
 }
