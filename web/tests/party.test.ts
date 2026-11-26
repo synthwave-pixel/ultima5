@@ -7,6 +7,7 @@ import type { Figure, Place } from '../src/game/io.ts';
 import { gameWindows, journeyOnward } from '../src/game/run.ts';
 import { earnedLevel, Status } from '../src/game/save.ts';
 import { A } from '../src/game/tiles.ts';
+import { CLASSES } from '../src/game/zstats.ts';
 import { animateParty, drawView, lineMembers, partyFigures, setView } from '../src/game/world.ts';
 import { K } from '../src/game/io.ts';
 import { Colour } from '../src/ui/colours.ts';
@@ -350,6 +351,8 @@ describe('the party, as the Standard look shows it', () => {
     s.members[0].status = Status.Dead;
     s.members[2].status = Status.Sleeping;
     s.members[5].status = Status.Poisoned;
+    // Each walker a class of their own, so each square says who stands on it.
+    [...'ABMMFA'].forEach((c, m) => (s.members[m].cls = c.charCodeAt(0)));
     g.trail = [0, 1, 2, 3, 4].map((i) => ({ x: 10, y: 11 + i, z: 0 }));
     for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) setView(g, x, y, 0x44);
     setView(g, 5, 5, 0);
@@ -359,13 +362,18 @@ describe('the party, as the Standard look shows it', () => {
     g.draw.tile = (tile: number, x: number, y: number, _gr?: number, _pl?: Place, tint?: number) =>
       void drawn.set(`${x},${y}`, [tile, tint]);
     drawView(g);
-    // Members 2, 4, 5 and 6 walk (1 dead, 3 asleep): the second leads, the sixth (poisoned) last.
-    const line = partyFigures(g, true);
-    expect(line.length).toBe(4);
-    expect(drawn.get('5,5')).toEqual([line[0].tile, 0]);
-    expect(drawn.get('5,6')).toEqual([line[1].tile, 0]);
-    expect(drawn.get('5,7')).toEqual([line[2].tile, 0]);
-    expect(drawn.get('5,8')).toEqual([line[3].tile, 0x40ff40]);
+    // Members 2, 4, 5 and 6 walk (1 dead, 3 asleep): the bard leads, then the mage, the fighter, and the sixth
+    // (poisoned, in the Avatar's figure) last - each their class's figure (DATA.OVL 0x1ADE), in a frame of its four.
+    const classTiles = g.data.bytes(0x1ade, 9);
+    const figure = (c: string): number => 0x100 + (classTiles[CLASSES.indexOf(c)] & 0xfc);
+    const at = (y: number): [number, number | undefined] => [drawn.get(`5,${y}`)![0] & ~3, drawn.get(`5,${y}`)![1]];
+    expect([5, 6, 7, 8].map(at)).toEqual([
+      [figure('B'), 0],
+      [figure('M'), 0],
+      [figure('F'), 0],
+      [figure('A'), 0x40ff40],
+    ]);
+    expect(partyFigures(g, true)).toHaveLength(4);
     expect(drawn.get('5,9')![0]).toBe(0x44); // the trail goes on; nobody walks it
   });
 
