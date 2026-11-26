@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { drawVitals, markTurn } from '../src/game/frame.ts';
+import { enterWorld, outdoorsLoop } from '../src/game/outdoors.ts';
+import { lzwDecompress } from '../src/data/lzw.ts';
+import { indices } from '../src/ui/originals.ts';
 import type { Figure, Place } from '../src/game/io.ts';
 import { gameWindows, journeyOnward } from '../src/game/run.ts';
 import { earnedLevel, Status } from '../src/game/save.ts';
 import { A } from '../src/game/tiles.ts';
-import { animateParty, drawView, partyFigures, setView } from '../src/game/world.ts';
+import { animateParty, drawView, lineMembers, partyFigures, setView } from '../src/game/world.ts';
+import { K } from '../src/game/io.ts';
 import { Colour } from '../src/ui/colours.ts';
-import { newGame } from './helpers.ts';
+import { gameFiles, newGame } from './helpers.ts';
 
 /**
  * The party as the ultima3 port's Standard look shows it: members in the colour of their state on the panel (and
- * a letter only for a state to tell), and on the map as themselves - four in a grid out in the world, all of them
+ * a letter only for a state to tell), and on the map as themselves - four in a grid out in the world, up to four
  * in a line in a settlement - tinted as their names are, the dead left out.
  */
 describe('the party, as the Standard look shows it', () => {
@@ -311,5 +315,95 @@ describe('the party, as the Standard look shows it', () => {
     expect(drawn.get('5,6')).toEqual([figures[1].tile, 0x40ff40]); // the poisoned one, green
     expect(drawn.get('5,7')).toEqual([figures[2].tile, 0]);
     expect(drawn.get('5,8')![0]).toBe(0x44); // three members: the trail's last square is empty
+  });
+
+  /** Statuses from letters, a member each: G good, P poisoned, S asleep, D dead. */
+  const states = (letters: string): number[] => [...letters].map((c) => c.charCodeAt(0));
+
+  it('walks at most four in the line: the leader, the poisoned first, then the rest, in party order', () => {
+    // The owner's worked example (2026-11-26), in a party of six.
+    expect(lineMembers(states('DGGGGP'))).toEqual([1, 2, 3, 5]); // the Avatar dead, the sixth poisoned
+    expect(lineMembers(states('DGGGGG'))).toEqual([1, 2, 3, 4]); // the sixth cured
+    expect(lineMembers(states('GGGGGP'))).toEqual([0, 1, 2, 5]); // all alive, the sixth poisoned
+    expect(lineMembers(states('GGG'))).toEqual([0, 1, 2]); // fewer than four: all of them
+    // More poisoned than places: the first of them in party order.
+    expect(lineMembers(states('GGPPPP'))).toEqual([0, 2, 3, 4]);
+    // The leader poisoned is the leader, not one of the three.
+    expect(lineMembers(states('PGGGGP'))).toEqual([0, 1, 2, 5]);
+  });
+
+  it('leaves a sleeper out of the line, and leads with the first awake where the Avatar is dead or asleep', () => {
+    expect(lineMembers(states('GSGGGG'))).toEqual([0, 2, 3, 4]);
+    expect(lineMembers(states('SGGGGG'))).toEqual([1, 2, 3, 4]);
+    expect(lineMembers(states('DSGPGG'))).toEqual([2, 3, 4, 5]);
+    // None awake: the first living leads alone, asleep (as before); none living, nobody.
+    expect(lineMembers(states('DSSD'))).toEqual([1]);
+    expect(lineMembers(states('DD'))).toEqual([]);
+  });
+
+  it('draws four of a party of six in a settlement, the dead and the asleep left out', () => {
+    const { g, s } = setup();
+    s.mapId = 5;
+    s.level = 0;
+    s.partyTile = A.Avatar;
+    [s.x, s.y] = [10, 10];
+    s.members[0].status = Status.Dead;
+    s.members[2].status = Status.Sleeping;
+    s.members[5].status = Status.Poisoned;
+    g.trail = [0, 1, 2, 3, 4].map((i) => ({ x: 10, y: 11 + i, z: 0 }));
+    for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) setView(g, x, y, 0x44);
+    setView(g, 5, 5, 0);
+    g.actorMap[5 * 16 + 5] = A.Avatar;
+    g.groundMap[5 * 16 + 5] = 0x44;
+    const drawn = new Map<string, [number, number | undefined]>();
+    g.draw.tile = (tile: number, x: number, y: number, _gr?: number, _pl?: Place, tint?: number) =>
+      void drawn.set(`${x},${y}`, [tile, tint]);
+    drawView(g);
+    // Members 2, 4, 5 and 6 walk (1 dead, 3 asleep): the second leads, the sixth (poisoned) last.
+    const line = partyFigures(g, true);
+    expect(line.length).toBe(4);
+    expect(drawn.get('5,5')).toEqual([line[0].tile, 0]);
+    expect(drawn.get('5,6')).toEqual([line[1].tile, 0]);
+    expect(drawn.get('5,7')).toEqual([line[2].tile, 0]);
+    expect(drawn.get('5,8')).toEqual([line[3].tile, 0x40ff40]);
+    expect(drawn.get('5,9')![0]).toBe(0x44); // the trail goes on; nobody walks it
+  });
+
+  it('faces the rider the way it last went east or west in Remastered, a step north keeping it', async () => {
+    const { g, p, s } = setup();
+    g.options.tiles = 'modern-pc';
+    // Mounted on Britannia's grass at noon, nothing about.
+    Object.assign(s, { mapId: 0, level: 0, x: 80, y: 100, partyTile: 0x12, hour: 12, minute: 0 });
+    enterWorld(g);
+    for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
+    let rider = -1;
+    const tile = g.draw.tile.bind(g.draw);
+    g.draw.tile = (t, x, y, ...rest) => {
+      if (x === 5 && y === 5) rider = t;
+      tile(t, x, y, ...rest);
+    };
+    // West, east, north: the rider as drawn once each move is done (when the next key is asked for).
+    const keys = [K.Left, K.Right, K.Up];
+    const drawn: number[] = [];
+    p.next = () => {
+      if (keys.length < 3) drawn.push(rider);
+      return keys.shift();
+    };
+    await outdoorsLoop(g).catch((e: Error) => {
+      if (!e.message.includes('ran out')) throw e;
+    });
+    const tiles = lzwDecompress(gameFiles().get('TILES.16'));
+    /** Which way a horse's art faces: the side its head is on, the nearer edge of its top rows' pixels. */
+    const facing = (t: number): 'west' | 'east' => {
+      const px = indices(tiles, t);
+      let [left, right] = [16, -1];
+      for (let y = 2; y <= 5; y++) for (let x = 0; x < 16; x++) if (px[y * 16 + x]) [left, right] = [Math.min(left, x), Math.max(right, x)];
+      return left < 15 - right ? 'west' : 'east';
+    };
+    const [west, east, north] = drawn;
+    expect(drawn).toHaveLength(3);
+    expect(facing(west)).toBe('west');
+    expect(facing(east)).toBe('east');
+    expect(north).toBe(east);
   });
 });
