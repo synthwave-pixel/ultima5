@@ -204,8 +204,10 @@ describes how the Enhanced interface and the Remastered look are drawn.
 - **The party on foot** is drawn as its members, tinted by their state:
   out in Britannia and the Underworld, the first living member alone,
   walking (with every look but Remastered, 1988's single party icon);
-  in a towne, the first living member with the others after it in a line,
-  on the squares it walked. In the Enhanced interface the figures move at
+  in a towne, a line of at most four on the squares the leader walked:
+  the Avatar leading (or, where the Avatar is dead or asleep, the first
+  awake), then up to three more who are awake, the poisoned chosen first,
+  walking in party order. In the Enhanced interface the figures move at
   the pace of a 1988 XT, half that of Retro, which keeps an AT's.
 - **The runes are read for you.** A sign, the runic speech, the sextant's
   reading and the rest are printed in runes, and after a second each rune

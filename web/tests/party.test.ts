@@ -414,4 +414,92 @@ describe('the party, as the Standard look shows it', () => {
     expect(facing(east)).toBe('east');
     expect(north).toBe(east);
   });
+  it('chooses the line for every mix of states, never more than four, never the dead or the asleep', () => {
+    // Everyone dead, or no party at all: nobody walks.
+    expect(lineMembers(states('DDDDDD'))).toEqual([]);
+    expect(lineMembers([])).toEqual([]);
+    // Everyone asleep: the Avatar leads alone, asleep, as before.
+    expect(lineMembers(states('SSSSSS'))).toEqual([0]);
+    // Everyone poisoned: the first four, the Avatar leading.
+    expect(lineMembers(states('PPPPPP'))).toEqual([0, 1, 2, 3]);
+    // Everyone but the Avatar poisoned: the first three of them behind the Avatar.
+    expect(lineMembers(states('GPPPPP'))).toEqual([0, 1, 2, 3]);
+    // Only the Avatar poisoned: the Avatar leads, and is not counted among the three.
+    expect(lineMembers(states('PGGGGG'))).toEqual([0, 1, 2, 3]);
+    // The Avatar asleep and the rest poisoned: the second leads, three poisoned behind.
+    expect(lineMembers(states('SPPPPP'))).toEqual([1, 2, 3, 4]);
+    // The poisoned last in the party still walk ahead of the healthy in the choosing.
+    expect(lineMembers(states('GGGGPP'))).toEqual([0, 1, 4, 5]);
+    // Only the last alive: alone.
+    expect(lineMembers(states('DDDDDG'))).toEqual([5]);
+    expect(lineMembers(states('DDDDDP'))).toEqual([5]);
+    // The last alive asleep: alone, asleep.
+    expect(lineMembers(states('DDDDDS'))).toEqual([5]);
+    // Dead and asleep between the living: skipped.
+    expect(lineMembers(states('GDSGDP'))).toEqual([0, 3, 5]);
+    // A party of one, and of two.
+    expect(lineMembers(states('G'))).toEqual([0]);
+    expect(lineMembers(states('GS'))).toEqual([0]);
+    expect(lineMembers(states('SG'))).toEqual([1]);
+    // A state byte the game does not name walks as one awake.
+    expect(lineMembers([Status.Good, 0, 0x41, Status.Good, Status.Good])).toEqual([0, 1, 2, 3]);
+    // Every mix of the four states in a party of six: at most four, each living and awake (but a lone sleeper),
+    // in party order, the leader first awake.
+    const all = [Status.Good, Status.Poisoned, Status.Sleeping, Status.Dead];
+    for (let n = 0; n < 4 ** 6; n++) {
+      const party = Array.from({ length: 6 }, (_, m) => all[Math.floor(n / 4 ** m) % 4]);
+      const line = lineMembers(party);
+      const awake = party.flatMap((v, m) => (v !== Status.Dead && v !== Status.Sleeping ? [m] : []));
+      expect(line.length).toBeLessThanOrEqual(4);
+      expect([...line].sort((a, b) => a - b)).toEqual(line);
+      if (!awake.length) {
+        const living = party.findIndex((v) => v !== Status.Dead);
+        expect(line).toEqual(living < 0 ? [] : [living]);
+        continue;
+      }
+      expect(line[0]).toBe(awake[0]);
+      expect(line.length).toBe(Math.min(4, awake.length));
+      for (const m of line) expect(awake).toContain(m);
+      // A healthy member walks only where no poisoned one was left out.
+      const left = awake.filter((m) => !line.includes(m));
+      if (line.slice(1).some((m) => party[m] !== Status.Poisoned)) expect(left.some((m) => party[m] === Status.Poisoned)).toBe(false);
+    }
+  });
+
+  describe('draws a settlement without a hitch, whatever the party', () => {
+    /** The party in a towne, five squares of trail behind it, drawn: the squares down the line and what is on them. */
+    const drawTown = (letters: string) => {
+      const { g, s } = setup();
+      const code = { G: Status.Good, P: Status.Poisoned, S: Status.Sleeping, D: Status.Dead } as Record<string, number>;
+      [...letters].forEach((c, m) => (s.members[m].status = code[c]));
+      s.partySize = letters.length;
+      Object.assign(s, { mapId: 5, level: 0, partyTile: A.Avatar, x: 10, y: 10 });
+      g.trail = [0, 1, 2, 3, 4].map((i) => ({ x: 10, y: 11 + i, z: 0 }));
+      for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) setView(g, x, y, 0x44);
+      setView(g, 5, 5, 0);
+      g.actorMap[5 * 16 + 5] = A.Avatar;
+      g.groundMap[5 * 16 + 5] = 0x44;
+      const drawn = new Map<string, number>();
+      g.draw.tile = (tile: number, x: number, y: number) => void drawn.set(`${x},${y}`, tile);
+      drawView(g);
+      /** How many squares behind the leader someone walks on. */
+      const walkers = [6, 7, 8, 9, 10].filter((y) => drawn.get(`5,${y}`) !== 0x44).length;
+      return { g, walkers };
+    };
+
+    it.each([
+      ['everyone dead', 'DDDDDD', 0, 0],
+      ['everyone asleep', 'SSSSSS', 1, 0],
+      ['everyone poisoned', 'PPPPPP', 4, 3],
+      ['everyone but the Avatar poisoned', 'GPPPPP', 4, 3],
+      ['the Avatar alone alive', 'GDDDDD', 1, 0],
+      ['the Avatar dead, the rest asleep', 'DSSSSS', 1, 0],
+      ['a party of one', 'G', 1, 0],
+      ['a party of six, all well', 'GGGGGG', 4, 3],
+    ])('%s', (_name, letters, figures, walkers) => {
+      const { g, walkers: seen } = drawTown(letters);
+      expect(partyFigures(g, true)).toHaveLength(figures);
+      expect(seen).toBe(walkers);
+    });
+  });
 });
