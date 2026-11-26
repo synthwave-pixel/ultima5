@@ -637,17 +637,40 @@ export function animateParty(): void {
   }
 }
 
+/** How many walk in a settlement's line: the leader and three behind (the owner, 2026-11-26). */
+const LINE = 4;
+
+/**
+ * Who walks in a settlement's line, by the members' states (`statuses`, in party order): the living who are awake, at
+ * most LINE of them. The leader is the Avatar where alive and awake, else the first who is; after the leader the
+ * poisoned are chosen first, then the rest in party order; the chosen walk in party order. Where nobody is awake, the
+ * first living leads alone, asleep (as the line was before); where nobody lives, nobody.
+ */
+export function lineMembers(statuses: readonly number[]): number[] {
+  const awake = statuses.flatMap((v, m) => (v !== Status.Dead && v !== Status.Sleeping ? [m] : []));
+  if (!awake.length) {
+    const living = statuses.findIndex((v) => v !== Status.Dead);
+    return living < 0 ? [] : [living];
+  }
+  const [leader, ...rest] = awake;
+  const poisoned = rest.filter((m) => statuses[m] === Status.Poisoned);
+  const chosen = [...poisoned, ...rest.filter((m) => statuses[m] !== Status.Poisoned)].slice(0, LINE - 1);
+  return [leader, ...chosen.sort((a, b) => a - b)];
+}
+
 /**
  * The living members as they are drawn on the map, in marching order (the dead are left out): each class's figure as
- * a fight draws it - the Avatar's the walking Avatar - in the frame of their walk, in the tint of their state.
+ * a fight draws it - the Avatar's the walking Avatar - in the frame of their walk, in the tint of their state. With
+ * `line`, only those who walk in a settlement's line (lineMembers).
  */
-export function partyFigures(g: Game): Figure[] {
+export function partyFigures(g: Game, line = false): Figure[] {
   const s = g.s;
   const classTiles = g.data.bytes(0x1ade, 9);
   const out: Figure[] = [];
-  for (let m = 0; m < s.partySize; m++) {
+  const statuses = s.members.slice(0, s.partySize).map((p) => p.status);
+  const members = line ? lineMembers(statuses) : statuses.flatMap((v, m) => (v === Status.Dead ? [] : [m]));
+  for (const m of members) {
     const p = s.members[m];
-    if (p.status === Status.Dead) continue;
     const cls = CLASSES.indexOf(String.fromCharCode(p.cls));
     const tile = (classTiles[Math.max(0, cls)] & 0xfc) + partyFrames[out.length % partyFrames.length];
     out.push({ tile: 0x100 + tile, tint: FIGURE_TINT[p.status] ?? 0, dress: dressingOf(g, m) });
@@ -658,9 +681,9 @@ export function partyFigures(g: Game): Figure[] {
 /**
  * The Standard look's party on foot: on Britannia and in the Underworld, its leader alone (the first living member,
  * walking) - or, with PARTY_GRID, its first four living members in a grid of two by two on the party's square (the
- * ultima3 port's); in a settlement, the first living member there and the others after it in a line, on the squares
- * it came through (g.trail). Where a square of the line is out of sight,
- * or someone else stands on it, that member is not drawn. The EGA look keeps the one figure.
+ * ultima3 port's); in a settlement, its leader and up to three after it in a line (lineMembers), on the squares it
+ * came through (g.trail). Where a square of the line is out of sight, or someone else stands on it, that member is not
+ * drawn. The EGA look keeps the one figure.
  */
 function partyOnFoot(g: Game): 'grid' | 'line' | 'one' | null {
   const s = g.s;
@@ -681,12 +704,12 @@ export function drawView(g: Game): void {
   const s = g.s;
   d.viewBegin?.();
   const style = partyOnFoot(g);
-  const figures = style ? partyFigures(g) : [];
+  const figures = style ? partyFigures(g, style === 'line') : [];
   // Where the party's leader stands (out of a fight: the view's middle square), so the mirror he stands before gives
   // back the Avatar as the player made it, and one anyone else stands before the original's reflection.
   const lead = s.mapId < 0x80 ? placeOf(g, 5, 5) : undefined;
   d.leader?.(lead ? { map: lead.map, x: lead.x, y: lead.y } : null);
-  // The squares the followers stand on, in the view: each the next living member after the leader.
+  // The squares the followers stand on, in the view: each the next who walks after the leader (lineMembers).
   const followers = new Map<number, Figure>();
   const followerIds = new Map<number, string>();
   if (style === 'line')
