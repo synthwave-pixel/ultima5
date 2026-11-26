@@ -77,8 +77,9 @@ export const U4_TOWNS = 'U4TOWNS';
 export const COPIED_TUNES = [U4_TOWNS];
 
 /**
- * The tunes heard once - the character's making, the reunion with Lord British, the proclamation of victory - played
- * through and played again after a rest, as a player may stay on their screens; every other is heard over and over.
+ * The tunes heard once - the Amiga theme (the Upgrade's at the character's making, kept unplayed), the reunion with
+ * Lord British, the proclamation of victory - played through and played again after a rest, as a player may stay on
+ * their screens; every other is heard over and over (U4_TOWNS too, looping as Ultima IV rendered it).
  */
 export const HEARD_ONCE = ['AMIGA.XMI', 'REUNION.XMI', 'RULEBRIT.XMI'];
 
