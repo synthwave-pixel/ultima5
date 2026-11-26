@@ -91,6 +91,19 @@ describe("the journal's places", () => {
     }
   });
 
+  it('finds Ararat in the Underworld, not in the forest above it', () => {
+    const { g } = newGame();
+    const ararat = () => kind(g, 'Keeps').open!.lines[0];
+    const at = g.data.locations[24];
+    g.fog.mark(false, at.x, at.y); // the forest south-west of Yew, on the surface: no keep there
+    expect(ararat().label).toBe('Mystery...           ');
+    expect(ararat().hint).toBe('A keep, on an isle in the Underworld: a ship is needed.');
+    g.fog.mark(true, at.x, at.y); // its door, seen below
+    expect(ararat().label).toBe('Keep?            seen');
+    // The others are on the surface, and said by the townes there.
+    expect(kind(g, 'Keeps').open!.lines[6].hint).toBe('A keep, west of Yew.'); // Empath Abbey
+  });
+
   it('keeps a dungeon a mystery till found, named or its Word heard', () => {
     const { g } = newGame();
     const dungeon = () => part(g, 'Dungeons unsealed').open!.lines[1]; // Despise

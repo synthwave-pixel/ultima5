@@ -10,7 +10,7 @@
 
 import { DataOvl } from '../data/dataOvl.ts';
 import { GameFiles } from '../data/files.ts';
-import { readLocations, type Location } from '../data/maps.ts';
+import { readLocations, readUnderworld, type Location } from '../data/maps.ts';
 
 export class GameData {
   readonly ovl: DataOvl;
@@ -76,6 +76,8 @@ export class GameData {
   readonly moonPhases = (): Uint8Array => this.cached('moonPhases', () => this.bytes(0x1eda, 56));
   /** D_1b18: actor animation scripts (16 bytes each), with the script number per actor tile group at +0xb0. */
   readonly animScripts = (): Uint8Array => this.cached('animScripts', () => this.bytes(0x1b18, 0xe3));
+  /** UNDER.DAT: the Underworld's squares, 256 by 256. */
+  readonly underworld = (): Uint8Array => this.cached('underworld', () => readUnderworld(this.files).tiles);
 
   private readonly cache = new Map<string, Uint8Array>();
   private cached(key: string, make: () => Uint8Array): Uint8Array {

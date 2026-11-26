@@ -12,6 +12,7 @@
 import * as modern from './modernKarma.ts';
 import { Game, type Note } from './game.ts';
 import { Save } from './save.ts';
+import { T } from './tiles.ts';
 import { DUNGEON_HINTS, EQUIPMENT, PASSWORDS, SHADOWLORD_HINTS, SHARD_HINT, SHRINE_HINTS } from './journalHints.ts';
 import { scriptAnswers } from './words.ts';
 import { clueHeard, isClue, lordNames, placeClues } from './placeClues.ts';
@@ -390,6 +391,8 @@ const LANDMARKS = [1, 2, 3, 4, 5, 6, 7, 8, 17];
 function placeHint(g: Game, id: number): string {
   const here = g.data.locations[id - 1];
   if (!here) return '';
+  // Below, no towne stands to say it by.
+  if (underground(g, id)) return `A ${placeKind(id).toLowerCase()}, on an isle in the Underworld: a ship is needed.`;
   const wrapped = (d: number): number => ((((d + 128) % 256) + 256) % 256) - 128;
   let best = -1;
   let far = Infinity;
@@ -421,10 +424,32 @@ const PLACE_MORE: Record<number, string> = {
 /** Whether the party has set foot in a place (any of its levels, Fog.places). */
 const beenIn = (g: Game, id: number): boolean => [...g.fog.places.keys()].some((k) => k.startsWith(`${id}.`));
 
-/** Whether a place's door has been seen, in either world. */
+/** The squares a settlement's door stands on (mapMarks.ts's places, the shrines and dungeons left out). */
+const SETTLEMENT_TILES = new Set<number>([
+  T.Towne,
+  T.Castle,
+  T.Keep,
+  T.Village,
+  T.Hut,
+  T.Lighthouse,
+  T.Ruins,
+  T.CastleLB,
+  T.PalaceBlackthorn,
+]);
+
+/**
+ * Whether a place's door is in the Underworld (Ararat, alone): its square there a settlement's, as the map marks it.
+ * Above it on Britannia is only whatever the land is there.
+ */
+function underground(g: Game, id: number): boolean {
+  const l = g.data.locations[id - 1];
+  return !!l && SETTLEMENT_TILES.has(g.data.underworld()[(l.y & 0xff) * 256 + (l.x & 0xff)]);
+}
+
+/** Whether a place's door has been seen, in the world it is in. */
 function placeSeen(g: Game, id: number): boolean {
   const l = g.data.locations[id - 1];
-  return !!l && (g.fog.seen(false, l.x, l.y) || g.fog.seen(true, l.x, l.y));
+  return !!l && g.fog.seen(underground(g, id), l.x, l.y);
 }
 
 /** A place's clues: how many heard, of all (placeClues.ts). */
