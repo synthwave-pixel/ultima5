@@ -12,6 +12,8 @@
  * their pixels kept in Remastered's toned colours, square blocks too, as
  * PC EGA draws them (November 2026, the player's choice: no longer EPX's
  * rounded corners).
+ * A scene, for a game that asks for it ('scene'): its own pixels in
+ * Remastered's toned colours, square blocks, nothing else changed (toned).
  * Everything else - the title, the introduction, the gypsy's cards, the
  * ending - is shown in both looks as the game drew it: its own pixels in its
  * own colours (screen.ts).
@@ -60,8 +62,26 @@ export function doubled(px: Uint32Array, w: number, h: number): Uint32Array {
   return out;
 }
 
-/** The corridor's walls, what stands in it, and its wandering creature (MON0-7.16). */
-export type PictureKind = 'dungeon' | 'thing' | 'creature';
+/**
+ * The corridor's walls, what stands in it, and its wandering creature (MON0-7.16); and a scene, which a game asks for
+ * of its own pictures (toned).
+ */
+export type PictureKind = 'dungeon' | 'thing' | 'creature' | 'scene';
+
+/**
+ * A scene's own pixels in Remastered's toned colours (TONED), each EGA colour for its toned one, at the picture's own
+ * size (RGBA in memory order, width by height), see-through where its mask is: nothing moved, blended or outlined.
+ */
+export function toned(v: Picture): Uint32Array {
+  const at = colours(v);
+  const out = new Uint32Array(v.width * v.height);
+  for (let y = 0; y < v.height; y++)
+    for (let x = 0; x < v.width; x++) {
+      const c = at(x, y);
+      out[y * v.width + x] = c < 0 ? 0 : abgr(TONED[c]);
+    }
+  return out;
+}
 
 /**
  * A picture in the Standard look, at twice its size (RGBA in memory order,
@@ -229,6 +249,8 @@ export function standsOut(v: Picture, wall: WallOf): Uint8Array {
 
 export function restyle(v: Picture, kind: PictureKind, tint = 0, wall?: WallOf): Uint32Array {
   const { width: w, height: h } = v;
+  // A scene: its own pixels toned, nothing else (toned; the screen draws them at their own size).
+  if (kind === 'scene') return doubled(toned(v), w, h);
   const e = new Uint8Array(w * h);
   const clear = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) {
