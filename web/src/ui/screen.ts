@@ -37,7 +37,7 @@ import {
   type Snapshot,
   type Words,
 } from './framebuffer.ts';
-import { doubled, type PictureKind, restyle, type WallOf } from './standardPictures.ts';
+import { doubled, type PictureKind, restyle, toned, type WallOf } from './standardPictures.ts';
 import { frameFor, mapArtFor, pieceFileOf, portDungeon, signRunes, signStyleFor, type Skin, SkinOvers } from './skins.ts';
 import type { FontChoice, Tiles } from '../game/settings.ts';
 import type { StandardArt } from './standardArt.ts';
@@ -1515,16 +1515,25 @@ export class Screen implements Platform {
     return out;
   }
 
-  /** Pictures in the Standard look, made once each from the player's own. */
+  /** Pictures in the Standard look, made once each from the player's own; and scenes toned, by their file. */
   private readonly restyled = new WeakMap<Uint8Array, Map<number, Uint32Array>>();
+  private readonly scenes = new WeakMap<Uint8Array, Map<number, Uint32Array>>();
 
   /**
    * How a picture shows in the Standard look: the corridor's walls, things and wandering creature in the Standard
-   * palette at the colour page's size. The scenes - the title, the introduction, the gypsy's cards, the ending - are the game's own
-   * pixels in its own colours, each a square block: the art as it was drawn, the words beside it the port's.
+   * palette at the colour page's size; a scene, where a game asks for it ('scene'), its own pixels in Remastered's toned
+   * colours, each a square block. Other scenes - the title, the introduction, the gypsy's cards, the ending - are the
+   * game's own pixels in its own colours, each a square block: the art as it was drawn, the words beside it the port's.
    */
   private styled(res: Uint8Array, i: number, v: Picture, style?: PictureKind): ImageOver | undefined {
     if (!portDungeon(this.look, this.tiles) || !this.standard || style === undefined) return undefined;
+    if (style === 'scene') {
+      let s = this.scenes.get(res);
+      if (!s) this.scenes.set(res, (s = new Map<number, Uint32Array>()));
+      const px = s.get(i) ?? toned(v);
+      s.set(i, px);
+      return { kind: 'rgba', px, width: v.width, scale: 1 };
+    }
     let m = this.restyled.get(res);
     if (!m) this.restyled.set(res, (m = new Map<number, Uint32Array>()));
     // A wall is the colour of the dungeon it stands in, so what is kept is kept by both.
