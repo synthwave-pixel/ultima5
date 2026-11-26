@@ -42,7 +42,28 @@ named for what it holds (a hash of its bytes: BRITLAND.3fa9c01d.ogg), so a
 tune rendered again is a new file to every player; the manifest
 (web/src/audio/musicManifest.json) says which is which.
 
-Ultima is a trademark of Electronic Arts. Neither the Upgrade nor this
+One tune here is not the Upgrade's. While the character is made, the
+engine plays Ultima IV's Towns (web/src/game/music.ts U4_TOWNS), as the
+Ultima IV port plays it at the gypsy's questions: three of that port's
+renders, copied as they are (U4TOWNS.*.ogg in original/, remastered/ and
+consort/; their notes are not here, so the render leaves them be). The
+tune is the Ultima IV Upgrade's: Aridindae Dragon's "Ultima 4 Upgrade
+Patch", v1.3 (music v3.15), General MIDI arrangements of the songs of the
+Apple II and Commodore 64 versions of Ultima IV: Quest of the Avatar,
+composed for Origin Systems. Its readme thanks SpiritWind ("some music")
+and Minstrel ("more and better music"), and says of the Upgrade: "this
+software is Freeware ... may be distributed to anyone, anytime, with no
+restrictions".
+
+  The Moongates Ultima IV Annex, where the Upgrade was published:
+                         http://www.moongates.com/u4
+
+original/ and consort/ were rendered through MuseScore General, as
+above (its licence and notices: MuseScore_General_License.md);
+remastered/ in the engine's own synthesized voices. The Amiga theme's
+renders are kept, though no longer played.
+
+Ultima is a trademark of Electronic Arts. Neither the two Upgrades nor this
 engine is affiliated with or endorsed by Origin Systems or Electronic Arts.
 
   U5THEME.XMI   Ultima V Theme
@@ -60,4 +81,10 @@ engine is affiliated with or endorsed by Origin Systems or Electronic Arts.
   LADYNAN.XMI   Dream of Lady Nan
   REUNION.XMI   Joyous Reunion
   RULEBRIT.XMI  Rule Britannia
-  AMIGA.XMI     Amiga Theme (the Amiga version's one song)
+  AMIGA.XMI     Amiga Theme (the Amiga version's one song; the Upgrade's
+                at the character's making, kept unplayed)
+
+  And copied, its renders only:
+
+  U4TOWNS       Ultima IV's Towns (the Ultima IV Upgrade's), while the
+                character is made

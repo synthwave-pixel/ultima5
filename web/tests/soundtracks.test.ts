@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ARRANGEMENTS, arrangementsFor, arrangementsOf, PICKS, pick, SOUNDTRACKS } from '../src/audio/soundtracks.ts';
-import { mapOccasion, musicForMap, Tune, TUNE_FILES } from '../src/game/music.ts';
+import { mapOccasion, musicForMap, Tune, ULTIMA5_TUNES } from '../src/game/music.ts';
 import { newGame } from './helpers.ts';
 
 describe('the soundtracks', () => {
   it('give every tune, in Electronic and Classical, arrangements to play wherever it is heard', () => {
-    for (const name of TUNE_FILES)
+    for (const name of ULTIMA5_TUNES.names)
       for (const soundtrack of ['classical', 'electronic'] as const) {
         const choices = PICKS[name]?.[soundtrack];
         expect(choices?.usual.length, `${soundtrack} ${name}`).toBeGreaterThan(0);
         for (const list of Object.values(choices ?? {})) for (const a of list ?? []) expect(ARRANGEMENTS).toContain(a);
       }
-    expect(Object.keys(PICKS).sort()).toEqual([...TUNE_FILES].sort());
+    expect(Object.keys(PICKS).sort()).toEqual([...ULTIMA5_TUNES.names].sort());
   });
 
   it('play Original and Remastered in their own arrangement, whatever the occasion', () => {
@@ -38,6 +38,15 @@ describe('the soundtracks', () => {
     expect(arrangementsFor('classical', 'U5THEME.XMI', 'title')).toEqual(['consort']);
     expect(arrangementsFor('electronic', 'U5THEME.XMI', 'title')).toEqual(['upsidedown']);
     expect(arrangementsFor('classical', 'TRNTLLA.XMI', 'night')).toEqual(arrangementsFor('classical', 'TRNTLLA.XMI'));
+  });
+
+  it("play Ultima IV's Towns as Ultima IV plays it at the gypsy: Classical a consort, Electronic the Remastered", () => {
+    expect(arrangementsFor('classical', 'U4TOWNS')).toEqual(['consort']);
+    expect(arrangementsFor('electronic', 'U4TOWNS')).toEqual(['remastered']);
+    expect(arrangementsFor('remastered', 'U4TOWNS')).toEqual(['remastered']);
+    expect(arrangementsFor('original', 'U4TOWNS')).toEqual(['original']);
+    // The three files copied in, and no other.
+    expect(arrangementsOf('U4TOWNS')).toEqual(['original', 'remastered', 'consort']);
   });
 
   it('render every arrangement some soundtrack plays of a tune, Original and Remastered always', () => {

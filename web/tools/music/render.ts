@@ -98,18 +98,23 @@ export interface RenderJob {
 
 /**
  * What `args` ask of `set`'s render - arrangements and tunes by name, each list all where none is named: every tune
- * asked in every arrangement asked that a soundtrack plays of it. Throws on a word that is neither.
+ * asked in every arrangement asked that a soundtrack plays of it, but those copied from another game's render (the
+ * set's copied). Throws on a word that is neither, or names a tune copied.
  */
 export function renderJobs(set: TuneSet, args: string[]): RenderJob[] {
   const words = args.filter((a) => a !== '--');
-  const unknown = words.filter((a) => !(ARRANGEMENTS as readonly string[]).includes(a) && !set.names.includes(a));
+  // A tune copied from another game's render has no notes here: that game renders it.
+  const copied = words.filter((a) => set.copied?.includes(a));
+  if (copied.length) throw new Error(`${copied.join(', ')}: rendered by another game, its files copied in; not rendered here.`);
+  const names = set.names.filter((t) => !set.copied?.includes(t));
+  const unknown = words.filter((a) => !(ARRANGEMENTS as readonly string[]).includes(a) && !names.includes(a));
   if (unknown.length)
     throw new Error(
-      `Not an arrangement or a tune: ${unknown.join(', ')}. Arrangements: ${ARRANGEMENTS.join(', ')}. Tunes: ${set.names.join(', ')}.`,
+      `Not an arrangement or a tune: ${unknown.join(', ')}. Arrangements: ${ARRANGEMENTS.join(', ')}. Tunes: ${names.join(', ')}.`,
     );
   const asked = ARRANGEMENTS.filter((a) => words.includes(a));
-  const tunes = set.names.filter((t) => words.includes(t));
-  return (tunes.length ? tunes : set.names).flatMap((tune) =>
+  const tunes = names.filter((t) => words.includes(t));
+  return (tunes.length ? tunes : names).flatMap((tune) =>
     arrangementsOf(tune, set.picks)
       .filter((a) => !asked.length || asked.includes(a))
       .map((arrangement) => ({

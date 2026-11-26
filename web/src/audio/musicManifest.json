@@ -575,5 +575,22 @@
       "loopStart": 4.5,
       "loopEnd": 109.33333333333333
     }
+  },
+  "U4TOWNS": {
+    "original": {
+      "file": "original/U4TOWNS.3ebdf2a0.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 120.57501133786847
+    },
+    "remastered": {
+      "file": "remastered/U4TOWNS.d15fd43f.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 120.57501133786847
+    },
+    "consort": {
+      "file": "consort/U4TOWNS.8c4ca451.ogg",
+      "loopStart": 4.5,
+      "loopEnd": 120.57501133786847
+    }
   }
 }

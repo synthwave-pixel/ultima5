@@ -882,8 +882,9 @@ export class Intro {
     g.titleIdle = null;
     g.draw.chrome?.(false);
     Object.assign(this.prose, { x: 0, y: 9, left: [0, 0xaf], right: [0x140, 0x140], top: 0x59, bottom: 200 });
-    // The Upgrade plays the Amiga version's theme while the character is made.
-    playTune(g, Tune.Amiga);
+    // Ultima IV's Towns while the character is made, as Ultima IV plays it at the gypsy's questions: the Upgrade's
+    // Amiga theme (Tune.Amiga) was here, and is kept, unplayed.
+    playTune(g, Tune.U4Towns);
     fx.page(1);
     g.printChar(0xff);
     fx.image(cards, 0, 0, 0x60);

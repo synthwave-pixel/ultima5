@@ -26,6 +26,8 @@ export interface TuneSet {
   names: readonly string[];
   /** Where each tune's notes are, by name; a name not here is the file of that name, its first sequence. */
   sources?: Readonly<Record<string, TuneSource>>;
+  /** Tunes another game rendered, their files copied into `folder`: played, but with no notes here, never rendered. */
+  copied?: readonly string[];
   /** The tunes heard once: played through, then a rest before they come round; not eased as a tune heard for hours. */
   heardOnce: readonly string[];
   /** Electronic's and Classical's arrangements of each tune. */

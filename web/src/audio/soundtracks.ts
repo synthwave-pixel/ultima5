@@ -49,9 +49,13 @@ const ALL_ELECTRONIC: Arrangement[] = ['grid', 'newwave', 'upsidedown'];
 /** A game's Electronic and Classical arrangements of each of its tunes, by name (audio/tuneSet.ts TuneSet picks). */
 export type Picks = Readonly<Record<string, Record<'classical' | 'electronic', Choices>>>;
 
-/** Electronic's and Classical's arrangements of each of Ultima V's tunes (game/music.ts TUNE_FILES), as chosen. */
+/** Electronic's and Classical's arrangements of each of Ultima V's tunes (game/music.ts ULTIMA5_TUNES), as chosen. */
 export const PICKS: Picks = {
-  // The character's making, the reunion with Lord British, the proclamation of victory: heard once, each one.
+  // The character's making: Ultima IV's Towns, copied (game/music.ts U4_TOWNS), as Ultima IV plays it at the gypsy
+  // (its u4/audio/tunes.ts U4_PICKS TOWNS, introduction). Only these arrangements' files are copied.
+  U4TOWNS: { classical: { usual: ['consort'] }, electronic: { usual: ['remastered'] } },
+  // The reunion with Lord British, the proclamation of victory, and the Amiga theme (the Upgrade's at the character's
+  // making, kept unplayed): heard once, each one.
   'AMIGA.XMI': { classical: { usual: ['original'] }, electronic: { usual: ['remastered'] } },
   'REUNION.XMI': { classical: { usual: ['piano'] }, electronic: { usual: ['remastered'] } },
   'RULEBRIT.XMI': { classical: { usual: ['piano'] }, electronic: { usual: ['upsidedown'] } },

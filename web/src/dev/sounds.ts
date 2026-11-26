@@ -21,7 +21,7 @@ import { GameData } from '../game/data.ts';
 import { identify, RULES, type Kind } from '../audio/effects.ts';
 import { cueKey, sfxKey, SUITES, type Suite } from '../audio/sfxKeys.ts';
 import { type Arrangement, arrangementsFor, SOUNDTRACKS, type Soundtrack } from '../audio/soundtracks.ts';
-import { Tune, TUNE_FILES } from '../game/music.ts';
+import { Tune, TUNE_FILES, ULTIMA5_TUNES } from '../game/music.ts';
 import { BOLT_BEAT_MS, FANFARE_MS } from '../game/combat.ts';
 import { MUSIC, MusicPlayer } from '../ui/music.ts';
 import { SFX_MANIFEST as SFX } from '../ui/sfxBank.ts';
@@ -173,7 +173,7 @@ function musicTable(host: HTMLElement, onPlay: () => void): () => void {
   for (const t of ['Tune', ...SOUNDTRACKS.map((s) => SOUNDTRACK_NAMES[s])])
     head.appendChild(Object.assign(document.createElement('th'), { textContent: t }));
   const body = table.createTBody();
-  for (const tune of TUNE_FILES) {
+  for (const tune of ULTIMA5_TUNES.names) {
     const tr = body.insertRow();
     tr.insertCell().textContent = tune.replace(/\.XMI$/, '');
     for (const soundtrack of SOUNDTRACKS) {

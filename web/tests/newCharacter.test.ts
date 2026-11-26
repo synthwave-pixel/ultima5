@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chooseCharacter } from '../src/game/characters.ts';
 import { Intro, unmadeAvatar } from '../src/game/intro.ts';
 import { K, Pad } from '../src/game/io.ts';
+import { Tune } from '../src/game/music.ts';
 import { Save } from '../src/game/save.ts';
 import { localSave } from '../src/game/storage.ts';
 import { fromBase64 } from '../src/game/saveCodec.ts';
@@ -41,6 +42,19 @@ describe('a new character', () => {
     expect(String.fromCharCode(m.cls)).toBe('A');
     expect(m.int).toBeGreaterThan(0);
     expect(m.mp).toBe(m.int);
+  });
+
+  it("plays Ultima IV's Towns while the character is made, where the Upgrade played the Amiga theme", async () => {
+    const { g, p } = newGame();
+    Object.assign(g.options, { tileSet: 'original', input: 'controller' });
+    const asked: number[] = [];
+    p.sound.music = (tune: number) => void asked.push(tune);
+    // As above: the name suggested; Lady; Modern; the opening's page; the seven answers; the verdict's page.
+    p.keys.push(K.Down, Pad.A, K.Left, Pad.A, Pad.A, K.Enter, ...Array<number>(7).fill(0x41), K.Enter);
+    expect(await (new Intro(g) as unknown as { createCharacter(): Promise<boolean> }).createCharacter()).toBe(true);
+    expect(asked).toContain(Tune.U4Towns);
+    expect(asked).not.toContain(Tune.Amiga);
+    expect(g.musicFollowsMap).toBe(false); // a set piece's, as the Amiga theme was, until the game takes the music up
   });
 
   it('comes back from the mirror to how the Avatar is addressed with the answer given still chosen', async () => {
