@@ -424,6 +424,13 @@ export interface Effects {
     ground?: number,
     place?: Place,
   ): void;
+  /**
+   * The Standard look's figure `tile` (as figures are drawn, see-through about it) grown to `size` EGA pixels a side
+   * with its top-left at (px, py), on page 0, over what the page has there - a scene's own ground, which tileLarge's
+   * square would cover; only what falls within `clip` (EGA pixels, inclusive) is drawn, so a thing rising out of the
+   * ground is cut at it. Nothing in the PC (1988) look.
+   */
+  figureLarge?(tile: number, px: number, py: number, size: number, clip: [number, number, number, number]): void;
   moongatePx(rows: number, px: number, py: number): void;
   revealPx(tile: number, px: number, py: number, step: number): void;
 }
