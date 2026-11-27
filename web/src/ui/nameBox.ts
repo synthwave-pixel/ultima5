@@ -24,6 +24,8 @@ export interface NameBoxStyle {
   /** A text cell's side and an EGA pixel's, at the game's size (CSS pixels). */
   cell: number;
   pixel: number;
+  /** How far the selection's light reaches above the letters (CSS pixels): two of the game's pixels (the owner's). */
+  rise: number;
   /** The band's depth (CSS pixels), and its colours: its lit edges' line, its foot's, the band's own, the line inside it. */
   band: number;
   frame: { light: string; shade: string; base: string; rim: string };
@@ -42,5 +44,33 @@ export function nameBoxStyle(font: FontChoice, look: TileSet, cell: number): Nam
     const c = chromeColours(TITLE_DIALOG);
     frame = { light: css(c.light[0]), shade: css(c.shade[0]), base: css(c.base), rim: css(c.rim) };
   } else frame = { light: '#0000aa', shade: '#0000aa', base: '#0000aa', rim: '#ffffff' };
-  return { family: face.family, weight: face.weight, size: cell * face.share, cell, pixel, band: BAND * pixel, frame };
+  return { family: face.family, weight: face.weight, size: cell * face.share, cell, pixel, rise: 2 * pixel, band: BAND * pixel, frame };
+}
+
+/** What the field shows (the box draws it over the page's own field, whose letters, selection and cursor are hid). */
+export interface FieldView {
+  before: string;
+  selected: string;
+  after: string;
+  /** The game's turning cursor after the last letter. */
+  spinner: boolean;
+  /** The page's line of a cursor, where the cursor stands. */
+  caret: boolean;
+}
+
+/**
+ * The field of `value`, selected from `start` to `end`, `focused` or not: the game's turning cursor after the name
+ * where the cursor - or the selection - ends at its end, as the game's own line has it (input.ts); within the name,
+ * or nothing typed, the page's line (the owner's, 2026-11-27); none where a selection ends within it, as the page.
+ */
+export function fieldView(value: string, start: number, end: number, focused: boolean): FieldView {
+  const [a, b] = [Math.min(start, end), Math.max(start, end)];
+  const atEnd = focused && value.length > 0 && b === value.length;
+  return {
+    before: value.slice(0, a),
+    selected: value.slice(a, b),
+    after: value.slice(b),
+    spinner: atEnd,
+    caret: focused && !atEnd && a === b,
+  };
 }

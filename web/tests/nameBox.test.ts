@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TITLE_DIALOG } from '../src/game/chromeTone.ts';
 import { chromeColours } from '../src/ui/framebuffer.ts';
-import { nameBoxStyle } from '../src/ui/nameBox.ts';
+import { fieldView, nameBoxStyle } from '../src/ui/nameBox.ts';
 
 /**
  * The page's own box for a name (pageHooks.ts textBox, askName's "Type a name" from a keyboard or a touch) dressed as
@@ -53,5 +53,38 @@ describe('the name box (nameBoxStyle)', () => {
   it('keeps the copper as it is where no tone is asked (chromeColours)', () => {
     expect(chromeColours(null).base).toBe(0x623318);
     expect(chromeColours(null).rim).toBe(0x3e210f);
+  });
+});
+
+/**
+ * The name box's field as the game's own line (fieldView): its letters, the selection lit white from two of the game's
+ * pixels above them (nameBoxStyle rise), and the game's turning cursor (input.ts's glyphs 5-8) after the last letter
+ * where the cursor or the selection ends there; anywhere else, or nothing typed, the page's own line of a cursor.
+ */
+describe('the name box’s field (fieldView)', () => {
+  it('turns the game’s cursor after the name where the whole name is selected, as it opens', () => {
+    expect(fieldView('Jarek', 0, 5, true)).toEqual({ before: '', selected: 'Jarek', after: '', spinner: true, caret: false });
+  });
+
+  it('turns it after the name where the cursor stands at its end', () => {
+    expect(fieldView('Jarek', 5, 5, true)).toEqual({ before: 'Jarek', selected: '', after: '', spinner: true, caret: false });
+  });
+
+  it('shows the line of a cursor within the name, and in an empty field', () => {
+    expect(fieldView('Jarek', 2, 2, true)).toEqual({ before: 'Ja', selected: '', after: 'rek', spinner: false, caret: true });
+    expect(fieldView('', 0, 0, true)).toEqual({ before: '', selected: '', after: '', spinner: false, caret: true });
+  });
+
+  it('shows neither for a selection ending within the name (the page shows no cursor there)', () => {
+    expect(fieldView('Jarek', 1, 3, true)).toEqual({ before: 'J', selected: 'ar', after: 'ek', spinner: false, caret: false });
+  });
+
+  it('shows neither while the field has not the focus (OK or Cancel has it)', () => {
+    expect(fieldView('Jarek', 5, 5, false)).toMatchObject({ spinner: false, caret: false });
+  });
+
+  it('lights the selection from two of the game’s pixels above the letters', () => {
+    expect(nameBoxStyle('sixtyfour', 'standard', 32).rise).toBeCloseTo(8);
+    expect(nameBoxStyle('sixtyfour', 'standard', 16).rise).toBeCloseTo(4);
   });
 });

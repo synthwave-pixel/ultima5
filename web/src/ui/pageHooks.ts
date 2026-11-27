@@ -18,7 +18,7 @@ import { reportArgs, steamLaunch, steamNative } from '../install/sources.ts';
 import { cloudSaves } from '../game/keyStore.ts';
 import { GamepadInput } from './gamepad.ts';
 import { InTwos } from './inTwos.ts';
-import { nameBoxStyle, type NameBoxStyle } from './nameBox.ts';
+import { fieldView, nameBoxStyle, type NameBoxStyle } from './nameBox.ts';
 import type { CapacitorLike } from './platform.ts';
 import { menuUp } from './pageMenu.ts';
 import { ScanlineOverlay } from './scanlines.ts';
@@ -58,7 +58,8 @@ function nameBoxRules(): void {
   rules.id = 'name-box-rules';
   rules.textContent =
     '.name-box button:hover,.name-box button:focus-visible{background:#fff;color:#000;outline:none}' +
-    '.name-box input::selection{background:#fff;color:#000}';
+    '.name-box input::selection{background:transparent;color:transparent}' +
+    '@keyframes name-box-blink{50%{opacity:0}}';
   document.head.appendChild(rules);
 }
 
@@ -68,7 +69,7 @@ function nameBoxRules(): void {
  * or Cancel puts it by (null). The game's font has only the plain letters: anything else is left out. Dressed as the
  * title's dialogs (nameBox.ts `st`): the lettering chosen, at the game's size, in their blue frame.
  */
-function textBox(title: string, value: string, max: number, st: NameBoxStyle): Promise<string | null> {
+function textBox(title: string, value: string, max: number, st: NameBoxStyle, spin: string[]): Promise<string | null> {
   return new Promise((resolve) => {
     nameBoxRules();
     const f = st.frame;
@@ -88,19 +89,61 @@ function textBox(title: string, value: string, max: number, st: NameBoxStyle): P
     const label = document.createElement('label');
     label.textContent = title;
     label.style.cssText = `display:block;margin-bottom:${st.cell / 2}px;line-height:1.4;`;
+    // The page's own field takes the typing (a phone's keyboard, a paste), its letters, selection and cursor hid; over
+    // it the game's line is drawn (nameBox.ts fieldView): the letters, the selection lit from a little above them, and
+    // the game's turning cursor after the name, or the page's line of one within it.
+    const field = document.createElement('div');
+    field.style.cssText = `position:relative;margin-top:${st.cell / 2}px;`;
     const input = document.createElement('input');
     Object.assign(input, { type: 'text', value, maxLength: max, autocomplete: 'off', spellcheck: false });
     input.setAttribute('autocapitalize', 'words');
     input.setAttribute('enterkeyhint', 'done');
+    const line = `font:${font};padding:${st.cell / 4}px 0;line-height:${st.cell}px;`;
     input.style.cssText =
-      `display:block;width:100%;box-sizing:border-box;margin-top:${st.cell / 2}px;font:${font};padding:${st.cell / 4}px 0;` +
-      `background:#000;color:#fff;caret-color:#fff;border:none;border-bottom:${st.pixel}px solid #fff;outline:none;`;
-    label.appendChild(input);
+      `display:block;width:100%;box-sizing:border-box;${line}background:#000;color:transparent;caret-color:transparent;` +
+      'border:none;outline:none;';
+    const shown = document.createElement('div');
+    shown.setAttribute('aria-hidden', 'true');
+    shown.style.cssText = `position:absolute;inset:0;${line}white-space:pre;overflow:hidden;pointer-events:none;color:#fff;`;
+    field.append(input, shown);
+    label.appendChild(field);
     box.appendChild(label);
+    let turn = 0;
+    const draw = (): void => {
+      const v = fieldView(input.value, input.selectionStart ?? 0, input.selectionEnd ?? 0, document.activeElement === input);
+      shown.replaceChildren();
+      shown.append(v.before);
+      if (v.selected) {
+        const lit = document.createElement('span');
+        lit.textContent = v.selected;
+        lit.style.cssText = `background:#fff;color:#000;padding-top:${st.rise}px;`;
+        shown.append(lit);
+      }
+      const at = document.createElement('span');
+      if (v.spinner && spin.length) {
+        at.style.cssText =
+          `display:inline-block;width:${st.cell}px;height:${st.cell}px;vertical-align:middle;` +
+          `background:url(${spin[turn % spin.length]}) center/contain no-repeat;image-rendering:pixelated;`;
+      } else if (v.caret) {
+        at.style.cssText =
+          `border-left:${Math.max(1, st.pixel / 2)}px solid #fff;margin-right:-${Math.max(1, st.pixel / 2)}px;` +
+          'animation:name-box-blink 1s steps(1) infinite;';
+      }
+      shown.append(at, v.after);
+    };
+    // The game's cursor turns about nine times a second, as at its own prompts; the field is drawn again each time too,
+    // and at once on any change.
+    const turning = setInterval(() => {
+      turn++;
+      draw();
+    }, 110);
+    for (const e of ['input', 'keydown', 'keyup', 'mouseup', 'select', 'focus', 'blur'])
+      input.addEventListener(e, () => requestAnimationFrame(draw));
     const row = document.createElement('div');
     row.style.cssText = `display:flex;gap:${st.cell}px;justify-content:flex-end;margin-top:${st.cell}px;`;
     const done = (text: string | null): void => {
       pageBox = null;
+      clearInterval(turning);
       back.remove();
       resolve(text === null ? null : text.replace(/[^\x20-\x7e]/g, '').slice(0, max));
     };
@@ -131,6 +174,7 @@ function textBox(title: string, value: string, max: number, st: NameBoxStyle): P
     document.body.appendChild(back);
     input.focus();
     input.select();
+    draw();
   });
 }
 
@@ -397,7 +441,8 @@ export function installPageHooks(g: GameCore, screen: Screen, canvas: HTMLCanvas
     async askText(title, value, max) {
       // The game's text size on the screen: a cell is the fortieth of the picture's width.
       const cell = screen.canvas.getBoundingClientRect().width / 40 || 16;
-      const text = await textBox(title, value, max, nameBoxStyle(g.options.font, g.options.tileSet, cell));
+      const st = nameBoxStyle(g.options.font, g.options.tileSet, cell);
+      const text = await textBox(title, value, max, st, screen.cursorFrames(st.cell * devicePixelRatio));
       screen.flushKeys();
       return text;
     },
