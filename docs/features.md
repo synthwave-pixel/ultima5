@@ -242,8 +242,10 @@ describes how the Enhanced interface and the Remastered look are drawn.
 - **Music.** The DOS game had none; the Ultima V Upgrade (The Exodus
   Project, 2001) gave it the Apple II and Commodore 128 versions' songs as
   MIDI, and they play where the Upgrade plays them, read from its driver
-  and patches (`web/src/game/music.ts`). Its sixteen tunes come in four
-  soundtracks, chosen in Audio (Sound):
+  and patches (`web/src/game/music.ts`). Its sixteen tunes, and Ultima
+  IV's Towns while the character is made (as the Ultima IV port plays it
+  at the gypsy, from the Ultima IV Upgrade), come in four soundtracks,
+  chosen in Audio (Sound):
   - **Classical** (the default): the tunes arranged anew for a string
     orchestra, a full orchestra, a Renaissance consort, a Celtic band
     and a pedalled piano;
@@ -263,9 +265,9 @@ describes how the Enhanced interface and the Remastered look are drawn.
   random each time it starts, never the one it played last, and gentler
   ones, eased where the ear is most sensitive; the title, a shrine and the
   two stories have their own; Britannia's change at dusk and dawn, by
-  night darker; Blackthorn's castle is ominous. The three tunes heard once
-  - the character's making, the reunion, the proclamation - rest five
-  seconds before they come round, and Joyous Reunion is rewritten from
+  night darker; Blackthorn's castle is ominous. The two tunes heard once
+  - the reunion and the proclamation - rest five seconds before they
+  come round, and Joyous Reunion is rewritten from
   Lord British's own theme (the Upgrade's echoed the Wedding March). All
   are rendered to files before the game is built (`npm run music`:
   tools/music/), each a loop without a seam, set at one loudness, in
