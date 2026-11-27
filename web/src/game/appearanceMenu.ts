@@ -57,6 +57,11 @@ export interface MirrorScene {
   world(): void;
   /** The scene, the one being made standing in it in the Avatar's place (the walking Avatar, 0x14c), in step `step` (0-3) of the walk. */
   scene(step: number): void;
+  /**
+   * While the screen waits for a key, each pass (every other tick, the map's idle): a scene's own animation, as its
+   * water flowing - `step` the walk's step the scene was last drawn in. Ultima V's has none.
+   */
+  wait?(step: number): void;
   /** At the title, `name` in the border under the scene, as the title names its scenes. */
   banner(name: string): void;
   /** Whether the Avatar is addressed as Lady: the Avatar drawn as she is (a mage without the beard). */
@@ -155,6 +160,11 @@ const WIDTH = 21;
 /** Where the value's left arrow stands, and how wide the value between the arrows is. */
 const FIELD = 8;
 export const VALUE_WIDTH = WIDTH - FIELD - 2;
+/**
+ * The x of the box's sides (EGA pixels, inclusive: its frame's left and right edges), at the title and in play alike
+ * (menu.ts framedBox, the box centred on the screen's forty columns): where a game may draw beside it.
+ */
+export const MENU_SIDES: readonly [number, number] = [(((40 - WIDTH) >> 1) - 1) * 8, (((40 - WIDTH) >> 1) + WIDTH + 1) * 8 - 1];
 
 /** One row's text, `WIDTH` long, of the screen laid out as `rows`; `copy`, what the copying row says. */
 function rowText(look: Appearance, r: number, copy: string, rows: ReturnType<typeof rowsFor>): string {
@@ -250,6 +260,7 @@ export async function chooseLook(
   // The Avatar walks on the spot, a step every fourth pass, as the Standard look's figures do - but for the step being
   // chosen to copy.
   const idle = (): void => {
+    scene.wait?.(step & 3);
     if (at === rows.copy || ++pass % 4 !== 0) return;
     step++;
     drawRoom();
