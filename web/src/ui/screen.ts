@@ -1230,6 +1230,14 @@ export class Screen implements Platform {
         fb.drawScaled(square, [px, py, size, size], false, clip);
         fb.page = was;
       },
+      figureLarge: (tile, px, py, size, clip) => {
+        const figure = this.look === 'standard' ? this.standard?.figure(tile) : null;
+        if (!figure) return;
+        const was = fb.page;
+        fb.page = 0;
+        fb.drawScaled(figure, [px, py, size, size], false, clip);
+        fb.page = was;
+      },
       moongatePx: (rows, px, py) => fb.moongateRise(rows, 0x05, px, py),
       revealPx: (tile, px, py, step) => fb.revealStep(tile, px, py, step),
     };
