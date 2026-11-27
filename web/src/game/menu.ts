@@ -143,15 +143,15 @@ let cols = WIDTH;
 /**
  * A box in the middle of the map, only as big as what it asks: a question
  * with two or three answers should not blot out the whole view (the
- * ultima3 port's placed windows). The text window is left selected.
+ * ultima3 port's placed windows). The text window is left selected. At the title, `room` as framedBox's.
  */
-export function box(g: GameCore, title: string, width: number, rows: number): void {
+export function box(g: GameCore, title: string, width: number, rows: number, room = 0): void {
   const d = g.draw;
   const t = g.text;
   cols = Math.max(6, Math.min(WIDTH, width));
   const head = title ? 2 : 0; // a box with no title is its answers and nothing else
   if (!g.inPlay && !titlePanel) {
-    framedBox(g, title, width, rows);
+    framedBox(g, title, width, rows, room);
     return;
   }
   // In the map's square (at the title, the one Settings is centred in), as in play.
@@ -183,14 +183,17 @@ export function box(g: GameCore, title: string, width: number, rows: number): vo
  * A box as the title has it: across the middle of the screen, in a frame of its own, the picture about it left as it
  * is - above the title menu's box, clear of its border (their copper would run together), where it fits there. The
  * text window is left selected. (box does this at the title; a screen in play that wants the title's arrangement, the
- * Appearance screen, asks for it.)
+ * Appearance screen, asks for it.) Too tall for the room above the title's box, it is centred on the screen - but for
+ * one that fits in `room` rows from the screen's top (a scene below it it must keep clear of: the Appearance
+ * screen's), which takes the top.
  */
-export function framedBox(g: GameCore, title: string, width: number, rows: number): void {
+export function framedBox(g: GameCore, title: string, width: number, rows: number, room = 0): void {
   const t = g.text;
   cols = Math.max(6, Math.min(WIDTH, width));
   const head = title ? 2 : 0;
   const tall = rows + head + 2;
-  const [left, top] = [(40 - cols) >> 1, 1 + (tall <= titleAbove ? (titleAbove - tall) >> 1 : Math.max(0, (25 - tall) >> 1))];
+  const above = tall <= titleAbove ? (titleAbove - tall) >> 1 : tall <= room ? 0 : Math.max(0, (25 - tall) >> 1);
+  const [left, top] = [(40 - cols) >> 1, 1 + above];
   framed(g, (left - 1) * 8, (top - 1) * 8, (left + cols + 1) * 8 - 1, (top + rows + head + 1) * 8 - 1);
   t.setWindow(WIN, left, top, left + cols - 1, top + rows + head - 1);
   t.select(WIN);

@@ -265,9 +265,11 @@ export async function chooseLook(
   // The world first, the menu's box over it (the stage keeps the screen as it stands then, the figure's ground).
   scene.world();
   g.draw.chromeHole?.([...scene.rect]);
-  if (g.inPlay) framedBox(g, title, WIDTH, rows.count);
+  // Its box kept above the scene, whose frame runs a row above it, where the title's room is too short for it.
+  const room = (scene.rect[1] - 8) >> 3;
+  if (g.inPlay) framedBox(g, title, WIDTH, rows.count, room);
   else {
-    box(g, title, WIDTH, rows.count);
+    box(g, title, WIDTH, rows.count, room);
     // At the title, the room's name in the border under it, as each scene's is (in play the screen has no border).
     const was = g.text.current;
     g.text.select(0);
