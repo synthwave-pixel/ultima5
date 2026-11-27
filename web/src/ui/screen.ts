@@ -110,6 +110,17 @@ const READING: Record<'legible' | 'dyslexic', FaceSpec> = {
   legible: { family: 'U5 Legible', file: 'AtkinsonHyperlegibleMono.ttf', share: 0.9, bold: 0, weight: 800, weights: '200 800' },
   dyslexic: { family: 'U5 Dyslexic', file: 'OpenDyslexicMono-Regular.otf', share: 0.92, bold: 0 },
 };
+/**
+ * The lettering in the font chosen (Appearance > Font) for a box of the page's own (nameBox.ts): its CSS family -
+ * SixtyFour after a reading font, for a letter it has not got - its weight, and its share of a text cell; SixtyFour's
+ * for DOS, which a font cannot draw.
+ */
+export function letterFace(font: FontChoice): { family: string; weight: number; share: number } {
+  const spec = font === 'legible' || font === 'dyslexic' ? READING[font] : FACES.mono;
+  const family = spec === FACES.mono ? `"${spec.family}"` : `"${spec.family}", "${FACES.mono.family}"`;
+  return { family, weight: spec.weight ?? 400, share: spec.share };
+}
+
 /** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
 const PANEL = 'rgba(0, 0, 0, 0.72)';
 
@@ -769,6 +780,33 @@ export class Screen implements Platform {
         this.theme();
       })
       .catch(() => undefined);
+  }
+
+  /**
+   * The game's turning cursor (input.ts: glyphs 5-8 of its letters), its four frames as pictures `side` CSS pixels
+   * square, white on nothing, for a box of the page's own (pageHooks.ts textBox): in the Standard look its symbols'
+   * smoothed shapes, as the screen fills them; else the 8-by-8 glyph, each pixel a block. None without a page.
+   */
+  cursorFrames(side: number): string[] {
+    if (typeof document === 'undefined') return [];
+    const px = Math.max(1, Math.round(side));
+    return [5, 6, 7, 8].map((code) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = px;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.fillStyle = '#fff';
+      if (this.look === 'standard') {
+        ctx.scale(px / GLYPH_SIDE, px / GLYPH_SIDE);
+        ctx.fill(this.symbolPath(`0:${code}`));
+      } else {
+        const rows = this.fb.fonts[0].rows;
+        const dot = px / 8;
+        for (let r = 0; r < 8; r++)
+          for (let c = 0; c < 8; c++) if (rows[code * 8 + r] & (0x80 >> c)) ctx.fillRect(c * dot, r * dot, dot, dot);
+      }
+      return canvas.toDataURL();
+    });
   }
 
   /** How a face sits in a cell `cell` pixels square. */

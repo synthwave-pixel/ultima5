@@ -2626,6 +2626,18 @@ export interface ChromeTone {
 
 const toneKey = (t: ChromeTone | null): string => (t ? `${t.hue ?? '-'}|${t.sat.toFixed(3)}|${t.value.toFixed(3)}` : '');
 
+/**
+ * The frame's colours (0xRRGGBB) in tone `t` - null, the copper as it is: its bevel's light, from the lit edge in;
+ * its shade, from the foot's edge in; the copper; the rim. For a box of the page's own to be framed as the screen
+ * frames its dialogs (nameBox.ts).
+ */
+export function chromeColours(t: ChromeTone | null): { light: number[]; shade: number[]; base: number; rim: number } {
+  const all = Uint32Array.from([...COPPER_LIGHT, ...COPPER_SHADE, COPPER, COPPER_RIM]);
+  const rgb = [...(t ? toned(all, t) : all)].map((v) => ((v & 0xff) << 16) | (v & 0xff00) | ((v >>> 16) & 0xff));
+  const n = COPPER_LIGHT.length;
+  return { light: rgb.slice(0, n), shade: rgb.slice(n, 2 * n), base: rgb[2 * n], rim: rgb[2 * n + 1] };
+}
+
 /** Colours (RGBA, little-endian) in tone `t`: each one's hue, saturation and value changed as it says. */
 function toned(colours: Uint32Array, t: ChromeTone): Uint32Array {
   const seen = new Map<number, number>();
