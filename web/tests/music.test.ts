@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { readXmiEvents } from '../src/audio/xmi.ts';
 import { ARRANGEMENTS, arrangementsOf } from '../src/audio/soundtracks.ts';
-import { HEARD_ONCE, TUNE_FILES } from '../src/game/music.ts';
+import { HEARD_ONCE, TUNE_FILES, ULTIMA5_TUNES } from '../src/game/music.ts';
 import { CROSSFADE, heldAt, MUSIC, MusicPlayer } from '../src/ui/music.ts';
 import { rewritten } from '../tools/music/rewrites.ts';
 import { GAMEDATA } from './helpers.ts';
@@ -43,6 +43,22 @@ describe("the Upgrade's music", () => {
         expect(t.file, name).toMatch(new RegExp(`^${arrangement}/${name.replace('.XMI', '')}\\.[0-9a-f]{8}\\.ogg$`));
         const stem = name.replace('.XMI', '');
         expect(readdirSync(join('public', 'music', arrangement)).filter((f) => f.startsWith(`${stem}.`))).toEqual([t.file.split('/')[1]]);
+        named.add(t.file);
+      }
+    }
+    // The tunes another game rendered, their files copied in (Ultima IV's Towns): each arrangement a soundtrack plays.
+    expect(ULTIMA5_TUNES.copied?.length).toBeGreaterThan(0);
+    for (const name of ULTIMA5_TUNES.copied ?? []) {
+      expect(TUNE_FILES, name).not.toContain(name);
+      for (const arrangement of arrangementsOf(name)) {
+        const t = MUSIC[name]?.[arrangement];
+        expect(t, `${arrangement} ${name}`).toBeDefined();
+        if (!t) continue;
+        expect(t.file, name).toMatch(new RegExp(`^${arrangement}/${name}\\.[0-9a-f]{8}\\.ogg$`));
+        expect(existsSync(join('public', 'music', t.file)), t.file).toBe(true);
+        expect(t.loopStart).toBeGreaterThan(0);
+        expect(t.loopEnd).toBeGreaterThan(t.loopStart);
+        expect(readdirSync(join('public', 'music', arrangement)).filter((f) => f.startsWith(`${name}.`))).toEqual([t.file.split('/')[1]]);
         named.add(t.file);
       }
     }

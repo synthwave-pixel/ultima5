@@ -12,6 +12,10 @@
  * tune (MID.DRV 016d); set pieces (the title, character creation, a
  * shrine, holing up, the ending) play their own tune and stop that until
  * they are done (MID.DRV 0299, 0293).
+ *
+ * One tune is not the Upgrade's: character creation plays Ultima IV's Towns
+ * (U4_TOWNS) where the Upgrade played the Amiga theme, so the gypsy's
+ * questions sound the same in both games. The Amiga theme is kept, unplayed.
  */
 
 import manifest from '../audio/musicManifest.json';
@@ -39,6 +43,8 @@ export const Tune = {
   Reunion: 14,
   RuleBritannia: 15,
   Amiga: 16,
+  /** Not the Upgrade's: Ultima IV's Towns (U4_TOWNS), at character creation. */
+  U4Towns: 17,
 } as const;
 
 /** Each tune's file (MID.DRV 0040), Tune.Theme first. */
@@ -62,17 +68,29 @@ export const TUNE_FILES = [
 ];
 
 /**
- * The tunes heard once - the character's making, the reunion with Lord British, the proclamation of victory - played
- * through and played again after a rest, as a player may stay on their screens; every other is heard over and over.
+ * Ultima IV's Towns, as the Ultima IV Upgrade arranged it: its renders copied from the Ultima IV port (public/music
+ * README.txt), in the arrangements Ultima IV plays at the gypsy. Its notes are not here, so it is never rendered.
+ */
+export const U4_TOWNS = 'U4TOWNS';
+
+/** The tunes another game rendered, their files copied in: played, never rendered here (tools/music/render.ts). */
+export const COPIED_TUNES = [U4_TOWNS];
+
+/**
+ * The tunes heard once - the Amiga theme (the Upgrade's at the character's making, kept unplayed), the reunion with
+ * Lord British, the proclamation of victory - played through and played again after a rest, as a player may stay on
+ * their screens; every other is heard over and over (U4_TOWNS too, looping as Ultima IV rendered it).
  */
 export const HEARD_ONCE = ['AMIGA.XMI', 'REUNION.XMI', 'RULEBRIT.XMI'];
 
 /**
  * Ultima V's music (audio/tuneSet.ts), the set every game plays unless its entry gives its own: the sixteen, each its
- * own file in public/music, their picks (audio/soundtracks.ts) and the render's manifest.
+ * own file in public/music, then Ultima IV's Towns (Tune.U4Towns), copied; their picks (audio/soundtracks.ts) and the
+ * render's manifest.
  */
 export const ULTIMA5_TUNES: TuneSet = {
-  names: TUNE_FILES,
+  names: [...TUNE_FILES, U4_TOWNS],
+  copied: COPIED_TUNES,
   heardOnce: HEARD_ONCE,
   picks: PICKS,
   manifest,

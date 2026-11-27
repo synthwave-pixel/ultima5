@@ -13,7 +13,9 @@ npm run music -- strings piano BRITLAND.XMI STONES.XMI
 
 **A game's own tunes.** What is rendered is a game's tune set (`web/src/audio/tuneSet.ts` `TuneSet`): its tunes'
 names, where each one's notes are (a file in its folder, and which of the file's sequences: an XMI may hold several),
-the ones heard once, its picks, its folder under `web/public/` and its manifest's path. `npm run music` renders
+the ones heard once, its picks, its folder under `web/public/` and its manifest's path. A tune it lists as `copied`
+(Ultima V's `U4TOWNS`, Ultima IV's Towns at character creation) is another game's render with its files copied in: the
+render leaves it be, and naming it is an error. `npm run music` renders
 Ultima V's (`game/music.ts` `ULTIMA5_TUNES`); another game's render is a script of a few lines passing its own set to
 `renderTunes` (`render.ts`), with the same arguments.
 

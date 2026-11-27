@@ -20,7 +20,7 @@ export interface TuneFile {
   loopEnd: number;
 }
 
-/** The render's manifest: each tune's files (game/music.ts TUNE_FILES), by arrangement. */
+/** The render's manifest: each tune's files (game/music.ts ULTIMA5_TUNES names), by arrangement. */
 export const MUSIC = manifest as unknown as Record<string, Partial<Record<Arrangement, TuneFile>>>;
 
 /** How long a change of tune takes, one fading out as the next fades in (seconds). */

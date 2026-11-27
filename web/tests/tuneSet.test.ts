@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { arrangementsFor, arrangementsOf, PICKS } from '../src/audio/soundtracks.ts';
 import { heardOnce, tuneSet, tuneSource, useTunes, type TuneSet } from '../src/audio/tuneSet.ts';
-import { HEARD_ONCE, TUNE_FILES, ULTIMA5_TUNES } from '../src/game/music.ts';
+import { HEARD_ONCE, Tune, TUNE_FILES, ULTIMA5_TUNES } from '../src/game/music.ts';
 import { MUSIC } from '../src/ui/music.ts';
 import { renderJobs } from '../tools/music/render.ts';
 
@@ -27,7 +27,10 @@ afterEach(() => useTunes(null));
 describe('a game’s tunes', () => {
   it('are Ultima V’s unless a game sets its own', () => {
     expect(tuneSet()).toBe(ULTIMA5_TUNES);
-    expect(ULTIMA5_TUNES.names).toEqual(TUNE_FILES);
+    // The Upgrade's sixteen, then Ultima IV's Towns, its renders copied in (the character's making).
+    expect(ULTIMA5_TUNES.names).toEqual([...TUNE_FILES, 'U4TOWNS']);
+    expect(ULTIMA5_TUNES.names[Tune.U4Towns - 1]).toBe('U4TOWNS');
+    expect(ULTIMA5_TUNES.copied).toEqual(['U4TOWNS']);
     expect(ULTIMA5_TUNES.heardOnce).toEqual(HEARD_ONCE);
     expect(ULTIMA5_TUNES.picks).toBe(PICKS);
     expect(ULTIMA5_TUNES.manifest).toBe(MUSIC);
@@ -81,5 +84,11 @@ describe('the render', () => {
 
   it('refuses a word that is no arrangement or tune of the set', () => {
     expect(() => renderJobs(OTHER, ['BRITLAND.XMI'])).toThrow('Not an arrangement or a tune');
+  });
+
+  it('leaves a tune copied from another game be: it has no notes here to render', () => {
+    expect(renderJobs(ULTIMA5_TUNES, []).some((j) => j.tune === 'U4TOWNS')).toBe(false);
+    expect(renderJobs(ULTIMA5_TUNES, ['consort']).some((j) => j.tune === 'U4TOWNS')).toBe(false);
+    expect(() => renderJobs(ULTIMA5_TUNES, ['U4TOWNS'])).toThrow('rendered by another game');
   });
 });
