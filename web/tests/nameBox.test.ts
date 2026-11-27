@@ -70,9 +70,13 @@ describe('the name box’s field (fieldView)', () => {
     expect(fieldView('Jarek', 5, 5, true)).toEqual({ before: 'Jarek', selected: '', after: '', spinner: true, caret: false });
   });
 
-  it('shows the line of a cursor within the name, and in an empty field', () => {
+  it('shows the line of a cursor within the name', () => {
     expect(fieldView('Jarek', 2, 2, true)).toEqual({ before: 'Ja', selected: '', after: 'rek', spinner: false, caret: true });
-    expect(fieldView('', 0, 0, true)).toEqual({ before: '', selected: '', after: '', spinner: false, caret: true });
+  });
+
+  it('turns the game’s cursor in an empty field, as the game’s own empty line has it', () => {
+    expect(fieldView('', 0, 0, true)).toEqual({ before: '', selected: '', after: '', spinner: true, caret: false });
+    expect(fieldView('', 0, 0, false)).toMatchObject({ spinner: false, caret: false });
   });
 
   it('shows neither for a selection ending within the name (the page shows no cursor there)', () => {

@@ -61,11 +61,12 @@ export interface FieldView {
 /**
  * The field of `value`, selected from `start` to `end`, `focused` or not: the game's turning cursor after the name
  * where the cursor - or the selection - ends at its end, as the game's own line has it (input.ts); within the name,
- * or nothing typed, the page's line (the owner's, 2026-11-27); none where a selection ends within it, as the page.
+ * the page's line (the owner's, 2026-11-27); none where a selection ends within it, as the page. With nothing typed,
+ * the game's cursor too, as its own empty line has it (the owner's).
  */
 export function fieldView(value: string, start: number, end: number, focused: boolean): FieldView {
   const [a, b] = [Math.min(start, end), Math.max(start, end)];
-  const atEnd = focused && value.length > 0 && b === value.length;
+  const atEnd = focused && b === value.length;
   return {
     before: value.slice(0, a),
     selected: value.slice(a, b),
