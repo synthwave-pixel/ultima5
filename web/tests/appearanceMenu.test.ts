@@ -6,9 +6,11 @@ import {
   chooseAppearance,
   chooseLook,
   LARGE_AT,
+  MENU_SIDES,
   MIRROR_SQUARE,
   VALUE_WIDTH,
   VALUES,
+  ultima5Mirror,
   WORLD_SQUARE,
 } from '../src/game/appearanceMenu.ts';
 import { readBritannia, tileAt } from '../src/data/maps.ts';
@@ -269,6 +271,48 @@ describe('the Appearance screen', () => {
     p.keys.push(Pad.B);
     await chooseLook(g, { ...DEFAULT_APPEARANCE }, scene);
     expect(calls.some((c) => c.startsWith('banner'))).toBe(false);
+  });
+
+  it('gives a scene that animates each pass of the wait for a key, with the step of the walk shown', async () => {
+    const { g, p } = setup();
+    const waits: number[] = [];
+    const steps: number[] = [];
+    const scene = {
+      rect: [8, 104, 311, 183] as const,
+      world: () => {},
+      scene: (step: number) => steps.push(step),
+      banner: () => {},
+      lady: () => false,
+      wait: (step: number) => waits.push(step),
+    };
+    const waitKey = p.waitKey.bind(p);
+    Object.assign(p, {
+      waitKey: async (idle: () => void | Promise<void>) => {
+        for (let i = 0; i < 9; i++) await idle();
+        return waitKey();
+      },
+    });
+    p.keys.push(Pad.B);
+    await chooseLook(g, { ...DEFAULT_APPEARANCE }, scene);
+    // Every pass, not every fourth (the walk's): the step given the one the scene was last drawn in.
+    expect(waits).toHaveLength(9);
+    expect(waits[0]).toBe(steps[0]);
+    expect(waits[8]).toBe(steps[steps.length - 1]);
+    // Ultima V's own mirror has none: its wait is as it was.
+    expect('wait' in ultima5Mirror(g)).toBe(false);
+  });
+
+  it('says where its box’s sides are, at the title and in play, for a game to draw beside it', async () => {
+    for (const inPlay of [false, true]) {
+      const { g, p } = setup();
+      g.inPlay = inPlay;
+      let frame: number[] = [];
+      Object.assign(p.draw, { chrome: (_on: boolean, _row: number, only?: number[]) => only && (frame = [...only]) });
+      Object.assign(p.draw, { chromeBox: (only: number[]) => (frame = [...only]) });
+      p.keys.push(Pad.B);
+      await chooseLook(g, { ...DEFAULT_APPEARANCE }, ultima5Mirror(g));
+      expect([frame[0], frame[2]]).toEqual([...MENU_SIDES]);
+    }
   });
 
   it('fits every value between its arrows with a space either side', () => {
