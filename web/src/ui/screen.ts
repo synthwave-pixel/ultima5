@@ -110,6 +110,17 @@ const READING: Record<'legible' | 'dyslexic', FaceSpec> = {
   legible: { family: 'U5 Legible', file: 'AtkinsonHyperlegibleMono.ttf', share: 0.9, bold: 0, weight: 800, weights: '200 800' },
   dyslexic: { family: 'U5 Dyslexic', file: 'OpenDyslexicMono-Regular.otf', share: 0.92, bold: 0 },
 };
+/**
+ * The lettering in the font chosen (Appearance > Font) for a box of the page's own (nameBox.ts): its CSS family -
+ * SixtyFour after a reading font, for a letter it has not got - its weight, and its share of a text cell; SixtyFour's
+ * for DOS, which a font cannot draw.
+ */
+export function letterFace(font: FontChoice): { family: string; weight: number; share: number } {
+  const spec = font === 'legible' || font === 'dyslexic' ? READING[font] : FACES.mono;
+  const family = spec === FACES.mono ? `"${spec.family}"` : `"${spec.family}", "${FACES.mono.family}"`;
+  return { family, weight: spec.weight ?? 400, share: spec.share };
+}
+
 /** The dark box the gypsy's question stands on over the smoke (storyText.ts setChoice): the smoke still seen through. */
 const PANEL = 'rgba(0, 0, 0, 0.72)';
 
