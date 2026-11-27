@@ -297,6 +297,13 @@ export interface ChoiceLayout {
   readonly answers: readonly [number, number];
   readonly question: readonly [number, number, number, number];
   readonly clear: readonly [number, number, number, number];
+  /**
+   * Where the question and the answers share one band, the question above (Ultima IV's): the rows the question's box
+   * may end on, first to last (EGA pixels, inclusive), the answers' band beginning on the row after. The one taken is
+   * that which sets all at the largest size - of those, the question's box the shortest. Without one, `question` and
+   * `answers` as they are (Ultima V's); with one, they are where all are set at the smallest size where nothing fits.
+   */
+  readonly split?: readonly [number, number];
 }
 
 /**
@@ -346,22 +353,29 @@ const answer = (t: string): string => t.replace(/[\s?;,.]+$/, '').replace(/^./, 
  * (Ultima V's, ULTIMA5_CHOICE: the question in the column between the bowls, above the Avatar, on a dark panel over
  * the smoke's inner edges; each answer under its bowl): the question in its box on a dark panel, each answer centred
  * in its column - grey, or white for the one chosen (`lit`: 0 the left, 1 the right, -1 neither) - all at the one
- * size, the largest at which each fits its band.
+ * size, the largest at which each fits its band (where the layout has a split, the bands divided as fits it best).
  */
 export function setChoice(question: string, left: string, right: string, lit: number, measure: Measure, layout: ChoiceLayout): Run[] {
   const columns = layout.columns;
-  const [CHOICE_TOP, CHOICE_BOTTOM] = layout.answers;
-  const [QUESTION_LEFT, QUESTION_TOP, QUESTION_RIGHT, QUESTION_BOTTOM] = layout.question;
+  const CHOICE_BOTTOM = layout.answers[1];
+  const [QUESTION_LEFT, QUESTION_TOP, QUESTION_RIGHT] = layout.question;
   const answers = [left, right].map((t) => ({ indent: false, words: words(answer(t)) }));
   const q = { indent: false, words: words(trailing(question)) };
+  // The question's box's last row and the answers' band's first: the layout's own, or each its split allows.
+  const nominal: [number, number] = [layout.question[3], layout.answers[0]];
+  const splits: [number, number][] = [];
+  if (layout.split) for (let b = layout.split[0]; b <= layout.split[1]; b++) splits.push([b, b + 1]);
+  else splits.push(nominal);
   for (let size = CHOICE_LARGEST; ; size--) {
     const lh = size * LEADING;
     const cols = answers.map((a, i) => balanced(measure, size, a, (columns[i][1] - columns[i][0]) * K, 'mono'));
     const ql = balanced(measure, size, q, (QUESTION_RIGHT - QUESTION_LEFT - 2 * PANEL_MARGIN) * K, 'mono');
     const answerLines = Math.max(...cols.map((c) => c.length));
-    const fits =
-      answerLines * lh <= (CHOICE_BOTTOM - CHOICE_TOP) * K && ql.length * lh <= (QUESTION_BOTTOM - QUESTION_TOP - 2 * PANEL_MARGIN) * K;
-    if (!fits && size > CHOICE_SMALLEST) continue;
+    const fit = splits.find(
+      ([qb, at]) => answerLines * lh <= (CHOICE_BOTTOM - at) * K && ql.length * lh <= (qb - QUESTION_TOP - 2 * PANEL_MARGIN) * K,
+    );
+    if (!fit && size > CHOICE_SMALLEST) continue;
+    const [QUESTION_BOTTOM, CHOICE_TOP] = fit ?? nominal;
     const runs: Run[] = [];
     const centred = (text: string, c1: number, c2: number, y: number, colour: number): void => {
       const w = measure(text, size, 'mono');

@@ -272,4 +272,44 @@ describe('the story pages set in the Standard look', () => {
     expect(panel[1]).toBeGreaterThanOrEqual(152 * 4 - 3 * 4);
     expect(panel[3]).toBeLessThanOrEqual(176 * 4 + 3 * 4);
   });
+
+  it('shares a band between the question and the answers where the game gives it a split: the largest size, the question as tall as it needs', () => {
+    // Ultima IV's, widened: the answers each half the band, the question above them; its band may end on rows 170 to
+    // 188. The stand-in measure is 10 a letter at any size: a three-line question, one-line answers.
+    const nominal: ChoiceLayout = {
+      columns: [
+        [4, 156],
+        [164, 316],
+      ],
+      answers: [178, 199],
+      question: [4, 152, 316, 176],
+      clear: [0, 152, 319, 199],
+    };
+    const q = `${'A question that runs on and on, '.repeat(9)}dost thou`;
+    const set = (layout: ChoiceLayout): Run[] => setChoice(q, 'go,', 'stay?', -1, measure, layout);
+    const sizeOf = (runs: Run[]): number => runs.find((r) => !r.panel)!.size;
+    // Without a split: three lines in the question's 24 rows, at 18.
+    expect(sizeOf(set(nominal))).toBe(18);
+    // With one: 24, the question's band ending on row 182 (the first its three lines fit), the answers from 183.
+    const runs = set({ ...nominal, split: [170, 188] });
+    expect(sizeOf(runs)).toBe(24);
+    const words = runs.filter((r) => !r.panel);
+    const question = words.filter((r) => r.colour === WHITE);
+    const answers = words.filter((r) => r.colour === GREY);
+    expect(question).toHaveLength(3);
+    expect(answers.map((r) => r.y)).toEqual([183 * 4 + 24, 183 * 4 + 24]);
+    for (const r of question) {
+      expect(r.y - r.size).toBeGreaterThanOrEqual(152 * 4);
+      expect(r.y).toBeLessThanOrEqual(182 * 4);
+    }
+    const panel = runs.find((r) => r.panel)!.panel!;
+    expect(panel[3]).toBeLessThan(answers[0].y - answers[0].size);
+    // Long answers and a short question: the answers' band grows instead.
+    const long = setChoice('Dost thou', `${'walk on and on, '.repeat(7)}`, 'stay?', 0, measure, { ...nominal, split: [170, 188] });
+    const lit = long.filter((r) => r.colour === WHITE && !r.text.startsWith('Dost'));
+    expect(sizeOf(long)).toBe(24);
+    expect(lit.length).toBe(2);
+    expect(lit[0].y - lit[0].size).toBeLessThan(178 * 4);
+    expect(lit[1].y).toBeLessThanOrEqual(199 * 4);
+  });
 });
