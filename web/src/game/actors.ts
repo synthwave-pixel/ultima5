@@ -7,7 +7,48 @@
  */
 
 import { Game } from './game.ts';
+import type { Actor } from './save.ts';
 import { T } from './tiles.ts';
+
+// --- The table itself -------------------------------------------------------------
+// Only these functions reach the 32 slots (#69): slot 0 is the party, 1-31 creatures, townsfolk and (in a fight) the
+// arena's combatants and what they leave. Vehicles and things lying about keep stores of their own (objectStores.ts).
+
+/** How many slots the table has. */
+export const ACTOR_SLOTS = 32;
+
+/** The table's place in the save (D_5c5a), as an offset into `Save.b`. */
+const TABLE_AT = 0x5c5a - 0x55a6;
+
+/** The record in slot `i` (0-31); 0 is the party. */
+export function actor(g: Game, i: number): Actor {
+  return g.s.actors[i];
+}
+
+/** The party's record, slot 0. */
+export function party(g: Game): Actor {
+  return actor(g, 0);
+}
+
+/** Slots `from` up to (not including) `to`, in order, empty ones included. */
+export function* actorSlots(g: Game, from = 0, to = ACTOR_SLOTS): IterableIterator<[number, Actor]> {
+  for (let i = from; i < to; i++) yield [i, actor(g, i)];
+}
+
+/** Every slot from `from` up emptied. */
+export function clearActors(g: Game, from = 1): void {
+  for (let i = from; i < ACTOR_SLOTS; i++) actor(g, i).clear();
+}
+
+/** A copy of the whole table (256 bytes), to put back with restoreActorTable. */
+export function copyActorTable(g: Game): Uint8Array {
+  return g.s.b.slice(TABLE_AT, TABLE_AT + ACTOR_SLOTS * 8);
+}
+
+/** The table set from a copy made by copyActorTable. */
+export function restoreActorTable(g: Game, bytes: Uint8Array): void {
+  g.s.b.set(bytes.subarray(0, ACTOR_SLOTS * 8), TABLE_AT);
+}
 
 /** ULTIMA_368e: the first actor from 1 up standing at (x, y, z): its tile, and its index in dx (0 if none). */
 export function actorTileAt(g: Game, x: number, y: number, z: number): number {
