@@ -6,7 +6,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { T } from '../src/game/tiles.ts';
 import { enterTown, loadLevel, townLoop } from '../src/game/town.ts';
 import { tileAt } from '../src/game/world.ts';
-import { actorTileAt } from '../src/game/actors.ts';
+import { actor, actorTileAt, party } from '../src/game/actors.ts';
 import { newGame } from './helpers.ts';
 
 class Stop extends Error {}
@@ -77,7 +77,7 @@ async function talkWith({ town, who, hour, words, karma }: Visit): Promise<strin
   Object.assign(s, { level: n.z, x: n.x, y: n.y });
   loadLevel(g, true);
   expect(n.actor, `${who} is about at ${hour}:00`).toBeGreaterThan(0);
-  expect(s.actors[n.actor].tile).not.toBe(0);
+  expect(actor(g, n.actor).tile).not.toBe(0);
   expect(tileAt(g, n.x, n.y), `${who} is not abed at ${hour}:00`).not.toBe(T.Bed);
 
   /** Beside them, on whichever side is clear; the key that faces them from there. */
@@ -88,10 +88,10 @@ async function talkWith({ town, who, hour, words, karma }: Visit): Promise<strin
     [-1, 0, K.Right],
   ];
   const beside = (): number => {
-    const a = s.actors[n.actor];
+    const a = actor(g, n.actor);
     const [dx, dy, toward] = sides.find(([x, y]) => actorTileAt(g, a.x + x, a.y + y, s.level) === 0)!;
     Object.assign(s, { x: a.x + dx, y: a.y + dy });
-    Object.assign(s.actors[0], { x: s.x, y: s.y, z: s.level });
+    Object.assign(party(g), { x: s.x, y: s.y, z: s.level });
     return toward;
   };
   beside();
@@ -99,7 +99,7 @@ async function talkWith({ town, who, hour, words, karma }: Visit): Promise<strin
   // poor house at noon, Greyson and a guard in Britain); Talk answers the first of them, so the party waits a turn
   // or two, as a player would, for them to step apart.
   const alone = (): boolean => {
-    const a = s.actors[n.actor];
+    const a = actor(g, n.actor);
     actorTileAt(g, a.x, a.y, s.level);
     return s.dx === n.actor;
   };

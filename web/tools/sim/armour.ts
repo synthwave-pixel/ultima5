@@ -13,7 +13,7 @@
  * With tactics=off the party casts nothing, auto combat alone.
  */
 
-import { freeActor } from '../../src/game/actors.ts';
+import { actor, freeActor } from '../../src/game/actors.ts';
 import { autoKey } from '../../src/game/autocombat.ts';
 import { arenaFight } from '../../src/game/combat.ts';
 import type { Game } from '../../src/game/game.ts';
@@ -156,7 +156,7 @@ async function fight(stage: Stage, kind: number, rules: Rules, tactics: boolean,
   const startMixed = [...s.mixtures];
   const startAmmo = s.equipment[I.arrows] + s.equipment[I.quarrels];
   const foe = freeActor(g);
-  Object.assign(s.actors[foe], { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
+  Object.assign(actor(g, foe), { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
   let presses = 0;
   const fallen = (): boolean => stage.party.every((_, i) => s.members[i].status === Status.Dead);
   // The player: a spell where one is called for, else auto combat's key (it is never turned on, so it never hands

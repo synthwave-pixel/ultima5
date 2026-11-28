@@ -8,6 +8,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { Status } from '../src/game/save.ts';
 import { keys, newGame } from './helpers.ts';
 import type { FakePlatform } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 const MANI = 4;
 const AN_ZU = 2;
@@ -45,8 +46,8 @@ function fight(kind: number, seed = 1234) {
   s.combatTurn = 0;
   Object.assign(g.combat[0], { who: 0, x: 5, y: 5, flags: CF.Player, actor: 1 });
   Object.assign(g.combat[6], { who: kind, x: 6, y: 5, flags: CF.Monster, hp: enemy(g, kind).maxHp, dex: 10, actor: 2 });
-  Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 5, y: 5, z: 0 });
-  Object.assign(s.actors[2], { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 6, y: 5, z: 0 });
+  Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 5, y: 5, z: 0 });
+  Object.assign(actor(g, 2), { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 6, y: 5, z: 0 });
   return game;
 }
 
@@ -161,7 +162,7 @@ describe('spells cast out of a fight', () => {
     await cast(g, 0x2f);
     expect([s.icon, s.protection]).toEqual([0x54, 10]);
     s.icon = s.protection = 0;
-    s.actors[3].tile = 0xfc;
+    actor(g, 3).tile = 0xfc;
     p.log = '';
     await cast(g, 0x2f);
     expect(p.log).toContain('Magic absorbed!');
@@ -218,7 +219,7 @@ describe('spells cast in a fight', () => {
     freed.s.members[0].int = 99;
     freed.g.combat[6].flags = 0; // no foe stands, so the aim starts on the caster
     Object.assign(freed.g.combat[1], { who: 1, x: 6, y: 5, flags: CF.Player, actor: 3 });
-    Object.assign(freed.s.actors[3], { tile: 0x1c, anim: 0x1c, x: 6, y: 5, z: 0 });
+    Object.assign(actor(freed.g, 3), { tile: 0x1c, anim: 0x1c, x: 6, y: 5, z: 0 });
     charm(freed.g, 1, 6);
     freed.s.members[1].status = Status.Sleeping;
     freed.p.keys.push(K.Right, K.Enter);
@@ -269,11 +270,11 @@ describe('spells cast in a fight', () => {
   });
 
   it('In Por blinks the caster to another square, and not at all where the fight forbids it', async () => {
-    const { g, s } = fight(RAT, 5);
+    const { g } = fight(RAT, 5);
     await cast(g, 0x11);
     const me = g.combat[0];
     expect([me.x, me.y]).not.toEqual([5, 5]);
-    expect([s.actors[1].x, s.actors[1].y]).toEqual([me.x, me.y]);
+    expect([actor(g, 1).x, actor(g, 1).y]).toEqual([me.x, me.y]);
 
     const held = fight(RAT, 5);
     held.s.combatFlags |= 2;
@@ -283,15 +284,15 @@ describe('spells cast in a fight', () => {
   });
 
   it('Lor Sanct makes the caster invisible, and Quas Wis shows the foes who are', async () => {
-    const { g, s } = fight(RAT);
+    const { g } = fight(RAT);
     await cast(g, 0x24);
     expect(g.combat[0].flags & CF.Invisible).toBeTruthy();
-    expect(s.actors[1].anim).not.toBe(s.actors[1].tile);
+    expect(actor(g, 1).anim).not.toBe(actor(g, 1).tile);
     g.combat[6].flags |= CF.Invisible;
-    s.actors[2].anim = 0x1d;
+    actor(g, 2).anim = 0x1d;
     await cast(g, 0x17);
     expect(g.combat[6].flags & CF.Invisible).toBe(0);
-    expect(s.actors[2].anim).toBe(s.actors[2].tile);
+    expect(actor(g, 2).anim).toBe(actor(g, 2).tile);
   });
 
   it('An Tym freezes the foes: a monster, while time is stopped, has a dexterity of one', async () => {

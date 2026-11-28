@@ -1,5 +1,7 @@
 // web/tests/actorTable.test.ts
 // The actor table reached only through actors.ts's functions (#69).
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ACTOR_SLOTS, actor, actorSlots, clearActors, copyActorTable, party, restoreActorTable } from '../src/game/actors.ts';
 import { newGame } from './helpers.ts';
@@ -46,5 +48,25 @@ describe('the actor table', () => {
     restoreActorTable(g, copy);
     expect(actor(g, 7).tile).toBe(0x2c);
     expect(actor(g, 7).x).toBe(99);
+  });
+});
+
+describe('the table is private to actors.ts', () => {
+  it('no code reaches the table but actors.ts', () => {
+    const root = new URL('..', import.meta.url).pathname;
+    const allowed = new Set(['src/game/actors.ts', 'src/game/save.ts', 'tests/actorTable.test.ts']);
+    const files: string[] = [];
+    const walk = (dir: string): void => {
+      for (const f of readdirSync(dir)) {
+        const p = join(dir, f);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (/\.(ts|js|mjs)$/.test(f)) files.push(p);
+      }
+    };
+    for (const d of ['src', 'tests', 'tools']) walk(join(root, d));
+    const bad = files
+      .map((p) => relative(root, p))
+      .filter((p) => !allowed.has(p) && /\.actors\b|savedActor|0x5c5a/.test(readFileSync(join(root, p), 'utf8')));
+    expect(bad).toEqual([]);
   });
 });

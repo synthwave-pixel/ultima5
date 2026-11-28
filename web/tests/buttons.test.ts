@@ -5,6 +5,7 @@ import { getChar, getCommandKey, selectDirection, selectMember } from '../src/ga
 import { K, Pad } from '../src/game/io.ts';
 import { choose } from '../src/game/menu.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * The buttons' one meaning each (the port's): A chooses and B backs out everywhere; X attacks and Y casts; Start or
@@ -123,7 +124,7 @@ describe('auto combat', () => {
     Object.assign(ours, { flags: CF.Monster | CF.Charmed, who: 0, x: 5, y: 5, hp: 20 });
     const foe = g.combat[7];
     Object.assign(foe, { flags: CF.Monster, who: 0, x: 5, y: 4, hp: 20, actor: 8 });
-    Object.assign(s.actors[8], { tile: 0x50, anim: 0x50, x: 5, y: 4, z: 0 }); // standing on the field, to be struck
+    Object.assign(actor(g, 8), { tile: 0x50, anim: 0x50, x: 5, y: 4, z: 0 }); // standing on the field, to be struck
     s.combatTurn = 6;
     s.crosshair = 0;
     expect(await autoKey(g)).toBe(0x41);

@@ -10,6 +10,7 @@ import { klimbOffer, searchOffer, signAhead } from '../src/game/targets.ts';
 import { A, T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
 import { fly, Landed, pick, press } from './pilot.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** The dungeon's cells, by controller: what the menu offers for each, and how the map marks them (the port's). */
 describe("a dungeon's cells", () => {
@@ -21,7 +22,7 @@ describe("a dungeon's cells", () => {
     Object.assign(g.s, { mapId: 0x21, level: 0, x: 3, y: 3, facing: 1, d58a7: 0xff, d58a6: 0 });
     g.s.dungeon.fill(0x00);
     for (const [dx, dy, c] of cells) g.s.dungeon[(3 + dy) * 8 + 3 + dx] = c;
-    g.s.actors[1].x = g.s.actors[1].y = 0xff;
+    actor(g, 1).x = actor(g, 1).y = 0xff;
     return made;
   };
   const labels = async (made: ReturnType<typeof room>): Promise<{ labels: string[]; enabled: boolean[] }> => {

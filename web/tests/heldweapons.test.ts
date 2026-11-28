@@ -5,6 +5,7 @@ import { K } from '../src/game/io.ts';
 import { castCommand } from '../src/game/magic.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 const RAT = 0x14;
 const DAGGER = 0x10;
@@ -19,7 +20,7 @@ function fight(seed: number, rat: [number, number], shamino: [number, number] = 
   for (const c of g.combat) c.flags = 0;
   const put = (i: number, at: [number, number], flags: number, who: number, hp: number, tile: number): void => {
     Object.assign(g.combat[i], { who, x: at[0], y: at[1], flags, hp, dex: 10, actor: i + 1 });
-    Object.assign(s.actors[i + 1], { tile, anim: tile, x: at[0], y: at[1], z: 0 });
+    Object.assign(actor(g, i + 1), { tile, anim: tile, x: at[0], y: at[1], z: 0 });
   };
   put(0, [2, 5], CF.Player, 0, 0, 0x1c);
   put(1, shamino, CF.Player, 1, 0, 0x1c);

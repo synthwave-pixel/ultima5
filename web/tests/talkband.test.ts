@@ -9,6 +9,7 @@ import { setWind } from '../src/game/frame.ts';
 import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * The talk's menus at the foot of the view (menu.ts choose, speech.ts talkMenuRows, the port's): framed as the
@@ -67,7 +68,7 @@ describe("the talk's menus, at the view's foot", () => {
     const { g, p, i } = await britain();
     for (const w of analyse(g).learnable.keys()) g.words.add(w); // every word: a long list
     const s = g.s;
-    const a = s.actors[s.npcs[i].actor];
+    const a = actor(g, s.npcs[i].actor);
     Object.assign(a, { x: 16, y: 16 }); // in the middle of the towne
     Object.assign(s, { level: a.z, x: 16, y: 14 }); // two squares north of them, as across a counter: four lines of room
     const marks: string[] = [];

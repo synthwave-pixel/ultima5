@@ -8,6 +8,7 @@ import type { Rules } from '../src/game/settings.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { actorAt, overlayActors, setView } from '../src/game/world.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 const CHEST = 0x01;
 const GOLD = 0x02;
@@ -22,10 +23,10 @@ function field(rules: Rules = 'modern') {
   s.mapId = 0xff;
   g.combatMap.fill(0x44);
   for (let y = 0; y < 11; y++) for (let x = 0; x < 11; x++) setView(g, x, y, 0x44);
-  for (const a of s.actors) a.tile = a.anim = 0;
+  for (const a of actorList(g)) a.tile = a.anim = 0;
   for (const c of g.combat) Object.assign(c, { flags: 0, x: 0x63, y: 0x63 });
   const put = (slot: number, tile: number, x: number, y: number): void => {
-    Object.assign(s.actors[slot], { tile, anim: tile, x, y, z: 0 });
+    Object.assign(actor(g, slot), { tile, anim: tile, x, y, z: 0 });
   };
   return { g, put };
 }
@@ -81,7 +82,7 @@ async function walkIntoChest(rules: Rules) {
   const s = g.s;
   g.options.rules = rules;
   const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-  const foe = s.actors[1];
+  const foe = actor(g, 1);
   foe.tile = foe.anim = 0x40 + rat * 4;
   [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
   const fight = fighter(g);
@@ -96,8 +97,8 @@ async function walkIntoChest(rules: Rules) {
     const free = (y: number): boolean => y >= 0 && combatantAt(g, me.x, y) < 0;
     if (!chest && me.flags & CF.Player && !s.crosshair && foesAbout(g, 'combat') && free(me.y - 1) && free(me.y - 2)) {
       chest = [me.x, me.y - 1];
-      const slot = s.actors.findIndex((v, i) => i > 0 && v.tile === 0);
-      Object.assign(s.actors[slot], { tile: CHEST, anim: CHEST, x: me.x, y: me.y - 1, z: 0, b5: 5 });
+      const slot = actorList(g).findIndex((v, i) => i > 0 && v.tile === 0);
+      Object.assign(actor(g, slot), { tile: CHEST, anim: CHEST, x: me.x, y: me.y - 1, z: 0, b5: 5 });
       mover = me.who;
       from = p.log.length;
       g.options.input = 'controller';

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor, party } from '../src/game/actors.ts';
 import { arenaFight } from '../src/game/combat.ts';
 import { ARENAS, roomsToShow, startRoom } from '../src/game/devStarts.ts';
 import type { Game } from '../src/game/game.ts';
@@ -140,7 +140,7 @@ const outside =
   async (g: Game): Promise<boolean> => {
     Object.assign(g.s, { mapId: 0, level, x, y, partyTile: tile });
     unstashWorldActors(g);
-    if ((tile & 0xfc) === 0x24) g.s.actors[0].b5 = 50;
+    if ((tile & 0xfc) === 0x24) party(g).b5 = 50;
     return false;
   };
 
@@ -172,7 +172,7 @@ const PLACES: [string, (g: Game) => Promise<boolean>][] = [
     async (g) => {
       await outside(86, 112)(g);
       const foe = freeActor(g);
-      Object.assign(g.s.actors[foe], { tile: ARENAS[2].foe, anim: ARENAS[2].foe, x: 86, y: 111, z: 0, b5: 0 });
+      Object.assign(actor(g, foe), { tile: ARENAS[2].foe, anim: ARENAS[2].foe, x: 86, y: 111, z: 0, b5: 0 });
       await arenaFight(g, 2, foe);
       return false;
     },

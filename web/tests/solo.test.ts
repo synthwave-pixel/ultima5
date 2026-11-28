@@ -9,6 +9,7 @@ import { Status } from '../src/game/save.ts';
 import { endSolo, setAutoCombat, startSolo } from '../src/game/solo.ts';
 import { damageMember } from '../src/game/time.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Solo Mode (solo.ts): with a controller, the member whose turn it is in a fight made the only one who moves - 1988's
@@ -24,18 +25,18 @@ describe('Solo Mode', () => {
     g.options.input = 'controller';
     g.commandPrompt = 'combat';
     for (const c of g.combat) c.clear();
-    for (let i = 1; i < 32; i++) s.actors[i].tile = 0;
+    for (let i = 1; i < 32; i++) actor(g, i).tile = 0;
     for (let m = 0; m < 3; m++) {
       Object.assign(s.members[m], { status: Status.Good });
       s.members[m].hp = 50;
       const c = g.combat[m];
       Object.assign(c, { flags: CF.Player, who: m, actor: 8 + m, x: 4 + m, y: 5 });
-      Object.assign(s.actors[8 + m], { tile: 0x80, anim: 0x80, x: 4 + m, y: 5, z: 0 });
+      Object.assign(actor(g, 8 + m), { tile: 0x80, anim: 0x80, x: 4 + m, y: 5, z: 0 });
     }
     if (!won) {
       const foe = g.combat[3];
       Object.assign(foe, { flags: CF.Monster, who: 0, actor: 12, x: 5, y: 1, hp: 30 });
-      Object.assign(s.actors[12], { tile: 0x40, anim: 0x40, x: 5, y: 1, z: 0 });
+      Object.assign(actor(g, 12), { tile: 0x40, anim: 0x40, x: 5, y: 1, z: 0 });
     }
     Object.assign(s, {
       mapId: 0xff,
@@ -223,8 +224,8 @@ describe('Solo Mode', () => {
     const made = fight(true);
     const { g } = made;
     Object.assign(g.combat[3], { flags: CF.Monster, who: 0, actor: 12, x: 5, y: 1, hp: 30 });
-    Object.assign(g.s.actors[12], { tile: 0x40, anim: 0x40, x: 5, y: 1, z: 0 });
-    Object.assign(g.s.actors[13], { tile: 2, anim: 2, x: 2, y: 2, z: 0 }); // gold lying there
+    Object.assign(actor(g, 12), { tile: 0x40, anim: 0x40, x: 5, y: 1, z: 0 });
+    Object.assign(actor(g, 13), { tile: 2, anim: 2, x: 2, y: 2, z: 0 }); // gold lying there
     expect(lootOffer(g)).toBe('hide');
     const shown = await labels(made);
     expect(shown).not.toContain('Leave combat');

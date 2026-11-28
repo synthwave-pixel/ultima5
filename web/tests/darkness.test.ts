@@ -4,6 +4,7 @@ import { enterWorld, outdoorsLoop } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { tileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** The Underworld's dark round Doom: no way about in it without the Amulet, and no trap for a party that strays in. */
 describe('the dark round Doom', () => {
@@ -13,7 +14,7 @@ describe('the dark round Doom', () => {
     journeyOnward(g);
     Object.assign(g.s, { mapId: 0, level: 0xff, x, y, partyTile: 0x1c });
     enterWorld(g);
-    for (let i = 1; i < 0x20; i++) g.s.actors[i].tile = 0; // nothing about
+    for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0; // nothing about
     return made;
   };
   const walk = async (g: ReturnType<typeof newGame>['g'], p: ReturnType<typeof newGame>['p'], key: number) => {

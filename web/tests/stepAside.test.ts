@@ -7,6 +7,7 @@ import { T } from '../src/game/tiles.ts';
 import { setTileAt, tileAt } from '../src/game/world.ts';
 import type { Game } from '../src/game/game.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList, party } from '../src/game/actors.ts';
 
 /**
  * Issue #40: a townsperson in the way, waited out with Pass. One who is friendly and wanders (at their place, kind 1 -
@@ -31,12 +32,12 @@ async function scene(seed = 1234) {
   for (let y = 10; y <= 20; y++)
     for (let x = 10; x <= 20; x++) setTileAt(g, x, y, x === 10 || x === 20 || y === 10 || y === 20 ? WALL : FLOOR);
   for (let i = 1; i < 0x20; i++) {
-    if (s.npcs[i].actor) s.actors[s.npcs[i].actor].tile = s.actors[s.npcs[i].actor].anim = 0;
+    if (s.npcs[i].actor) actor(g, s.npcs[i].actor).tile = actor(g, s.npcs[i].actor).anim = 0;
     s.npcs[i].actor = 0;
     s.npcTypes[i] = 0;
   }
-  for (let a = 1; a < 0x20; a++) s.actors[a].tile = s.actors[a].anim = 0;
-  Object.assign(s.actors[0], { x: s.x, y: s.y, z: s.level });
+  for (let a = 1; a < 0x20; a++) actor(g, a).tile = actor(g, a).anim = 0;
+  Object.assign(party(g), { x: s.x, y: s.y, z: s.level });
   const who = 1;
   /** NPC 1 put at (x, y), its place for every hour at (px, py), of `kind` in all three slots. */
   const at = (x: number, y: number, kind = 2, px = x, py = y, tile = PERSON) => {
@@ -58,10 +59,10 @@ function placeAt(g: Game, i: number, x: number, y: number): void {
   const s = g.s;
   const me = s.npcs[i];
   if (!me.actor) {
-    me.actor = s.actors.findIndex((a, k) => k > 0 && a.tile === 0);
-    s.actors[me.actor].tile = s.actors[me.actor].anim = s.npcTypes[i];
+    me.actor = actorList(g).findIndex((a, k) => k > 0 && a.tile === 0);
+    actor(g, me.actor).tile = actor(g, me.actor).anim = s.npcTypes[i];
   }
-  Object.assign(s.actors[me.actor], { x, y, z: s.level });
+  Object.assign(actor(g, me.actor), { x, y, z: s.level });
   Object.assign(me, { x, y, z: s.level });
 }
 
@@ -134,7 +135,7 @@ describe('a step aside', () => {
       expect(apart(x, y, s.x + 1, s.y), `seed ${seed}`).toBe(1);
       expect(apart(x, y, s.x, s.y), `seed ${seed}`).toBeGreaterThanOrEqual(2);
       expect(tileAt(g, x, y)).toBe(FLOOR);
-      const a = s.actors[s.npcs[who].actor];
+      const a = actor(g, s.npcs[who].actor);
       expect([a.x, a.y]).toEqual([x, y]);
     }
   });
@@ -172,8 +173,8 @@ describe('a step aside', () => {
     s.npcTypes[2] = PERSON;
     s.npcs[2].f0 = 1;
     placeAt(g, 2, s.x + 1, s.y - 1);
-    const horse = s.actors.findIndex((a, k) => k > 0 && a.tile === 0);
-    Object.assign(s.actors[horse], { tile: 0x11, anim: 0x11, x: s.x + 1, y: s.y + 1, z: s.level });
+    const horse = actorList(g).findIndex((a, k) => k > 0 && a.tile === 0);
+    Object.assign(actor(g, horse), { tile: 0x11, anim: 0x11, x: s.x + 1, y: s.y + 1, z: s.level });
     setTileAt(g, s.x + 2, s.y, WALL);
     expect(stepAside(g, who)).toBe(false);
     expect(where(g, who)).toEqual([s.x + 1, s.y]);
@@ -355,7 +356,7 @@ describe('in every settlement', () => {
       return (walk[t >> 3] & (0x80 >> (t & 7))) === 0;
     };
     const someone = (x: number, y: number): boolean =>
-      s.actors.some((a, k) => k > 0 && a.tile !== 0 && a.x === x && a.y === y && a.z === s.level);
+      actorList(g).some((a, k) => k > 0 && a.tile !== 0 && a.x === x && a.y === y && a.z === s.level);
     let checked = 0;
     let stepped = 0;
     let boxed = 0;
@@ -375,7 +376,7 @@ describe('in every settlement', () => {
           const [px, py] = [me.x + dx, me.y + dy];
           if (!walkable(px, py) || someone(px, py)) continue;
           Object.assign(s, { x: px, y: py });
-          Object.assign(s.actors[0], { x: px, y: py, z: s.level });
+          Object.assign(party(g), { x: px, y: py, z: s.level });
           const eligible = besideParty(g).includes(i);
           const [x0, y0] = [me.x, me.y];
           const open = [
@@ -397,7 +398,7 @@ describe('in every settlement', () => {
             expect(apart(me.x, me.y, x0, y0)).toBe(1);
             expect(apart(me.x, me.y, px, py)).toBeGreaterThanOrEqual(2);
             expect(open.map((o) => o.join(','))).toContain(`${me.x},${me.y}`);
-            const a = s.actors[me.actor];
+            const a = actor(g, me.actor);
             expect([a.x, a.y]).toEqual([me.x, me.y]);
             placeAt(g, i, x0, y0); // back, for the next square
           } else {

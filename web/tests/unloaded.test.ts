@@ -7,6 +7,7 @@ import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { canReady, readyPurchase } from '../src/game/zstats.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 const [BOW, ARROWS, CROSSBOW, QUARRELS, MAGIC_BOW] = [0x1a, 0x1b, 0x1c, 0x1d, 0x24];
 
@@ -54,9 +55,9 @@ describe('a bow with no arrows', () => {
     Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff, partySize: 1 });
     for (const c of g.combat) c.flags = 0;
     Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1 });
-    Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
     Object.assign(g.combat[6], { who: 0x14, x: 3, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
-    Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 3, y: 5, z: 0 });
+    Object.assign(actor(g, 7), { tile: 0x90, anim: 0x90, x: 3, y: 5, z: 0 });
     s.equipment.fill(0);
     s.members[0].equips.fill(0xff);
     s.members[0].equips[2] = BOW;
@@ -74,9 +75,9 @@ describe('a bow with no arrows', () => {
     Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff });
     for (const c of g.combat) c.flags = 0;
     Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1 });
-    Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
     Object.assign(g.combat[6], { who: 0x14, x: 6, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
-    Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 6, y: 5, z: 0 });
+    Object.assign(actor(g, 7), { tile: 0x90, anim: 0x90, x: 6, y: 5, z: 0 });
     const e = s.members[0].equips;
     [e[0], e[2], e[3]] = [0xff, BOW, 0xff];
     g.commandPrompt = 'combat';
@@ -109,9 +110,9 @@ describe('a bow with no arrows', () => {
     Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff });
     for (const c of g.combat) c.flags = 0;
     Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1, dex: 10 });
-    Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
     Object.assign(g.combat[6], { who: 0x14, x: 3, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
-    Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 3, y: 5, z: 0 });
+    Object.assign(actor(g, 7), { tile: 0x90, anim: 0x90, x: 3, y: 5, z: 0 });
     const e = s.members[0].equips;
     [e[0], e[2], e[3]] = [0x03, BOW, 0xff]; // Spiked Helm; Bow
     s.equipment[ARROWS] = 0;
@@ -134,9 +135,9 @@ describe('a bow with no arrows', () => {
       Object.assign(s, { mapId: 0xff, combatTurn: 0, townAir: 0xff, partySize: 1 });
       for (const c of g.combat) c.flags = 0;
       Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1 });
-      Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+      Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
       Object.assign(g.combat[6], { who: 0x14, x: 8, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
-      Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 8, y: 5, z: 0 });
+      Object.assign(actor(g, 7), { tile: 0x90, anim: 0x90, x: 8, y: 5, z: 0 });
       s.equipment.fill(0);
       s.equipment[0x1e] = 1; // a long sword in the pack
       s.members[0].str = 30;

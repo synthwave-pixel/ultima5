@@ -4,6 +4,7 @@ import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 import { fly, Landed } from './pilot.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** The development build's auto kill: a fight is won the moment it is the party's turn, and nothing was pressed for it. */
 describe('auto kill', () => {
@@ -33,7 +34,7 @@ describe('auto kill', () => {
     });
     p.log = '';
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     g.autoKill = true;
     // Pressed until the field is won - B, which strikes no blow; how the party then leaves it (by B, or past the
     // treasure a rat may have dropped) is not this test's.

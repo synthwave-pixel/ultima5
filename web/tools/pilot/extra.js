@@ -243,8 +243,7 @@
     return undefined;
   };
   B.stepToward = (me, targets) => {
-    const s = g.s;
-    const mine = s.actors[me.actor].tile;
+    const mine = window.u5.table.actor(g, me.actor).tile;
     const blocked = new Set(g.combat.filter((c) => c !== me && c.flags && !(c.flags & 0x20)).map((c) => c.y * 11 + c.x));
     const goal = new Set(targets.map((t) => t.c.y * 11 + t.c.x));
     const start = me.y * 11 + me.x;

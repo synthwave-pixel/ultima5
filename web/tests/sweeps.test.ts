@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor } from '../src/game/actors.ts';
 import { arenaFight } from '../src/game/combat.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
@@ -106,7 +106,7 @@ describe('the sweeps', () => {
       const s = g.s;
       Object.assign(s, { mapId: 0, level: 0, x: 86, y: 110 });
       const foe = freeActor(g);
-      Object.assign(s.actors[foe], { tile: 0x90, anim: 0x90, x: 86, y: 109, z: 0, b5: 0 }); // giant rats
+      Object.assign(actor(g, foe), { tile: 0x90, anim: 0x90, x: 86, y: 109, z: 0, b5: 0 }); // giant rats
       const gold0 = s.gold;
       const play = careful(g);
       let cast = false;

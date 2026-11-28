@@ -4,10 +4,8 @@ import { CF } from '../src/game/game.ts';
 import { Status } from '../src/game/save.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
+import { clearActors, copyActorTable } from '../src/game/actors.ts';
 import { newGame } from './helpers.ts';
-
-/** The world's actors as the game holds them live (the chunk of the save the world's files are loaded into). */
-const ACTORS = [0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100] as const;
 
 const game = () => {
   const { g, p } = newGame();
@@ -90,29 +88,29 @@ describe('the cheats', () => {
   it('take a developer beneath a dungeon in the Underworld, the worlds’ creatures changed over', async () => {
     const { g, p } = game();
     Object.assign(g.s, { mapId: 0, level: 0, x: 86, y: 110 });
-    const brit = g.s.b.slice(...ACTORS);
+    const brit = copyActorTable(g);
     const under = g.ool.under.slice();
     const cheat = cheatsFor(g, true).find((c) => c.label === 'Go to Underworld...')!;
     pick(g, p, 'Shame');
     await expect(Promise.resolve(cheat.apply(g))).rejects.toBeInstanceOf(Relocate);
     const shame = g.data.locations[0x25];
     expect([g.s.mapId, g.s.level, g.s.x, g.s.y]).toEqual([0, 0xff, shame.x, shame.y]);
-    expect([...g.s.b.slice(...ACTORS)]).toEqual([...under]);
+    expect([...copyActorTable(g)]).toEqual([...under]);
     expect([...g.ool.brit]).toEqual([...brit]);
   });
 
   it('bring Britannia’s creatures back on leaving a dungeon from deep down, not the Underworld’s', async () => {
     const { g } = game();
     Object.assign(g.s, { mapId: 0, level: 0, x: 86, y: 110 });
-    const brit = g.s.b.slice(...ACTORS);
+    const brit = copyActorTable(g);
     const { stashWorldActors } = await import('../src/game/outdoors.ts');
     stashWorldActors(g); // going in, as enterDungeon does
     Object.assign(g.s, { mapId: 0x21, level: 5, x: 1, y: 1 });
-    g.s.b.fill(0, ...ACTORS); // the dungeon's own use of the space
+    clearActors(g, 0); // the dungeon's own use of the space
     const exit = cheatsFor(g, true).find((c) => c.label === 'Exit dungeon')!;
     await expect(Promise.resolve(exit.apply(g))).rejects.toBeInstanceOf(Relocate);
     expect(g.s.level).toBe(0);
-    expect([...g.s.b.slice(...ACTORS)]).toEqual([...brit]);
+    expect([...copyActorTable(g)]).toEqual([...brit]);
   });
 });
 

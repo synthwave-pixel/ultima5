@@ -4,6 +4,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { stashWorldActors } from '../src/game/outdoors.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 describe('someone found asleep', () => {
   it('is noted in the journal with the hours they are up, from their own day', async () => {
@@ -14,7 +15,7 @@ describe('someone found asleep', () => {
     Object.assign(s, { mapId: 7, level: 0, x: 15, y: 30, hour: 12 });
     await enterTown(g, true);
     // The sickly bard of New Magincia is abed at noon: stand south of him and talk north.
-    const abed = s.actors[s.npcs[6].actor];
+    const abed = actor(g, s.npcs[6].actor);
     Object.assign(s, { x: abed.x, y: abed.y + 1 });
     p.keys.push(...keys('T', K.Up));
     await townLoop(g).catch((e: Error) => {

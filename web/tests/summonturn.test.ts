@@ -4,6 +4,7 @@ import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Issue #20: a daemon summoned from a scroll (magic.ts summonDaemon) is a creature bound to the party's side, its
@@ -23,7 +24,7 @@ it("plays a summoned daemon's turn in the Standard look", async () => {
   });
   const s = g.s;
   const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-  const foe = s.actors[1];
+  const foe = actor(g, 1);
   foe.tile = foe.anim = 0x40 + rat * 4;
   [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
   let daemon = -1;
@@ -65,7 +66,7 @@ it("refuses the members' commands on a summoned daemon's turn, and asks again", 
   });
   const s = g.s;
   const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-  const foe = s.actors[1];
+  const foe = actor(g, 1);
   foe.tile = foe.anim = 0x40 + rat * 4;
   [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
   const commands = ['C', 'G', 'J', 'O', 'R', 'S', 'U', 'W'].map((k) => k.charCodeAt(0));

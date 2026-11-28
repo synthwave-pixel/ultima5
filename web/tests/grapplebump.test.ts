@@ -5,6 +5,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { T } from '../src/game/tiles.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * The grapple's mountains walked into (the port's): climbed on foot, as Klimb climbs them; ridden, flown or sailed into,
@@ -22,7 +23,7 @@ describe('a mountain walked into with the grapple', () => {
     setTileAt(g, at[0], at[1], T.Grass);
     setTileAt(g, at[0] + 1, at[1], 0x0c);
     Object.assign(g.s, { partyTile, grapple });
-    for (let i = 1; i < 0x20; i++) g.s.actors[i].tile = 0; // nothing about
+    for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0; // nothing about
     g.s.members.forEach((m) => (m.dex = 40)); // none falls
     return { ...made, at };
   };

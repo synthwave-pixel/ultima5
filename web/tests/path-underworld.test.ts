@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readBritannia, readUnderworld } from '../src/data/maps.ts';
-import { canEnter } from '../src/game/actors.ts';
+import { actor, canEnter, party } from '../src/game/actors.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward, runGame } from '../src/game/run.ts';
@@ -328,7 +328,7 @@ describe('the path through the Underworld', () => {
     expect(s.d58d0[7]).toBe(0);
 
     // The last quest answered at the Codex, the word is read from its page.
-    for (let i = 1; i < 32; i++) s.actors[i].tile = s.actors[i].anim = 0;
+    for (let i = 1; i < 32; i++) actor(g, i).tile = actor(g, i).anim = 0;
     Object.assign(s, { mapId: 0, level: 0, x: codex % 256, y: codex >> 8 });
     s.questActive = 0x80;
     s.questDone = 0x7f;
@@ -350,7 +350,7 @@ describe('the path through the Underworld', () => {
     await play(g, p, K.Down, 'E');
     expect(p.log).toMatch(/Attacked at\s+entrance!/);
     expect(s.mapId).toBe(0xff); // on the field, facing a Shadowlord, not in Doom
-    expect(g.combat.some((c) => c.flags && s.actors[c.actor].tile === 0xfc)).toBe(true);
+    expect(g.combat.some((c) => c.flags && actor(g, c.actor).tile === 0xfc)).toBe(true);
   });
 
   it('lets the party into Doom once the three Shadowlords are destroyed', async () => {
@@ -479,11 +479,11 @@ describe('the path through the Underworld', () => {
     }
     expect(at).toBeGreaterThanOrEqual(0);
     stashWorldActors(g);
-    for (let i = 1; i < 32; i++) s.actors[i].tile = s.actors[i].anim = 0;
+    for (let i = 1; i < 32; i++) actor(g, i).tile = actor(g, i).anim = 0;
     Object.assign(s, { mapId: 0, level: 0, x: at % 256, y: at >> 8, partyTile: 0x25 }); // a frigate, sails furled
-    s.actors[0].b5 = 99; // its hull
+    party(g).b5 = 99; // its hull
     // A whirlpool (actor tile 0xec, as MAINOUT_0e4e spawns them on deep water) two squares east of the ship.
-    const pool = s.actors[1];
+    const pool = actor(g, 1);
     Object.assign(pool, { tile: 0xec, anim: 0xec, x: s.x + 2, y: s.y, z: 0 });
     // Rowed a square east, beside it: the turn spent, the whirlpool reaches the ship before it drifts (MAINOUT_1a60).
     // (Rowing on into it is only blocked, and a blocked move spends no turn, in the original as here: the whirlpool

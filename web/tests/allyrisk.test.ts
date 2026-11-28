@@ -3,6 +3,7 @@ import { allyRisks, attackCommand, charm, enemy, strayRisk } from '../src/game/c
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 const RAT = 0x14;
 const BOW = 0x1a;
@@ -25,7 +26,7 @@ function fight(rats: [number, number][], seed = 1234) {
   s.equipment[ARROWS] = 20;
   const place = (i: number, at: [number, number], flags: number, who: number, hp: number, tile: number): void => {
     Object.assign(g.combat[i], { who, x: at[0], y: at[1], flags, hp, dex: 10, actor: i + 1 });
-    Object.assign(s.actors[i + 1], { tile, anim: tile, x: at[0], y: at[1], z: 0 });
+    Object.assign(actor(g, i + 1), { tile, anim: tile, x: at[0], y: at[1], z: 0 });
   };
   place(0, [2, 5], CF.Player, 0, 0, 0x1c);
   place(1, [7, 5], CF.Player, 1, 0, 0x1c);

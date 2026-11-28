@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { setActor } from '../src/game/actors.ts';
+import { actor, actorList, party, setActor } from '../src/game/actors.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { lookCommand, nightSky, viewGem } from '../src/game/look.ts';
 import { enterWorld, falls, hullDamage, monstersTurn, outdoorsLoop } from '../src/game/outdoors.ts';
@@ -19,9 +19,9 @@ const atSea = (partyTile = 0x20, x = 20, y = 20): Made => {
   const { g } = made;
   Object.assign(g.s, { mapId: 0, level: 0, x, y, partyTile, hour: 12, minute: 0 });
   enterWorld(g);
-  for (let i = 1; i < 0x20; i++) g.s.actors[i].tile = 0;
+  for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0;
   g.s.wind = 0;
-  Object.assign(g.s.actors[0], { b5: 200, b7: 0 });
+  Object.assign(party(g), { b5: 200, b7: 0 });
   return made;
 };
 
@@ -52,8 +52,8 @@ describe('a ship at sea', () => {
       pirate(made, x, y);
       await monstersTurn(made.g);
       expect(made.p.log, `from ${x},${y}`).toContain('BOOOM');
-      expect(made.g.s.actors[0].b5, `from ${x},${y}`).toBeLessThan(200);
-      expect(made.g.s.actors[0].b5).toBeGreaterThanOrEqual(170); // 1-30 a shot
+      expect(party(made.g).b5, `from ${x},${y}`).toBeLessThan(200);
+      expect(party(made.g).b5).toBeGreaterThanOrEqual(170); // 1-30 a shot
     }
   });
 
@@ -69,7 +69,7 @@ describe('a ship at sea', () => {
       pirate(made, x, y);
       await monstersTurn(made.g);
       expect(made.p.log, `from ${x},${y}`).not.toContain('BOOOM');
-      expect(made.g.s.actors[0].b5, `from ${x},${y}`).toBe(200);
+      expect(party(made.g).b5, `from ${x},${y}`).toBe(200);
     }
   });
 
@@ -82,10 +82,10 @@ describe('a ship at sea', () => {
     ] as const) {
       const made = atSea();
       pirate(made, x, y);
-      made.g.s.actors[5].anim = beam[0] === 0x2d ? 0x2c : 0x2d; // bows to the party, as it came
+      actor(made.g, 5).anim = beam[0] === 0x2d ? 0x2c : 0x2d; // bows to the party, as it came
       await monstersTurn(made.g);
-      expect(beam, `from ${x},${y}`).toContain(made.g.s.actors[5].anim);
-      expect(made.g.s.actors[5].tile).toBe(0x2c);
+      expect(beam, `from ${x},${y}`).toContain(actor(made.g, 5).anim);
+      expect(actor(made.g, 5).tile).toBe(0x2c);
     }
   });
 
@@ -96,7 +96,7 @@ describe('a ship at sea', () => {
     setTileAt(made.g, 20, 19, 0x3d);
     await monstersTurn(made.g);
     expect(made.p.log).toContain('BOOOM');
-    expect(made.g.s.actors[0].b5).toBe(200);
+    expect(party(made.g).b5).toBe(200);
   });
 
   it('is breathed on by a dragon or a serpent within three squares, one time in eight', async () => {
@@ -107,7 +107,7 @@ describe('a ship at sea', () => {
         made.g.random = (lo, hi) => (lo === 0 && hi === 7 ? roll : real(lo, hi));
         setActor(made.g, 5, tile, tile, 20, 18, 0, 0);
         await monstersTurn(made.g);
-        expect(made.g.s.actors[0].b5 < 200, `tile ${tile} roll ${roll}`).toBe(roll === 0);
+        expect(party(made.g).b5 < 200, `tile ${tile} roll ${roll}`).toBe(roll === 0);
       }
     }
   });
@@ -123,7 +123,7 @@ describe('a ship at sea', () => {
       await walk(made, K.Right);
       expect(made.p.log).toContain(word);
       expect(made.g.s.x).toBe(20);
-      expect(made.g.s.actors[0].b5).toBeLessThan(200);
+      expect(party(made.g).b5).toBeLessThan(200);
       expect(made.g.s.sailing).toBe(0);
     }
   });
@@ -131,7 +131,7 @@ describe('a ship at sea', () => {
   it('is sunk where the hull gives out: to the skiffs aboard, a carpet, or the sea', async () => {
     // A hull of one cannot take any shot.
     const skiff = atSea(0x21);
-    Object.assign(skiff.g.s.actors[0], { b5: 1, b7: 2 });
+    Object.assign(party(skiff.g), { b5: 1, b7: 2 });
     await hullDamage(skiff.g);
     expect(skiff.p.log).toContain('Ship sunk!');
     expect(skiff.p.log).toContain('Abandon ship!');
@@ -139,14 +139,14 @@ describe('a ship at sea', () => {
     expect(skiff.g.s.members.every((m) => m.status !== Status.Dead)).toBe(true);
 
     const carpet = atSea(0x21);
-    carpet.g.s.actors[0].b5 = 1;
+    party(carpet.g).b5 = 1;
     carpet.g.s.carpets = 2;
     await hullDamage(carpet.g);
     expect(carpet.g.s.carpets).toBe(1);
     expect([0x14, 0x15]).toContain(carpet.g.s.partyTile);
 
     const drowned = atSea(0x21);
-    drowned.g.s.actors[0].b5 = 1;
+    party(drowned.g).b5 = 1;
     drowned.g.s.carpets = 0;
     await hullDamage(drowned.g);
     expect(drowned.p.log).toContain('DROWNING!!!');
@@ -158,7 +158,7 @@ describe('a ship at sea', () => {
     const made = atSea(0x1c);
     const before = made.g.s.members.map((m) => m.hp);
     await hullDamage(made.g);
-    expect(made.g.s.actors[0].b5).toBe(200);
+    expect(party(made.g).b5).toBe(200);
     for (let i = 0; i < made.g.s.partySize; i++) expect(made.g.s.members[i].hp, `member ${i}`).toBeLessThan(before[i]);
   });
 
@@ -273,7 +273,7 @@ describe('Look', () => {
   };
   const keysOf = (...ks: (number | string)[]): number[] =>
     ks.flatMap((k) => (typeof k === 'string' ? [...k].map((c) => c.charCodeAt(0)) : [k]));
-  const horsesBeside = ({ g }: Made): number => g.s.actors.filter((a, i) => i > 0 && a.tile === 0x10 && a.x === 16 && a.y === 20).length;
+  const horsesBeside = ({ g }: Made): number => actorList(g).filter((a, i) => i > 0 && a.tile === 0x10 && a.x === 16 && a.y === 20).length;
 
   describe('a well', () => {
     it('grants a horse at the wells in Paws and Empath Abbey, for the coin it is wished on', async () => {

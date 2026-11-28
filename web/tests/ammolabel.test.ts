@@ -3,6 +3,7 @@ import { attackCommand, enemy, keepsLastThrown, spendAmmo, weaponLabel } from '.
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 const RAT = 0x14;
 const [BOW, ARROWS, CROSSBOW, QUARRELS, SPEAR, OIL, SWORD] = [0x1a, 0x1b, 0x1c, 0x1d, 0x15, 0x13, 0x1e];
@@ -16,7 +17,7 @@ function fight(weapon: number, seed = 1) {
   for (const c of g.combat) c.flags = 0;
   const put = (i: number, at: [number, number], flags: number, who: number, hp: number, tile: number): void => {
     Object.assign(g.combat[i], { who, x: at[0], y: at[1], flags, hp, dex: 10, actor: i + 1 });
-    Object.assign(s.actors[i + 1], { tile, anim: tile, x: at[0], y: at[1], z: 0 });
+    Object.assign(actor(g, i + 1), { tile, anim: tile, x: at[0], y: at[1], z: 0 });
   };
   put(0, [2, 5], CF.Player, 0, 0, 0x1c);
   put(6, [6, 5], CF.Monster, RAT, enemy(g, RAT).maxHp, 0x40 + RAT * 4);
@@ -55,12 +56,12 @@ describe('what a weapon spends, before the blow', () => {
   it('counts what a member has to throw: the one in hand and the spares', async () => {
     // (Y throws only at a neighbour - a spear there strikes from the hand; flaming oil is thrown.)
     const { g, p, s } = fight(SPEAR);
-    g.combat[6].x = s.actors[7].x = 3;
+    g.combat[6].x = actor(g, 7).x = 3;
     s.equipment[SPEAR] = 1;
     await attackCommand(g, 0, 1);
     expect(p.log).toContain('Spear x2:');
     const o = fight(OIL);
-    o.g.combat[6].x = o.s.actors[7].x = 3;
+    o.g.combat[6].x = actor(o.g, 7).x = 3;
     o.s.equipment[OIL] = 4;
     await attackCommand(o.g, 0, 1);
     expect(o.p.log).toContain('Flaming Oil x5:');
@@ -68,7 +69,7 @@ describe('what a weapon spends, before the blow', () => {
 
   it('says nothing more for a weapon that spends nothing', async () => {
     const { g, p } = fight(SWORD);
-    g.combat[6].x = g.s.actors[7].x = 3; // beside
+    g.combat[6].x = actor(g, 7).x = 3; // beside
     await attackCommand(g, 0, 1);
     expect(p.log).toContain('Long Sword:');
   });
@@ -110,7 +111,7 @@ describe('what a weapon spends, before the blow', () => {
 
   it('says the last flask of oil is gone as it leaves the hand empty', async () => {
     const { g, p, s } = fight(OIL);
-    g.combat[6].x = s.actors[7].x = 3; // beside: a flask is thrown there too
+    g.combat[6].x = actor(g, 7).x = 3; // beside: a flask is thrown there too
     s.equipment[OIL] = 0;
     await attackCommand(g, 0, 1);
     expect(p.log).toContain('Flaming Oil x1:');

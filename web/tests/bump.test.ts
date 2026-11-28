@@ -5,6 +5,7 @@ import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Bump to attack (controller play): walking into a foe strikes it. A member with a weapon in each hand - Iolo
@@ -25,7 +26,7 @@ describe('bump to attack', () => {
       const iolo = s.members.findIndex((m) => m.name === 'Iolo');
       expect(s.members[iolo].equips.filter((e) => e !== 0xff).length).toBeGreaterThanOrEqual(4); // two weapons, two armour
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      const foe = s.actors[1];
+      const foe = actor(g, 1);
       foe.tile = foe.anim = 0x40 + rat * 4;
       [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
 
@@ -81,7 +82,7 @@ describe('bump to attack', () => {
     });
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const inner = fighter(g);
@@ -130,7 +131,7 @@ describe('bump to attack', () => {
     const s = g.s;
     const iolo = s.members.findIndex((m) => m.name === 'Iolo');
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const fight = fighter(g);
@@ -197,7 +198,7 @@ describe('bump to attack', () => {
     const s = g.s;
     const iolo = s.members.findIndex((m) => m.name === 'Iolo');
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const fight = fighter(g);
@@ -269,7 +270,7 @@ describe('bump to attack', () => {
       const s = g.s;
       const iolo = s.members.findIndex((m) => m.name === 'Iolo');
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      const foe = s.actors[1];
+      const foe = actor(g, 1);
       foe.tile = foe.anim = 0x40 + rat * 4;
       [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
       const fight = fighter(g);
@@ -318,7 +319,7 @@ describe('bump to attack', () => {
     const s = g.s;
     g.options.autoAim = autoAim;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const inner = fighter(g);
@@ -381,7 +382,7 @@ describe('bump to attack', () => {
     });
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const inner = fighter(g);

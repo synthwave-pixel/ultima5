@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor } from '../src/game/actors.ts';
 import { attackCombat, campOutdoors, removeCombatant } from '../src/game/combat.ts';
 import { attackInDungeon } from '../src/game/dungeon.ts';
 import { CF } from '../src/game/game.ts';
@@ -50,7 +50,7 @@ describe('the Battle karma, fight by fight', () => {
   const fightOrcs = async (made: Made): Promise<void> => {
     const { g } = made;
     const foe = freeActor(g);
-    Object.assign(g.s.actors[foe], { tile: 0xc0, anim: 0xc0, x: g.s.x, y: g.s.y - 1, z: g.s.level, b5: 0 });
+    Object.assign(actor(g, foe), { tile: 0xc0, anim: 0xc0, x: g.s.x, y: g.s.y - 1, z: g.s.level, b5: 0 });
     await attackCombat(g, foe);
   };
   const win = (g: Made['g']): void => {
@@ -114,7 +114,7 @@ describe('the Battle karma, fight by fight', () => {
     g.s.dungeon.set(g.data.files.get('DUNGEON.DAT').subarray(0, 0x200));
     g.s.dungeon.fill(0x00); // open floor all round
     Object.assign(g.s, { mapId: 0x21, level: 0, x: 1, y: 1, facing: 1, d6602: 5, d58a7: 0xff });
-    Object.assign(g.s.actors[1], { tile: 0xc0, anim: 0xc0, x: 2, y: 1, z: 0, b5: 0x20 }); // orcs, ahead to the east
+    Object.assign(actor(g, 1), { tile: 0xc0, anim: 0xc0, x: 2, y: 1, z: 0, b5: 0x20 }); // orcs, ahead to the east
     playing(made, win);
     await attackInDungeon(g);
     expect(made.p.log).toContain('VICTORY');

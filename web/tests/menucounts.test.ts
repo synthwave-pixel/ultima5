@@ -5,6 +5,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { enterTown } from '../src/game/town.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /** In a towne beside a locked door, holding `torches`, `gems` and `keys`: the command menu's lines and which are greyed. */
 async function menu(input: 'controller' | 'letters', torches: number, gems: number, keys: number) {
@@ -13,7 +14,7 @@ async function menu(input: 'controller' | 'letters', torches: number, gems: numb
   Object.assign(g.s, { mapId: 1, level: 0, x: 15, y: 30, hour: 12 });
   await enterTown(g, true);
   const s = g.s;
-  for (const a of s.actors.slice(1)) a.tile = 0;
+  for (const a of actorList(g).slice(1)) a.tile = 0;
   Object.assign(s, { x: 10, y: 10, torches, gems, keys });
   for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) setTileAt(g, 10 + dx, 10 + dy, 0x44);
   setTileAt(g, 10, 9, 0xb9); // a locked door: Jimmy

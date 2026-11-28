@@ -7,7 +7,7 @@
  */
 
 import { Game } from './game.ts';
-import type { Actor } from './save.ts';
+import { Actor, type Save } from './save.ts';
 import { T } from './tiles.ts';
 
 // --- The table itself -------------------------------------------------------------
@@ -20,9 +20,21 @@ export const ACTOR_SLOTS = 32;
 /** The table's place in the save (D_5c5a), as an offset into `Save.b`. */
 const TABLE_AT = 0x5c5a - 0x55a6;
 
+/** Each save's 32 records, views over its bytes, made once per save. */
+const tables = new WeakMap<Save, Actor[]>();
+
+function table(s: Save): Actor[] {
+  let t = tables.get(s);
+  if (!t) {
+    t = Array.from({ length: ACTOR_SLOTS }, (_, i) => new Actor(s.b.subarray(TABLE_AT + i * 8, TABLE_AT + i * 8 + 8)));
+    tables.set(s, t);
+  }
+  return t;
+}
+
 /** The record in slot `i` (0-31); 0 is the party. */
 export function actor(g: Game, i: number): Actor {
-  return g.s.actors[i];
+  return table(g.s)[i];
 }
 
 /** The party's record, slot 0. */
@@ -33,6 +45,11 @@ export function party(g: Game): Actor {
 /** Slots `from` up to (not including) `to`, in order, empty ones included. */
 export function* actorSlots(g: Game, from = 0, to = ACTOR_SLOTS): IterableIterator<[number, Actor]> {
   for (let i = from; i < to; i++) yield [i, actor(g, i)];
+}
+
+/** The 32 records as a fresh array, index = slot (for scans that want an array's methods; the records are live). */
+export function actorList(g: Game): Actor[] {
+  return Array.from(actorSlots(g), ([, a]) => a);
 }
 
 /** Every slot from `from` up emptied. */

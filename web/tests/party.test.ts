@@ -12,6 +12,7 @@ import { animateParty, drawView, lineMembers, partyFigures, setView } from '../s
 import { K } from '../src/game/io.ts';
 import { Colour } from '../src/ui/colours.ts';
 import { gameFiles, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * The party as the ultima3 port's Standard look shows it: members in the colour of their state on the panel (and
@@ -383,7 +384,7 @@ describe('the party, as the Standard look shows it', () => {
     // Mounted on Britannia's grass at noon, nothing about.
     Object.assign(s, { mapId: 0, level: 0, x: 80, y: 100, partyTile: 0x12, hour: 12, minute: 0 });
     enterWorld(g);
-    for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
+    for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0;
     let rider = -1;
     const tile = g.draw.tile.bind(g.draw);
     g.draw.tile = (t, x, y, ...rest) => {

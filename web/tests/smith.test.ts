@@ -5,6 +5,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { talkOffer } from '../src/game/targets.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** Iolo's hut, where a new game begins, the party just south of Smith in his pen (27, 3). */
 async function bySmith(): Promise<{ g: Game; p: FakePlatform }> {
@@ -14,7 +15,7 @@ async function bySmith(): Promise<{ g: Game; p: FakePlatform }> {
   const s = g.s;
   const smith = s.npcs.findIndex((n) => n.fa === 13);
   expect([s.npcs[smith].x, s.npcs[smith].y, s.npcs[smith].z]).toEqual([27, 3, 0]);
-  expect(s.actors[s.npcs[smith].actor].tile & 0xfc).toBe(0x10); // a horse to look at, not a person's figure
+  expect(actor(g, s.npcs[smith].actor).tile & 0xfc).toBe(0x10); // a horse to look at, not a person's figure
   Object.assign(s, { x: 27, y: 4 });
   g.options.input = 'controller';
   return { g, p };

@@ -4,6 +4,7 @@ import { enterWorld } from '../src/game/outdoors.ts';
 import { updateFrame } from '../src/game/frame.ts';
 import { Colour } from '../src/ui/colours.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * A chest's badge (world.ts drawReadings): what its search said, in its top-right corner, the party's reading
@@ -16,8 +17,8 @@ describe("a chest's badge", () => {
     const s = g.s;
     [s.mapId, s.level, s.x, s.y, s.hour] = [0, 0, 82, 106, 12];
     enterWorld(g);
-    for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
-    Object.assign(s.actors[5], { tile: 0x01, anim: 0x01, x: s.x + 1, y: s.y, z: 0, b5: 0x81 });
+    for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0;
+    Object.assign(actor(g, 5), { tile: 0x01, anim: 0x01, x: s.x + 1, y: s.y, z: 0, b5: 0x81 });
     const drawn = (): Map<number, Set<string>> => {
       const px = new Map<number, Set<string>>();
       const d = g.draw;

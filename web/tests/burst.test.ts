@@ -6,6 +6,7 @@ import { castEffect } from '../src/game/magic.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * The Standard look's hits and spells, the ultima3 port's: a burst over the one hit, growing over three frames - red
@@ -30,7 +31,7 @@ describe('hits and spells, as the Standard look shows them', () => {
     const c = g.combat[6];
     c.flags = CF.Monster;
     c.actor = 7;
-    [g.s.actors[7].x, g.s.actors[7].y] = [4, 3];
+    [actor(g, 7).x, actor(g, 7).y] = [4, 3];
     await hitFlash(g, 6);
     expect(bursts).toEqual([
       [4, 3, 1, false],
@@ -66,7 +67,7 @@ describe('hits and spells, as the Standard look shows them', () => {
     const { bursts } = recording(g);
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const spell = 0x2d; // In Flam Hur, a wave of fire

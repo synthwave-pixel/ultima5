@@ -5,6 +5,7 @@ import { attackCombat } from '../src/game/combat.ts';
 import { K } from '../src/game/io.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * A fight's tips (tips.ts COMBAT_TIPS): one a fight, in their order, each once a character - worded for the controller
@@ -77,7 +78,7 @@ describe("a fight's tips", () => {
       const from = p.log.length;
       const s = g.s;
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      const foe = s.actors[1];
+      const foe = actor(g, 1);
       foe.tile = foe.anim = 0x40 + rat * 4;
       [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
       const inner = fighter(g);

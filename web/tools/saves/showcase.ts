@@ -14,7 +14,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { actorTileAt, canEnter } from '../../src/game/actors.ts';
+import { actor, actorTileAt, canEnter } from '../../src/game/actors.ts';
 import type { Game } from '../../src/game/game.ts';
 import { unstashWorldActors } from '../../src/game/outdoors.ts';
 import { journeyOnward } from '../../src/game/run.ts';
@@ -232,7 +232,7 @@ const SHOWCASES: Showcase[] = [
       party(g, { stage: 'mid', level: 5, join: ['Dupre', 'Jaana'], gold: 1200, food: 400 });
       outdoors(g, 138, 158, 13);
       g.s.partyTile = 0x20;
-      g.s.actors[0].b5 = 99; // the hull, whole
+      actor(g, 0).b5 = 99; // the hull, whole
     },
   },
   {

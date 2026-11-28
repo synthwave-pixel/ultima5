@@ -4,6 +4,7 @@ import type { Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /**
  * Where the aim starts: at the foe last struck, while it stands; with none, at the nearest foe in reach, the weakest
@@ -15,10 +16,10 @@ describe('where the aim starts', () => {
     const { g, p } = newGame(1);
     journeyOnward(g);
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
     const me = placeCombatant(g, 0, 1, 5, 8, 0);
-    g.s.actors[g.combat[me].actor].b7 = 0xff; // no foe struck yet
+    actor(g, g.combat[me].actor).b7 = 0xff; // no foe struck yet
     const at = foes.map(([x, y, hp]) => {
       const j = placeCombatant(g, rat, 0, x, y, 0);
       g.combat[j].hp = hp;
@@ -40,7 +41,7 @@ describe('where the aim starts', () => {
 
   it('starts on the foe last struck while it stands, near or not', async () => {
     const { g, p, me, at } = field([5, 3, 1], [4, 6, 4]);
-    g.s.actors[g.combat[me].actor].b7 = at[0];
+    actor(g, g.combat[me].actor).b7 = at[0];
     expect(await start(g, p, me, 8)).toEqual([5, 3]);
   });
 

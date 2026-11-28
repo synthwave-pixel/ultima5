@@ -4,6 +4,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { Status } from '../src/game/save.ts';
 import { setView } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /**
  * Issue #40: auto combat shot at a foe behind rocks, the rocks taking the shot turn after turn, though another foe
@@ -30,7 +31,7 @@ describe('auto combat aims along a clear line', () => {
         g.combatMap[y * 32 + x] = 0x4f;
         setView(g, x, y, 0x4f);
       }
-      for (const a of s.actors) a.tile = a.anim = 0;
+      for (const a of actorList(g)) a.tile = a.anim = 0;
       for (const c of g.combat) Object.assign(c, { flags: 0, x: 0x63, y: 0x63 });
       const m = s.members[0];
       Object.assign(m, { status: Status.Good, hp: 50 });
@@ -38,14 +39,14 @@ describe('auto combat aims along a clear line', () => {
       m.equips[2] = 0x1c; // a crossbow
       s.equipment[0x1d] = 20;
       const me = placeCombatant(g, 0, 1, 2, 5, 0);
-      s.actors[g.combat[me].actor].tile = 0x48;
+      actor(g, g.combat[me].actor).tile = 0x48;
       const behind = placeCombatant(g, 0x10, 0, 6, 5, 0); // four squares off, behind the rocks
       const open = placeCombatant(g, 0x10, 0, 2, 9, 0); // four squares off, in the open
-      s.actors[g.combat[behind].actor].tile = s.actors[g.combat[open].actor].tile = 0x90;
+      actor(g, g.combat[behind].actor).tile = actor(g, g.combat[open].actor).tile = 0x90;
       // The one behind the rocks the weaker, so the nearest first (the aim's start) would be it.
       g.combat[behind].hp = 1;
       g.combat[open].hp = 30;
-      if (lastStruck) s.actors[g.combat[me].actor].b7 = behind;
+      if (lastStruck) actor(g, g.combat[me].actor).b7 = behind;
       s.combatTurn = me;
       Object.assign(g.options, { autoCombat: 'all', input: 'controller' });
       g.commandPrompt = 'combat';

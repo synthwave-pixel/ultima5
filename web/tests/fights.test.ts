@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor } from '../src/game/actors.ts';
 import { arenaFight } from '../src/game/combat.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { K } from '../src/game/io.ts';
@@ -45,7 +45,7 @@ async function fights(kind: number, effects: 'modern' | 'classic', n: number, au
     const s = g.s;
     Object.assign(s, { mapId: 0, level: 0, x: 86, y: 110 });
     const foe = freeActor(g);
-    Object.assign(s.actors[foe], { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
+    Object.assign(actor(g, foe), { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
     const play = careful(g);
     let presses = 0;
     p.next = () => {

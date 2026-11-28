@@ -3627,7 +3627,7 @@ async function apparition(g: Game): Promise<void> {
 /** The old man's gifts to each of the party - healed, raised a level where earned - and his word on their karma. */
 async function blessings(
   g: Game,
-  man: Game['s']['actors'][number],
+  man: ReturnType<typeof actor>,
   snd: Game['sound'] | null,
   pause: (g: Game) => Promise<boolean>,
 ): Promise<void> {

@@ -2,7 +2,9 @@
 // Reads the game's state through window.u5 to plan; never writes it.
 (() => {
   const g = window.u5.g,
-    SC = window.u5.screen;
+    SC = window.u5.screen,
+    // The actor table, reached only through actors.ts's functions (main.ts puts them on window.u5).
+    table = window.u5.table;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // The pane this runs in is often hidden, and the game sleeps while hidden: keep it awake, and silent.
   Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
@@ -180,11 +182,18 @@
     (t >= 0xc4 && t <= 0xc7);
   // The game's own rule for a walker where it is to hand (doors that are not locked open when walked into).
   const okT = (t) =>
-    B.actors ? (B.actors.canEnter(g, 0x1c, t) && t !== 0xb9 && t !== 0xbb && t !== 0x8c) || DOORS.includes(t) || t === 0x4e : okT0(t);
+    B.actorRules
+      ? (B.actorRules.canEnter(g, 0x1c, t) && t !== 0xb9 && t !== 0xbb && t !== 0x8c) || DOORS.includes(t) || t === 0x4e
+      : okT0(t);
   B.path = (tx, ty, adjacent = true) => {
     const s = g.s,
       mm = g.map;
-    const occ = new Set(s.actors.filter((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level).map((a) => a.y * 32 + a.x));
+    const occ = new Set(
+      table
+        .actorList(g)
+        .filter((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level)
+        .map((a) => a.y * 32 + a.x),
+    );
     const start = s.y * 32 + s.x;
     const prev = new Map([[start, -1]]);
     const q = [start];
@@ -232,7 +241,7 @@
     const door = DOORS.includes(g.map[tgt]);
     await B.press(k);
     // A square that would not be entered is remembered as such - unless someone was standing on it.
-    const someone = s.actors.some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.y * 32 + a.x === tgt);
+    const someone = table.actorList(g).some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.y * 32 + a.x === tgt);
     if (g.s.x === bx && g.s.y === by && !door && !someone && !B.menu() && g.commandPrompt === 'town')
       B.bad.add(s.mapId + ':' + s.level + ':' + tgt);
   };
@@ -253,7 +262,7 @@
     return [...Array(32).keys()]
       .filter((i) => i > 0 && s.npcTypes[i] && s.npcs[i].actor)
       .map((i) => {
-        const a = s.actors[s.npcs[i].actor];
+        const a = table.actor(g, s.npcs[i].actor);
         return [i, s.npcTypes[i].toString(16), s.npcs[i].fa, a.x, a.y, a.z];
       });
   };
@@ -347,7 +356,7 @@
     for (let n = 0; n < 6; n++) {
       const npc = s.npcs[i];
       // Not on this floor: their place is known from the table, and the floor from it.
-      const a = npc.actor ? s.actors[npc.actor] : { x: npc.x, y: npc.y, z: npc.z, tile: 1 };
+      const a = npc.actor ? table.actor(g, npc.actor) : { x: npc.x, y: npc.y, z: npc.z, tile: 1 };
       if (!a.tile) return 'not here';
       const r = await B.seek(a.x, a.y, sgn(a.z), true, 300);
       if (r[r.length - 1] !== 'there') return r;
@@ -404,7 +413,7 @@
     let bumps = 0;
     for (let n = 0; n < 400 && alive(gen); n++) {
       const s = g.s;
-      const a = s.actors[s.npcs[i].actor];
+      const a = table.actor(g, s.npcs[i].actor);
       if (!a || !a.tile) return 'gone';
       if (a.z !== s.level) return 'on level ' + a.z;
       if (B.menu()) break;
@@ -433,9 +442,9 @@
   };
 
   // --- the open country ---
-  B.actors = null;
+  B.actorRules = null;
   import('/src/game/actors.ts').then((m) => {
-    B.actors = m;
+    B.actorRules = m;
   });
   // The surface, or the Underworld beneath it: whichever the party is on (B.world follows the level).
   let surface = null,
@@ -534,7 +543,11 @@
         const climb = (s.partyTile === 0x1c || (s.partyTile & 0xfe) === 0x14) && s.grapple !== 0 && W[n] === 0x0c ? 6 : 0;
         // Afoot with a carpet in the pack, water and rivers are crossed by unrolling it (a few turns' cost).
         const unroll =
-          s.partyTile === 0x1c && s.carpets > 0 && W[c] !== 0x0c && !B.actors.canEnter(g, 0x1c, W[n]) && B.actors.canEnter(g, 0x14, W[n])
+          s.partyTile === 0x1c &&
+          s.carpets > 0 &&
+          W[c] !== 0x0c &&
+          !B.actorRules.canEnter(g, 0x1c, W[n]) &&
+          B.actorRules.canEnter(g, 0x14, W[n])
             ? W[n] === 1
               ? 18 // and rough seas beyond
               : 4
@@ -551,10 +564,10 @@
                 ? climb
                 : unroll
                   ? unroll
-                  : B.actors && !B.actors.canEnter(g, craft, W[n])
+                  : B.actorRules && !B.actorRules.canEnter(g, craft, W[n])
                     ? 0
                     : (s.partyTile & 0xfc) === 0x1c
-                      ? cost(W[n]) || (B.actors ? 2 : 0)
+                      ? cost(W[n]) || (B.actorRules ? 2 : 0)
                       : W[n] === 4
                         ? 8
                         : 1;
@@ -611,8 +624,8 @@
         s.partyTile === 0x1c &&
         s.carpets > 0 &&
         B.world[by * 256 + bx] !== 0x0c &&
-        !B.actors.canEnter(g, 0x1c, ahead) &&
-        B.actors.canEnter(g, 0x14, ahead)
+        !B.actorRules.canEnter(g, 0x1c, ahead) &&
+        B.actorRules.canEnter(g, 0x14, ahead)
       ) {
         await B.fly(); // the carpet unrolled for the water ahead
         continue;
@@ -631,7 +644,7 @@
       // Only a "Blocked!" that came of this very step (a ship turning her head prints nothing new).
       // (A creature in the way - a sea serpent about a carpet - moves on: only the ground is remembered.)
       const ahead2 = [(bx + dx + 256) % 256, (by + dy + 256) % 256];
-      const someone = g.s.actors.some((a, i) => i > 0 && a.tile >= 0x80 && a.x === ahead2[0] && a.y === ahead2[1]);
+      const someone = table.actorList(g).some((a, i) => i > 0 && a.tile >= 0x80 && a.x === ahead2[0] && a.y === ahead2[1]);
       if (someone && g.s.x === bx && g.s.y === by) await B.pass();
       if (!someone && g.s.x === bx && g.s.y === by && g.commandPrompt === 'outdoors' && !B.menu() && /Blocked!\s*$/i.test(g.said))
         B.wbad.add(((by + dy + 256) % 256) * 256 + ((bx + dx + 256) % 256) + ':' + 'wdsa'.indexOf(k));
@@ -832,7 +845,7 @@
           const craft = craftTile >= 0x20 && craftTile < 0x30 ? (craftTile & 0xfc) + f : craftTile;
           const climb = craftTile === 0x1c && g.s.grapple !== 0 && W[n] === 0x0c;
           // (Deep water is crossed by skiff and carpet at a cost in hurts, which B.route weighs.)
-          if (!climb && !B.actors.canEnter(g, craft, W[n])) return;
+          if (!climb && !B.actorRules.canEnter(g, craft, W[n])) return;
           dist[n] = d + 1;
           next.push(n);
         });
@@ -846,12 +859,16 @@
   const nearest = (test) => {
     const s = g.s;
     const far = (a) => Math.min(Math.abs(a.x - s.x), 256 - Math.abs(a.x - s.x)) + Math.min(Math.abs(a.y - s.y), 256 - Math.abs(a.y - s.y));
-    const boats = s.actors.filter((a, k) => k > 0 && a.z === 0 && test(a.tile));
+    const boats = table.actorList(g).filter((a, k) => k > 0 && a.z === 0 && test(a.tile));
     if (!boats.length) return null;
     boats.sort((a, b) => far(a) - far(b));
     return [boats[0].x, boats[0].y];
   };
-  B.boats = () => g.s.actors.map((a, i) => [i, a.tile, a.x, a.y, a.b7]).filter((a) => a[1] >= 0x20 && a[1] < 0x2c);
+  B.boats = () =>
+    table
+      .actorList(g)
+      .map((a, i) => [i, a.tile, a.x, a.y, a.b7])
+      .filter((a) => a[1] >= 0x20 && a[1] < 0x2c);
   B.skiff = () => nearest((t) => (t & 0xfc) === 0x28);
   B.voyage = async (tx, ty) => {
     const log = [];
@@ -978,7 +995,7 @@
           [-1, 0, 3],
         ]) {
           const n = ((cy + dy + N) % N) * N + ((cx + dx + N) % N);
-          if (W[n] === 1 || !B.actors.canEnter(g, 0x28 + f, W[n])) continue;
+          if (W[n] === 1 || !B.actorRules.canEnter(g, 0x28 + f, W[n])) continue;
           if (row[c] + 1 < row[n]) {
             row[n] = row[c] + 1;
             next.push(n);
@@ -1030,7 +1047,7 @@
             ]) {
               const nx = (sk[0] + dx) & 0xff,
                 ny = (sk[1] + dy) & 0xff;
-              if (!B.actors.canEnter(g, 0x1c, W[ny * N + nx])) continue;
+              if (!B.actorRules.canEnter(g, 0x1c, W[ny * N + nx])) continue;
               await B.press(dy > 0 ? 's' : dy < 0 ? 'w' : dx > 0 ? 'd' : 'a');
               await B.ready(3000);
               if (s.x !== sk[0] || s.y !== sk[1]) break;
@@ -1110,7 +1127,7 @@
 
   // A square of the field a member may stand on: the void (0xff) round a room is not one, whatever the walking
   // table says of it (the engine's arenaFree rules it out).
-  const arenaOk = (mine, t) => t !== 0xff && B.actors.canEnter(g, mine, t);
+  const arenaOk = (mine, t) => t !== 0xff && B.actorRules.canEnter(g, mine, t);
   // --- a room puzzle: one member walked and made to push, the others passing their turns (auto combat off) ---
   B.room = {};
   // Until it is `who`'s turn at the combat prompt with no menu up (others pass with B); false if it never comes.
@@ -1207,7 +1224,7 @@
         const d = k - start;
         const key = d === -11 ? 'w' : d === 11 ? 's' : d === 1 ? 'd' : 'a';
         // A chest (or what came out of one) lying on the next square blocks it: opened, or picked up, from here.
-        const lying = g.s.actors.find((a) => a.tile > 0 && a.tile < 0x10 && a.x === k % 11 && a.y === ((k / 11) | 0));
+        const lying = table.actorList(g).find((a) => a.tile > 0 && a.tile < 0x10 && a.x === k % 11 && a.y === ((k / 11) | 0));
         if (lying) {
           if (!(await B.room.turn(who))) return false;
           await B.cmd(lying.tile === 1 ? /^Open/ : /^Get/);
@@ -1250,7 +1267,7 @@
     const s = g.s;
     const me = g.combat[s.combatTurn];
     if (!me) return 'nobody';
-    const mine = s.actors[me.actor].tile;
+    const mine = table.actor(g, me.actor).tile;
     const cm = g.combatMap;
     const others = new Set(g.combat.filter((c, i) => i !== s.combatTurn && c.flags && !(c.flags & 0x20)).map((c) => c.y * 11 + c.x));
     const edge = (x, y) => x === 0 || y === 0 || x === 10 || y === 10;
@@ -1397,7 +1414,10 @@
       // (B.skipLoot: chests left shut - their traps have killed a party deep in a dungeon.)
       const loot = B.skipLoot
         ? []
-        : s.actors.map((a, i) => ({ i, t: a.tile, x: a.x, y: a.y })).filter((a) => a.i > 0 && a.t >= 1 && a.t <= 0xf);
+        : table
+            .actorList(g)
+            .map((a, i) => ({ i, t: a.tile, x: a.x, y: a.y }))
+            .filter((a) => a.i > 0 && a.t >= 1 && a.t <= 0xf);
       if (!loot.length) {
         if (exit !== null && s.combatFlags & 0x80) {
           log.push(await B.dng.roomExit(exit));
@@ -1441,11 +1461,10 @@
   };
   // The key of the first step of the shortest way from `me` to a square beside any of `loot`, or null for none.
   B.lootWay = (me, loot) => {
-    const s = g.s;
     const cm = g.combatMap;
-    const mine = s.actors[me.actor].tile;
+    const mine = table.actor(g, me.actor).tile;
     const blocked = new Set(g.combat.filter((c) => c !== me && c.flags && !(c.flags & 0x20)).map((c) => c.y * 11 + c.x));
-    for (const a of s.actors) if (a.tile > 0 && a.tile < 0x10) blocked.add(a.y * 11 + a.x);
+    for (const a of table.actorList(g)) if (a.tile > 0 && a.tile < 0x10) blocked.add(a.y * 11 + a.x);
     const beside = new Set();
     for (const a of loot)
       for (const [dx, dy] of [
@@ -1567,7 +1586,7 @@
           // (With the carpet, rivers and lakes join chambers too - as the guide's way runs, by water.)
           const flyer = s.carpets > 0 || (s.partyTile & 0xfe) === 0x14;
           if ((B.world[((((n / N) | 0) + 1) % N) * N + (n % N)] & 0xfc) === 0xd4) continue; // a waterfall's brink
-          if (!(B.actors.canEnter(g, 0x1c, t) || (s.grapple && t === 0x0c) || (flyer && t !== 1 && B.actors.canEnter(g, 0x14, t))))
+          if (!(B.actorRules.canEnter(g, 0x1c, t) || (s.grapple && t === 0x0c) || (flyer && t !== 1 && B.actorRules.canEnter(g, 0x14, t))))
             continue;
           region[n] = id;
           cells.push(n);
@@ -1729,7 +1748,7 @@
           const n = ny * N + nx;
           if (dist.has(n)) continue;
           const t = B.world[n];
-          if (!(B.actors.canEnter(g, 0x1c, t) || (s.grapple && t === 0x0c))) continue;
+          if (!(B.actorRules.canEnter(g, 0x1c, t) || (s.grapple && t === 0x0c))) continue;
           const rx = (nx - wx0) & 0xff,
             ry = (ny - wy0) & 0xff;
           const ok =
@@ -1878,7 +1897,7 @@
       if (g.map[k] !== 0xab) continue;
       const x = k & 31,
         y = k >> 5;
-      if (s.actors.some((a, i) => i > 0 && a.tile && a.z === s.level && a.x === x && a.y === y)) continue;
+      if (table.actorList(g).some((a, i) => i > 0 && a.tile && a.z === s.level && a.x === x && a.y === y)) continue;
       // Not a bed someone keeps by day (the sleeper is put out on its right, and may be boxed in there).
       const kept = [...Array(32).keys()].some((i) => {
         if (i === 0 || !s.npcTypes[i]) return false;
@@ -1926,7 +1945,7 @@
   // Across a counter: stand two squares from the keeper with the counter between, and Talk that way.
   B.counter = async (i) => {
     const s = g.s;
-    const a = s.actors[s.npcs[i].actor];
+    const a = table.actor(g, s.npcs[i].actor);
     if (!a || a.z !== s.level) return 'not here';
     for (const [k, dx, dy] of [
       ['w', 0, 1],
@@ -2365,7 +2384,7 @@
   };
   B.fly = async () => {
     if ((g.s.partyTile & 0xfe) === 0x14) return 'flying';
-    const here = g.s.actors.findIndex((a, k) => k > 0 && a.tile === 0x1b && a.x === g.s.x && a.y === g.s.y);
+    const here = table.actorList(g).findIndex((a, k) => k > 0 && a.tile === 0x1b && a.x === g.s.x && a.y === g.s.y);
     if (here > 0) {
       await B.cmd(/^Board/);
       await B.ready();
@@ -2476,7 +2495,7 @@
     // Who stands where, on every floor (those not on this one are where the table says): the same view from any
     // floor, or the plan flips between floors as each looks emptier from the other.
     const occ = new Set();
-    s.actors.forEach((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && occ.add(key(sgn(a.z), a.x, a.y)));
+    table.actorList(g).forEach((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && occ.add(key(sgn(a.z), a.x, a.y)));
     for (let i = 1; i < 32; i++) {
       const n = s.npcs[i];
       if (s.npcTypes[i] && !n.actor) occ.add(key(sgn(n.z), n.x, n.y));
@@ -2625,7 +2644,7 @@
         continue;
       }
       const [ddx, ddy] = { w: [0, -1], d: [1, 0], s: [0, 1], a: [-1, 0] }[step] || [0, 0];
-      if (s.actors.some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.x === s.x + ddx && a.y === s.y + ddy)) {
+      if (table.actorList(g).some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.x === s.x + ddx && a.y === s.y + ddy)) {
         if (++crowded > 25) return [...log, 'someone in the way'];
         await B.press('x');
         continue;
@@ -2643,7 +2662,7 @@
       x < 32 &&
       y < 32 &&
       okT(g.map[y * 32 + x]) &&
-      !s.actors.some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.x === x && a.y === y);
+      !table.actorList(g).some((a, i) => i > 0 && a.tile && isBody(a) && a.z === s.level && a.x === x && a.y === y);
     // Two steps off, where there is room, then a few turns for them to go by.
     const dirs = [
       ['w', 0, -1],
@@ -2665,7 +2684,7 @@
     const s = g.s;
     for (let n = 0; n < 6; n++) {
       const npc = s.npcs[i];
-      const a = npc.actor ? s.actors[npc.actor] : null;
+      const a = npc.actor ? table.actor(g, npc.actor) : null;
       const z = a && a.tile ? sgn(a.z) : sgn(npc.z);
       const x = a && a.tile ? a.x : npc.x,
         y = a && a.tile ? a.y : npc.y;
@@ -2867,7 +2886,7 @@
     const m = D.roomMap(cell);
     const out = new Set();
     // A magical barrier (a 0x70 tile) at the edge is a side too, with the Sceptre to dissolve it.
-    const walkable = (t) => t !== 0xff && (B.actors.canEnter(g, 0x1c, t) || (g.s.sceptre !== 0 && (t & 0xf0) === 0x70));
+    const walkable = (t) => t !== 0xff && (B.actorRules.canEnter(g, 0x1c, t) || (g.s.sceptre !== 0 && (t & 0xf0) === 0x70));
     // What the room's triggers would put on its edges counts too (a wall that a trigger turns to floor).
     const after = new Map();
     for (let i = 0; i < 8; i++) {
@@ -3192,7 +3211,7 @@
           D.liveSquares = new Set();
           if (me) {
             const cm = g.combatMap;
-            const mine = s.actors[me.actor].tile;
+            const mine = table.actor(g, me.actor).tile;
             const seen = D.liveSquares;
             seen.add(me.y * 11 + me.x);
             const q = [me.y * 11 + me.x];
@@ -3353,7 +3372,7 @@
     const me = g.combat[s.combatTurn];
     const cm = g.combatMap;
     const tileAt = (x, y) => cm[y * 32 + x];
-    const mine = s.actors[me.actor].tile;
+    const mine = table.actor(g, me.actor).tile;
     const others = new Set(g.combat.filter((c, i) => i !== s.combatTurn && c.flags && !(c.flags & 0x20)).map((c) => c.y * 11 + c.x));
     const start = me.y * 11 + me.x;
     const isExit = (x, y) =>
@@ -3400,7 +3419,7 @@
       const d = c - start;
       const key = d === -11 ? 'w' : d === 11 ? 's' : d === 1 ? 'd' : 'a';
       // A chest (or what came out of one) on the next square is in the way: opened, or taken, from here.
-      const lying = s.actors.find((a, i) => i > 0 && a.tile > 0 && a.tile < 0x10 && a.x === c % 11 && a.y === ((c / 11) | 0));
+      const lying = table.actorList(g).find((a, i) => i > 0 && a.tile > 0 && a.tile < 0x10 && a.x === c % 11 && a.y === ((c / 11) | 0));
       if (lying) {
         await B.cmd(lying.tile === 1 ? /^Open/ : /^Get/);
         await B.ready();
@@ -3480,7 +3499,7 @@
         if ((tx === 0 && ty === 0) || tx > 10 || ty > 10) continue;
         // (A missile lands on its target square whatever it is, so long as the way to it is clear: shoot.ts
         // checks the flight, not the landing.)
-        if (!B.actors.canEnter(g, mine, tileAt(tx, ty))) shootable.push([tx, ty]);
+        if (!B.actorRules.canEnter(g, mine, tileAt(tx, ty))) shootable.push([tx, ty]);
       }
       const anyRanged = g.combat.some((c) => {
         if (!(c.flags & 0x80)) return false;
@@ -3505,7 +3524,7 @@
         const tx = cm[8 * 32 + 11 + i],
           ty = cm[8 * 32 + 19 + i];
         if ((tx === 0 && ty === 0) || tx > 10 || ty > 10) continue;
-        if (B.actors.canEnter(g, mine, tileAt(tx, ty))) onFloor.add(ty * 11 + tx);
+        if (B.actorRules.canEnter(g, mine, tileAt(tx, ty))) onFloor.add(ty * 11 + tx);
       }
       if (onFloor.size) {
         [end, prev] = search((x, y) => onFloor.has(y * 11 + x) && !(x === me.x && y === me.y), false);

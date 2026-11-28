@@ -555,7 +555,6 @@ export class Save {
 
   readonly b: Uint8Array;
   readonly members: Member[];
-  readonly actors: Actor[];
   readonly schedules: Schedule[];
   readonly npcs: NpcState[];
   /** D_615e: each NPC's 32-byte movement list. */
@@ -566,7 +565,6 @@ export class Save {
     if (bytes) this.b.set(bytes.subarray(0, SAVE_SIZE));
     const sub = (addr: number, len: number) => this.b.subarray(at(addr), at(addr) + len);
     this.members = Array.from({ length: MAX_MEMBERS }, (_, i) => new Member(sub(0x55a8 + i * MEMBER_SIZE, MEMBER_SIZE)));
-    this.actors = Array.from({ length: 32 }, (_, i) => new Actor(sub(0x5c5a + i * 8, 8)));
     this.schedules = Array.from({ length: 32 }, (_, i) => new Schedule(sub(0x5d5e + i * 16, 16)));
     this.npcs = Array.from({ length: 32 }, (_, i) => new NpcState(sub(0x5f5e + i * 16, 16)));
     this.moves = Array.from({ length: 32 }, (_, i) => sub(0x615e + i * 32, 32));

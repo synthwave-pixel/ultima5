@@ -4,6 +4,7 @@ import { charm, placeCombatant } from '../src/game/combat.ts';
 import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * Auto combat playing a creature on the party's side (autocombat.ts): it strikes where its own attack would reach a
@@ -30,7 +31,7 @@ describe('auto combat, a creature on the party side', () => {
     journeyOnward(g);
     Object.assign(g.options, { autoCombat: 'all', rules: 'modern' });
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     placeCombatant(g, 0, 1, 0, 0, 0);
     const me = placeCombatant(g, DAEMON, 0, 2, 5, 0);
     charm(g, me, 'bound');

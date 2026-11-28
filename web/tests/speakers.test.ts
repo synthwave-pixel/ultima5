@@ -13,6 +13,7 @@ import { begone, callGuards, enterTown, townLoop } from '../src/game/town.ts';
 import { setTileAt, tileAt } from '../src/game/world.ts';
 import { keys, newGame, type FakePlatform } from './helpers.ts';
 import { Landed } from './pilot.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Those who speak to the party outside a conversation or a shop - guards, prisoners, a frightened townsman, Smith,
@@ -61,10 +62,10 @@ describe('those who speak outside a conversation', () => {
       await enterTown(g, true);
       const s = g.s;
       const prisoner = [...Array(32).keys()].find((i) => {
-        const a = s.actors[s.npcs[i].actor];
+        const a = actor(g, s.npcs[i].actor);
         return i > 0 && s.npcTypes[i] !== 0 && s.npcs[i].fa !== 0 && tileAt(g, a.x, a.y) === 0x84;
       })!;
-      const at = s.actors[s.npcs[prisoner].actor];
+      const at = actor(g, s.npcs[prisoner].actor);
       Object.assign(s, { x: at.x, y: at.y + 1, keys: 3, activeMember: 0 });
       s.members.forEach((m) => (m.dex = 40));
       const heard = listen(g, p);
@@ -163,7 +164,7 @@ describe('those who speak outside a conversation', () => {
       // Out in Britannia, the square south of the guardian's (233, 235).
       Object.assign(s, { mapId: 0, level: 0, x: 0xe9, y: 0xec, questActive: 0, partyTile: 0x1c });
       enterWorld(g);
-      for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
+      for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0;
       setTileAt(g, 0xe9, 0xeb, T.Grass);
       const heard = listen(g, p);
       p.keys.push(K.Up);

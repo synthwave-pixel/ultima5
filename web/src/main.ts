@@ -41,6 +41,7 @@ import {
   useNoticeFont,
   watchForUpdates,
 } from './appStart.ts';
+import { actor, actorList, actorSlots } from './game/actors.ts';
 
 // Whatever breaks from here on is said, with a way out (crash.ts): the apps have no reload button of the browser's.
 installCrashHandler();
@@ -130,7 +131,8 @@ async function start(): Promise<void> {
   g.hooks.quit = appQuit(location.protocol, () => window.close(), capacitor);
   g.ool.under.set(files.get('INIT.OOL').subarray(0, 256));
   g.drawCombatMarks = () => drawCombatMarks(g);
-  (window as unknown as { u5: unknown }).u5 = { g, screen };
+  // The console's and the pilot bot's way in (tools/pilot); the actor table only through actors.ts's functions.
+  (window as unknown as { u5: unknown }).u5 = { g, screen, table: { actor, actorList, actorSlots } };
   canvas.focus();
   const params = new URLSearchParams(location.search);
   // ?peek (the tiles page's, looking at a place): nothing this window does is saved over the player's game.

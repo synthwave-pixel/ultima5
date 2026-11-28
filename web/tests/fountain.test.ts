@@ -5,6 +5,7 @@ import { commandMenu } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
 import { fly, Landed, pick, press } from './pilot.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** A dungeon's fountain, by controller: Drink in the command menu, standing on it or facing it (the port's). */
 describe('Drink at a fountain', () => {
@@ -15,7 +16,7 @@ describe('Drink at a fountain', () => {
     Object.assign(g.s, { mapId: 0x21, level: 0, x: 1, y: 1, facing: 1, d58a7: lit ? 0xff : 0, d58a6: 0 });
     g.s.dungeon.fill(0x00);
     g.s.dungeon[fountain === 'here' ? 1 * 8 + 1 : 1 * 8 + 2] = 0x51; // a healing fountain, here or east
-    g.s.actors[1].x = g.s.actors[1].y = 0xff; // no creature about
+    actor(g, 1).x = actor(g, 1).y = 0xff; // no creature about
     g.s.members[0].hp = 3;
     return made;
   };
