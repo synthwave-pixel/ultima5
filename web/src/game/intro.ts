@@ -31,6 +31,7 @@ import { T } from './tiles.ts';
 import { animateActors, clockTick } from './frame.ts';
 import { groundAmong, isGround } from './world.ts';
 import { actor, actorSlots } from './actors.ts';
+import { freshObjects } from './objectMigration.ts';
 
 /** The proportional text's layout (D_5146..D_5158): two column spans by height, the space's width, and the pen. */
 export interface Prose {
@@ -922,6 +923,7 @@ export class Intro {
     m.str = this.stats.str <= 0x14 ? 0x14 : this.stats.str;
     g.ool.brit.fill(0);
     g.ool.under.set(g.data.files.get('INIT.OOL').subarray(0, 256));
+    freshObjects(g); // the Underworld's skiff and bodies, INIT.GAM's own, into the stores (objectMigration.ts)
     g.printChar(0xff);
     t.moveTo(0, 10);
     g.tipsShown = new Set(); // its first turn points to the Tips (run.ts journeyOnward), its fights give theirs

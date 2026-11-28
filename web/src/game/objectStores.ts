@@ -87,6 +87,11 @@ export function placeKey(g: Game): PlaceKey | null {
   return null;
 }
 
+/** A place's lists themselves, for bringing an old save's things in (objectMigration.ts) - nothing else writes them. */
+export function placeStore(g: Game, key: PlaceKey): { vehicles: Vehicle[]; items: Item[] } {
+  return storeOf(g, key);
+}
+
 function storeOf(g: Game, key: PlaceKey): PlaceStore {
   let st = g.objects.places.get(key);
   if (!st) {

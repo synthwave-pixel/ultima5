@@ -21,7 +21,8 @@ import { addressedAsLady, type Appearance, LADY, validAppearance } from './appea
 import { placeTitle } from './journal.ts';
 import { fromBase64, toBase64, type SaveCodec, type StoredSave } from './saveCodec.ts';
 import { localSave } from './storage.ts';
-import { decodeObjects, encodeObjects, type ObjectsData, ObjectStores } from './objectStores.ts';
+import { decodeObjects, encodeObjects, type ObjectsData } from './objectStores.ts';
+import { freshObjects } from './objectMigration.ts';
 export const SAVE_VERSION = 1;
 export interface SaveData {
   game: typeof GAME_ID;
@@ -131,7 +132,7 @@ export function restore(g: Game, stored: SaveData | StoredSave, fresh = false): 
   // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
   g.path = PathState.decode(d.path);
   if (typeof d.objects === 'object' && d.objects !== null) decodeObjects(g, d.objects);
-  else g.objects = new ObjectStores();
+  else freshObjects(g); // a save from before the stores: its tables' vehicles and things moved in (objectMigration.ts)
   g.appearance = validAppearance(d.appearance);
   const made = typeof d.companions === 'object' && d.companions !== null ? Object.entries(d.companions) : [];
   g.companionLooks = new Map(made.map(([name, look]) => [name, validAppearance(look)]));
