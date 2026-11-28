@@ -21,6 +21,8 @@ import { PathState } from './modernKarma.ts';
 import { Vocabulary } from './words.ts';
 import type { Platform } from './io.ts';
 import { Save } from './save.ts';
+import { ObjectStores, type ObjectRules } from './objectStores.ts';
+import { ULTIMA5_OBJECTS } from './ultima5Objects.ts';
 import { TalkState } from './talk.ts';
 
 import { GameCore } from './gameCore.ts';
@@ -141,6 +143,10 @@ export class Game extends GameCore {
   readonly combatMap = new Uint8Array(0x400);
   /** D_a9fc: the world's creature table put aside during a fight (actors.ts copyActorTable). */
   combatTable: Uint8Array = new Uint8Array(256);
+  /** The vehicles and things left in each place, apart from the creatures (objectStores.ts). */
+  objects = new ObjectStores();
+  /** Which tiles are vehicles and items, and which finds unique (ultima5Objects.ts). */
+  readonly objectRules: ObjectRules = ULTIMA5_OBJECTS;
   /** D_ba14: the combatants. */
   readonly combatBytes = new Uint8Array(256);
   readonly combat = Array.from({ length: 32 }, (_, i) => new Combatant(this.combatBytes.subarray(i * 8, i * 8 + 8)));

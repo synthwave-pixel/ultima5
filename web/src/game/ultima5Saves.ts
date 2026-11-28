@@ -21,6 +21,7 @@ import { addressedAsLady, type Appearance, LADY, validAppearance } from './appea
 import { placeTitle } from './journal.ts';
 import { fromBase64, toBase64, type SaveCodec, type StoredSave } from './saveCodec.ts';
 import { localSave } from './storage.ts';
+import { decodeObjects, encodeObjects, type ObjectsData, ObjectStores } from './objectStores.ts';
 export const SAVE_VERSION = 1;
 export interface SaveData {
   game: typeof GAME_ID;
@@ -54,6 +55,8 @@ export interface SaveData {
   ammo?: Record<string, number>;
   /** The Modern karma's pools and what they have counted (modernKarma.ts; older saves have none: begun afresh). */
   path?: PathData;
+  /** The vehicles and things left in each place (objectStores.ts; older saves kept them in the actor tables). */
+  objects?: ObjectsData;
 }
 
 export function serialize(g: Game): SaveData {
@@ -74,6 +77,7 @@ export function serialize(g: Game): SaveData {
     oldManDay: g.oldManDay,
     ammo: g.ammoExtra,
     path: g.path.encode(),
+    objects: encodeObjects(g),
   };
 }
 
@@ -126,6 +130,8 @@ export function restore(g: Game, stored: SaveData | StoredSave, fresh = false): 
     if (Number.isInteger(n) && n > 0 && n <= 900) g.ammoExtra[Number(k)] = n;
   // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
   g.path = PathState.decode(d.path);
+  if (typeof d.objects === 'object' && d.objects !== null) decodeObjects(g, d.objects);
+  else g.objects = new ObjectStores();
   g.appearance = validAppearance(d.appearance);
   const made = typeof d.companions === 'object' && d.companions !== null ? Object.entries(d.companions) : [];
   g.companionLooks = new Map(made.map(([name, look]) => [name, validAppearance(look)]));
