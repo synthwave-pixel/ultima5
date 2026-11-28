@@ -8,6 +8,7 @@ import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { RUNE_INK } from '../src/game/runeWords.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** The townsman of this settlement whose script bears this name. */
 function findNpc(g: Game, name: string): number {
@@ -135,7 +136,7 @@ describe('what is said, in the play area', () => {
     await enterTown(g, true);
     g.words.add('SACRED');
     const npc = findNpc(g, 'Greyson');
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 }); // south of him: six rows above him
     loadLevel(g, true);
     const shownPages: string[][] = [];
@@ -162,7 +163,7 @@ describe('what is said, in the play area', () => {
     await enterTown(g, true);
     for (const w of ['MANTRA', 'SACRED']) g.words.add(w);
     const npc = findNpc(g, 'Greyson');
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
     loadLevel(g, true);
     const runes: { ch: string; ink?: number }[] = [];
@@ -200,7 +201,7 @@ describe('what is said, in the play area', () => {
     Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
     await enterTown(g, true);
     const npc = findNpc(g, 'Greyson');
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
     loadLevel(g, true);
     const text = (): string[] => {
@@ -245,7 +246,7 @@ describe('what is said, in the play area', () => {
     await enterTown(g, true);
     const npc = 5; // the busboy, who asks whether the party is here to eat once he has met them
     s.npcMet[(s.mapId - 1) * 4 + (npc >> 3)] |= 1 << (npc & 7);
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
     loadLevel(g, true);
     g.said = '';
@@ -266,7 +267,7 @@ describe('what is said, in the play area', () => {
     Object.assign(s, { mapId: 2, level: 0, x: 15, y: 30, hour: 12 });
     await enterTown(g, true);
     const npc = findNpc(g, 'Greyson');
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     Object.assign(s, { level: a.z, x: a.x, y: a.y + 1 });
     loadLevel(g, true);
     // At each box's arrow: a turn, then a lost focus, then A - and the box the same box throughout.

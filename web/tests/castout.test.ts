@@ -5,6 +5,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import type { Rules } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
 import type { MockRandom } from './mockRandom.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /**
  * A daemon beside the Avatar on an open field of grass, its possession of them begun: the charm's target roll set
@@ -18,13 +19,13 @@ async function possessed(rules: Rules, hp = 50, gatedIn = false) {
   s.mapId = 0xff;
   g.combatMap.fill(0x04);
   for (const c of g.combat) c.clear();
-  for (const a of s.actors) a.tile = a.anim = 0;
+  for (const a of actorList(g)) a.tile = a.anim = 0;
   Object.assign(g.combat[0], { flags: CF.Player, who: 0, x: 5, y: 5, actor: 1 });
-  s.actors[1].tile = s.actors[1].anim = 0x1c;
-  [s.actors[1].x, s.actors[1].y] = [5, 5];
+  actor(g, 1).tile = actor(g, 1).anim = 0x1c;
+  [actor(g, 1).x, actor(g, 1).y] = [5, 5];
   Object.assign(g.combat[8], { flags: CF.Monster, who: 0x26, x: 6, y: 5, actor: 9, hp });
-  s.actors[9].tile = s.actors[9].anim = 0xd8;
-  [s.actors[9].x, s.actors[9].y] = [6, 5];
+  actor(g, 9).tile = actor(g, 9).anim = 0xd8;
+  [actor(g, 9).x, actor(g, 9).y] = [6, 5];
   newSpawns(g);
   if (gatedIn) g.summoned.add(8); // gated in during the fight (combat.ts spawned)
   const rng = g.rng as MockRandom;

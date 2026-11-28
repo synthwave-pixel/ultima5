@@ -12,7 +12,7 @@
  *   node --import ./tools/node-ts.mjs tools/sim/fuzz.ts [-- fights=500] [seed=1] [rooms=only|none] [log]
  */
 
-import { freeActor } from '../../src/game/actors.ts';
+import { actor, actorList, freeActor } from '../../src/game/actors.ts';
 import { canEnter } from '../../src/game/actors.ts';
 import { autoKey } from '../../src/game/autocombat.ts';
 import { arenaFight, EF, enemyFlags } from '../../src/game/combat.ts';
@@ -76,7 +76,7 @@ function check(g: Game): string[] {
   const standing = new Map<string, number[]>();
   const now = new Set<string>();
   /** Shown or not: an invisible or submerged creature (its actor's anim 0) blocks nobody, in 1988 as here. */
-  const unseen = (i: number): boolean => !s.actors[g.combat[i].actor]?.anim;
+  const unseen = (i: number): boolean => !actor(g, g.combat[i].actor)?.anim;
   const shown = (i: number): string => (unseen(i) ? ' (unseen)' : '');
   /**
    * Whether `i` and `j` may share a square, as 1988 has it (docs/fixing-1988.md, Kept as they were): either unseen
@@ -112,7 +112,7 @@ function check(g: Game): string[] {
     }
     if (dead) continue;
     if (c.hp < 0) out.push(`combatant ${i} has ${c.hp} hit points`);
-    const a = s.actors[c.actor];
+    const a = actor(g, c.actor);
     if (!a) {
       out.push(`combatant ${i} has no actor ${c.actor}`);
       continue;
@@ -174,17 +174,16 @@ function party(g: Game, r: () => number, pick: <T>(xs: readonly T[]) => T): void
 
 /** Chests, gold and corpses strewn on the free squares of the field. */
 function strew(g: Game, r: () => number): void {
-  const s = g.s;
   const n = Math.floor(r() * 8);
   for (let k = 0; k < n; k++) {
     const x = Math.floor(r() * 11);
     const y = Math.floor(r() * 11);
     if (!canEnter(g, 0x1c, tileAt(g, x, y))) continue;
     if (g.combat.some((c) => c.flags !== 0 && !(c.flags & CF.Dead) && c.x === x && c.y === y)) continue;
-    const slot = s.actors.findIndex((a, i) => i > 0 && a.tile === 0 && !g.combat.some((c) => c.flags !== 0 && c.actor === i));
+    const slot = actorList(g).findIndex((a, i) => i > 0 && a.tile === 0 && !g.combat.some((c) => c.flags !== 0 && c.actor === i));
     if (slot < 0) return;
     const tile = [0x01, 0x01, 0x02, 0x03, 0x1f, 0x1f, 0x0f][Math.floor(r() * 7)];
-    Object.assign(s.actors[slot], { tile, anim: tile, x, y, z: 0, b5: tile === 0x01 ? Math.floor(r() * 0x10) : 3 });
+    Object.assign(actor(g, slot), { tile, anim: tile, x, y, z: 0, b5: tile === 0x01 ? Math.floor(r() * 0x10) : 3 });
   }
 }
 
@@ -369,7 +368,7 @@ async function one(seed: number): Promise<Outcome> {
       out.where = `arena ${arena} vs ${names[kind]}`;
       Object.assign(s, { mapId: 0, level: 0, x: 86, y: 110 });
       const foe = freeActor(g);
-      Object.assign(s.actors[foe], { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
+      Object.assign(actor(g, foe), { tile: 0x40 + kind * 4, anim: 0x40 + kind * 4, x: 86, y: 109, z: 0, b5: 0 });
       await arenaFight(g, arena, foe);
       if (out.end === 'won' && !won) out.end = 'fled';
     }

@@ -5,6 +5,7 @@ import { Pad } from '../src/game/io.ts';
 import { commandMenu, contextual } from '../src/game/offers.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Issue #21: a creature on the party's side - a daemon summoned from a scroll, or a foe charmed (An Xen Ex) - is the
@@ -35,12 +36,12 @@ function fight(kind: number) {
   s.mixtures.fill(0);
   s.mixtures[4] = 3; // Heal
   Object.assign(g.combat[0], { who: 0, x: 2, y: 5, flags: CF.Player, actor: 1 });
-  Object.assign(s.actors[1], { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
+  Object.assign(actor(g, 1), { tile: 0x1c, anim: 0x1c, x: 2, y: 5, z: 0 });
   Object.assign(g.combat[1], { who: kind, x: 3, y: 5, flags: CF.Monster, hp: enemy(g, kind).maxHp, actor: 2 });
-  Object.assign(s.actors[2], { tile: 0xd8, anim: 0xd8, x: 3, y: 5, z: 0 });
+  Object.assign(actor(g, 2), { tile: 0xd8, anim: 0xd8, x: 3, y: 5, z: 0 });
   charm(g, 1, 'bound');
   Object.assign(g.combat[6], { who: 0x14, x: 7, y: 5, flags: CF.Monster, hp: enemy(g, 0x14).maxHp, actor: 7 });
-  Object.assign(s.actors[7], { tile: 0x90, anim: 0x90, x: 7, y: 5, z: 0 });
+  Object.assign(actor(g, 7), { tile: 0x90, anim: 0x90, x: 7, y: 5, z: 0 });
   g.commandPrompt = 'combat';
   return { g, p, halberd: (g.data.table(0x17f6, 0x30)[halberd] ?? '').trim() };
 }

@@ -16,6 +16,7 @@
 
 import { SETTLEMENTS, TOWN_SIZE, WORLD_SIZE } from '../data/maps.ts';
 import type { Game } from './game.ts';
+import { actor } from './actors.ts';
 
 const SQUARES = WORLD_SIZE * WORLD_SIZE;
 
@@ -334,7 +335,7 @@ function creatureSight(g: Game): [number, number][] {
  */
 export function creatureSeen(g: Game): boolean {
   const s = g.s;
-  const a = s.actors[1];
+  const a = actor(g, 1);
   if (a.x > 7 || a.y > 7 || a.b5 === 0xff) return false;
   if (inTheDark(g)) return Math.abs(((a.x - s.x + 4) & 7) - 4) <= 1 && Math.abs(((a.y - s.y + 4) & 7) - 4) <= 1;
   return creatureSight(g).some(([x, y]) => x === a.x && y === a.y);

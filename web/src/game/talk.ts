@@ -16,7 +16,7 @@ import { Game } from './game.ts';
 import { heardOfThings, noteConversation, noteSleeper } from './journal.ts';
 import { getChar, getCharYN, getString, selectDirection } from './input.ts';
 import { saysWord } from './cmds.ts';
-import { actorTileAt } from './actors.ts';
+import { actor, actorTileAt } from './actors.ts';
 import { scheduleSlot } from './npc.ts';
 import { T } from './tiles.ts';
 import { callGuards, npcOfActor, removeNpc, setNpcKilled, begone } from './town.ts';
@@ -385,8 +385,8 @@ async function payGold(k: Talk): Promise<number> {
     t.keysBefore = null;
     vitals(g);
     // The Modern karma: alms to a beggar, each once a game day (modernKarma.ts); 1988's, below, as ever.
-    if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c) modern.alms(g, t.npc);
-    if ((s.actors[s.npcs[t.npc].actor].tile & 0xfc) === 0x6c && s.turn >= 100) {
+    if ((actor(g, s.npcs[t.npc].actor).tile & 0xfc) === 0x6c) modern.alms(g, t.npc);
+    if ((actor(g, s.npcs[t.npc].actor).tile & 0xfc) === 0x6c && s.turn >= 100) {
       s.turn = 0;
       s.karma = inc(s.karma, 1, 99);
       if (s.gold === 0) s.karma = inc(s.karma, 2, 99);
@@ -1331,7 +1331,7 @@ export async function talkToNpc(g: Game, npc: number): Promise<number> {
   const sch = s.schedules[npc];
   if (sch.type(me.fe) === 4) {
     sch.setType(me.fe, 1);
-  } else if (s.actors[me.actor].tile === 0x70 && ((me.fe & 1) === 0 || me.fa === 0)) {
+  } else if (actor(g, me.actor).tile === 0x70 && ((me.fe & 1) === 0 || me.fa === 0)) {
     g.say(0x9148); // "The guard offers\nno response!\n"
     return 0;
   }

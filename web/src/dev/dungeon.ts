@@ -24,6 +24,7 @@ import { TILE_NAMES } from '../data/tileNames.ts';
 import { DosRandom } from '../game/rng.ts';
 import { PC_TILES, TILES, TILES_NAMES, type Tiles } from '../game/settings.ts';
 import { loadSkin } from '../ui/loadArt.ts';
+import { actor } from '../game/actors.ts';
 
 const params = new URLSearchParams(location.search);
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -188,7 +189,7 @@ async function start(): Promise<void> {
     history.replaceState(null, '', `?${q.toString().replace('dev=&', 'dev&').replace(/dev=$/, 'dev')}`);
     out.textContent = '';
     setWalls();
-    g.s.actors[1].x = 0xff; // no creature in the cells' views
+    actor(g, 1).x = 0xff; // no creature in the cells' views
     // Lit, or the party without light (the Modern look's dark shows what gives its own).
     g.s.d58a6 = light.value === 'lit' ? 100 : 0;
     g.s.d58a7 = 0;
@@ -239,7 +240,7 @@ async function start(): Promise<void> {
       out.appendChild(fig);
     }
     // The creatures, down an open corridor: each at one, two and three squares off, in each look.
-    const a = g.s.actors[1];
+    const a = actor(g, 1);
     for (let t = 0; t < 8; t++) {
       const fig = document.createElement('figure');
       const cap = document.createElement('figcaption');
@@ -293,7 +294,7 @@ async function start(): Promise<void> {
       for (const [wallsName, wallsValue] of WALLS.filter(([, v]) => ['1', '2', '6'].includes(v))) {
         walls.value = wallsValue;
         setWalls();
-        g.s.actors[1].x = 0xff;
+        actor(g, 1).x = 0xff;
         for (const [shapeName] of SHAPES) {
           shape.value = shapeName;
           for (const lit of [0x32, 0]) {
@@ -310,7 +311,7 @@ async function start(): Promise<void> {
       g.s.light = 0x32;
       walls.value = '2';
       setWalls();
-      const a = g.s.actors[1];
+      const a = actor(g, 1);
       for (let t = 0; t < 8; t++)
         for (let depth = 1; depth <= 3; depth++) {
           g.s.dungeon.fill(0xb0, level * 0x40, level * 0x40 + 0x40);

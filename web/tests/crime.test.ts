@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor, party } from '../src/game/actors.ts';
 import type { Game } from '../src/game/game.ts';
 import { K } from '../src/game/io.ts';
 import { moveNpcs, placeNpcs, putNpc, scheduleSlot } from '../src/game/npc.ts';
@@ -129,7 +129,7 @@ describe('crime and the people of a town', () => {
     const karma = s.karma;
     Object.assign(s, { x: 9, y: 8 });
     const slot = freeActor(g);
-    Object.assign(s.actors[slot], { tile: 0xd8, anim: 0xd8, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, slot), { tile: 0xd8, anim: 0xd8, x: s.x + 1, y: s.y, z: 0 });
     p.keys.push(...keys(K.Right));
     await attackInTown(g);
     expect(s.karma).toBe(karma);
@@ -142,7 +142,7 @@ describe('crime and the people of a town', () => {
     const karma = s.karma;
     Object.assign(s, { x: 9, y: 8 });
     const slot = freeActor(g);
-    Object.assign(s.actors[slot], { tile: 0xa0, anim: 0xa0, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, slot), { tile: 0xa0, anim: 0xa0, x: s.x + 1, y: s.y, z: 0 });
     p.keys.push(...keys(K.Right));
     await attackInTown(g);
     expect(s.karma).toBe(karma);
@@ -256,8 +256,8 @@ describe('the people of a town', () => {
     const me = s.npcs[npc];
     const goal = { x: s.schedules[npc].x(2), y: s.schedules[npc].y(2) };
     Object.assign(s, { x: 29, y: 28 });
-    s.actors[0].x = s.x;
-    s.actors[0].y = s.y;
+    party(g).x = s.x;
+    party(g).y = s.y;
     expect([me.x, me.y]).not.toEqual([goal.x, goal.y]);
     let turns = 0;
     let there = false;
@@ -266,8 +266,8 @@ describe('the people of a town', () => {
       moveNpcs(g, 18);
       expect(Math.abs(me.x - x) + Math.abs(me.y - y)).toBeLessThanOrEqual(1);
       expect(walkable(g, me.x, me.y)).toBe(true);
-      expect(s.actors[me.actor].x).toBe(me.x);
-      expect(s.actors[me.actor].y).toBe(me.y);
+      expect(actor(g, me.actor).x).toBe(me.x);
+      expect(actor(g, me.actor).y).toBe(me.y);
       there = me.x === goal.x && me.y === goal.y && me.f0 === 1;
     }
     expect(there).toBe(true);
@@ -280,8 +280,8 @@ describe('the people of a town', () => {
     const { g } = await britain();
     const s = g.s;
     Object.assign(s, { x: 29, y: 28 });
-    s.actors[0].x = s.x;
-    s.actors[0].y = s.y;
+    party(g).x = s.x;
+    party(g).y = s.y;
     const here = (): Map<number, number> => {
       const at = new Map<number, number>();
       for (let i = 1; i < 32; i++) {
@@ -314,8 +314,8 @@ describe('the people of a town', () => {
     callGuards(g);
     const guard = s.npcs[9];
     Object.assign(s, { x: 8, y: 5 });
-    s.actors[0].x = s.x;
-    s.actors[0].y = s.y;
+    party(g).x = s.x;
+    party(g).y = s.y;
     const far = Math.abs(guard.x - s.x) + Math.abs(guard.y - s.y);
     expect(far).toBeGreaterThan(2);
     let d = far;
@@ -339,8 +339,8 @@ describe('the people of a town', () => {
     const me = s.npcs[npc];
     for (let k = 0; k < 3; k++) s.schedules[npc].setType(k, 3);
     for (let k = 0; k < 4; k++) s.schedules[npc].setTime(k, 0);
-    s.actors[0].x = s.x;
-    s.actors[0].y = s.y;
+    party(g).x = s.x;
+    party(g).y = s.y;
     moveNpcs(g, 12);
     expect(Math.abs(me.x - s.x) + Math.abs(me.y - s.y)).toBeGreaterThan(1);
     expect(s.d65be).toBe(0);

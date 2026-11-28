@@ -6,6 +6,7 @@ import { journeyOnward, runGame } from '../src/game/run.ts';
 import { enterTown, loadLevel, townLoop } from '../src/game/town.ts';
 import { tileAt } from '../src/game/world.ts';
 import { newGame, type FakePlatform } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /** A step of a script: a key, a word typed whole, or a function giving keys until it gives undefined. */
 type Step = number | string | ((g: Game) => number | undefined);
@@ -186,7 +187,7 @@ describe('the artifacts on the path', () => {
     expect(s.sandalwoodBox).not.toBe(0);
     // Taken for good: the castle entered again has no box in it.
     await enterTown(g, true);
-    expect(s.actors.some((a) => a.tile === 0x0e)).toBe(false);
+    expect(actorList(g).some((a) => a.tile === 0x0e)).toBe(false);
   });
 
   it('is given the Black Badge by Elistaria of Windemere for the password IMPERA', async () => {
@@ -211,7 +212,7 @@ describe('the artifacts on the path', () => {
     expect(s.crown).not.toBe(0);
     // Taken for good: the palace entered again has no Crown in it.
     await enterTown(g, true);
-    expect(s.actors.some((a) => a.tile === 0xb5)).toBe(false);
+    expect(actorList(g).some((a) => a.tile === 0xb5)).toBe(false);
   });
 
   it('flies over the trapdoors round the Sceptre in Stonegate on the magic carpet, and picks it up', async () => {
@@ -232,7 +233,7 @@ describe('the artifacts on the path', () => {
     expect(heard(p)).toMatch(/The Sceptre of Lord British!/);
     expect(s.sceptre).not.toBe(0);
     await enterTown(g, true);
-    expect(s.actors.some((a) => a.tile === 0xb6)).toBe(false);
+    expect(actorList(g).some((a) => a.tile === 0xb6)).toBe(false);
   });
 
   it("picks up Lord British's Amulet where it lies in the Underworld", async () => {

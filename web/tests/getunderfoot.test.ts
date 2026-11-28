@@ -3,6 +3,7 @@ import { K, Pad } from '../src/game/io.ts';
 import { getCommand } from '../src/game/items.ts';
 import { getOffer } from '../src/game/targets.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /** Out in Britannia on foot, the actors cleared, with a thing (tile) lying at (x, y). */
 function outdoors(tile: number, x: number, y: number, input: 'controller' | 'letters' = 'controller') {
@@ -11,8 +12,8 @@ function outdoors(tile: number, x: number, y: number, input: 'controller' | 'let
   g.options.input = input;
   g.inPlay = true;
   Object.assign(s, { mapId: 0, level: 0, x: 80, y: 100, partyTile: 0x1c });
-  for (const a of s.actors.slice(1)) a.tile = 0;
-  Object.assign(s.actors[5], { tile, anim: tile, x, y, z: 0 });
+  for (const a of actorList(g).slice(1)) a.tile = 0;
+  Object.assign(actor(g, 5), { tile, anim: tile, x, y, z: 0 });
   return { g, p, s };
 }
 
@@ -29,7 +30,7 @@ describe('Get of what lies underfoot', () => {
     p.keys.push(Pad.A);
     await getCommand(g);
     expect(s.carpets).toBe(carpets + 1);
-    expect(s.actors[5].tile).toBe(0);
+    expect(actor(g, 5).tile).toBe(0);
     expect(p.log).toMatch(/Here/);
   });
 

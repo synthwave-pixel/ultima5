@@ -10,6 +10,7 @@ import { partyFigures } from '../src/game/world.ts';
 import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
 import { Colour, DUNGEON_TINTS } from '../src/ui/colours.ts';
+import { actor } from '../src/game/actors.ts';
 
 /** The dungeon map (dungeonMap.ts): the Standard look's tiles for its marks, its two views, and the log under them. */
 describe('the dungeon map', () => {
@@ -201,7 +202,7 @@ describe('the dungeon map', () => {
 
   it('draws the level’s creature where the party sees it, on both maps, and not where it cannot', () => {
     const { g, icons } = level();
-    const bat = (x: number, y: number): void => void Object.assign(g.s.actors[1], { x, y, tile: 1, b5: 0x10 });
+    const bat = (x: number, y: number): void => void Object.assign(actor(g, 1), { x, y, tile: 1, b5: 0x10 });
     const drawnAt = (view: 'full' | 'mini'): [number, number][] => {
       g.options.dungeonView = view;
       icons.length = 0;
@@ -223,7 +224,7 @@ describe('the dungeon map', () => {
   it('sees the creature only where the view could show it, not through rock or a closed door', () => {
     const { g } = level();
     const at = (x: number, y: number): boolean => {
-      Object.assign(g.s.actors[1], { x, y, tile: 5, b5: 0x10 });
+      Object.assign(actor(g, 1), { x, y, tile: 5, b5: 0x10 });
       return creatureSeen(g);
     };
     const put = (x: number, y: number, v: number): void => void (g.s.dungeon[y * 8 + x] = v);
@@ -515,7 +516,7 @@ describe('walking the whole map', () => {
     g.s.dungeon[2 * 8 + 2] = 0x10; // a ladder up south
     expect(await step(K.Down)).toBe(0);
     expect([g.s.x, g.s.y, g.s.facing]).toEqual([2, 1, 2]);
-    Object.assign(g.s.actors[1], { x: 1, y: 1 }); // the creature, back west
+    Object.assign(actor(g, 1), { x: 1, y: 1 }); // the creature, back west
     expect(await step(K.Left)).toBe(0);
     expect([g.s.x, g.s.y, g.s.facing]).toEqual([2, 1, 3]);
   });

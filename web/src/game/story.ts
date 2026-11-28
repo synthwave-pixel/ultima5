@@ -12,7 +12,7 @@
 
 import * as modern from './modernKarma.ts';
 import { loadResource } from '../data/images.ts';
-import { setActor } from './actors.ts';
+import { actor, actorSlots, party, setActor } from './actors.ts';
 import { reveal, shakeScreen, sleepTicks, TICK_MS } from './effects.ts';
 import { drawMoons, drawVitals, invertMember, setWind, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
@@ -134,7 +134,7 @@ async function dying(g: Game): Promise<void> {
   await wait(g, 0x1c);
   g.say(0x7152); // "\n\nBut thy slumber is disturbed!"
   g.combatMap[5 * 32 + 5] = 0;
-  const a0 = s.actors[0];
+  const a0 = party(g);
   a0.tile = a0.anim = 0x1c;
   a0.x = a0.y = 5;
   updateFrame(g);
@@ -147,7 +147,7 @@ async function dying(g: Game): Promise<void> {
   }
   g.say(0x7172); // "\n\nSomeone shouts\n\n\"FORTIS FORTUNA\nAVENTARI\""
   await wait(g, 6);
-  const a1 = s.actors[1];
+  const a1 = actor(g, 1);
   for (const [x, t] of [
     [2, 0x5e],
     [8, 0x5f],
@@ -310,7 +310,7 @@ async function script(g: Game, addr: number, n: number): Promise<void> {
           count = 1;
           break;
         case 9: {
-          const a = s.actors[b[i++]];
+          const a = actor(g, b[i++]);
           a.tile = a.anim = 0;
           break;
         }
@@ -326,11 +326,11 @@ async function script(g: Game, addr: number, n: number): Promise<void> {
       [dx2, dy2] = [s.dx, s.dy];
     }
     for (; count > 0; count--) {
-      s.actors[first].x += dx1;
-      s.actors[first].y += dy1;
+      actor(g, first).x += dx1;
+      actor(g, first).y += dy1;
       if (second >= 0) {
-        s.actors[second].x += dx2;
-        s.actors[second].y += dy2;
+        actor(g, second).x += dx2;
+        actor(g, second).y += dy2;
       }
       if (sound) await steps(g, 1);
     }
@@ -406,8 +406,8 @@ async function companionDies(g: Game, sliced: boolean): Promise<void> {
     for (let f = 25000; f > 2000; f -= 0x32) await g.sound.pulse(0xa50, 1, 200, f, 0);
   }
   const { explosion } = await import('./effects.ts');
-  await explosion(g, s.actors[1].x, s.actors[1].y);
-  s.actors[1].tile = s.actors[1].anim = 0;
+  await explosion(g, actor(g, 1).x, actor(g, 1).y);
+  actor(g, 1).tile = actor(g, 1).anim = 0;
   g.combatMap[7 * 32 + 5] = 0x80;
   let alive = 0;
   let m = 0;
@@ -527,7 +527,7 @@ async function captured(g: Game): Promise<void> {
     const ys = g.data.bytes(0x1f48, 6);
     const tiles = g.data.bytes(0x1ade, 9);
     for (let m = 0; m < party; m++) {
-      const a = s.actors[m];
+      const a = actor(g, m);
       a.x = xs[places[(party - 1) * 8 + m]];
       a.y = ys[places[(party - 1) * 8 + m]];
       a.tile = a.anim = tiles[CLASSES.indexOf(String.fromCharCode(s.members[m].cls))];
@@ -558,7 +558,7 @@ async function captured(g: Game): Promise<void> {
     g.print(miscMsg(g, 0x32c));
     await getChar(g);
     await interrogation(g, shrine, party);
-    if (s.actors[8].tile !== 0) await script(g, 0x3716, 10);
+    if (actor(g, 8).tile !== 0) await script(g, 0x3716, 10);
   }
   s.level = 0xff;
   drawMoons(g);
@@ -580,7 +580,7 @@ async function stepPause(g: Game): Promise<void> {
 
 /** ENDGAME_0510: actor `i` a step toward (x, y) (the longer way first); false once there (or gone). */
 async function walkTo(g: Game, i: number, x: number, y: number): Promise<boolean> {
-  const a = g.s.actors[i];
+  const a = actor(g, i);
   if (a.tile === 0 || (a.x === x && a.y === y)) return false;
   if (Math.abs(a.x - x) < Math.abs(a.y - y)) a.y += a.y > y ? -1 : 1;
   else a.x += a.x > x ? -1 : 1;
@@ -590,7 +590,7 @@ async function walkTo(g: Game, i: number, x: number, y: number): Promise<boolean
 
 /** ENDGAME_05a2: now and then actor `i` wanders a step on open floor. */
 async function wander(g: Game, i: number): Promise<void> {
-  const a = g.s.actors[i];
+  const a = actor(g, i);
   if (a.tile !== 0 && g.random(0, 1) !== 0) {
     for (let n = 0; n < 8; n++) {
       let x = a.x;
@@ -826,8 +826,8 @@ export async function endgame(g: Game): Promise<void> {
   s.combatTurn = 0xff;
   drawVitals(g);
   miscMap(g, 0x210);
-  for (const a of s.actors) a.tile = a.anim = 0;
-  const lb = s.actors[31];
+  for (const [, a] of actorSlots(g)) a.tile = a.anim = 0;
+  const lb = actor(g, 31);
   lb.tile = lb.anim = 0x7c;
   lb.x = 5;
   lb.y = 8;
@@ -850,7 +850,7 @@ export async function endgame(g: Game): Promise<void> {
       if (!g.soundOff) await g.sound.pulse(0x2260, 1, 40000, 5000, 1);
       drawVitals(g);
     }
-    const a = s.actors[m];
+    const a = actor(g, m);
     a.tile = a.anim = tiles[CLASSES.indexOf(String.fromCharCode(p.cls))];
     a.x = 5;
     a.y = 9;
@@ -888,7 +888,7 @@ export async function endgame(g: Game): Promise<void> {
     while (await walkTo(g, 0, 5, 5));
     await sleepTicks(g, 4);
     setActor(g, 6, 0xe, 0xe, 5, 4, 0, 0);
-    s.actors[6].b6 = 0;
+    actor(g, 6).b6 = 0;
     g.print(msg(0xab));
     await sleepTicks(g, 0x28);
     g.say(0x84cc); // "\n\nHe says:\n\n"
@@ -898,10 +898,10 @@ export async function endgame(g: Game): Promise<void> {
     }
     await getChar(g);
     g.print(msg(0x24b));
-    s.actors[6].tile = s.actors[6].anim = 8;
+    actor(g, 6).tile = actor(g, 6).anim = 8;
     await getChar(g);
     if (!g.soundOff) await g.sound.pulse(0x1450, 1, 50000, 10000, 1);
-    s.actors[6].tile = s.actors[6].anim = 0;
+    actor(g, 6).tile = actor(g, 6).anim = 0;
     g.combatMap[4 * 32 + 5] = 0xdc;
     for (s.moongateHeight = 1; s.moongateHeight < 0x10; s.moongateHeight++) await sleepTicks(g, 1);
     await sleepTicks(g, 4);
@@ -910,7 +910,7 @@ export async function endgame(g: Game): Promise<void> {
     await sleepTicks(g, 1);
     for (let m = 0; m < s.partySize; m++) {
       while (await walkTo(g, m, 5, 4));
-      s.actors[m].tile = s.actors[m].anim = 0;
+      actor(g, m).tile = actor(g, m).anim = 0;
       await sleepTicks(g, 1);
     }
     for (s.moongateHeight = 0xf; s.moongateHeight > 0; s.moongateHeight--) await sleepTicks(g, 1);
@@ -927,7 +927,7 @@ export async function endgame(g: Game): Promise<void> {
   g.say(0x84da); // "\"I see...\n"
   await sleepTicks(g, 0x28);
   g.print(msg(0x2d5));
-  s.actors[0].y--;
+  party(g).y--;
   await stepPause(g);
   for (;;) {
     let moving = 0;

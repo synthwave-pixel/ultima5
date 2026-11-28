@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { actorAt, overlayActors, setTileAt, setView, viewAt } from '../src/game/world.ts';
 import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /**
  * Deep forest hides what stands in it (the DOS game's ULTIMA_5394): a monster there is not seen. The DOS game hid
@@ -20,8 +21,8 @@ describe('under cover of deep forest', () => {
         setView(g, x, y, ground);
         setTileAt(g, s.x - 5 + x, s.y - 5 + y, ground);
       }
-    for (const a of s.actors) a.tile = 0;
-    const m = s.actors[1];
+    for (const a of actorList(g)) a.tile = 0;
+    const m = actor(g, 1);
     [m.x, m.y, m.z, m.tile, m.anim] = [s.x + 2, s.y, 0, 0x88, 0x88];
     return g;
   };

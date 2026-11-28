@@ -9,6 +9,7 @@ import { T } from '../src/game/tiles.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { tileAt } from '../src/game/world.ts';
 import { keys, newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /**
  * The edges of a creature on the party's side - summoned, or charmed to it - found in testing it as the player's to
@@ -26,7 +27,7 @@ describe("a creature on the party's side, at the edges", () => {
     journeyOnward(g);
     g.s.mapId = 0xff;
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     const avatar = placeCombatant(g, 0, 1, 2, 2, 0);
     const me = placeCombatant(g, kind, 0, 5, 5, 0);
     charm(g, me, 'bound');
@@ -45,7 +46,7 @@ describe("a creature on the party's side, at the edges", () => {
 
   it("leaves a chest it walks into to a member: no search begun for it, so the member's bump searches it first", () => {
     const { g, me, avatar } = field(RAT);
-    Object.assign(g.s.actors[20], { tile: 0x01, anim: 0x01, x: 6, y: 5, z: 0 }); // a chest, the field won
+    Object.assign(actor(g, 20), { tile: 0x01, anim: 0x01, x: 6, y: 5, z: 0 }); // a chest, the field won
     expect(bumpCommand(g, 'combat', 0x01, tileAt(g, 6, 5), 6, 5)).toBe(0);
     expect(g.bumped.size).toBe(0);
     g.s.combatTurn = avatar;
@@ -101,7 +102,7 @@ describe("a creature on the party's side, at the edges", () => {
       if (!e.message.includes('ran out')) throw e;
     });
     const s = g.s;
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + ORC * 4; // orcs, which must walk to the party to strike it
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     let rat = -1;
@@ -113,7 +114,7 @@ describe("a creature on the party's side, at the edges", () => {
         // At the first member's prompt: a rat bound to the party beside the Avatar, the others gone from the field,
         // and the member at the field's west edge, to walk off it.
         for (let i = 0; i < 6; i++) if (i !== s.combatTurn && g.combat[i].flags & CF.Player) removeCombatant(g, -i - 1);
-        me.x = s.actors[me.actor].x = 0;
+        me.x = actor(g, me.actor).x = 0;
         rat = placeCombatant(g, RAT, 0, 1, me.y, s.level);
         charm(g, rat, 'bound');
         return K.Left;

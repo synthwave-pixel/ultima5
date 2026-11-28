@@ -34,6 +34,7 @@ import { poisonKills } from './settings.ts';
 import { logOnly, merchantKeeper, merchantPause, merchantSpeaking, withMerchantSpeech } from './merchantSpeech.ts';
 import { addAmmo, ammoFull, isAmmo } from './ammo.ts';
 import { shortArmNames } from './armNames.ts';
+import { leaveVehicle } from './objectStores.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 const dec = (v: number, n: number): number => (v > n ? v - n : 0);
@@ -444,8 +445,6 @@ async function apothecaryWares(v: Visit): Promise<void> {
 async function stables(v: Visit): Promise<void> {
   const { g } = v;
   const s = g.s;
-  let slot = 0;
-  for (; slot < 32; slot++) if (s.actors[slot].tile === 0) break;
   const dxs = g.data.sbytes(0x3c38, 8);
   let x = 0;
   let y = 0;
@@ -457,7 +456,7 @@ async function stables(v: Visit): Promise<void> {
     if (actorTileAt(g, x, y, s.level) === 0 && (t === T.T44 || t === T.T45 || t === T.Grass)) break;
   }
   void dxs;
-  if (side === 4 || slot === 0x20) {
+  if (side === 4) {
     g.say(0x7a48); // "The stables are closed.\n"
     return;
   }
@@ -481,12 +480,9 @@ async function stables(v: Visit): Promise<void> {
         } else {
           s.gold -= v.price;
           shortChange(g);
-          const a = s.actors[slot];
-          a.b6 = a.b7 = a.b5 = 0;
-          a.tile = a.anim = 0x10;
-          a.x = x;
-          a.y = y;
-          a.z = s.level;
+          // The party's horse, left by the stable door: in the towne's vehicles' store, there on the next visit.
+          leaveVehicle(g, { kind: 'horse', tile: 0x10, x, y, z: s.level, hull: 0, skiffs: 0 });
+          g.viewDirty |= 2;
           updateFrame(g);
           drawVitals(g);
           result = 1;

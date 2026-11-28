@@ -15,6 +15,7 @@ import { setTileAt, tileAt } from '../src/game/world.ts';
 import { somethingBeside } from '../src/game/items.ts';
 import { Status } from '../src/game/save.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 const [CAST, GET, JIMMY, KLIMB, LOOK, OPEN, PUSH, SEARCH] = [0x43, 0x47, 0x4a, 0x4b, 0x4c, 0x4f, 0x50, 0x53];
 
@@ -96,7 +97,7 @@ describe('bump to act, for things', () => {
   it('disarms a chest read as trapped, by An Sanct or a key, and opens it - and searches again when a key breaks', async () => {
     const run = async (g: ReturnType<typeof newGame>['g'], p: ReturnType<typeof newGame>['p']): Promise<string[]> => {
       const done: string[] = [];
-      for (let i = 0; i < 4 && g.s.actors[5].tile === 0x01; i++) {
+      for (let i = 0; i < 4 && actor(g, 5).tile === 0x01; i++) {
         const from = p.log.length;
         const command = bumpCommand(g, 'outdoors', 0x01, T.Grass, g.s.x + 1, g.s.y);
         bumpInto(g, command, K.Right);
@@ -111,8 +112,8 @@ describe('bump to act, for things', () => {
       const s = g.s;
       [s.mapId, s.level, s.x, s.y] = [0, 0, 82, 106]; // the plain outside Britain
       enterWorld(g);
-      Object.assign(s.actors[5], { tile: 0x01, anim: 0x01, x: s.x + 1, y: s.y, z: s.level, b5 });
-      for (let i = 1; i < 0x20; i++) if (i !== 5 && s.actors[i].tile >= 0x80) s.actors[i].tile = 0; // no monster about
+      Object.assign(actor(g, 5), { tile: 0x01, anim: 0x01, x: s.x + 1, y: s.y, z: s.level, b5 });
+      for (let i = 1; i < 0x20; i++) if (i !== 5 && actor(g, i).tile >= 0x80) actor(g, i).tile = 0; // no monster about
       s.partySize = 2;
       s.members.slice(0, 2).forEach((v) => Object.assign(v, { status: Status.Good, int: 30, dex: 30, hp: 99, level: 1, mp: 0 }));
       s.mixtures[AN_SANCT] = 0;
@@ -133,7 +134,7 @@ describe('bump to act, for things', () => {
       expect(s.members[1].mp).toBe(8);
       expect(open).toMatch(/Open/);
       expect(open).not.toMatch(/Trapped!/);
-      expect(s.actors[5].tile).not.toBe(0x01);
+      expect(actor(g, 5).tile).not.toBe(0x01);
     }
     // No caster, a key: Search, Jimmy ("Success!"), Open.
     {
@@ -220,7 +221,7 @@ describe('bump to act, for things', () => {
     });
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const fight = fighter(g);
@@ -230,8 +231,8 @@ describe('bump to act, for things', () => {
     const said: string[] = [];
     let from = 0;
     const put = (tile: number, x: number, y: number, b5 = 0): void => {
-      const a = s.actors.findIndex((v, i) => i > 0 && v.tile === 0);
-      Object.assign(s.actors[a], { tile, anim: tile, x, y, z: 0, b5 });
+      const a = actorList(g).findIndex((v, i) => i > 0 && v.tile === 0);
+      Object.assign(actor(g, a), { tile, anim: tile, x, y, z: 0, b5 });
     };
     p.next = () => {
       const me = g.combat[s.combatTurn];
@@ -247,7 +248,7 @@ describe('bump to act, for things', () => {
           put(0x1f, x, y); // a corpse, to the north
         } else if (step === 1) {
           // Whatever the corpse left (now and then gold or food) is cleared away, and a chest set there, untrapped.
-          for (const v of s.actors.slice(1)) if (v.x === x && v.y === y && v.tile < 0x20) v.tile = 0;
+          for (const v of actorList(g).slice(1)) if (v.x === x && v.y === y && v.tile < 0x20) v.tile = 0;
           put(0x01, x, y, 0x05);
         }
         if (step > 0) said.push(p.log.slice(from));
@@ -278,7 +279,7 @@ describe('bump to act, for things', () => {
     const g = game(0);
     const log = (): string => (g.p as unknown as { log: string }).log.replace(/\s+/g, ' ');
     // A monster in view of the party, out in the world.
-    Object.assign(g.s.actors[5], { tile: 0x90, anim: 0x90, x: g.s.x + 3, y: g.s.y, z: g.s.level });
+    Object.assign(actor(g, 5), { tile: 0x90, anim: 0x90, x: g.s.x + 3, y: g.s.y, z: g.s.level });
     expect(foesAbout(g, 'outdoors')).toBe(true);
     // Not "Blocked!", which a wall says too (issue #5): what was not done, and why.
     expect(bump(g, 0x02, T.Grass, 'outdoors')).toBe(NOT_NOW); // gold, not taken
@@ -295,7 +296,7 @@ describe('bump to act, for things', () => {
     expect(log()).toMatch(/Cannot take with foes near!\s*$/);
     expect(bump(g, 0, 0x97, 'outdoors')).toBe(OPEN); // an odd door still says why it will not open
     // Out of sight, the monster is no matter.
-    g.s.actors[5].x = g.s.x + 8;
+    actor(g, 5).x = g.s.x + 8;
     expect(foesAbout(g, 'outdoors')).toBe(false);
     expect(bump(g, 0x02, T.Grass, 'outdoors')).toBe(GET);
   });
@@ -308,15 +309,15 @@ describe('bump to act, for things', () => {
     Object.assign(g.s, { mapId: 1, level: 0, x: 15, y: 30, hour: 12 });
     await enterTown(g, true);
     const s = g.s;
-    for (const a of s.actors.slice(1)) a.tile = 0;
+    for (const a of actorList(g).slice(1)) a.tile = 0;
     Object.assign(s, { x: 10, y: 10, activeMember: 0 });
     for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) setTileAt(g, 10 + dx, 10 + dy, 0x44);
     setTileAt(g, 10, 9, T.Barrel);
     g.options.input = 'controller';
     // A creature that is nobody's: in a slot none of the towne's people holds (one of theirs who talks is no foe).
     const { npcOfActor } = await import('../src/game/town.ts');
-    const slot = s.actors.findIndex((_, i) => i > 0 && npcOfActor(g, i) < 0);
-    const rat = (near: boolean): void => void Object.assign(s.actors[slot], { tile: near ? 0x90 : 0, anim: 0x90, x: 13, y: 10, z: 0 });
+    const slot = actorList(g).findIndex((_, i) => i > 0 && npcOfActor(g, i) < 0);
+    const rat = (near: boolean): void => void Object.assign(actor(g, slot), { tile: near ? 0x90 : 0, anim: 0x90, x: 13, y: 10, z: 0 });
     const walk = async (): Promise<string> => {
       g.viewDirty = 1;
       updateFrame(g);
@@ -347,7 +348,7 @@ describe('bump to act, for things', () => {
     await enterTown(g, true);
     const s = g.s;
     const grendel = s.npcs[1];
-    expect(s.actors[grendel.actor].tile).toBe(0x90); // a giant rat to look at
+    expect(actor(g, grendel.actor).tile).toBe(0x90); // a giant rat to look at
     Object.assign(s, { x: grendel.x + 2, y: grendel.y });
     expect(foesAbout(g, 'town')).toBe(false); // he talks: the hut is searched as any other
     // Turned hostile (an air of Falsehood: town.ts turnHostile), he is a foe after all.
@@ -438,7 +439,7 @@ describe('bump to act, for things', () => {
     const s = g.s;
     s.sceptre = 0xff;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const fight = fighter(g);
@@ -517,7 +518,7 @@ describe('bump to act, where it had said Blocked', () => {
     });
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
     const fight = fighter(g);

@@ -6,6 +6,7 @@ import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { normaliseOptions } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Auto combat's Allies (autocombat.ts): every turn on the party's side played but the Avatar's, which is the player's -
@@ -48,7 +49,7 @@ describe('auto combat: Allies', () => {
   it("plays a creature charmed to the party's side", async () => {
     const { g } = fight(6);
     Object.assign(g.combat[7], { who: 0x14, x: 8, y: 5, flags: CF.Monster, hp: 10, actor: 4 }); // a second rat beside it
-    Object.assign(g.s.actors[4], { tile: 0x90, anim: 0x90, x: 8, y: 5, z: 0 }); // standing on the field, to be struck
+    Object.assign(actor(g, 4), { tile: 0x90, anim: 0x90, x: 8, y: 5, z: 0 }); // standing on the field, to be struck
     charm(g, 6, 0); // the first rat, turned to the party's side
     expect(await autoKey(g)).toBe(0x41);
   });

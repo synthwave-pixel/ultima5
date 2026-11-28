@@ -6,6 +6,7 @@ import { asPad } from '../src/game/input.ts';
 import { gameplayLines } from '../src/game/menu.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * Snap targets (the port's): the foe a snap attack (X, Snap attacks on) opens on - the nearest the first hand reaches,
@@ -21,7 +22,7 @@ describe('snap targets', () => {
     const { g, p } = newGame(1);
     journeyOnward(g);
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
     const me = placeCombatant(g, 0, 1, 5, 5, 0);
     const m = g.s.members[g.combat[me].who];

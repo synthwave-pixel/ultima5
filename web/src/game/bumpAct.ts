@@ -60,6 +60,7 @@ import { isTrigger } from './targets.ts';
 import { T } from './tiles.ts';
 import { npcOfActor } from './town.ts';
 import { tileAt } from './world.ts';
+import { actor } from './actors.ts';
 
 const C = 0x43; // Cast
 const G = 0x47; // Get
@@ -129,7 +130,7 @@ export function foesAbout(g: Game, where: BumpPlace): boolean {
     return false;
   }
   for (let i = 1; i < 32; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     const t = a.tile;
     if (!t || a.z !== s.level || Math.abs(a.x - s.x) > 5 || Math.abs(a.y - s.y) > 5) continue;
     if (where === 'town' && friendly(g, i)) continue;

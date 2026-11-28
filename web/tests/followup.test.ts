@@ -3,6 +3,7 @@ import { foePast, followUpFoe, passable, placeCombatant } from '../src/game/comb
 import { CF, type Game } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * Walking into a foe gives every hand a blow (a spiked helm and a weapon in each hand, up to three), none of them
@@ -22,7 +23,7 @@ describe("a bump attack's later blows", () => {
     const { g } = newGame(1);
     journeyOnward(g);
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
     const me = placeCombatant(g, 0, 1, 5, 5, 0);
     const at = foes.map(([x, y, hp]) => {

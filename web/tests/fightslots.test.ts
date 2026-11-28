@@ -3,6 +3,7 @@ import { canStrike, placeCombatant } from '../src/game/combat.ts';
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /** A fight's field of floor, nobody on it. */
 function field(rules: 'story' | 'modern' | 'classic' = 'modern') {
@@ -12,7 +13,7 @@ function field(rules: 'story' | 'modern' | 'classic' = 'modern') {
   g.s.mapId = 0xff;
   g.combatMap.fill(0x44);
   for (const c of g.combat) Object.assign(c, { flags: 0, x: 0x63, y: 0x63 });
-  for (const a of g.s.actors) a.tile = a.anim = 0;
+  for (const a of actorList(g)) a.tile = a.anim = 0;
   return g;
 }
 
@@ -20,7 +21,7 @@ describe('a fighter set down with no actor free', () => {
   it('is not placed, and leaves its slot empty: no phantom with another figure', () => {
     const g = field('classic');
     // Every actor held - by corpses, chests, loot, fields - and a fighter's slot free.
-    g.s.actors.forEach((a, i) => Object.assign(a, { tile: 0x1f, anim: 0x1f, x: i % 11, y: 0 }));
+    actorList(g).forEach((a, i) => Object.assign(a, { tile: 0x1f, anim: 0x1f, x: i % 11, y: 0 }));
     const gargoyle = g.data.table(0x18b6, 0x30).indexOf('GARGOYLE');
     expect(placeCombatant(g, gargoyle, 0, 5, 5, 0)).toBe(-1);
     expect(g.combat.filter((c) => c.flags !== 0)).toHaveLength(0);
@@ -53,17 +54,17 @@ describe('auto combat with a friend charmed against the party, by the Classic ru
     // Shamino (1): the spiked helm strikes at arm's length; the magic axe in hand is thrown, and is asked first.
     s.members[1].equips.set([0x03, 0xff, 0x26, 0xff, 0xff, 0xff]);
     Object.assign(g.combat[1], { flags: CF.Player, who: 1, x: 5, y: 5, actor: 1 });
-    Object.assign(s.actors[1], { tile: 0x48, anim: 0x48, x: 5, y: 5 });
+    Object.assign(actor(g, 1), { tile: 0x48, anim: 0x48, x: 5, y: 5 });
     // Iolo (2), charmed against the party, two squares off: the axe reaches him, the helm does not.
     Object.assign(g.combat[2], { flags: CF.Player | CF.Charmed, who: 2, x: 5, y: 7, actor: 2 });
-    Object.assign(s.actors[2], { tile: 0x44, anim: 0x44, x: 5, y: 7 });
+    Object.assign(actor(g, 2), { tile: 0x44, anim: 0x44, x: 5, y: 7 });
     g.charmedBy.set(2, 'bound');
     expect(canStrike(g, 1, [2])).toBe(true);
     // A spiked shield in the axe's place: asked after the helm, as far (one square), and neither reaches him.
     s.members[1].equips.set([0x03, 0xff, 0x06, 0xff, 0xff, 0xff]);
     expect(canStrike(g, 1, [2])).toBe(false); // closes in, rather than backing out of the helm's aim for ever
     Object.assign(g.combat[2], { y: 6 });
-    s.actors[2].y = 6;
+    actor(g, 2).y = 6;
     expect(canStrike(g, 1, [2])).toBe(true);
   });
 });

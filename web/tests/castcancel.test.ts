@@ -5,6 +5,7 @@ import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * A cast backed out of spends no turn (the port's): the member is asked again, and a blow struck then is a weapon's -
@@ -20,7 +21,7 @@ it('strikes with the weapon, not as a spell, after a cast backed out of in a fig
   });
   const s = g.s;
   const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-  const foe = s.actors[1];
+  const foe = actor(g, 1);
   foe.tile = foe.anim = 0x40 + rat * 4;
   [foe.x, foe.y, foe.z] = [s.x + 1, s.y, 0];
   const spellSounds: number[] = [];

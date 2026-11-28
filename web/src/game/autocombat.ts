@@ -17,7 +17,7 @@
  * 1988, and let alone with the Modern, the charm wearing off.
  */
 
-import { actorTileAtRev, treasureLies } from './actors.ts';
+import { actor, actorTileAtRev, treasureLies } from './actors.ts';
 import {
   arenaFree,
   autoPlaysTurn,
@@ -284,7 +284,7 @@ export async function autoKey(g: Game, interrupt?: AutoInterrupt): Promise<numbe
   if (member ? canStrike(g, s.combatTurn, targets) : creatureStrikes()) return 0x41;
   // The way to the nearest foe that can be reached, round whatever is in between (a ship's rail, a plank, a
   // wall): the first step of it. Where no foe can be reached, the greedy step of old, which at least keeps moving.
-  const step = firstStep(g, me.x, me.y, s.actors[me.actor].tile, foes, member);
+  const step = firstStep(g, me.x, me.y, actor(g, me.actor).tile, foes, member);
   if (step !== 0) {
     stuck = 0;
     const [dx, dy] = STEPS.get(step) ?? [0, 0];

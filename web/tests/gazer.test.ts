@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freeActor } from '../src/game/actors.ts';
+import { actor, freeActor } from '../src/game/actors.ts';
 import { attackCombat, damage, report } from '../src/game/combat.ts';
 import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
@@ -17,7 +17,7 @@ describe('a gazer, and the swarm it lets out', () => {
     journeyOnward(g);
     const s = g.s;
     const foe = freeActor(g);
-    Object.assign(s.actors[foe], { tile: 0xb0, anim: 0xb0, x: s.x, y: s.y - 1, z: s.level, b5: 0 });
+    Object.assign(actor(g, foe), { tile: 0xb0, anim: 0xb0, x: s.x, y: s.y - 1, z: s.level, b5: 0 });
     // Into the fight, and held at its first key: the field as it stands.
     p.next = () => {
       throw new Error('held');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canEnter } from '../src/game/actors.ts';
+import { actor, canEnter } from '../src/game/actors.ts';
 import { arenaFree, clearShot, combatantAt, onMonsterSide } from '../src/game/combat.ts';
 import { CF, type Game } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
@@ -225,7 +225,7 @@ function walker(g: Game, p: FakePlatform, trace: string[]): void {
     const r = room ?? { l: s.level, x: 0, y: 0, entry: 'fall' };
     const me = g.combat[s.combatTurn];
     if (!(me.flags & CF.Player)) return Pad.B;
-    const tile = s.actors[me.actor].tile;
+    const tile = actor(g, me.actor).tile;
     const start = me.y * 11 + me.x;
     // What this member can reach on the field as it stands: sides walked off, ladders stood on.
     const from = new Map<number, number>([[start, -1]]);

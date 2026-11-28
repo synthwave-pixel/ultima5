@@ -16,6 +16,7 @@ import { isCaster, restedMp } from './rest.ts';
 import { earnedLevel, type Member, Status } from './save.ts';
 import { T } from './tiles.ts';
 import { animateParty, buildLightMap, buildView, drawView, overlayActors, tileAt, tileCell, viewAt } from './world.ts';
+import { actorSlots, party } from './actors.ts';
 
 export const Win = { screen: 0, stats: 1, messages: 2 } as const;
 
@@ -28,7 +29,7 @@ export const Win = { screen: 0, stats: 1, messages: 2 } as const;
  */
 export function animateActors(g: Game, figures = true, tiles = true): void {
   const scripts = g.data.animScripts();
-  for (const a of figures ? g.s.actors : []) {
+  for (const [, a] of figures ? actorSlots(g) : []) {
     if (a.tile === 0) continue;
     let delay = a.b6 & 0xf;
     let pos = a.b6 >> 4;
@@ -745,8 +746,8 @@ export function drawVitals(g: Game, marking = true): void {
     while (t.win.x < 8) g.printChar(' ');
     if (s.mapId < 0x80 && (s.partyTile & 0xf8) === 0x20) {
       g.say(0x54bd); // "Ship:"
-      g.printNumber(s.actors[0].b5);
-      if (s.actors[0].b5 < 10) g.printChar(' ');
+      g.printNumber(party(g).b5);
+      if (party(g).b5 < 10) g.printChar(' ');
     } else {
       drawGold(g);
     }

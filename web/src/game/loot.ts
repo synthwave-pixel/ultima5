@@ -22,6 +22,7 @@ import { Status } from './save.ts';
 import type { Offer } from './targets.ts';
 import { updateFrame } from './frame.ts';
 import { fieldWon } from './turn.ts';
+import { actor, actorSlots, lyingSlot } from './actors.ts';
 
 const CHEST = 1;
 
@@ -32,11 +33,11 @@ const takeable = (tile: number): boolean => (tile >= 2 && tile <= 0xf) || tile =
 function lying(g: Game): { chests: number[]; things: number[] } {
   const chests: number[] = [];
   const things: number[] = [];
-  g.s.actors.forEach((a, i) => {
-    if (i === 0) return;
+  for (const [i, a] of actorSlots(g)) {
+    if (i === 0) continue;
     if (a.tile === CHEST) chests.push(i);
     else if (takeable(a.tile)) things.push(i);
-  });
+  }
   return { chests, things };
 }
 
@@ -141,7 +142,7 @@ export async function lootField(g: Game): Promise<boolean> {
   const traps: string[] = [];
   let left = 0;
   for (const i of lying(g).chests) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile !== CHEST) continue;
     const key = thingKey(g, a.x, a.y);
     // What a search of it said, if the player had one made; else the cleverest searches it now.
@@ -152,7 +153,7 @@ export async function lootField(g: Game): Promise<boolean> {
         left++;
         continue;
       }
-      await quiet(() => searchChest(g, i, who));
+      await quiet(() => searchChest(g, lyingSlot(g, i), who));
       tally(did.searched, who);
       read = g.bumped.get(key);
     }
@@ -166,7 +167,7 @@ export async function lootField(g: Game): Promise<boolean> {
       } else if (s.keys > 0) {
         const who = best(able(g), (m) => s.members[m].dex);
         if (who >= 0) {
-          await quiet(async () => (safe = await jimmyChestBy(g, i, who)));
+          await quiet(async () => (safe = await jimmyChestBy(g, lyingSlot(g, i), who)));
           tally(did.jimmied, who);
           if (!safe) broke++;
         }
@@ -181,7 +182,7 @@ export async function lootField(g: Game): Promise<boolean> {
     const m = s.members[opener];
     const [hp, status] = [m.hp, m.status];
     const trapped = a.b5 > 0x7f;
-    await quiet(() => openChest(g, a.x, a.y, a.z, { actor: i, who: opener }));
+    await quiet(() => openChest(g, a.x, a.y, a.z, { chest: lyingSlot(g, i), who: opener }));
     tally(did.opened, opener);
     if (trapped) {
       const hurt = m.status === Status.Dead ? ', and falls' : m.status !== status ? ', poisoned' : hp > m.hp ? ` (-${hp - m.hp})` : '';
@@ -192,7 +193,7 @@ export async function lootField(g: Game): Promise<boolean> {
   // Everything lying about, what the chests gave up with it.
   const taken: string[] = [];
   for (const i of lying(g).things) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     taken.push(await quiet(() => getObject(g, a.tile, a.b5, i)));
   }
   g.viewDirty |= 2;

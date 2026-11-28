@@ -17,6 +17,7 @@ import {
 } from '../src/game/targets.ts';
 import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /** A fight's field of plain floor, the party's first member at its middle, their turn. */
 function fight(): Game {
@@ -25,7 +26,7 @@ function fight(): Game {
   s.mapId = 0xff;
   g.commandPrompt = 'combat';
   g.combatMap.fill(0x44);
-  for (const a of s.actors) a.tile = 0;
+  for (const a of actorList(g)) a.tile = 0;
   Object.assign(s, { x: 5, y: 5, combatTurn: 0 });
   Object.assign(g.combat[0], { who: 0, x: 5, y: 5, flags: CF.Player });
   return g;
@@ -33,7 +34,7 @@ function fight(): Game {
 
 /** An actor standing on (x, y). */
 function place(g: Game, tile: number, x: number, y: number): void {
-  Object.assign(g.s.actors[5], { tile, anim: tile, x, y, z: 0 });
+  Object.assign(actor(g, 5), { tile, anim: tile, x, y, z: 0 });
 }
 
 /** The menu `open` shows, read as it is shown, then backed out of. */
@@ -154,7 +155,7 @@ describe('what the menus offer', () => {
     Object.assign(s, { mapId: 2, level: 0, x: 5, y: 5 });
     g.commandPrompt = 'town';
     g.map.fill(0x44);
-    for (const a of s.actors) a.tile = 0;
+    for (const a of actorList(g)) a.tile = 0;
     return g;
   }
 

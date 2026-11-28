@@ -3,6 +3,7 @@ import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Walking into a settlement's daemon (town.ts bump): one with nothing to say is spoken to, not struck - striking a
@@ -16,7 +17,7 @@ describe('walking into a silent daemon', () => {
     s.mapId = g.data.locations.findIndex((l) => l.name === 'WINDEMERE') + 1;
     await enterTown(g, true);
     const npc = [10, 11].find((i) => s.npcs[i].f0 !== 0 && s.npcs[i].actor !== 0)!;
-    const a = s.actors[s.npcs[npc].actor];
+    const a = actor(g, s.npcs[npc].actor);
     expect(a.tile & 0xfc).toBe(0xd8);
     Object.assign(s, { x: a.x - 1, y: a.y, level: a.z });
     const karma = s.karma;

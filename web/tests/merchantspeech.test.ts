@@ -9,6 +9,7 @@ import { T } from '../src/game/tiles.ts';
 import { newGame } from './helpers.ts';
 import { boxedWords, words } from './merchantWords.ts';
 import { fly, Landed } from './pilot.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * A merchant's words in the Dialog setting's box with Play (merchantSpeech.ts): the same visit as with Log - the same
@@ -104,7 +105,7 @@ describe("a merchant's words with the Dialog setting's Play", () => {
       gems: s.gems,
       party: s.members.slice(0, 6).map((m) => [m.name, m.status]),
       size: s.partySize,
-      actors: s.actors.map((a) => a.tile),
+      actors: actorList(g).map((a) => a.tile),
     };
     return { offered, held, log, box, boxes, after: boxShown(g), all, shown };
   };

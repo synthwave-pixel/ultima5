@@ -3,6 +3,8 @@ import { K, Pad, type HarpView } from '../src/game/io.ts';
 import { runGame, journeyOnward } from '../src/game/run.ts';
 import { fighter, newGame } from './helpers.ts';
 import { command, fly, Landed, pick, press, until, type Step } from './pilot.ts';
+import { actor, actorList, party } from '../src/game/actors.ts';
+import { leaveVehicle, vehiclesHere } from '../src/game/objectStores.ts';
 
 /** The game played with nothing but a controller, from its prompts and menus as a player meets them. */
 describe('a controller plays', () => {
@@ -174,7 +176,7 @@ describe('a controller plays', () => {
     Object.assign(s, { mapId: 1, level: 0, x: 15, y: 30, hour: 10, gold: 500 });
     await enterTown(g, true);
     // Stand before the herbalist's counter: south of where she stands, facing her.
-    const keeper = s.actors[s.npcs[2].actor];
+    const keeper = actor(g, s.npcs[2].actor);
     Object.assign(s, { x: keeper.x, y: keeper.y + 1, level: keeper.z });
     const which = g.data.table(0x19d2, 8).findIndex((n) => /garlic/i.test(n));
     const garlic = s.reagents[which];
@@ -200,7 +202,7 @@ describe('a controller plays', () => {
     stashWorldActors(g);
     Object.assign(s, { mapId: 15, level: 0, x: 15, y: 30, hour: 10 });
     await enterTown(g, true);
-    const him = s.actors[s.npcs[1].actor];
+    const him = actor(g, s.npcs[1].actor);
     expect(him.tile).toBeGreaterThanOrEqual(0x80); // a creature's tile, in the hut's own table of people
     Object.assign(s, { x: him.x, y: him.y + 1, level: him.z });
     fly(g, p, [
@@ -227,7 +229,7 @@ describe('a controller plays', () => {
     const crown = [...Array(32).keys()].find((i) => s.npcTypes[i] === 0xb5)!;
     Object.assign(s, { x: s.npcs[crown].x, y: s.npcs[crown].y + 1, level: s.npcs[crown].z });
     loadLevel(g, true);
-    const it = s.actors[s.npcs[crown].actor];
+    const it = actor(g, s.npcs[crown].actor);
     expect(it.tile).toBe(0xb5);
     fly(g, p, [press(K.Up), (game) => (game.commandPrompt === '' ? Pad.A : undefined)]);
     await play(g);
@@ -248,7 +250,7 @@ describe('a controller plays', () => {
     g.words.learn(g, `His name is ${title(name)}, whisper it not.`);
     fly(g, p, [command('Yell'), pick('Yell', title(name)), (game) => (game.commandPrompt === '' ? Pad.A : undefined)]);
     await play(g);
-    expect(s.actors.some((a) => a.tile === 0xfc)).toBe(true);
+    expect(actorList(g).some((a) => a.tile === 0xfc)).toBe(true);
   });
 
   it('destroys a Shadowlord: his name yelled before the flame, and as he steps into it his shard used', async () => {
@@ -272,7 +274,7 @@ describe('a controller plays', () => {
       pick('Yell', title(name)),
       // he appears beyond the flame and walks into it: a turn passed until he stands there
       until(
-        (game) => game.s.actors.some((a) => a.tile === 0xfc && a.x === x && a.y === y - 1),
+        (game) => actorList(game).some((a) => a.tile === 0xfc && a.x === x && a.y === y - 1),
         () => press(Pad.B), // B passes
       ),
       command('Use item'),
@@ -283,7 +285,7 @@ describe('a controller plays', () => {
     expect(p.log).not.toContain('No effect');
     expect(s.shadowlords[0]).toBe(0xff);
     expect(s.shards[0]).toBe(0);
-    expect(s.actors.some((a) => a.tile === 0xfc)).toBe(false);
+    expect(actorList(g).some((a) => a.tile === 0xfc)).toBe(false);
   });
 
   it('casts a healing spell on a wounded companion', async () => {
@@ -362,7 +364,7 @@ describe('a controller plays', () => {
       });
       p.log = '';
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+      Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
       g.options.autoCombat = auto ? 'all' : 'off';
       // The tests' usual fighter decides; its keys are given as a pad gives them. Attack is chosen from the menu,
       // and the crosshair, which a d-pad cannot move on the slant, goes across and then up or down.
@@ -442,7 +444,7 @@ describe('a controller plays', () => {
     // A rat at the party's elbow, a long sword and the returning axe in the pack - no shield - and nothing in hand:
     // the Avatar's style is weapon and shield, and with none to be had, a weapon in each hand.
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     s.members[0].equips.fill(0xff);
     s.members[0].str = 40;
     s.equipment[0x1e] = 1; // Long Sword
@@ -473,7 +475,7 @@ describe('a controller plays', () => {
     });
     p.log = '';
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     let menus = 0;
     fly(
       g,
@@ -649,7 +651,7 @@ describe('the Sandalwood Box, by controller', () => {
     await enterTown(g, true);
     s.level = 2;
     loadLevel(g, true);
-    const box = s.actors.find((a) => a.tile === 0x0e);
+    const box = actorList(g).find((a) => a.tile === 0x0e);
     expect(box).toBeDefined();
     Object.assign(s, { x: box!.x - 1, y: box!.y }); // in the cell the tune opens, the box to the east
     fly(g, p, [command('Get'), press(K.Right), (game) => (game.commandPrompt === '' ? Pad.A : undefined)]);
@@ -674,9 +676,9 @@ describe("Lord Kenneth's lesson, by controller", () => {
       stashWorldActors(g);
       Object.assign(s, { mapId: town, level: 0, x: 15, y: 30, hour: 12 });
       await enterTown(g, true);
-      const npc = [...Array(32).keys()].find((i) => i > 0 && s.npcTypes[i] !== 0 && s.npcs[i].fa === 14 && s.actors[s.npcs[i].actor]?.tile);
+      const npc = [...Array(32).keys()].find((i) => i > 0 && s.npcTypes[i] !== 0 && s.npcs[i].fa === 14 && actor(g, s.npcs[i].actor)?.tile);
       if (npc === undefined) continue;
-      const a = s.actors[s.npcs[npc].actor];
+      const a = actor(g, s.npcs[npc].actor);
       Object.assign(s, { x: a.x, y: a.y + 1, level: a.z });
       return { g, p };
     }
@@ -791,11 +793,11 @@ describe('a ship, by controller', () => {
       }
     }
     Object.assign(s, { x: at % 256, y: at >> 8 });
-    for (let i = 1; i < 32; i++) s.actors[i].tile = s.actors[i].anim = 0; // nothing of the hut's woods comes to sea
+    for (let i = 1; i < 32; i++) actor(g, i).tile = actor(g, i).anim = 0; // nothing of the hut's woods comes to sea
     const ship = freeActor(g);
     setActor(g, ship, 0x24, 0x24, s.x, s.y, 0, 0); // a frigate, sails furled, under the party's feet
-    s.actors[ship].b5 = 50; // her hull
-    s.actors[ship].b7 = 1; // a skiff aboard
+    actor(g, ship).b5 = 50; // her hull
+    actor(g, ship).b7 = 1; // a skiff aboard
     const [x, y] = [s.x, s.y];
     fly(g, p, [
       command('Board'),
@@ -851,8 +853,8 @@ describe('a horse, by controller', () => {
     expect(mounted).toBe(true);
     expect([s.x, s.y]).not.toEqual(start); // ridden a square north
     expect(s.partyTile).toBe(0x1c); // on foot again
-    // The horse left there - where it may have taken a step of its own the turn after
-    expect(s.actors.some((a) => (a.tile & 0xfe) === 0x10 && Math.abs(a.x - s.x) <= 1 && Math.abs(a.y - s.y) <= 1)).toBe(true);
+    // The horse left there, in the towne's vehicles' store (objectStores.ts): where it was left
+    expect(vehiclesHere(g).some((v) => v.kind === 'horse' && v.x === s.x && v.y === s.y)).toBe(true);
   });
 });
 
@@ -873,7 +875,7 @@ describe('the Codex, by controller', () => {
     }
     expect(where).not.toBeNull();
     Object.assign(s, { mapId: 0, ...where });
-    for (let i = 1; i < 32; i++) s.actors[i].tile = s.actors[i].anim = 0;
+    for (let i = 1; i < 32; i++) actor(g, i).tile = actor(g, i).anim = 0;
     s.questActive = 0x80; // the last of the eight ordained...
     s.questDone = 0x7f; // ...and the other seven done
     const doom = g.data.table(0x4502, 8)[7];
@@ -962,15 +964,12 @@ describe('a skiff rowed back to its ship, by controller', () => {
     const { g, p } = newGame();
     journeyOnward(g);
     const s = g.s;
-    const { freeActor, setActor } = await import('../src/game/actors.ts');
     const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0, x: 133, y: 150 });
-    const ship = freeActor(g);
-    setActor(g, ship, 0x26, 0x26, s.x, s.y, 0, 0); // a frigate, under the skiff
-    s.actors[ship].b5 = 50;
-    s.actors[ship].b7 = 0; // her skiff is the one the party is in
+    // A frigate, under the skiff; her skiff is the one the party is in.
+    leaveVehicle(g, { kind: 'frigate', tile: 0x26, x: s.x, y: s.y, z: 0, hull: 50, skiffs: 0 });
     s.partyTile = 0x28;
     g.commandPrompt = 'outdoors';
     let offered: string[] = [];
@@ -980,10 +979,9 @@ describe('a skiff rowed back to its ship, by controller', () => {
     };
     await commandMenu(g);
     expect(offered).toContain('Board');
-    s.dx = ship; // the actor Board takes (actorTileAt leaves its index there)
     await boardCommand(g);
     expect(s.partyTile & 0xfc).toBe(0x24);
-    expect(s.actors[0].b7).toBe(1);
+    expect(party(g).b7).toBe(1);
   });
 });
 
@@ -992,13 +990,12 @@ describe('a magic carpet where it lies, by controller', () => {
     const { g, p } = newGame();
     journeyOnward(g);
     const s = g.s;
-    const { freeActor, setActor } = await import('../src/game/actors.ts');
     const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0 });
-    const carpet = freeActor(g);
-    setActor(g, carpet, 0x1b, 0x1b, s.x, s.y, 0, 0); // a carpet on the ground, where it was left (X-it) or kept
+    // A carpet on the ground, where it was left (X-it).
+    leaveVehicle(g, { kind: 'carpet', tile: 0x1b, x: s.x, y: s.y, z: 0, hull: 0, skiffs: 0 });
     g.commandPrompt = 'outdoors';
     let offered: string[] = [];
     p.next = () => {
@@ -1007,8 +1004,8 @@ describe('a magic carpet where it lies, by controller', () => {
     };
     await commandMenu(g);
     expect(offered).toContain('Board');
-    s.dx = carpet;
     await boardCommand(g);
     expect(s.partyTile & 0xfe).toBe(0x14);
+    expect(vehiclesHere(g)).toEqual([]);
   });
 });

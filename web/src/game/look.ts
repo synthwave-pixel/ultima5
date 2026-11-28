@@ -7,7 +7,7 @@
  * the gem's map of the surroundings.
  */
 
-import { actorTileAt, freeActor, setActor } from './actors.ts';
+import { actorTileAt } from './actors.ts';
 import { drawVitals, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
 import { getChar, selectDirection, selectMember, whoActs, yesNo } from './input.ts';
@@ -21,6 +21,7 @@ import { T } from './tiles.ts';
 import { tileAt } from './world.ts';
 import { u16 } from '../data/files.ts';
 import { Colour } from '../ui/colours.ts';
+import { leaveVehicle } from './objectStores.ts';
 
 /** A NUL-terminated string at a byte offset of a file. */
 function fileString(data: Uint8Array, at: number): string {
@@ -77,7 +78,8 @@ async function well(g: Game, x: number, y: number, z: number): Promise<void> {
     } else {
       g.say(0x7284); // "\nPoof!\n"
       if (!g.soundOff) await g.sound.noise(10, 3000, 2000);
-      setActor(g, freeActor(g), 0x10, 0x10, x + 1, y, z, 0);
+      leaveVehicle(g, { kind: 'horse', tile: 0x10, x: x + 1, y, z, hull: 0, skiffs: 0 });
+      g.viewDirty |= 2;
     }
   } else {
     g.say(0x728c); // "\nNo effect...\n"

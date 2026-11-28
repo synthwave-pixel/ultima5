@@ -9,7 +9,8 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actorTileAt, actorTileAtRev, canEnter, freeActor, setActor } from './actors.ts';
+import { actor, actorSlots, actorTileAt, actorTileAtRev, canEnter, creatureTileAt, freeActor, party, setActor } from './actors.ts';
+import { leaveVehicle, takeVehicle, vehicleAt } from './objectStores.ts';
 import { shoot } from './combat.ts';
 import { reveal, shakeScreen, explosion } from './effects.ts';
 import { drawMoons, drawVitals, updateFrame } from './frame.ts';
@@ -85,8 +86,10 @@ export async function boardCommand(g: Game): Promise<number> {
     g.say(0x4252); // "\nNot here!\n"
     return 1;
   }
-  const tile = actorTileAt(g, s.x, s.y, s.level);
-  const i = s.dx;
+  // A vehicle left here (the vehicles' store), else a horse that is one of the place's people (the table).
+  const v = vehicleAt(g, s.x, s.y, s.level);
+  const tile = v ? v.tile : creatureTileAt(g, s.x, s.y, s.level);
+  const i = v ? 32 : s.dx;
   // Smith beside the party, who will not be ridden (the port's): in 1988 he was stood on and Board said "Nay!"; walked
   // into, he is talked to now (town.ts move), and Board says it from beside him.
   if (tile === 0 && talkingHorseBeside(g)) {
@@ -116,21 +119,22 @@ export async function boardCommand(g: Game): Promise<number> {
   } else if ((tile & 0xfc) === 0x24) {
     if (!canBoardShip(g)) return 1;
     g.say(0x427c); // "Ship\n"
-    const hull = s.actors[i].b5;
+    const hull = v ? v.hull : actor(g, i).b5;
     if (hull < 10) g.say(0x4282); // "\nDANGER: SHIP BADLY DAMAGED!\n"
-    s.actors[0].b5 = hull;
-    let skiffs = s.actors[i].b7;
+    party(g).b5 = hull;
+    let skiffs = v ? v.skiffs : actor(g, i).b7;
     if ((s.partyTile & 0xfe) === 0x14) s.carpets++;
     if ((s.partyTile & 0xfc) === 0x28) skiffs++;
     if (skiffs === 0) g.say(0x42a0); // "\nWARNING: NO SKIFFS ON BOARD!\n"
     s.partyTile = tile;
-    s.actors[0].b7 = skiffs;
+    party(g).b7 = skiffs;
     g.vitalsDirty = 1;
   } else {
     g.say(0x42bf); // "What?\n"
     return 0;
   }
-  setActor(g, i, 0, 0, 0, 0, 0, 0);
+  if (v) takeVehicle(g, v);
+  else setActor(g, i, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
   musicForMap(g);
   return 1;
@@ -144,7 +148,7 @@ export function talkingHorseBeside(g: Game): boolean {
   const s = g.s;
   if (s.mapId === 0 || s.mapId > 0x20) return false;
   for (let i = 1; i < 32; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if ((a.tile & 0xfe) !== 0x10 || a.z !== s.level || Math.abs(a.x - s.x) + Math.abs(a.y - s.y) !== 1) continue;
     const npc = npcOfActor(g, i);
     if (npc >= 0 && s.npcs[npc].fa !== 0) return true;
@@ -198,16 +202,16 @@ export async function xitCommand(g: Game): Promise<number> {
       if (landNearby(g)) {
         left = s.partyTile;
         s.partyTile = 0x1c;
-        skiffs = s.actors[0].b7;
-      } else if (s.actors[0].b7 !== 0) {
+        skiffs = party(g).b7;
+      } else if (party(g).b7 !== 0) {
         left = s.partyTile;
         s.partyTile += 4;
-        skiffs = s.actors[0].b7 - 1;
+        skiffs = party(g).b7 - 1;
       } else if (s.carpets !== 0) {
         s.carpets--;
         left = s.partyTile;
         s.partyTile = 0x14;
-        skiffs = s.actors[0].b7;
+        skiffs = party(g).b7;
       } else {
         g.say(0x43d9); // "\nNo skiffs on board!\n"
         return 1;
@@ -216,9 +220,11 @@ export async function xitCommand(g: Game): Promise<number> {
     default:
       return 1;
   }
-  const i = freeActor(g);
-  setActor(g, i, left, left, s.x, s.y, s.level, s.actors[0].b5);
-  s.actors[i].b7 = skiffs;
+  // Left where the party stood, in the vehicles' store: never taken for a creature (#69).
+  const kind = g.objectRules.vehicleKind(left)!;
+  const ship = kind === 'frigate';
+  leaveVehicle(g, { kind, tile: left, x: s.x, y: s.y, z: s.level, hull: ship ? party(g).b5 : 0, skiffs: ship ? skiffs : 0 });
+  g.viewDirty |= 2;
   drawVitals(g);
   musicForMap(g);
   return 1;
@@ -250,7 +256,7 @@ async function broadside(g: Game): Promise<void> {
     const creature = (tile >= 0x2c && tile <= 0x2f) || (tile >= 0x80 && !(tile >= 0xb4 && tile <= 0xb7) && !(tile >= 0xe8 && tile <= 0xeb));
     if (creature && (tile & 0xfc) !== 0xec) {
       const i = s.dx;
-      const a = s.actors[i];
+      const a = actor(g, i);
       if (await shoot(g, 5, 5, a.x - s.x + 5, a.y - s.y + 5, 1)) {
         updateFrame(g);
         await explosion(g, x, y);
@@ -324,8 +330,10 @@ export async function fireCommand(g: Game): Promise<number> {
     y += dy;
     vx += dx;
     vy += dy;
+    // A vehicle or a thing lying there (the stores, dx 32) is flown over: what the party leaves is never let go but by
+    // the stores' rules (objectStores.ts).
     const other = actorTileAtRev(g, x, y, s.level);
-    if (other === 0) {
+    if (other === 0 || s.dx === 32) {
       switch (tileAt(g, x, y)) {
         case T.T97:
         case T.T98:
@@ -428,7 +436,7 @@ async function nay(g: Game): Promise<void> {
   const s = g.s;
   // The box placed by him: the horse beside the party with words of his own.
   const by = s.npcs.findIndex((n) => {
-    const a = s.actors[n.actor];
+    const a = actor(g, n.actor);
     return n.fa !== 0 && a && (a.tile & 0xfe) === 0x10 && Math.abs(a.x - s.x) <= 1 && Math.abs(a.y - s.y) <= 1;
   });
   await withSpeaker(g, by >= 0 ? fromActor(g, s.npcs[by].actor) : { dx: 0, dy: 0 }, async () => g.say(0x425e));
@@ -450,14 +458,18 @@ async function yellInTown(g: Game, word: string): Promise<number> {
     g.say(0x440b); // "\nNo effect!\n"
     return 1;
   }
-  for (const a of s.actors) {
+  for (const [, a] of actorSlots(g)) {
     if (a.tile === 0xfc) {
       g.say(0x4418); // "\nNo effect!\n"
       return 1;
     }
   }
   s.d58cb = which;
-  const slot = freeActor(g);
+  const slot = freeActor(g, true);
+  if (slot === 0) {
+    g.say(0x440b); // "\nNo effect!\n"
+    return 1;
+  }
   setActor(g, slot, 0xfc, 0xfc, s.x, s.y - 2, s.level, 0);
   let npc = 0x1f;
   for (; npc >= 0; npc--) if (s.npcTypes[npc] === 0) break;
@@ -476,9 +488,9 @@ async function yellInTown(g: Game, word: string): Promise<number> {
   s.npcTypes[npc] = 0xfc;
   g.say(0x4425); // "\nA shadowlord appears\n"
   if (!g.soundOff) void g.sound.pulse(0x28a0, 1, 30000, 2000, 2);
-  s.actors[slot].tile = s.actors[slot].anim = 0x16;
+  actor(g, slot).tile = actor(g, slot).anim = 0x16;
   await reveal(g, 0x1fc, 5, 3);
-  s.actors[slot].tile = s.actors[slot].anim = 0xfc;
+  actor(g, slot).tile = actor(g, slot).anim = 0xfc;
   return 0;
 }
 
@@ -697,8 +709,8 @@ export async function pushCommand(g: Game, said = false): Promise<number> {
     // The pusher's own figure, its actor. CMDS_161a_PushCmd moved D_5c5a[entityIdx] - the member's number, or a
     // charmed creature's kind (up to 0x2f), which pushes in its turn as a member does: some other figure, or one past
     // the 32 actors' end.
-    s.actors[c.actor].x += dx;
-    s.actors[c.actor].y += dy;
+    actor(g, c.actor).x += dx;
+    actor(g, c.actor).y += dy;
     s.x = sx;
     s.y = sy;
     updateFrame(g);
@@ -847,7 +859,7 @@ export async function holeUpInBed(g: Game): Promise<void> {
   s.activeMember = active;
   s.x++;
   g.viewDirty = 1;
-  s.actors[0].x++;
+  party(g).x++;
   drawVitals(g);
   updateFrame(g);
 }

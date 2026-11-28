@@ -4,18 +4,18 @@ import { CF } from '../src/game/game.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import type { Rules } from '../src/game/settings.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /** A creature named `name` at (5, 4) of an open arena of grass, at `hp`, the fight begun under `rules`. */
 function foe(name: string, hp: number, rules: Rules = 'modern') {
   const { g } = newGame();
   journeyOnward(g);
   g.options.rules = rules;
-  const s = g.s;
   g.combatMap.fill(0x04);
   for (const c of g.combat) c.clear();
   const kind = g.data.table(0x18b6, 0x30).indexOf(name);
   Object.assign(g.combat[8], { flags: CF.Monster, who: kind, x: 5, y: 4, actor: 9, hp });
-  const a = s.actors[9];
+  const a = actor(g, 9);
   a.tile = a.anim = 0x40 + kind * 4;
   [a.x, a.y] = [5, 4];
   newSpawns(g);
@@ -83,7 +83,7 @@ describe('the eased rules’ allowance of what a fight breeds', () => {
       for (let k = 1; k < 10; k++) {
         const [x, y] = [k, k % 2 ? 1 : 8];
         Object.assign(g.combat[8 + k], { flags: CF.Monster, who: kind, x, y, actor: 9 + k, hp: 99 });
-        const a = g.s.actors[9 + k];
+        const a = actor(g, 9 + k);
         a.tile = a.anim = 0x40 + kind * 4;
         [a.x, a.y] = [x, y];
       }
@@ -124,7 +124,7 @@ describe('a creature gating in daemons', () => {
           n++;
           g.combat[i].clear();
         }
-      for (const [i, a] of g.s.actors.entries()) if (i !== 9) a.tile = a.anim = 0;
+      for (const [i, a] of actorList(g).entries()) if (i !== 9) a.tile = a.anim = 0;
     }
     return n / turns;
   };

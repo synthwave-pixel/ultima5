@@ -5,6 +5,7 @@ import { K } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { enterTown, townLoop } from '../src/game/town.ts';
 import { fighter, keys, newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 async function outside(seed = 1234) {
   const { g, p } = newGame(seed);
@@ -32,7 +33,7 @@ describe('combat', () => {
       const { g, p } = await outside(seed);
       const s = g.s;
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      const foe = s.actors[1];
+      const foe = actor(g, 1);
       foe.tile = foe.anim = 0x40 + rat * 4;
       foe.x = s.x + 1;
       foe.y = s.y;
@@ -44,7 +45,7 @@ describe('combat', () => {
       expect(p.log).toMatch(/killed!/);
       expect(p.log).toMatch(/VICTORY|BATTLE IS LOST/);
       expect([s.x, s.y, s.mapId]).toEqual([x, y, 0]);
-      if (p.log.includes('VICTORY')) expect(s.actors[1].tile).toBe(0);
+      if (p.log.includes('VICTORY')) expect(actor(g, 1).tile).toBe(0);
       expect(g.combat.every((c) => c.flags === 0 || c.flags & CF.Dead || !(c.flags & CF.Player))).toBe(true);
     });
   }
@@ -54,7 +55,7 @@ describe('combat', () => {
       const { g, p } = await outside(seed);
       const s = g.s;
       const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-      Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+      Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
       p.next = fighter(g); // Escape (the menu's "Leave combat") once no foe stands
       await attackCombat(g, 1);
       if (!p.log.includes('VICTORY')) continue;
@@ -70,7 +71,7 @@ describe('combat', () => {
     const { g, p } = await outside(7);
     const s = g.s;
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    const foe = s.actors[1];
+    const foe = actor(g, 1);
     foe.tile = foe.anim = 0x40 + rat * 4;
     foe.x = s.x + 1;
     foe.y = s.y;

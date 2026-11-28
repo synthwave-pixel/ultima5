@@ -30,6 +30,8 @@ import { TICK_MS } from './effects.ts';
 import { T } from './tiles.ts';
 import { animateActors, clockTick } from './frame.ts';
 import { groundAmong, isGround } from './world.ts';
+import { actor, actorSlots } from './actors.ts';
+import { freshObjects } from './objectMigration.ts';
 
 /** The proportional text's layout (D_5146..D_5158): two column spans by height, the space's width, and the pen. */
 export interface Prose {
@@ -921,6 +923,7 @@ export class Intro {
     m.str = this.stats.str <= 0x14 ? 0x14 : this.stats.str;
     g.ool.brit.fill(0);
     g.ool.under.set(g.data.files.get('INIT.OOL').subarray(0, 256));
+    freshObjects(g); // the Underworld's skiff and bodies, INIT.GAM's own, into the stores (objectMigration.ts)
     g.printChar(0xff);
     t.moveTo(0, 10);
     g.tipsShown = new Set(); // its first turn points to the Tips (run.ts journeyOnward), its fights give theirs
@@ -979,10 +982,10 @@ export class Intro {
         pass++;
         fx.nextWDFrame();
         if (own) {
-          const avatar = s.actors.find((a) => a.tile !== 0 && (a.tile & 0xfc) === AVATAR_FIGURE);
+          const avatar = [...actorSlots(g)].map(([, a]) => a).find((a) => a.tile !== 0 && (a.tile & 0xfc) === AVATAR_FIGURE);
           d.leader?.(avatar ? { map: SCENE_MAP, x: avatar.x, y: avatar.y } : null);
         }
-        for (const a of s.actors) {
+        for (const [, a] of actorSlots(g)) {
           if (a.tile === 0) continue;
           const c = a.x + a.y * 0x20;
           map[c] = 0;
@@ -1038,10 +1041,10 @@ export class Intro {
     let loopAt = 0;
     try {
       for (let at = 0x200; at < 2000; at++) {
-        const actor = (): (typeof s.actors)[number] => s.actors[script[++at]];
+        const next = (): ReturnType<typeof actor> => actor(g, script[++at]);
         switch (script[at]) {
           case 0: {
-            const a = actor();
+            const a = next();
             const t = script[++at];
             a.tile = a.anim = own && scene.n === 0 && t === HOME_FIGURE ? AVATAR_FIGURE : t;
             a.x = script[++at];
@@ -1050,7 +1053,7 @@ export class Intro {
             break;
           }
           case 1: {
-            const a = actor();
+            const a = next();
             a.tile = a.anim = a.b6 = 0;
             map[a.y * 32 + a.x] = copy[a.y * 32 + a.x];
             break;
@@ -1058,7 +1061,7 @@ export class Intro {
           case 2:
           case 0xd: {
             const op = script[at];
-            const a = actor();
+            const a = next();
             const dir = script[++at];
             map[a.y * 32 + a.x] = copy[a.y * 32 + a.x];
             a.x += dxs[dir];
@@ -1095,7 +1098,7 @@ export class Intro {
             setScene(script[++at]);
             break;
           case 7: {
-            const a = actor();
+            const a = next();
             const t = a.tile;
             a.tile = a.anim = 0x16;
             if (await revealTile(0x100 + t, a.x, a.y)) return;
@@ -1103,7 +1106,7 @@ export class Intro {
             break;
           }
           case 8: {
-            const a = actor();
+            const a = next();
             const t = a.tile;
             a.tile = a.anim = 0x16;
             if (await revealTile(copy[a.y * 32 + a.x], a.x, a.y)) return;
@@ -1132,7 +1135,7 @@ export class Intro {
               d.line(lx + 0x80, ly + 0x99, lx + 0x89, ly + 0x9c);
             }
             at += 2;
-            const a = s.actors[script[at]];
+            const a = actor(g, script[at]);
             const [px, py] = tileAtPx(a.x, a.y);
             fx.tilePx(0, px, py);
             if (!g.soundOff) void g.sound.noise(1, 0x4b0, 4000);
@@ -1140,7 +1143,7 @@ export class Intro {
             break;
           }
           case 0xc:
-            for (const a of s.actors) a.anim = a.tile = a.b6 = 0;
+            for (const [, a] of actorSlots(g)) a.anim = a.tile = a.b6 = 0;
             break;
           case 0xe:
             repeat = script[++at];

@@ -4,6 +4,7 @@ import { journeyOnward } from '../src/game/run.ts';
 import { Tune } from '../src/game/music.ts';
 import { newGame } from './helpers.ts';
 import { fly, Landed } from './pilot.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * A fight won (combat.ts victoryTune): the fanfare, and the field's tune turned to the theme - in the suites after the
@@ -39,7 +40,7 @@ describe('the victory', () => {
     p.sound.music = (tune: number) => after(`music ${tune}`);
     p.log = '';
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     g.autoKill = true;
     fly(g, p, [() => (/VICTORY/.test(p.log) ? (after('key'), undefined) : Pad.B)], 400);
     try {

@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actorTileAt, freeActor, setActor } from './actors.ts';
+import { actor, actorTileAt, type Lying, lyingAt, regaliaAmount, setActor, thingsAt } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
 import { selectDirection, whoActs } from './input.ts';
@@ -21,6 +21,7 @@ import { buildLightMap, setTileAt, setTownTile, tileAt } from './world.ts';
 import { roll30 } from './outdoors.ts';
 import { cue } from './cues.ts';
 import { addAmmo, isAmmo } from './ammo.ts';
+import { placeItem, takeItem, takeVehicle } from './objectStores.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 
@@ -86,9 +87,9 @@ export async function springTrap(g: Game, i: number): Promise<void> {
 // --- Search -----------------------------------------------------------------------
 
 /** SJOG_01f2: searching a body: mostly remains, sometimes plague, now and then food or gold. */
-function searchBody(g: Game, actor: number, who: number): void {
+function searchBody(g: Game, body: Lying, who: number): void {
   if (g.random(0, 7) !== 0) {
-    setActor(g, actor, 0, 0, 0, 0, 0, 0);
+    body.remove();
     if (g.random(0, 0x1f) === 0x13) {
       g.say(0x8606); // "Plague!\n"
       if (!g.soundOff) void g.sound.noise(0x28, 3000, 500);
@@ -98,23 +99,22 @@ function searchBody(g: Game, actor: number, who: number): void {
       g.say([0x8610, 0x861a, 0x8622, 0x862a][g.random(0, g.random(0, 3))]); // nothing, worms, guts, a bloody pulp
     }
   } else {
-    const a = g.s.actors[actor];
+    let tile: number;
     if (g.random(0, 3) === 0) {
       g.say(0x863a); // "food!\n"
-      a.tile = a.anim = 0xf;
+      tile = 0xf;
     } else {
       g.say(0x8642); // "gold!\n"
-      a.tile = a.anim = 2;
+      tile = 2;
     }
-    a.b5 = g.random(1, 3);
+    body.become(tile, g.random(1, 3));
     g.viewDirty |= 2;
     updateFrame(g);
   }
 }
 
 /** SJOG_02ea: searching a chest for traps, by intelligence. */
-export function searchChest(g: Game, actor: number, who: number): void {
-  const a = g.s.actors[actor];
+export function searchChest(g: Game, a: Lying, who: number): void {
   const b5 = a.b5;
   const int = g.s.members[who].int;
   const odds = (b5 & 0x80) === 0 ? -(int - 0x1e) >> 1 : ((b5 & 0x7f) - int + 0x1e) >> 1;
@@ -139,10 +139,9 @@ function findMoonstone(g: Game, x: number, y: number, z: number): boolean {
   const s = g.s;
   for (let i = 7; i >= 0; i--) {
     if (s.moonstoneX[i] !== x || s.moonstoneY[i] !== y || s.moonstoneZ[i] !== z || s.moonstoneHeld[i] !== s.mapId) continue;
-    let shown = false;
-    for (let k = 0x1f; k >= 0; k--) if (actorTileAt(g, x, y, z) === 0x19 && s.actors[s.dx].b5 === i) shown = true;
-    if (shown) continue;
-    setActor(g, freeActor(g), 0x19, 0x19, x, y, z, i);
+    // Shown already (dug up and not taken): the stone's uncovered bit (objectStores.ts), drawn from its record.
+    if ((g.objects.uncovered & (1 << i)) !== 0) continue;
+    g.objects.uncovered |= 1 << i;
     g.say(0x8680); // "a strange rock!\n"
     g.viewDirty |= 2;
     return true;
@@ -205,16 +204,19 @@ function findHidden(g: Game, x: number, y: number): void {
   if (i < 0xd || i > 0xf) s.d585c[i >> 3] |= 1 << (i & 7);
   if (i === 0xe) s.skullKeyDay = s.day;
   const tile = g.data.bytes(0x3e78, 0x72)[i];
-  setActor(
-    g,
-    freeActor(g),
+  const amount = g.data.bytes(0x3eea, 0x72)[i];
+  // In the place's item store (objectStores.ts); a one-of-a-kind find in a slot of its own, never let go.
+  placeItem(g, {
     tile,
-    tile,
-    g.data.bytes(0x4040, 0x72)[i],
-    g.data.bytes(0x40b2, 0x72)[i],
-    g.data.bytes(0x3fce, 0x72)[i],
-    g.data.bytes(0x3eea, 0x72)[i],
-  );
+    x: g.data.bytes(0x4040, 0x72)[i],
+    y: g.data.bytes(0x40b2, 0x72)[i],
+    z: g.data.bytes(0x3fce, 0x72)[i],
+    amount,
+    b6: 0,
+    b7: 0,
+    unique: g.objectRules.isUnique(i, tile, amount),
+    hidden: i,
+  });
   g.viewDirty |= 2;
   nameFind(g, tile);
 }
@@ -240,8 +242,7 @@ export function somethingBeside(g: Game): boolean {
     if (hiddenIndex(g, x, y) >= 0 || tileAt(g, x, y) === T.HiddenDoor) return true;
     for (let i = 0; i < 8; i++)
       if (s.moonstoneX[i] === x && s.moonstoneY[i] === y && s.moonstoneZ[i] === s.level && s.moonstoneHeld[i] === s.mapId) {
-        const shown = actorTileAt(g, x, y, s.level) === 0x19;
-        if (!shown) return true;
+        if ((g.objects.uncovered & (1 << i)) === 0) return true;
       }
     for (let i = 0; i < 3; i++) if (xs[i] === x && ys[i] === y && s.hour === 0 && s.harvestDays[i] !== s.day) return true;
   }
@@ -262,24 +263,16 @@ export async function searchCommand(g: Game): Promise<number> {
   const who = await whoActs(g);
   if (who === -1) return 1;
   const t = tileAt(g, x, y);
-  let chest = 1;
-  for (; chest < 0x20; chest++) {
-    const a = s.actors[chest];
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
-  }
-  if (chest < 0x20) {
+  const chest = lyingAt(g, x, y, s.level, (t) => t === 1);
+  if (chest) {
     g.say(0x892c); // "\nThou dost find\n"
     searchChest(g, chest, who);
     return 1;
   }
   // A body, wherever it lies among what is there (the 1988 game looked at the top one only, and a body under gold
   // - two fallen on one square, one searched - was never found).
-  let body = 0x1f;
-  for (; body > 0; body--) {
-    const a = s.actors[body];
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 0x1f) break;
-  }
-  if (body > 0) {
+  const body = lyingAt(g, x, y, s.level, (t) => t === 0x1f, true);
+  if (body) {
     g.say(0x893e); // "\nThou dost find\n"
     searchBody(g, body, who);
     return 1;
@@ -316,15 +309,14 @@ export async function searchCommand(g: Game): Promise<number> {
 // --- Jimmy ------------------------------------------------------------------------
 
 /** SJOG_0baa: a chest's lock. */
-async function jimmyChest(g: Game, actor: number): Promise<void> {
+async function jimmyChest(g: Game, chest: Lying): Promise<void> {
   const who = await whoActs(g);
   if (who === -1) return;
-  await jimmyChestBy(g, actor, who);
+  await jimmyChestBy(g, chest, who);
 }
 
 /** A chest's lock picked by member `who` (loot.ts names them; Jimmy asks): whether its trap was disarmed. */
-export async function jimmyChestBy(g: Game, actor: number, who: number): Promise<boolean> {
-  const a = g.s.actors[actor];
+export async function jimmyChestBy(g: Game, a: Lying, who: number): Promise<boolean> {
   const b5 = a.b5;
   // The bump's next step (bumpAct.ts): open it, disarmed; or, the key broken, search it again - the reading that
   // sent the party here may have been wrong, and a chest never trapped breaks every key.
@@ -461,12 +453,8 @@ export async function jimmyCommand(g: Game): Promise<number> {
       break;
     }
     default: {
-      let c = 1;
-      for (; c < 0x20; c++) {
-        const a = s.actors[c];
-        if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
-      }
-      if (c < 0x20) await jimmyChest(g, c);
+      const c = lyingAt(g, x, y, s.level, (t) => t === 1);
+      if (c) await jimmyChest(g, c);
       else g.say(0x8b52); // "No lock!\n"
     }
   }
@@ -480,20 +468,20 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
   const s = g.s;
   if (tile === 3 || tile === 4) amount--;
   const n = tile === 1 ? g.random(1, level) : tile === 2 ? g.random(1, level * 3) : amount;
-  let slot = 0;
-  for (let i = 0x1f; i >= 0; i--) {
-    if (s.actors[i].tile === 0) {
-      slot = i;
-      break;
-    }
-  }
-  if (slot === 0) return;
-  setActor(g, slot, tile, tile, x, y, z, n);
   if (s.mapId < 0x80) {
-    s.actors[slot].b7 = 0;
-    s.actors[slot].z = z;
+    // Out of a fight, in the place's item store (objectStores.ts): kept there, never taken for a creature.
+    placeItem(g, { tile, x, y, z, amount: n & 0xff, b6: 0, b7: 0, unique: false, hidden: -1 });
   } else {
-    s.actors[slot].b7 = 0x20;
+    let slot = 0;
+    for (let i = 0x1f; i >= 0; i--) {
+      if (actor(g, i).tile === 0) {
+        slot = i;
+        break;
+      }
+    }
+    if (slot === 0) return;
+    setActor(g, slot, tile, tile, x, y, z, n);
+    actor(g, slot).b7 = 0x20;
   }
   g.viewDirty |= 2;
   updateFrame(g);
@@ -508,27 +496,21 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
  * SJOG_112c: open a chest: traps, then its contents by its level (D_4124.., D_413c..). `by` names the chest and who
  * opens it (loot.ts, where two may lie on one square); else the chest at (x, y), by whoever acts.
  */
-export async function openChest(g: Game, x: number, y: number, z: number, by?: { actor: number; who: number }): Promise<void> {
+export async function openChest(g: Game, x: number, y: number, z: number, by?: { chest: Lying; who: number }): Promise<void> {
   const s = g.s;
-  let i = by ? by.actor : 1;
-  for (; i < 0x20 && !by; i++) {
-    const a = s.actors[i];
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z)) {
-      if (a.tile === 1) break;
-      if (a.tile === 0xe) {
-        g.say(0x8b64); // "Can't!\n"
-        return;
-      }
-    }
+  const chest = by ? by.chest : lyingAt(g, x, y, z, (t) => t === 1 || t === 0xe);
+  if (chest?.tile === 0xe) {
+    g.say(0x8b64); // "Can't!\n"
+    return;
   }
-  if (i === 0x20) {
+  if (!chest) {
     g.say(0x8b6c); // "Nothing to open!\n"
     return;
   }
   const who = by ? by.who : await whoActs(g);
   if (who === -1) return;
-  let level = s.actors[i].b5;
-  setActor(g, i, 0, 0, 0, 0, 0, 0);
+  let level = chest.b5;
+  chest.remove();
   g.viewDirty |= 2;
   if (s.mapId >= 1 && s.mapId <= 0x20) {
     s.karma = s.karma > 2 ? s.karma - 2 : 0;
@@ -542,7 +524,7 @@ export async function openChest(g: Game, x: number, y: number, z: number, by?: {
       for (const c of g.combat) {
         if ((c.flags & 0x80) !== 0 && c.who === who) {
           c.flags |= 0x20;
-          s.actors[c.actor].tile = s.actors[c.actor].anim = 0x1e;
+          actor(g, c.actor).tile = actor(g, c.actor).anim = 0x1e;
           break;
         }
       }
@@ -632,12 +614,13 @@ export async function openCommand(g: Game): Promise<number> {
 // --- Get ------------------------------------------------------------------------------
 
 /** SJOG_1458: take an item (`amount` is the actor's byte 5), and clear its actor (`actor` < 32). */
-export function getObject(g: Game, tile: number, amount: number, actor: number): void {
+/** Take a thing up (`actor` its slot, 0x20 for none); false where it is not taken (a chest, nothing there). */
+export function getObject(g: Game, tile: number, amount: number, actor: number): boolean {
   const s = g.s;
   switch (tile) {
     case 1:
       g.say(0x8c3e); // "Open it first!\n"
-      return;
+      return false;
     case 0x19:
       g.say(0x8c4e); // "A moonstone!\n"
       s.moonstoneHeld[amount] = 0xff;
@@ -646,7 +629,9 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       g.say(0x8c5c); // "A magic carpet!\n"
       s.carpets++;
       if (s.carpets === 100) s.carpets = 99;
-      if (s.mapId === 0x11) removeNpc(g, 0x16);
+      // The castle's own carpet (a townsfolk record's, in the table) taken: its record goes. Not for the party's own,
+      // left there from the vehicles' store (actor 0x20).
+      if (s.mapId === 0x11 && actor < 0x20) removeNpc(g, 0x16);
       break;
     case 0xf:
       g.printNumber(amount);
@@ -743,11 +728,12 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       break;
     default:
       g.say(0x8d92); // "Nothing to get!\n"
-      return;
+      return false;
   }
   if (actor < 0x20) setActor(g, actor, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
   g.vitalsDirty = 1;
+  return true;
 }
 
 /** SJOG_179e: Get in a dungeon: an open chest's contents, by the level's depth (D_41bc..). */
@@ -784,13 +770,7 @@ function getInDungeon(g: Game): void {
 export function thingUnderfoot(g: Game): boolean {
   const s = g.s;
   if (g.inDungeon) return false;
-  for (let i = 1; i < 0x20; i++) {
-    const a = s.actors[i];
-    if (a.x !== s.x || a.y !== s.y || !(s.mapId > 0x7f || a.z === s.level)) continue;
-    const t = a.tile;
-    if ((t > 1 && t < 0x10) || t === 0x19 || t === 0x1b || (t & 0xfc) === 0xb4) return true;
-  }
-  return false;
+  return thingsAt(g, s.x, s.y, s.level).some(({ tile: t }) => (t > 1 && t < 0x10) || t === 0x19 || t === 0x1b || (t & 0xfc) === 0xb4);
 }
 
 /** SJOG_18ce: Get: items, torches from walls, crops and a bite from a plate. */
@@ -807,17 +787,29 @@ export async function getCommand(g: Game): Promise<number> {
   const x = dx + s.x;
   const y = dy + s.y;
   g.say(0x8de6); // "\n"
-  let i = 1;
-  let tile = 0;
-  for (; i < 0x20; i++) {
-    const a = s.actors[i];
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level)) {
-      tile = a.tile;
-      if (tile < 0x10 || tile === 0x19 || tile === 0x1b || (tile & 0xfc) === 0xb4) break;
-    }
+  // The first thing there that can be taken: from the table, a carpet from the vehicles' store, a thing lying about.
+  const got = thingsAt(g, x, y, s.level).find(({ tile }) => tile < 0x10 || tile === 0x19 || tile === 0x1b || (tile & 0xfc) === 0xb4);
+  if (got?.kind === 'creature') {
+    getObject(g, got.tile, actor(g, got.slot).b5, got.slot);
+    return 1;
   }
-  if (i < 0x20) {
-    getObject(g, tile, s.actors[i].b5, i);
+  if (got?.kind === 'vehicle') {
+    takeVehicle(g, got.v);
+    g.viewDirty |= 2;
+    getObject(g, got.tile, 0, 0x20);
+    return 1;
+  }
+  if (got?.kind === 'moonstone') {
+    getObject(g, 0x19, got.stone, 0x20);
+    g.objects.uncovered &= ~(1 << got.stone);
+    return 1;
+  }
+  if (got?.kind === 'regalia') {
+    getObject(g, got.tile, regaliaAmount(g, got.which), 0x20);
+    return 1;
+  }
+  if (got?.kind === 'item') {
+    if (getObject(g, got.tile, got.it.amount, 0x20)) takeItem(g, got.it);
     return 1;
   }
   const t = tileAt(g, x, y);

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { updateFrame } from '../src/game/frame.ts';
 import { enterTown } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * The figures' pace (frame.ts updateFrame, input.ts): a pass of the key-wait loop can leave the figures as they are,
@@ -15,7 +16,10 @@ describe('the figures’ pace', () => {
     Object.assign(g.s, { animate: 1, drawMap: 1 });
     return g;
   };
-  const frames = (g: Awaited<ReturnType<typeof town>>): string => g.s.actors.map((a) => `${a.anim}:${a.b6}`).join(',');
+  const frames = (g: Awaited<ReturnType<typeof town>>): string =>
+    actorList(g)
+      .map((a) => `${a.anim}:${a.b6}`)
+      .join(',');
 
   it('leaves the figures be on a pass without them, the tiles still animating', async () => {
     const g = await town();

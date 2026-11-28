@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { setActor } from '../src/game/actors.ts';
+import { actor, actorList, setActor } from '../src/game/actors.ts';
 import { CF, thingKey } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { lootField, lootOffer } from '../src/game/loot.ts';
@@ -23,7 +23,7 @@ describe('Loot and Leave', () => {
     for (const c of g.combat) c.flags = 0;
     g.combat[0].flags = CF.Player;
     Object.assign(s, { mapId: 0xff, combatTurn: 0, battleWon: 1, crosshair: 0, combatFlags: 0, keys: 0 });
-    for (let i = 1; i < 32; i++) s.actors[i].tile = 0;
+    for (let i = 1; i < 32; i++) actor(g, i).tile = 0;
     s.mixtures.fill(0);
     for (let m = 0; m < s.partySize; m++) {
       const p = s.members[m];
@@ -58,7 +58,7 @@ describe('Loot and Leave', () => {
     s.battleWon = 0; // foes still standing
     expect(lootOffer(g)).toBe('hide');
     s.battleWon = 1;
-    s.actors[3].tile = 0;
+    actor(g, 3).tile = 0;
     setActor(g, 4, 2, 2, 3, 3, 0, 12); // gold alone
     expect(lootOffer(g)).toBe('show');
     for (let m = 0; m < s.partySize; m++) s.members[m].status = Status.Sleeping;
@@ -80,7 +80,11 @@ describe('Loot and Leave', () => {
     expect(flat(p.log)).toContain(flat(`${s.members[1].name} searched 1 chest.`));
     expect(flat(p.log)).toContain(flat(`${s.members[2].name} opened 1 chest.`));
     expect(s.gold).toBeGreaterThanOrEqual(gold + 12);
-    expect(s.actors.slice(1).some((a) => a.tile >= 1 && a.tile <= 0xf)).toBe(false);
+    expect(
+      actorList(g)
+        .slice(1)
+        .some((a) => a.tile >= 1 && a.tile <= 0xf),
+    ).toBe(false);
   });
 
   it('unlocks a trapped chest with An Sanct where someone can cast it, spending its mixture and mana', async () => {
@@ -147,7 +151,7 @@ describe('Loot and Leave', () => {
     setActor(g, 4, 2, 2, 7, 7, 0, 12);
     const gold = s.gold;
     expect(await lootField(g)).toBe(false);
-    expect(s.actors[3].tile).toBe(1);
+    expect(actor(g, 3).tile).toBe(1);
     expect(s.gold).toBe(gold + 12); // what could be taken was
     expect(flat(p.log)).toContain(flat('A chest is left: no one could open it safely.'));
     // Chosen from the menu, the party stays on the field.
@@ -162,7 +166,7 @@ describe('Loot and Leave', () => {
     chest(g, 3, 2, 2, 6, false);
     g.bumped.set(thingKey(g, 2, 2), 'disarmed');
     expect(await lootField(g)).toBe(true);
-    expect(s.actors[3].tile).not.toBe(1);
+    expect(actor(g, 3).tile).not.toBe(1);
   });
 
   it('gives a poisoned opener the chest first, poison costing them nothing', async () => {

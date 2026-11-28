@@ -5,6 +5,7 @@ import { onlySide } from '../src/game/targets.ts';
 import { enterTown } from '../src/game/town.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actor, actorList } from '../src/game/actors.ts';
 
 /** The one way Talk, Open or Jimmy could go from the menu (targets.ts onlySide): given where only one side has it. */
 describe('the one way a command could go', () => {
@@ -13,13 +14,13 @@ describe('the one way a command could go', () => {
     journeyOnward(g);
     Object.assign(g.s, { mapId: 1, level: 0, x: 15, y: 30 });
     await enterTown(g, true);
-    for (const a of g.s.actors.slice(1)) a.tile = 0;
+    for (const a of actorList(g).slice(1)) a.tile = 0;
     Object.assign(g.s, { x: 10, y: 10 });
     for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) setTileAt(g, 10 + dx, 10 + dy, 0x44); // floor
     return g;
   };
   const person = (g: Awaited<ReturnType<typeof town>>, slot: number, x: number, y: number) =>
-    Object.assign(g.s.actors[slot], { tile: 0x50, anim: 0x50, x, y, z: 0 });
+    Object.assign(actor(g, slot), { tile: 0x50, anim: 0x50, x, y, z: 0 });
 
   it('is the side of the one person in reach to talk to, and none with two', async () => {
     const g = await town();
@@ -47,11 +48,11 @@ describe('the one way a command could go', () => {
     // in an actor's place no townsperson has: in one of theirs it would be them, whatever it looked like (Smith).
     person(g, 2, 10, 9);
     expect(onlySide(g, 'talk')).toBe(K.Up);
-    g.s.actors[2].tile = 0;
+    actor(g, 2).tile = 0;
     const free = [...Array(32).keys()].find(
       (i) => i > 0 && !g.s.npcs.some((n, k) => n.actor === i && g.s.npcTypes[k] !== 0 && n.f0 !== 0),
     )!;
-    Object.assign(g.s.actors[free], { tile: 0x01, anim: 0x01, x: 10, y: 9, z: 0 });
+    Object.assign(actor(g, free), { tile: 0x01, anim: 0x01, x: 10, y: 9, z: 0 });
     expect(talkOffer(g)).toBe('hide');
   });
 

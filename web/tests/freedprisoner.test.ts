@@ -7,6 +7,7 @@ import { talkToNpc } from '../src/game/talk.ts';
 import { enterTown } from '../src/game/town.ts';
 import { tileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * A prisoner freed from Yew's stocks has no conversation since, as in 1988 (items.ts jimmyCommand); the port gives
@@ -22,10 +23,10 @@ describe('a prisoner freed', () => {
     const s = g.s;
     // One in the stocks, and the party below them, with a key and a steady hand.
     const prisoner = [...Array(32).keys()].find((i) => {
-      const a = s.actors[s.npcs[i].actor];
+      const a = actor(g, s.npcs[i].actor);
       return i > 0 && s.npcTypes[i] !== 0 && s.npcs[i].fa !== 0 && tileAt(g, a.x, a.y) === 0x84;
     })!;
-    const at = s.actors[s.npcs[prisoner].actor];
+    const at = actor(g, s.npcs[prisoner].actor);
     Object.assign(s, { x: at.x, y: at.y + 1, keys: 3, activeMember: 0 });
     s.members.forEach((m) => (m.dex = 40));
     p.keys.push(K.Up);
@@ -37,7 +38,7 @@ describe('a prisoner freed', () => {
     expect(p.log.slice(from)).toContain('"Thank ye!"');
     // Anyone else of the place with nothing to say (no guard, whose silence is his own): no response, as ever.
     const mute = [...Array(32).keys()].find(
-      (i) => i > 0 && i !== prisoner && s.npcTypes[i] !== 0 && s.npcs[i].fa === 0 && s.actors[s.npcs[i].actor].tile !== 0x70,
+      (i) => i > 0 && i !== prisoner && s.npcTypes[i] !== 0 && s.npcs[i].fa === 0 && actor(g, s.npcs[i].actor).tile !== 0x70,
     )!;
     expect(mute).toBeDefined();
     const before = p.log.length;

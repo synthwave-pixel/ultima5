@@ -4,6 +4,7 @@ import { CF } from '../src/game/game.ts';
 import { Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 /**
  * Issue #40: in a fight with many foes, a Pause, or B twice to stop auto combat, went unheard - the keys were read only
@@ -123,7 +124,7 @@ describe('auto combat in a real fight, keys pressed while a foe acts', () => {
       if (!e.message.includes('ran out')) throw e;
     });
     const rat = g.data.table(0x18b6, 0x30).findIndex((n) => /GIANT RATS/.test(n));
-    Object.assign(s.actors[1], { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
+    Object.assign(actor(g, 1), { tile: 0x40 + rat * 4, anim: 0x40 + rat * 4, x: s.x + 1, y: s.y, z: 0 });
     Object.assign(g.options, { autoCombat: 'all', input: 'controller' });
     // The first thing said in a foe's turn: B twice pressed there and then. Which turn it was, and which turn's
     // was the first said once auto combat is off.

@@ -8,6 +8,7 @@ import { stashWorldActors } from '../src/game/outdoors.ts';
 import { journeyOnward, runGame } from '../src/game/run.ts';
 import { enterTown, loadLevel } from '../src/game/town.ts';
 import { newGame } from './helpers.ts';
+import { actor } from '../src/game/actors.ts';
 
 class Stop extends Error {}
 
@@ -101,7 +102,7 @@ describe('the words of the quest, by controller', () => {
       }
       if (g.commandPrompt === 'town') {
         if (rounds++ > 12) throw new Stop('left without it');
-        const a = s.actors[s.npcs[npc].actor];
+        const a = actor(g, s.npcs[npc].actor);
         if (!a || a.tile === 0) throw new Stop('not about');
         Object.assign(s, { x: a.x, y: a.y + 1 }); // set before them: finding them is not what is tried here
         stage = 1;

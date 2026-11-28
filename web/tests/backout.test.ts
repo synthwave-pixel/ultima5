@@ -5,6 +5,7 @@ import { castCommand, useCommand } from '../src/game/magic.ts';
 import { Status } from '../src/game/save.ts';
 import { setTileAt } from '../src/game/world.ts';
 import { newGame } from './helpers.ts';
+import { party } from '../src/game/actors.ts';
 
 /**
  * A command backed out of at its own prompt spends nothing (the port's): no turn, and not the thing it would have
@@ -158,7 +159,7 @@ describe('a command backed out of spends no turn, on a controller', () => {
     const { g, p } = newGame();
     g.options.input = 'controller';
     g.s.mapId = 0;
-    g.s.actors[0].anim = 0x1c; // the party on foot, as a camp needs
+    party(g).anim = 0x1c; // the party on foot, as a camp needs
     p.next = () => Pad.B;
     expect(await processCommand(g, 0x48)).toBe(0);
     expect(p.log).not.toMatch(/On foot|On land/);

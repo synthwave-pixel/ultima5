@@ -4,6 +4,7 @@ import { CF } from '../src/game/game.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { journeyOnward } from '../src/game/run.ts';
 import { newGame } from './helpers.ts';
+import { actorList } from '../src/game/actors.ts';
 
 /**
  * A creature on the party's side - summoned, or charmed to it - attacks as a member does (the port's): aimed by hand
@@ -22,7 +23,7 @@ describe("a creature on the party's side, attacking", () => {
     journeyOnward(g);
     g.s.mapId = 0xff; // in a fight
     for (const c of g.combat) c.flags = 0;
-    for (const a of g.s.actors) a.tile = a.anim = 0;
+    for (const a of actorList(g)) a.tile = a.anim = 0;
     placeCombatant(g, 0, 1, 0, 0, 0); // the Avatar, in a corner
     const me = placeCombatant(g, kind, 0, 5, 5, 0);
     charm(g, me, 'bound');
