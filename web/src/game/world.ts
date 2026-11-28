@@ -23,7 +23,7 @@ import { Status } from './save.ts';
 import { A, T } from './tiles.ts';
 import { CLASSES } from './zstats.ts';
 import { dressingOf, dressingOfActor } from './companions.ts';
-import { actor, actorSlots, party } from './actors.ts';
+import { actor, actorSlots, party, relicsHere } from './actors.ts';
 import { itemsHere, vehiclesHere } from './objectStores.ts';
 
 /** A byte of memory: a buffer and an index. */
@@ -490,6 +490,7 @@ export function overlayActors(g: Game): void {
   // about, then the vehicles left about (objectStores.ts).
   if (!combat) {
     for (const it of itemsHere(g)) figure(it.tile, it.tile, it.x, it.y, it.z, -1);
+    for (const r of relicsHere(g)) figure(r.thing.tile, r.thing.tile, r.x, r.y, r.z, -1);
     for (const v of vehiclesHere(g)) figure(v.tile, v.tile, v.x, v.y, v.z, -1);
   }
   for (const i of order) {

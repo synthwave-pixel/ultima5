@@ -64,34 +64,7 @@ export function enterWorld(g: Game): void {
   buildLightMap(g);
   setWind(g, -1);
   drawMoons(g);
-  placeTreasures(g);
-}
-
-/** OUTSUBS_0566: in the Underworld, the Amulet and the shards lie where they wait to be found. */
-function placeTreasures(g: Game): void {
-  const s = g.s;
-  if (s.level === 0) return;
-  if (s.amulet === 0) {
-    const a = actor(g, 28);
-    a.tile = a.anim = 0xb7;
-    a.x = 0x69;
-    a.y = 0xe1;
-    a.z = 0xff;
-    a.b5 = 0xf3;
-  }
-  const xs = g.data.bytes(0x3a06, 3);
-  const ys = g.data.bytes(0x3a0a, 3);
-  const b5 = g.data.bytes(0x3a0e, 3);
-  for (let i = 0; i < 3; i++) {
-    if (s.shards[i] === 0 && s.shadowlords[i] < 0x80) {
-      const a = actor(g, 29 + i);
-      a.tile = a.anim = 0xb4;
-      a.x = xs[i];
-      a.y = ys[i];
-      a.z = 0xff;
-      a.b5 = b5[i];
-    }
-  }
+  // The Amulet and the shards are drawn from their records (actors.ts relicsHere, OUTSUBS_0566's places).
 }
 
 /** MAINOUT_0d22: into the world's loop, with a ship bought in port waiting at the dock. */

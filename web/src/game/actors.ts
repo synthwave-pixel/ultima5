@@ -120,12 +120,45 @@ export type Thing =
   | { kind: 'regalia'; which: number; tile: number }
   | { kind: 'item'; it: Item; tile: number };
 
-/** The first of the stores' things at a square, in drawing order (vehicle, then item). */
+/** The first of the stores' things at a square, in drawing order (vehicle, moonstone or regalia, then item). */
 function storedAt(g: Game, x: number, y: number, z: number): Thing | undefined {
   const v = vehicleAt(g, x, y, z);
   if (v) return { kind: 'vehicle', v, tile: v.tile };
+  const r = relicsHere(g).find((t) => t.x === (x & 0xff) && t.y === (y & 0xff) && t.z === (z & 0xff));
+  if (r) return r.thing;
   const it = itemOnSquare(g, x, y, z);
   return it ? { kind: 'item', it, tile: it.tile } : undefined;
+}
+
+/** Where the Amulet lies in the Underworld (OUTSUBS_0566). */
+const AMULET_AT = [0x69, 0xe1] as const;
+
+/**
+ * The moonstones dug up and not taken, and the Amulet and the shards where they wait in the Underworld: drawn and
+ * taken from the records the save keeps of them (the stones' places and the uncovered bits, s.amulet, s.shards,
+ * s.shadowlords), with no actor standing for them.
+ */
+export function relicsHere(g: Game): { x: number; y: number; z: number; thing: Thing }[] {
+  const s = g.s;
+  const out: { x: number; y: number; z: number; thing: Thing }[] = [];
+  if (s.mapId > 0x7f) return out;
+  for (let i = 0; i < 8; i++)
+    if ((g.objects.uncovered & (1 << i)) !== 0 && s.moonstoneHeld[i] === s.mapId)
+      out.push({ x: s.moonstoneX[i], y: s.moonstoneY[i], z: s.moonstoneZ[i], thing: { kind: 'moonstone', stone: i, tile: 0x19 } });
+  if (s.mapId === 0 && s.level === 0xff) {
+    if (s.amulet === 0) out.push({ x: AMULET_AT[0], y: AMULET_AT[1], z: 0xff, thing: { kind: 'regalia', which: 0, tile: 0xb7 } });
+    const xs = g.data.bytes(0x3a06, 3);
+    const ys = g.data.bytes(0x3a0a, 3);
+    for (let i = 0; i < 3; i++)
+      if (s.shards[i] === 0 && s.shadowlords[i] < 0x80)
+        out.push({ x: xs[i], y: ys[i], z: 0xff, thing: { kind: 'regalia', which: 1 + i, tile: 0xb4 } });
+  }
+  return out;
+}
+
+/** What a regalia piece holds for Get (getObject's amount): the shard's number (D_3a0e), the Amulet's 0xf3. */
+export function regaliaAmount(g: Game, which: number): number {
+  return which === 0 ? 0xf3 : g.data.bytes(0x3a0e, 3)[which - 1];
 }
 
 /** The last placed of the things lying on a square. */
@@ -149,6 +182,7 @@ export function thingsAt(g: Game, x: number, y: number, z: number): Thing[] {
   }
   const v = vehicleAt(g, x, y, z);
   if (v) out.push({ kind: 'vehicle', v, tile: v.tile });
+  for (const r of relicsHere(g)) if (r.x === (x & 0xff) && r.y === (y & 0xff) && r.z === (z & 0xff)) out.push(r.thing);
   const list = itemsHere(g);
   for (let i = list.length - 1; i >= 0; i--) {
     const it = list[i];

@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actor, actorTileAt, freeActor, type Lying, lyingAt, setActor, thingsAt } from './actors.ts';
+import { actor, actorTileAt, type Lying, lyingAt, regaliaAmount, setActor, thingsAt } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
 import { selectDirection, whoActs } from './input.ts';
@@ -139,10 +139,9 @@ function findMoonstone(g: Game, x: number, y: number, z: number): boolean {
   const s = g.s;
   for (let i = 7; i >= 0; i--) {
     if (s.moonstoneX[i] !== x || s.moonstoneY[i] !== y || s.moonstoneZ[i] !== z || s.moonstoneHeld[i] !== s.mapId) continue;
-    let shown = false;
-    for (let k = 0x1f; k >= 0; k--) if (actorTileAt(g, x, y, z) === 0x19 && actor(g, s.dx).b5 === i) shown = true;
-    if (shown) continue;
-    setActor(g, freeActor(g), 0x19, 0x19, x, y, z, i);
+    // Shown already (dug up and not taken): the stone's uncovered bit (objectStores.ts), drawn from its record.
+    if ((g.objects.uncovered & (1 << i)) !== 0) continue;
+    g.objects.uncovered |= 1 << i;
     g.say(0x8680); // "a strange rock!\n"
     g.viewDirty |= 2;
     return true;
@@ -243,8 +242,7 @@ export function somethingBeside(g: Game): boolean {
     if (hiddenIndex(g, x, y) >= 0 || tileAt(g, x, y) === T.HiddenDoor) return true;
     for (let i = 0; i < 8; i++)
       if (s.moonstoneX[i] === x && s.moonstoneY[i] === y && s.moonstoneZ[i] === s.level && s.moonstoneHeld[i] === s.mapId) {
-        const shown = actorTileAt(g, x, y, s.level) === 0x19;
-        if (!shown) return true;
+        if ((g.objects.uncovered & (1 << i)) === 0) return true;
       }
     for (let i = 0; i < 3; i++) if (xs[i] === x && ys[i] === y && s.hour === 0 && s.harvestDays[i] !== s.day) return true;
   }
@@ -797,6 +795,15 @@ export async function getCommand(g: Game): Promise<number> {
     takeVehicle(g, got.v);
     g.viewDirty |= 2;
     getObject(g, got.tile, 0, 0x20);
+    return 1;
+  }
+  if (got?.kind === 'moonstone') {
+    getObject(g, 0x19, got.stone, 0x20);
+    g.objects.uncovered &= ~(1 << got.stone);
+    return 1;
+  }
+  if (got?.kind === 'regalia') {
+    getObject(g, got.tile, regaliaAmount(g, got.which), 0x20);
     return 1;
   }
   if (got?.kind === 'item') {

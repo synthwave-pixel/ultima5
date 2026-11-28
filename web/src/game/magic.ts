@@ -1938,6 +1938,7 @@ function useMoonstone(g: Game, n: number): void {
     s.moonstoneY[n] = s.y;
     s.moonstoneHeld[n] = s.mapId;
     s.moonstoneZ[n] = s.level;
+    g.objects.uncovered &= ~(1 << n); // buried: to be dug up again
   } else {
     g.say(0x477c); // "cannot be buried here!\n"
   }
