@@ -24,7 +24,7 @@ import { A, T } from './tiles.ts';
 import { CLASSES } from './zstats.ts';
 import { dressingOf, dressingOfActor } from './companions.ts';
 import { actor, actorSlots, party } from './actors.ts';
-import { vehiclesHere } from './objectStores.ts';
+import { itemsHere, vehiclesHere } from './objectStores.ts';
 
 /** A byte of memory: a buffer and an index. */
 export type Cell = [Uint8Array, number];
@@ -486,9 +486,12 @@ export function overlayActors(g: Game): void {
       placeActor(g, vx, vy, x, y, anim, slot === 0 && s.mapId < 0x80);
     }
   };
-  // Drawn first, so that whoever stands on the same square is drawn over them (1988's layering): the vehicles left
-  // about (objectStores.ts).
-  if (!combat) for (const v of vehiclesHere(g)) figure(v.tile, v.tile, v.x, v.y, v.z, -1);
+  // Drawn first, so that whoever stands on the same square is drawn over them (1988's layering): the things lying
+  // about, then the vehicles left about (objectStores.ts).
+  if (!combat) {
+    for (const it of itemsHere(g)) figure(it.tile, it.tile, it.x, it.y, it.z, -1);
+    for (const v of vehiclesHere(g)) figure(v.tile, v.tile, v.x, v.y, v.z, -1);
+  }
   for (const i of order) {
     const a = actor(g, i);
     if (a.tile === 0) continue;

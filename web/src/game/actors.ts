@@ -7,7 +7,7 @@
  */
 
 import { Game } from './game.ts';
-import { type Item, itemsHere, type Vehicle, vehicleAt } from './objectStores.ts';
+import { type Item, itemsHere, takeItem, type Vehicle, vehicleAt } from './objectStores.ts';
 import { Actor, type Save } from './save.ts';
 import { T } from './tiles.ts';
 
@@ -155,6 +155,91 @@ export function thingsAt(g: Game, x: number, y: number, z: number): Thing[] {
     if (it.x === (x & 0xff) && it.y === (y & 0xff) && it.z === (z & 0xff)) out.push({ kind: 'item', it, tile: it.tile });
   }
   return out;
+}
+
+/**
+ * A thing lying on a square as Search, Open, Jimmy, Get and An Sanct act on it: a record of the table (the arena's in
+ * a fight; elsewhere what the place's people hold, as the sandalwood box), or of the item store.
+ */
+export interface Lying {
+  readonly tile: number;
+  /** What it holds: a chest's trap and lock, how much food or gold, which arm (the actor's b5, an item's amount). */
+  b5: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  /** Its slot in the table; 32 for one in the item store. */
+  readonly slot: number;
+  /** Turned to another thing where it lies (a body searched to food or gold). */
+  become(tile: number, b5: number): void;
+  /** Gone from where it lay. */
+  remove(): void;
+}
+
+/** The table's record in `slot` as a thing lying about. */
+export function lyingSlot(g: Game, slot: number): Lying {
+  const a = actor(g, slot);
+  return {
+    get tile() {
+      return a.tile;
+    },
+    get b5() {
+      return a.b5;
+    },
+    set b5(v: number) {
+      a.b5 = v;
+    },
+    x: a.x,
+    y: a.y,
+    z: a.z,
+    slot,
+    become(tile: number, b5: number) {
+      a.tile = a.anim = tile;
+      a.b5 = b5;
+    },
+    remove() {
+      setActor(g, slot, 0, 0, 0, 0, 0, 0);
+    },
+  };
+}
+
+/** An item of the store as a thing lying about. */
+function lyingItem(g: Game, it: Item): Lying {
+  return {
+    get tile() {
+      return it.tile;
+    },
+    get b5() {
+      return it.amount;
+    },
+    set b5(v: number) {
+      it.amount = v & 0xff;
+    },
+    x: it.x,
+    y: it.y,
+    z: it.z,
+    slot: 32,
+    become(tile: number, b5: number) {
+      it.tile = tile;
+      it.amount = b5 & 0xff;
+    },
+    remove() {
+      takeItem(g, it);
+    },
+  };
+}
+
+/** The first thing on a square whose tile `test` passes: the table's (slot 1 up, or 31 down), then the item store's. */
+export function lyingAt(g: Game, x: number, y: number, z: number, test: (tile: number) => boolean, down = false): Lying | undefined {
+  const things = thingsAt(g, x, y, z);
+  const table = things.filter((t) => t.kind === 'creature');
+  if (down) table.reverse();
+  for (const t of [...table, ...things.filter((t) => t.kind === 'item')]) {
+    if (!test(t.tile)) continue;
+    if (t.kind === 'creature') return lyingSlot(g, t.slot);
+    if (t.kind === 'item') return lyingItem(g, t.it);
+  }
+  return undefined;
 }
 
 /** ULTIMA_3868: an actor slot 1-23 whose tile is in [lo, hi] (and out of view, if asked). */

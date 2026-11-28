@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actor, actorTileAt, freeActor, setActor, thingsAt } from './actors.ts';
+import { actor, actorTileAt, freeActor, type Lying, lyingAt, setActor, thingsAt } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
 import { selectDirection, whoActs } from './input.ts';
@@ -21,7 +21,7 @@ import { buildLightMap, setTileAt, setTownTile, tileAt } from './world.ts';
 import { roll30 } from './outdoors.ts';
 import { cue } from './cues.ts';
 import { addAmmo, isAmmo } from './ammo.ts';
-import { takeVehicle } from './objectStores.ts';
+import { placeItem, takeItem, takeVehicle } from './objectStores.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 
@@ -87,9 +87,9 @@ export async function springTrap(g: Game, i: number): Promise<void> {
 // --- Search -----------------------------------------------------------------------
 
 /** SJOG_01f2: searching a body: mostly remains, sometimes plague, now and then food or gold. */
-function searchBody(g: Game, slot: number, who: number): void {
+function searchBody(g: Game, body: Lying, who: number): void {
   if (g.random(0, 7) !== 0) {
-    setActor(g, slot, 0, 0, 0, 0, 0, 0);
+    body.remove();
     if (g.random(0, 0x1f) === 0x13) {
       g.say(0x8606); // "Plague!\n"
       if (!g.soundOff) void g.sound.noise(0x28, 3000, 500);
@@ -99,23 +99,22 @@ function searchBody(g: Game, slot: number, who: number): void {
       g.say([0x8610, 0x861a, 0x8622, 0x862a][g.random(0, g.random(0, 3))]); // nothing, worms, guts, a bloody pulp
     }
   } else {
-    const a = actor(g, slot);
+    let tile: number;
     if (g.random(0, 3) === 0) {
       g.say(0x863a); // "food!\n"
-      a.tile = a.anim = 0xf;
+      tile = 0xf;
     } else {
       g.say(0x8642); // "gold!\n"
-      a.tile = a.anim = 2;
+      tile = 2;
     }
-    a.b5 = g.random(1, 3);
+    body.become(tile, g.random(1, 3));
     g.viewDirty |= 2;
     updateFrame(g);
   }
 }
 
 /** SJOG_02ea: searching a chest for traps, by intelligence. */
-export function searchChest(g: Game, slot: number, who: number): void {
-  const a = actor(g, slot);
+export function searchChest(g: Game, a: Lying, who: number): void {
   const b5 = a.b5;
   const int = g.s.members[who].int;
   const odds = (b5 & 0x80) === 0 ? -(int - 0x1e) >> 1 : ((b5 & 0x7f) - int + 0x1e) >> 1;
@@ -206,16 +205,19 @@ function findHidden(g: Game, x: number, y: number): void {
   if (i < 0xd || i > 0xf) s.d585c[i >> 3] |= 1 << (i & 7);
   if (i === 0xe) s.skullKeyDay = s.day;
   const tile = g.data.bytes(0x3e78, 0x72)[i];
-  setActor(
-    g,
-    freeActor(g),
+  const amount = g.data.bytes(0x3eea, 0x72)[i];
+  // In the place's item store (objectStores.ts); a one-of-a-kind find in a slot of its own, never let go.
+  placeItem(g, {
     tile,
-    tile,
-    g.data.bytes(0x4040, 0x72)[i],
-    g.data.bytes(0x40b2, 0x72)[i],
-    g.data.bytes(0x3fce, 0x72)[i],
-    g.data.bytes(0x3eea, 0x72)[i],
-  );
+    x: g.data.bytes(0x4040, 0x72)[i],
+    y: g.data.bytes(0x40b2, 0x72)[i],
+    z: g.data.bytes(0x3fce, 0x72)[i],
+    amount,
+    b6: 0,
+    b7: 0,
+    unique: g.objectRules.isUnique(i, tile, amount),
+    hidden: i,
+  });
   g.viewDirty |= 2;
   nameFind(g, tile);
 }
@@ -263,24 +265,16 @@ export async function searchCommand(g: Game): Promise<number> {
   const who = await whoActs(g);
   if (who === -1) return 1;
   const t = tileAt(g, x, y);
-  let chest = 1;
-  for (; chest < 0x20; chest++) {
-    const a = actor(g, chest);
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
-  }
-  if (chest < 0x20) {
+  const chest = lyingAt(g, x, y, s.level, (t) => t === 1);
+  if (chest) {
     g.say(0x892c); // "\nThou dost find\n"
     searchChest(g, chest, who);
     return 1;
   }
   // A body, wherever it lies among what is there (the 1988 game looked at the top one only, and a body under gold
   // - two fallen on one square, one searched - was never found).
-  let body = 0x1f;
-  for (; body > 0; body--) {
-    const a = actor(g, body);
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 0x1f) break;
-  }
-  if (body > 0) {
+  const body = lyingAt(g, x, y, s.level, (t) => t === 0x1f, true);
+  if (body) {
     g.say(0x893e); // "\nThou dost find\n"
     searchBody(g, body, who);
     return 1;
@@ -317,15 +311,14 @@ export async function searchCommand(g: Game): Promise<number> {
 // --- Jimmy ------------------------------------------------------------------------
 
 /** SJOG_0baa: a chest's lock. */
-async function jimmyChest(g: Game, actor: number): Promise<void> {
+async function jimmyChest(g: Game, chest: Lying): Promise<void> {
   const who = await whoActs(g);
   if (who === -1) return;
-  await jimmyChestBy(g, actor, who);
+  await jimmyChestBy(g, chest, who);
 }
 
 /** A chest's lock picked by member `who` (loot.ts names them; Jimmy asks): whether its trap was disarmed. */
-export async function jimmyChestBy(g: Game, slot: number, who: number): Promise<boolean> {
-  const a = actor(g, slot);
+export async function jimmyChestBy(g: Game, a: Lying, who: number): Promise<boolean> {
   const b5 = a.b5;
   // The bump's next step (bumpAct.ts): open it, disarmed; or, the key broken, search it again - the reading that
   // sent the party here may have been wrong, and a chest never trapped breaks every key.
@@ -462,12 +455,8 @@ export async function jimmyCommand(g: Game): Promise<number> {
       break;
     }
     default: {
-      let c = 1;
-      for (; c < 0x20; c++) {
-        const a = actor(g, c);
-        if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
-      }
-      if (c < 0x20) await jimmyChest(g, c);
+      const c = lyingAt(g, x, y, s.level, (t) => t === 1);
+      if (c) await jimmyChest(g, c);
       else g.say(0x8b52); // "No lock!\n"
     }
   }
@@ -481,19 +470,19 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
   const s = g.s;
   if (tile === 3 || tile === 4) amount--;
   const n = tile === 1 ? g.random(1, level) : tile === 2 ? g.random(1, level * 3) : amount;
-  let slot = 0;
-  for (let i = 0x1f; i >= 0; i--) {
-    if (actor(g, i).tile === 0) {
-      slot = i;
-      break;
-    }
-  }
-  if (slot === 0) return;
-  setActor(g, slot, tile, tile, x, y, z, n);
   if (s.mapId < 0x80) {
-    actor(g, slot).b7 = 0;
-    actor(g, slot).z = z;
+    // Out of a fight, in the place's item store (objectStores.ts): kept there, never taken for a creature.
+    placeItem(g, { tile, x, y, z, amount: n & 0xff, b6: 0, b7: 0, unique: false, hidden: -1 });
   } else {
+    let slot = 0;
+    for (let i = 0x1f; i >= 0; i--) {
+      if (actor(g, i).tile === 0) {
+        slot = i;
+        break;
+      }
+    }
+    if (slot === 0) return;
+    setActor(g, slot, tile, tile, x, y, z, n);
     actor(g, slot).b7 = 0x20;
   }
   g.viewDirty |= 2;
@@ -509,27 +498,21 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
  * SJOG_112c: open a chest: traps, then its contents by its level (D_4124.., D_413c..). `by` names the chest and who
  * opens it (loot.ts, where two may lie on one square); else the chest at (x, y), by whoever acts.
  */
-export async function openChest(g: Game, x: number, y: number, z: number, by?: { actor: number; who: number }): Promise<void> {
+export async function openChest(g: Game, x: number, y: number, z: number, by?: { chest: Lying; who: number }): Promise<void> {
   const s = g.s;
-  let i = by ? by.actor : 1;
-  for (; i < 0x20 && !by; i++) {
-    const a = actor(g, i);
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z)) {
-      if (a.tile === 1) break;
-      if (a.tile === 0xe) {
-        g.say(0x8b64); // "Can't!\n"
-        return;
-      }
-    }
+  const chest = by ? by.chest : lyingAt(g, x, y, z, (t) => t === 1 || t === 0xe);
+  if (chest?.tile === 0xe) {
+    g.say(0x8b64); // "Can't!\n"
+    return;
   }
-  if (i === 0x20) {
+  if (!chest) {
     g.say(0x8b6c); // "Nothing to open!\n"
     return;
   }
   const who = by ? by.who : await whoActs(g);
   if (who === -1) return;
-  let level = actor(g, i).b5;
-  setActor(g, i, 0, 0, 0, 0, 0, 0);
+  let level = chest.b5;
+  chest.remove();
   g.viewDirty |= 2;
   if (s.mapId >= 1 && s.mapId <= 0x20) {
     s.karma = s.karma > 2 ? s.karma - 2 : 0;
@@ -633,12 +616,13 @@ export async function openCommand(g: Game): Promise<number> {
 // --- Get ------------------------------------------------------------------------------
 
 /** SJOG_1458: take an item (`amount` is the actor's byte 5), and clear its actor (`actor` < 32). */
-export function getObject(g: Game, tile: number, amount: number, actor: number): void {
+/** Take a thing up (`actor` its slot, 0x20 for none); false where it is not taken (a chest, nothing there). */
+export function getObject(g: Game, tile: number, amount: number, actor: number): boolean {
   const s = g.s;
   switch (tile) {
     case 1:
       g.say(0x8c3e); // "Open it first!\n"
-      return;
+      return false;
     case 0x19:
       g.say(0x8c4e); // "A moonstone!\n"
       s.moonstoneHeld[amount] = 0xff;
@@ -744,11 +728,12 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       break;
     default:
       g.say(0x8d92); // "Nothing to get!\n"
-      return;
+      return false;
   }
   if (actor < 0x20) setActor(g, actor, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
   g.vitalsDirty = 1;
+  return true;
 }
 
 /** SJOG_179e: Get in a dungeon: an open chest's contents, by the level's depth (D_41bc..). */
@@ -812,6 +797,10 @@ export async function getCommand(g: Game): Promise<number> {
     takeVehicle(g, got.v);
     g.viewDirty |= 2;
     getObject(g, got.tile, 0, 0x20);
+    return 1;
+  }
+  if (got?.kind === 'item') {
+    if (getObject(g, got.tile, got.it.amount, 0x20)) takeItem(g, got.it);
     return 1;
   }
   const t = tileAt(g, x, y);

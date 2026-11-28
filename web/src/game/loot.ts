@@ -22,7 +22,7 @@ import { Status } from './save.ts';
 import type { Offer } from './targets.ts';
 import { updateFrame } from './frame.ts';
 import { fieldWon } from './turn.ts';
-import { actor, actorSlots } from './actors.ts';
+import { actor, actorSlots, lyingSlot } from './actors.ts';
 
 const CHEST = 1;
 
@@ -153,7 +153,7 @@ export async function lootField(g: Game): Promise<boolean> {
         left++;
         continue;
       }
-      await quiet(() => searchChest(g, i, who));
+      await quiet(() => searchChest(g, lyingSlot(g, i), who));
       tally(did.searched, who);
       read = g.bumped.get(key);
     }
@@ -167,7 +167,7 @@ export async function lootField(g: Game): Promise<boolean> {
       } else if (s.keys > 0) {
         const who = best(able(g), (m) => s.members[m].dex);
         if (who >= 0) {
-          await quiet(async () => (safe = await jimmyChestBy(g, i, who)));
+          await quiet(async () => (safe = await jimmyChestBy(g, lyingSlot(g, i), who)));
           tally(did.jimmied, who);
           if (!safe) broke++;
         }
@@ -182,7 +182,7 @@ export async function lootField(g: Game): Promise<boolean> {
     const m = s.members[opener];
     const [hp, status] = [m.hp, m.status];
     const trapped = a.b5 > 0x7f;
-    await quiet(() => openChest(g, a.x, a.y, a.z, { actor: i, who: opener }));
+    await quiet(() => openChest(g, a.x, a.y, a.z, { chest: lyingSlot(g, i), who: opener }));
     tally(did.opened, opener);
     if (trapped) {
       const hurt = m.status === Status.Dead ? ', and falls' : m.status !== status ? ', poisoned' : hp > m.hp ? ` (-${hp - m.hp})` : '';

@@ -12,7 +12,7 @@
 
 import * as modern from './modernKarma.ts';
 import { SETTLEMENTS } from '../data/maps.ts';
-import { actor, actorSlots, actorTileAt } from './actors.ts';
+import { actor, actorSlots, actorTileAt, lyingAt } from './actors.ts';
 import {
   aim,
   arenaFree,
@@ -582,14 +582,12 @@ async function anSanct(g: Game): Promise<number> {
     await castEffect(g, 2);
     return 1;
   }
-  for (let a = 0; a < 0x20; a++) {
-    const rec = actor(g, a);
-    if (rec.tile === 1 && rec.x === s.dx && rec.y === s.dy && (s.mapId > 0x7f || rec.z === s.level)) {
-      rec.b5 &= 0x7f;
-      g.bumped.set(thingKey(g, s.dx, s.dy), 'disarmed'); // the bump opens it next (bumpAct.ts)
-      await castEffect(g, 2);
-      return 1;
-    }
+  const chest = lyingAt(g, s.dx, s.dy, s.level, (t) => t === 1);
+  if (chest) {
+    chest.b5 &= 0x7f;
+    g.bumped.set(thingKey(g, s.dx, s.dy), 'disarmed'); // the bump opens it next (bumpAct.ts)
+    await castEffect(g, 2);
+    return 1;
   }
   return 0;
 }
