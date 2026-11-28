@@ -17,6 +17,7 @@ import { Status } from './save.ts';
 import { K } from './io.ts';
 import { turnMember } from './turn.ts';
 import { counter } from './talk.ts';
+import { actor, actorSlots } from './actors.ts';
 
 /** Offered, offered greyed, or left out. */
 export type Offer = 'show' | 'grey' | 'hide';
@@ -42,7 +43,7 @@ function actorsOn(g: Game, x: number, y: number): number[] {
   const s = g.s;
   const out: number[] = [];
   for (let i = 1; i < 32; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile !== 0 && a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level)) out.push(a.tile);
   }
   return out;
@@ -197,7 +198,7 @@ function talkReaches(g: Game, dx: number, dy: number): boolean {
 function talker(g: Game, x: number, y: number): boolean {
   const s = g.s;
   for (let i = 1; i < 32; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile === 0 || a.x !== (x & 0xff) || a.y !== (y & 0xff) || a.z !== s.level) continue;
     const npc = s.npcs.findIndex((n, k) => n.actor === i && s.npcTypes[k] !== 0 && n.f0 !== 0);
     if (npc >= 0 && s.npcs[npc].fa !== 0) return true;
@@ -212,7 +213,7 @@ export function attackOffer(g: Game): Offer {
   if (inDungeon(g)) {
     const ax = (g.data.swords(0x24d6, 4)[s.facing] + s.x) & 7;
     const ay = (g.data.swords(0x24de, 4)[s.facing] + s.y) & 7;
-    return s.actors[1].x === ax && s.actors[1].y === ay ? 'show' : 'hide';
+    return actor(g, 1).x === ax && actor(g, 1).y === ay ? 'show' : 'hide';
   }
   const afloat = tileAt(g, s.x, s.y) < 4 && !onFoot(g) && !onShip(g);
   if (outdoors(g)) {
@@ -316,7 +317,7 @@ export function yellOffer(g: Game): Offer {
   }
   if (s.mapId >= 0x1e && s.mapId <= 0x20 && s.y >= 2) {
     const standing = [0, 1, 2].some((i) => s.shadowlords[i] !== 0xff);
-    const here = s.actors.some((a) => a.tile === 0xfc);
+    const here = [...actorSlots(g)].some(([, a]) => a.tile === 0xfc);
     return standing && !here ? 'show' : 'hide';
   }
   return 'hide';
@@ -415,7 +416,7 @@ export function whyNotHere(g: Game, item: number): string | null {
           'Nothing here to dispel',
         );
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if ((tileAt(g, s.x + dx, s.y + dy) & 0xf0) === T.T70) return null;
-      return unless(fight && s.actors.some((a) => (a.tile & 0xfc) === 0xe8), 'Nothing here to dispel');
+      return unless(fight && [...actorSlots(g)].some(([, a]) => (a.tile & 0xfc) === 0xe8), 'Nothing here to dispel');
     case 0x1d:
     case 0x1e:
     case 0x1f: {

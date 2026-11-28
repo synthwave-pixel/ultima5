@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actorTileAt, actorTileAtRev, canEnter, freeActor, setActor } from './actors.ts';
+import { actor, actorTileAt, actorTileAtRev, canEnter, copyActorTable, freeActor, party, restoreActorTable, setActor } from './actors.ts';
 import { attackCombat, shoot } from './combat.ts';
 import { processCommand, setActivePlayer } from './commands.ts';
 import { commandPrompt, drawVitals, drawMoons, drawMapName, leftArrow, setWind, updateFrame } from './frame.ts';
@@ -41,12 +41,12 @@ export function worldActors(g: Game): Uint8Array {
 
 /** Save the world's actors to its file (the party is leaving it). */
 export function stashWorldActors(g: Game): void {
-  worldActors(g).set(g.s.b.subarray(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100));
+  worldActors(g).set(copyActorTable(g));
 }
 
 /** Restore them. */
 export function unstashWorldActors(g: Game): void {
-  g.s.b.set(worldActors(g), 0x5c5a - 0x55a6);
+  restoreActorTable(g, worldActors(g));
 }
 
 /** MAINOUT_0000: come out into the world: load the chunks around the party, the light, the wind, the moons. */
@@ -71,7 +71,7 @@ function placeTreasures(g: Game): void {
   const s = g.s;
   if (s.level === 0) return;
   if (s.amulet === 0) {
-    const a = s.actors[28];
+    const a = actor(g, 28);
     a.tile = a.anim = 0xb7;
     a.x = 0x69;
     a.y = 0xe1;
@@ -83,7 +83,7 @@ function placeTreasures(g: Game): void {
   const b5 = g.data.bytes(0x3a0e, 3);
   for (let i = 0; i < 3; i++) {
     if (s.shards[i] === 0 && s.shadowlords[i] < 0x80) {
-      const a = s.actors[29 + i];
+      const a = actor(g, 29 + i);
       a.tile = a.anim = 0xb4;
       a.x = xs[i];
       a.y = ys[i];
@@ -100,7 +100,7 @@ export async function outdoorsEntry(g: Game): Promise<void> {
   enterWorld(g);
   if (s.boughtShip >= 0x40) {
     const i = freeActor(g);
-    const a = s.actors[i];
+    const a = actor(g, i);
     a.b7 = s.boughtShip & 0x3f;
     a.x = s.shipX;
     a.y = s.shipY;
@@ -143,7 +143,7 @@ function turnParty(g: Game, dir: number): boolean {
         g.say([0x295c, 0x296a, 0x2963, 0x2970][dir]); // North, East, South, West
         s.newline = 1;
         spent = true;
-        if (s.actors[0].b5 < 0x32) g.say(0x2976); // "Hull weak!\n"
+        if (party(g).b5 < 0x32) g.say(0x2976); // "Hull weak!\n"
       } else if (s.partyTile < 0x24 && s.wind === 0) {
         spent = true;
       }
@@ -280,7 +280,7 @@ async function terrainDelay(g: Game): Promise<void> {
 /** MAINOUT_007a: a moment's pause when a monster is near (the original's loop only ever looks at actor 1). */
 export async function monsterPause(g: Game): Promise<void> {
   const s = g.s;
-  const a = s.actors[1];
+  const a = actor(g, 1);
   if (a.tile !== 0 && a.z === s.level && Math.abs(s.x - a.x) < 6 && Math.abs(s.y - a.y) < 6) await sleepTicks(g, 1);
 }
 
@@ -434,7 +434,7 @@ async function enterDungeon(g: Game, kind: string): Promise<boolean> {
     if ((s.shadowlords[0] & s.shadowlords[1] & s.shadowlords[2]) < 0x80) {
       g.say(0x2a2f); // "\nAttacked at entrance!\n"
       const a = freeActor(g);
-      s.actors[a].tile = 0xfc;
+      actor(g, a).tile = 0xfc;
       await attackCombat(g, a);
       return false;
     }
@@ -605,7 +605,7 @@ function spawn(g: Game): void {
   if (tries === 0x80) return;
   const i = freeActor(g);
   setActor(g, i, tile, tile, x, y, s.level, 0);
-  if (tile === 0x2c) s.actors[i].b5 = 100;
+  if (tile === 0x2c) actor(g, i).b5 = 100;
 }
 
 /** MAINOUT_105c: actors that move and fight (pirates, and monsters but not shards, crowns or the like). */
@@ -624,7 +624,7 @@ export async function hullDamage(g: Game): Promise<void> {
     return;
   }
   const hit = g.random(1, 0x1e);
-  const ship = s.actors[0];
+  const ship = party(g);
   if (hit < ship.b5) {
     ship.b5 -= hit;
     drawVitals(g);
@@ -657,7 +657,7 @@ export async function hullDamage(g: Game): Promise<void> {
 /** MAINOUT_1168: a pirate ship's broadside. */
 async function broadside(g: Game, i: number, dx: number, dy: number): Promise<void> {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   if (dx === 0 && (a.anim === 0x2c || a.anim === 0x2e)) a.anim = (g.random(0, 3) & 2) + 0x2d;
   if (dy === 0 && (a.anim === 0x2d || a.anim === 0x2f)) a.anim = (g.random(0, 3) & 2) + 0x2c;
   updateFrame(g);
@@ -674,7 +674,7 @@ async function broadside(g: Game, i: number, dx: number, dy: number): Promise<vo
 /** MAINOUT_1248: a creature next to the party: a whirlpool swallows, sand traps and bridges bite, others fight. */
 async function creatureReaches(g: Game, i: number): Promise<void> {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   if ((a.tile & 0xfc) === 0xec) {
     if (s.partyTile === 0x1c) {
       await hullDamage(g);
@@ -710,7 +710,7 @@ async function creatureReaches(g: Game, i: number): Promise<void> {
 /** MAINOUT_131a: does creature `i` act on the party this turn (reach it, spit fire, fire cannon)? */
 async function creatureActs(g: Game, i: number): Promise<number> {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   const tile = a.tile;
   let dx = Math.abs(a.x - s.x);
   if (dx > 0x7f) dx = 0x100 - dx;
@@ -743,7 +743,7 @@ async function creatureActs(g: Game, i: number): Promise<number> {
 /** MAINOUT_1482: can creature `i` go to (x, y). */
 function creatureCanGo(g: Game, i: number, x: number, y: number): boolean {
   const s = g.s;
-  if (!canEnter(g, s.actors[i].tile, tileAt(g, x, y))) return false;
+  if (!canEnter(g, actor(g, i).tile, tileAt(g, x, y))) return false;
   return actorTileAtRev(g, x, y, s.level) === 0;
 }
 
@@ -753,7 +753,7 @@ const notBack = (g: Game, x: number, y: number): boolean => !(x === g.a526 && y 
 /** MAINOUT_14ea: is the party in a Shadowlord's sight (D_2c18). */
 function seesParty(g: Game, i: number): number {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   let dx = Math.abs(a.x - s.x);
   if (dx > 0x7f) dx = 0x100 - dx;
   let dy = Math.abs(a.y - s.y);
@@ -764,8 +764,7 @@ function seesParty(g: Game, i: number): number {
 
 /** MAINOUT_1578: creature `i` steps by (dx, dy); rough ground may stop it; pirates turn to face. */
 function creatureStep(g: Game, i: number, dx: number, dy: number): void {
-  const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   const tile = a.tile;
   const x = (a.x + dx) & 0xff;
   const y = (a.y + dy) & 0xff;
@@ -808,7 +807,7 @@ function creatureStep(g: Game, i: number, dx: number, dy: number): void {
 
 /** MAINOUT_16fc: a random step. */
 function randomStep(g: Game, i: number): void {
-  const a = g.s.actors[i];
+  const a = actor(g, i);
   const x = a.x;
   const y = a.y;
   switch (g.random(0, 3)) {
@@ -829,7 +828,7 @@ function randomStep(g: Game, i: number): void {
 /** MAINOUT_17d4: step toward the party, one axis or the other, else at random. */
 function chase(g: Game, i: number): void {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   const x = a.x;
   const y = a.y;
   let rx = (a.x - s.x) & 0xff;
@@ -863,7 +862,7 @@ function chase(g: Game, i: number): void {
 /** MAINOUT_198c: how creature `i` moves: whirlpools drift, Shadowlords pursue a while, pirates need a wind. */
 function creatureMoves(g: Game, i: number): void {
   const s = g.s;
-  const a = s.actors[i];
+  const a = actor(g, i);
   const tile = a.tile;
   if ((tile & 0xfc) === 0xec) {
     a.b5 ^= 1;
@@ -903,12 +902,12 @@ export async function monstersTurn(g: Game): Promise<number> {
   }
   if (spawnOdds(g) > g.random(1, 0x1e)) spawn(g);
   for (let i = 0x1f; i > 0; i--) {
-    if (!isCreature(s.actors[i].tile)) continue;
+    if (!isCreature(actor(g, i).tile)) continue;
     acted += await creatureActs(g, i);
     if (acted === 0) creatureMoves(g, i);
   }
   for (let i = 0x1f; i > 0; i--) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (isCreature(a.tile) && (((a.x - s.chunkX) & 0xff) > 0x1f || ((a.y - s.chunkY) & 0xff) > 0x1f)) setActor(g, i, 0, 0, 0, 0, 0, 0);
   }
   return acted;
@@ -937,8 +936,8 @@ export async function falls(g: Game): Promise<void> {
     g.say(0x39c3); // "Falling into underworld!!\n"
     g.sound.music(0);
     s.level = 0xff;
-    g.ool.brit.set(s.b.subarray(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100));
-    s.b.set(g.ool.under, 0x5c5a - 0x55a6);
+    g.ool.brit.set(copyActorTable(g));
+    restoreActorTable(g, g.ool.under);
     enterWorld(g);
     musicForMap(g);
   }

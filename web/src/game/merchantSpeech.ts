@@ -13,6 +13,7 @@
 import type { Game } from './game.ts';
 import * as speech from './speech.ts';
 import { cue } from './cues.ts';
+import { actor } from './actors.ts';
 
 /** The message log's window (frame.ts Win.messages). */
 const LOG = 2;
@@ -150,8 +151,8 @@ export async function withSpeaker<T>(g: Game, from: { dx: number; dy: number } |
 }
 
 /** Where `actor` stands, squares from the party (withSpeaker's `from`). */
-export const fromActor = (g: Game, actor: number): { dx: number; dy: number } => {
-  const a = g.s.actors[actor];
+export const fromActor = (g: Game, slot: number): { dx: number; dy: number } => {
+  const a = actor(g, slot);
   return a ? { dx: a.x - g.s.x, dy: a.y - g.s.y } : { dx: 0, dy: 0 };
 };
 

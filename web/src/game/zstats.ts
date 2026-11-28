@@ -20,6 +20,7 @@ import { usableHere } from './targets.ts';
 import { armCounts } from './ammo.ts';
 import { eased } from './settings.ts';
 import { shortArmNames } from './armNames.ts';
+import { actor } from './actors.ts';
 
 export const CLASSES = 'AMBFDTPRS';
 const STATUSES = 'GPDSC';
@@ -422,7 +423,7 @@ export function unequip(g: Game, m: number, item: number): boolean {
 async function equip(g: Game, m: number, item: number): Promise<boolean> {
   const s = g.s;
   const member = s.members[m];
-  const actor = s.mapId > 0x7f ? s.actors[g.combat[s.combatTurn].actor] : null;
+  const rec = s.mapId > 0x7f ? actor(g, g.combat[s.combatTurn].actor) : null;
   if (item === 0x1b || item === 0x1d) return false;
   if (item >= 9 && item <= 0xf && s.mapId > 0x7f && s.battleWon === 0) {
     refuse(g, 0x97e2); // "Thou canst not change armour in heated battle!"
@@ -431,8 +432,8 @@ async function equip(g: Game, m: number, item: number): Promise<boolean> {
   if (wears(g, m, item)) {
     unequip(g, m, item);
     if (s.equipment[item] < 99) s.equipment[item]++;
-    if (s.mapId <= 0x7f || item !== 0x2a || !actor) return false;
-    actor.tile = actor.anim = g.data.bytes(0x1ade, 9)[CLASSES.indexOf(String.fromCharCode(member.cls))];
+    if (s.mapId <= 0x7f || item !== 0x2a || !rec) return false;
+    rec.tile = rec.anim = g.data.bytes(0x1ade, 9)[CLASSES.indexOf(String.fromCharCode(member.cls))];
     return false;
   }
   if (unloadedRefused(g, item)) {
@@ -506,7 +507,7 @@ async function equip(g: Game, m: number, item: number): Promise<boolean> {
     await cue(g, 'Dissolve', () => g.sound.sweep(0x4b0, 2000, 1, 0x28));
     return true;
   }
-  if (item === 0x2a && s.mapId > 0x7f && actor) actor.tile = actor.anim = 0x1d;
+  if (item === 0x2a && s.mapId > 0x7f && rec) rec.tile = rec.anim = 0x1d;
   return false;
 }
 

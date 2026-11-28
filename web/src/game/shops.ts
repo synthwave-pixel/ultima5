@@ -12,7 +12,7 @@
 
 import * as modern from './modernKarma.ts';
 import { withFullPanel } from './layout.ts';
-import { freeActor } from './actors.ts';
+import { actor, freeActor } from './actors.ts';
 import { borderTitle, clearBorderTitle, clearSpellBar, drawGold, drawVitals, leftArrow, rightArrow, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
 import { getChar, getCharYN, getLetter, getNumber, neediest, type Need, selectMember } from './input.ts';
@@ -445,7 +445,7 @@ async function stables(v: Visit): Promise<void> {
   const { g } = v;
   const s = g.s;
   let slot = 0;
-  for (; slot < 32; slot++) if (s.actors[slot].tile === 0) break;
+  for (; slot < 32; slot++) if (actor(g, slot).tile === 0) break;
   const dxs = g.data.sbytes(0x3c38, 8);
   let x = 0;
   let y = 0;
@@ -481,7 +481,7 @@ async function stables(v: Visit): Promise<void> {
         } else {
           s.gold -= v.price;
           shortChange(g);
-          const a = s.actors[slot];
+          const a = actor(g, slot);
           a.b6 = a.b7 = a.b5 = 0;
           a.tile = a.anim = 0x10;
           a.x = x;

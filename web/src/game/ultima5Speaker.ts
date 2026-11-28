@@ -9,12 +9,13 @@
 import { animating, updateFrame } from './frame.ts';
 import type { Game } from './game.ts';
 import type { Speaker } from './speech.ts';
+import { actor } from './actors.ts';
 
 export function ultima5Speaker(g: Game): Speaker {
   return {
     at: () => {
       const s = g.s;
-      const a = s.actors[s.npcs[g.talk.npc]?.actor ?? -1];
+      const a = actor(g, s.npcs[g.talk.npc]?.actor ?? -1);
       return { dx: a ? a.x - s.x : 0, dy: a ? a.y - s.y : 0 };
     },
     redraw: () => updateFrame(g),

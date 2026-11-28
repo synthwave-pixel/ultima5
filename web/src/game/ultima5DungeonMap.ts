@@ -14,6 +14,7 @@ import { compactPanel } from './frame.ts';
 import type { Game } from './game.ts';
 import { A, T } from './tiles.ts';
 import { creatureFrame, partyFigures } from './world.ts';
+import { actor } from './actors.ts';
 
 /** The dungeon view's rectangle on the screen (DUNGEON_1a90 fills it). */
 const VIEW = { x1: 0x10, y1: 0x0e, x2: 0xaf, y2: 0xb2 };
@@ -129,7 +130,7 @@ export function ultima5DungeonMap(g: Game): DungeonMapSource {
     // The level's creature (actor 1), where the party sees it: its figure (MON0-7.16), walking.
     creatures: () => {
       if (!creatureSeen(g)) return [];
-      const a = g.s.actors[1];
+      const a = actor(g, 1);
       return [{ x: a.x, y: a.y, tile: DUNGEON_CREATURES[a.tile & 7] + creatureFrame(), mover: 'a1' }];
     },
     look: (kind, detail) => cellLook(g, kind, detail),

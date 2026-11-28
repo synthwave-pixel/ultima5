@@ -14,7 +14,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { canEnter, freeActor, setActor } from './actors.ts';
+import { actor, canEnter, copyActorTable, freeActor, party, restoreActorTable, setActor } from './actors.ts';
 import { reveal, sleepTicks } from './effects.ts';
 import { endSolo, soloHurt, soloOn, startSolo } from './solo.ts';
 import { borderTitle, clearBorderTitle, commandPrompt, drawVitals, invertMember, markTurn, turnColour, updateFrame } from './frame.ts';
@@ -134,9 +134,8 @@ export function arenaFree(g: Game, tile: number, x: number, y: number): boolean 
   if (x > 0xa || y > 0xa || x < 0 || y < 0) return true;
   const t = tileAt(g, x, y);
   if (!canEnter(g, tile, t) || t === 0xff) return false;
-  const s = g.s;
   for (let i = 0; i < 0x20; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x === x && a.y === y) {
       const k = a.tile;
       if (k === 0xeb) return false;
@@ -148,7 +147,7 @@ export function arenaFree(g: Game, tile: number, x: number, y: number): boolean 
     } else if (g.combat[i].x === x && g.combat[i].y === y) {
       const f = g.combat[i].flags;
       if ((f & (CF.Dead | CF.F4)) === 0 && f === 0) return false;
-      if (s.actors[i].anim !== 0 && f === 8) return false;
+      if (actor(g, i).anim !== 0 && f === 8) return false;
     }
   }
   return true;
@@ -157,7 +156,7 @@ export function arenaFree(g: Game, tile: number, x: number, y: number): boolean 
 /** ULTIMA_3564: the burst on a combatant (a member's line flashes too). */
 export async function hitFlash(g: Game, i: number, magic = false): Promise<void> {
   const c = g.combat[i];
-  const a = g.s.actors[c.actor];
+  const a = actor(g, c.actor);
   // The Standard look's hit, the ultima3 port's: a burst over the one hit that grows over three frames - red for a
   // blow or a missile, blue for magic - and the sound unwaited.
   if (g.options.tileSet === 'standard' && g.draw.burst) {
@@ -227,22 +226,22 @@ export function placeCombatant(g: Game, what: number, kind: 0 | 1 | 2, x: number
   if (slot > -1 || kind === 2) {
     let a = 0;
     for (; a < 0x20; a++) {
-      const actor = s.actors[a];
-      if (actor.tile !== 0) continue;
+      const rec = actor(g, a);
+      if (rec.tile !== 0) continue;
       if (kind === 0 && c) {
         c.actor = a;
-        actor.anim = actor.tile = (what * 4 + 0x40) & 0xff;
+        rec.anim = rec.tile = (what * 4 + 0x40) & 0xff;
       }
       if (kind === 1 && c) c.actor = a;
       if (kind === 2) {
-        actor.anim = actor.tile = what;
+        rec.anim = rec.tile = what;
         slot = a;
       }
-      actor.x = x;
-      actor.y = y;
-      actor.z = z;
-      actor.b7 = 0xff;
-      actor.b5 = kind === 0 && c ? c.hp : what;
+      rec.x = x;
+      rec.y = y;
+      rec.z = z;
+      rec.b7 = 0xff;
+      rec.b5 = kind === 0 && c ? c.hp : what;
       if (kind !== 2 && c) c.actor = a;
       break;
     }
@@ -257,7 +256,7 @@ export function placeCombatant(g: Game, what: number, kind: 0 | 1 | 2, x: number
     slot = -1;
   }
   if (slot >= 0) {
-    for (const cc of g.combat) if (s.actors[cc.actor].b7 === slot) s.actors[cc.actor].b7 = 0xff;
+    for (const cc of g.combat) if (actor(g, cc.actor).b7 === slot) actor(g, cc.actor).b7 = 0xff;
   }
   // Whoever had the slot's last holder for their snap target has a new foe there, not it (snapTarget).
   g.snapMemory = g.snapMemory.map((m) => (m === slot ? -1 : m));
@@ -270,7 +269,7 @@ function ringTurn(g: Game, i: number): void {
   if ((c.flags & CF.Player) === 0 || (c.flags & (CF.Dead | CF.Asleep)) !== 0) return;
   const ring = g.s.members[c.who].equips[4];
   if (ring === 0x2a) {
-    g.s.actors[c.actor].anim = 0x1d;
+    actor(g, c.actor).anim = 0x1d;
     c.flags |= CF.Invisible;
   } else if (ring === 0x2c) {
     // The original passes a member where the whole party is meant: the ring heals everyone a little, now and then.
@@ -291,9 +290,9 @@ export function wake(g: Game, i: number): void {
   if (c.flags & CF.Asleep) {
     if (c.flags & CF.Player) {
       s.members[c.who].status = Status.Good;
-      s.actors[c.actor].anim = c.flags & CF.Invisible ? 0x1d : s.actors[c.actor].tile;
+      actor(g, c.actor).anim = c.flags & CF.Invisible ? 0x1d : actor(g, c.actor).tile;
     } else {
-      s.actors[c.actor].b6 = 0;
+      actor(g, c.actor).b6 = 0;
     }
     c.flags &= ~CF.Asleep;
   }
@@ -309,7 +308,7 @@ export function putToSleep(g: Game, i: number): void {
     if (s.members[c.who].status === Status.Dead) return;
     s.members[c.who].status = Status.Sleeping;
     c.flags |= CF.Asleep;
-    s.actors[c.actor].anim = 0x1e;
+    actor(g, c.actor).anim = 0x1e;
     if (i === s.activeMember) s.activeMember = 0xff;
     s.d58a2 = 4;
     drawVitals(g);
@@ -317,7 +316,7 @@ export function putToSleep(g: Game, i: number): void {
   } else {
     c.flags |= CF.Asleep;
     s.d58a2 = 4;
-    s.actors[c.actor].b6 = 0xff;
+    actor(g, c.actor).b6 = 0xff;
     updateFrame(g);
   }
 }
@@ -394,7 +393,7 @@ export function raiseInFight(g: Game, m: number): boolean {
     c.dex = p.dex;
     c.timer = 36 - c.dex;
     Object.assign(c, at);
-    const a = s.actors[c.actor];
+    const a = actor(g, c.actor);
     Object.assign(a, at);
     a.tile = a.anim = tile;
     a.b7 = 0xff;
@@ -409,7 +408,7 @@ export function raiseInFight(g: Game, m: number): boolean {
   const j = placeCombatant(g, m, 1, at.x, at.y, s.level);
   p.status = was;
   if (j < 0) return false;
-  const a = s.actors[g.combat[j].actor];
+  const a = actor(g, g.combat[j].actor);
   a.b7 = 0xff;
   a.tile = a.anim = tile;
   return true;
@@ -420,7 +419,7 @@ export async function placeParty(g: Game): Promise<void> {
   liftDungeonMap(g); // a fight's log is the whole log
   const s = g.s;
   for (let i = 0; i < 0x20; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     a.y = a.z = a.b5 = a.tile = a.anim = a.x = a.b6 = 0;
     g.combat[i].clear();
   }
@@ -444,7 +443,7 @@ export async function placeParty(g: Game): Promise<void> {
     }
     const i = placeCombatant(g, m, 1, px[m], py[m], s.level);
     if (i < 0) continue;
-    const a = s.actors[g.combat[i].actor];
+    const a = actor(g, g.combat[i].actor);
     a.b7 = 0xff;
     a.tile = fighterTile(p.cls);
     a.anim = a.tile;
@@ -453,7 +452,7 @@ export async function placeParty(g: Game): Promise<void> {
   }
   if (g.combatMap[5 * 32 + 5] === 0xdc) {
     const i = placeCombatant(g, 1, 2, 5, 5, s.level);
-    s.actors[i].b5 = s.level * 3 + 7;
+    actor(g, i).b5 = s.level * 3 + 7;
     g.combatMap[5 * 32 + 5] = g.bb15;
   }
 }
@@ -588,7 +587,7 @@ export async function castOut(g: Game): Promise<void> {
     g.printChar('\n');
     g.print(`The daemon is cast out of ${s.members[c.who].name}!\n`);
     if (!g.soundOff) void g.sound.pulse(0xac8, 1, 5000, 1000, 0xf);
-    const a = s.actors[g.combat[d].actor];
+    const a = actor(g, g.combat[d].actor);
     a.tile = a.anim = 0x16;
     await reveal(g, 0x1d8, s.dx, s.dy);
     a.tile = a.anim = 0xd8;
@@ -605,7 +604,7 @@ function resists(g: Game, attacker: number, target: number, spell: number): bool
 
 /** COMSUBS_0056: fields fade now and then. */
 function fadeFields(g: Game): void {
-  for (let i = 0; i < 0x20; i++) if ((g.s.actors[i].tile & 0xfc) === 0xe8 && g.random(0, 0xff) < 0x10) removeCombatant(g, i + 1);
+  for (let i = 0; i < 0x20; i++) if ((actor(g, i).tile & 0xfc) === 0xe8 && g.random(0, 0xff) < 0x10) removeCombatant(g, i + 1);
 }
 
 /** COMSUBS_00f4: a monster's magic instead of a move: charm, vanish or reappear, summon a daemon. True if it acted. */
@@ -641,7 +640,7 @@ export async function monsterMagic(g: Game, i: number): Promise<boolean> {
   if (flags & EF.Disappear && g.random(0, 0xff) < 0x20) {
     g.printChar('\n');
     sayName(g, i);
-    const a = s.actors[c.actor];
+    const a = actor(g, c.actor);
     if (a.anim === 0) {
       g.say(0x99c2); // " reappears!"
       c.flags &= ~CF.Invisible;
@@ -664,7 +663,7 @@ export async function monsterMagic(g: Game, i: number): Promise<boolean> {
         sayName(g, i);
         g.say(0x99dc); // " gates in a daemon!\n"
         if (!g.soundOff) void g.sound.pulse(0xac8, 1, 5000, 1000, 0xf);
-        const a = s.actors[g.combat[d].actor];
+        const a = actor(g, g.combat[d].actor);
         a.tile = a.anim = 0x16;
         await reveal(g, 0x1d8, s.dx, s.dy);
         a.tile = a.anim = 0xd8;
@@ -727,7 +726,7 @@ function nearestFoe(g: Game, i: number): number {
 /** SJOG_20d8: is (x, y) blocked for combatant `i` (off the arena too, unless it is fleeing). */
 function blockedFor(g: Game, x: number, y: number, i: number): boolean {
   const c = g.combat[i];
-  if (inArena(x, y)) return !arenaFree(g, g.s.actors[c.actor].tile, x, y);
+  if (inArena(x, y)) return !arenaFree(g, actor(g, c.actor).tile, x, y);
   return (c.flags & CF.F2) === 0;
 }
 
@@ -770,10 +769,10 @@ function monsterMove(g: Game, i: number): boolean {
     g.regalia !== 0x1c &&
     (boxedIn(g, i) || g.rng.upTo(3) !== 3) &&
     randomSquare(g) &&
-    arenaFree(g, s.actors[c.actor].tile, s.dx, s.dy)
+    arenaFree(g, actor(g, c.actor).tile, s.dx, s.dy)
   ) {
-    s.actors[c.actor].x = c.x = s.dx;
-    s.actors[c.actor].y = c.y = s.dy;
+    actor(g, c.actor).x = c.x = s.dx;
+    actor(g, c.actor).y = c.y = s.dy;
     g.print(creatureName(g, c.who));
     g.say(0x6f0c); // " teleports!\n"
     moved++;
@@ -804,9 +803,9 @@ function monsterMove(g: Game, i: number): boolean {
     }
     if (how !== 0) {
       c.x += s.dx;
-      s.actors[c.actor].x = c.x;
+      actor(g, c.actor).x = c.x;
       c.y += s.dy;
-      s.actors[c.actor].y = c.y;
+      actor(g, c.actor).y = c.y;
       moved = 1;
       if (!inArena(c.x, c.y)) s.d58a2 = 0x10;
     }
@@ -857,9 +856,9 @@ async function monsterAttacks(g: Game, i: number): Promise<boolean> {
   if ((tc.flags & CF.Player) !== 0 && s.members[tc.who].equips[5] === 0x2d && enemyFlags(g, kind) & EF.Magic)
     reflected = g.random(0, 0xff) < 0x80;
   if (between(g, i, target) > g.data.bytes(0x159c, 0x30)[kind]) return false;
-  if (kind === 0x1a) s.actors[c.actor].b6 = 0x20;
+  if (kind === 0x1a) actor(g, c.actor).b6 = 0x20;
   if (between(g, i, target) !== 1) return monsterShoots(g, i, target, reflected);
-  if (kind === 0x2d) s.actors[c.actor].b6 = 0x20;
+  if (kind === 0x2d) actor(g, c.actor).b6 = 0x20;
   if (!g.soundOff) await g.sound.sweep(0x2ee, 400, 5, 0x96);
   s.d58a8[target] = i;
   if (!hitRoll(g, target, i, -s.d588f, 0)) return true;
@@ -890,7 +889,7 @@ async function monsterTurn(g: Game): Promise<void> {
     if (easedRules(g) ? g.random(0, 9) === 0 : g.random(0, 0x10) === 0x10) wake(g, s.combatTurn);
     return;
   }
-  if (c.who === 0x2d) s.actors[c.actor].b6 = 0;
+  if (c.who === 0x2d) actor(g, c.actor).b6 = 0;
   if (c.flags & CF.F2) {
     if ((c.flags & CF.Player) === 0 && g.random(0, 3) === 3) c.hp++;
     woundedState(g, s.combatTurn);
@@ -1099,7 +1098,7 @@ export async function damage(g: Game, i: number, amount: number): Promise<number
       m.status = Status.Dead;
       released(g, i);
       void cue(g, deathCue(m.gender));
-      s.actors[c.actor].tile = s.actors[c.actor].anim = 0x1e;
+      actor(g, c.actor).tile = actor(g, c.actor).anim = 0x1e;
       if (c.who === s.activeMember) s.activeMember = 0xff;
     }
     drawVitals(g);
@@ -1118,7 +1117,7 @@ export async function damage(g: Game, i: number, amount: number): Promise<number
     const x = c.x;
     const y = c.y;
     const under = g.combatMap[y * 32 + x];
-    const a = s.actors[c.actor];
+    const a = actor(g, c.actor);
     if ((flags & (EF.Vanish | EF.NoCorpse)) === 0) {
       if (c.who === 0x1c) {
         a.tile = a.anim = 0x1f;
@@ -1154,8 +1153,8 @@ export async function damage(g: Game, i: number, amount: number): Promise<number
       nearSquare(g, c.x, c.y);
       const x = s.dx;
       const y = s.dy;
-      if (arenaFree(g, s.actors[c.actor].tile, x, y)) {
-        const n = placeCombatant(g, (s.actors[c.actor].tile - 0x40) >> 2, 0, x, y, s.level);
+      if (arenaFree(g, actor(g, c.actor).tile, x, y)) {
+        const n = placeCombatant(g, (actor(g, c.actor).tile - 0x40) >> 2, 0, x, y, s.level);
         if (n > -1) {
           g.combat[n].hp = c.hp;
           spawned(g, n, i);
@@ -1275,7 +1274,7 @@ export async function report(g: Game, i: number, attacker: number): Promise<void
         g.say(0x9a10); // " dragged under!\n"
         await cue(g, 'DraggedUnder', () => g.sound.sweep(0x4b0, 2000, 1, 0x28));
         g.combat[i].flags |= CF.F4;
-        s.actors[g.combat[i].actor].anim = 0;
+        actor(g, g.combat[i].actor).anim = 0;
         await sleepTicks(g, 4);
       } else {
         g.say(0x9a22); // " hit!\n"
@@ -1332,7 +1331,7 @@ export function combatantAt(g: Game, x: number, y: number): number {
     const c = g.combat[i];
     if (c.x !== x || c.y !== y) continue;
     if (
-      g.s.actors[c.actor].anim !== 0xf4 &&
+      actor(g, c.actor).anim !== 0xf4 &&
       (c.flags & (CF.Player | CF.Monster)) !== 0 &&
       (c.flags & CF.Dead) === 0 &&
       (c.flags & CF.F4) === 0
@@ -1520,7 +1519,7 @@ function nearestFriend(g: Game, i: number, range: number): number {
 export async function aim(g: Game, i: number, range: number, friend = false): Promise<number> {
   const s = g.s;
   s.crosshair = 1;
-  let target = s.actors[g.combat[i].actor].b7;
+  let target = actor(g, g.combat[i].actor).b7;
   // A foe chosen with the crosshair - by Attack, or a spell aimed at one - is where the next aim starts, in the dark too.
   if (!friend && g.snapByHand[i] && g.snapMemory[i] >= 0) target = g.snapMemory[i];
   const tc = g.combat[target];
@@ -1530,7 +1529,7 @@ export async function aim(g: Game, i: number, range: number, friend = false): Pr
     !standingFoe(g, target, i) || // the last one struck, charmed to the party's side since
     (tc.flags & (CF.Dead | CF.Invisible)) !== 0 ||
     tc.flags === 0 ||
-    s.actors[tc.actor].tile === 0 ||
+    actor(g, tc.actor).tile === 0 ||
     between(g, i, target) > range
   )
     target = firstAim(g, i, range);
@@ -1677,7 +1676,7 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number,
   // The same roll to hit, the same blow. Flaming oil is thrown, to burn.
   const beside = combatantAt(g, s.crossX, s.crossY);
   if (d <= 1 && HELD.includes(weapon) && g.combat[i].flags & CF.Player && beside >= 0) {
-    s.actors[g.combat[i].actor].b7 = beside;
+    actor(g, g.combat[i].actor).b7 = beside;
     await melee(g, i, beside, weapon);
     return;
   }
@@ -1693,7 +1692,7 @@ async function rangedAttack(g: Game, i: number, weapon: number, missile: number,
     if (s.equipment[weapon] !== 0) s.equipment[weapon]--;
     else lastFlask = unequip(g, g.combat[s.combatTurn].who, weapon);
   }
-  const a = s.actors[g.combat[i].actor];
+  const a = actor(g, g.combat[i].actor);
   a.b7 = 0xff;
   const target = combatantAt(g, s.crossX, s.crossY);
   let victim: number;
@@ -1780,7 +1779,7 @@ export async function attackWith(g: Game, i: number, weapon: number): Promise<vo
     } else if (d === 0 || target === -1) {
       g.say(0x9a8a); // "Nothing!\n"
     } else {
-      s.actors[c.actor].b7 = target;
+      actor(g, c.actor).b7 = target;
       await melee(g, i, target, weapon);
     }
   } else {
@@ -1821,7 +1820,7 @@ const standingFoe = (g: Game, j: number, by = -1): boolean => {
     combatantAt(g, c.x, c.y) === j &&
     (c.flags & (CF.Invisible | CF.Player)) === 0 &&
     onMonsterSide(g, j) &&
-    g.s.actors[c.actor].tile !== 0
+    actor(g, c.actor).tile !== 0
   );
 };
 
@@ -2477,17 +2476,17 @@ export function trigger(g: Game, x: number, y: number): boolean {
 
 /** COMBAT_1236: remove a combatant (negative: -index - 1) or an actor (positive: index + 1). */
 export function removeCombatant(g: Game, n: number): void {
-  let actor: number;
+  let slot: number;
   if (n < 0) {
     const c = g.combat[-n - 1];
-    actor = c.actor;
+    slot = c.actor;
     if (!(c.flags & CF.Player)) g.gone.set(-n - 1, c.who);
     c.clear();
     g.charmedBy.delete(-n - 1); // one charmed who leaves the field - escapes, or is taken off it - is charmed no more
   } else {
-    actor = n - 1;
+    slot = n - 1;
   }
-  const a = g.s.actors[actor];
+  const a = actor(g, slot);
   a.y = a.z = a.b5 = a.tile = a.anim = a.x = 0;
 }
 
@@ -2589,9 +2588,9 @@ async function movePlayer(g: Game, i: number, key: number): Promise<boolean> {
   const lying = pad && combatantAt(g, x, y) < 0 ? thingAt(g, x, y) : 0;
   const stopsAt = corpseBlocks(lying) || (isLoot(lying) && eased(g.options));
   // While foes stand, such a thing is stepped over, not stopped at (bumpAct.ts foesAbout).
-  if (arenaFree(g, s.actors[c.actor].tile, x, y) && !(stopsAt && !foesAbout(g, 'combat'))) {
-    s.actors[c.actor].x = c.x = x;
-    s.actors[c.actor].y = c.y = y;
+  if (arenaFree(g, actor(g, c.actor).tile, x, y) && !(stopsAt && !foesAbout(g, 'combat'))) {
+    actor(g, c.actor).x = c.x = x;
+    actor(g, c.actor).y = c.y = y;
     if (!g.soundOff) void g.sound.noise(1, 0x19, 1000);
     if (s.combatFlags & 0x82) trigger(g, x, y);
     return true;
@@ -2647,11 +2646,11 @@ async function movePlayer(g: Game, i: number, key: number): Promise<boolean> {
 export function thingAt(g: Game, x: number, y: number): number {
   let corpse = 0;
   for (let a = 1; a < 0x20; a++) {
-    const actor = g.s.actors[a];
-    if (actor.tile === 0 || actor.x !== x || actor.y !== y) continue;
+    const rec = actor(g, a);
+    if (rec.tile === 0 || rec.x !== x || rec.y !== y) continue;
     if (g.combat.some((c) => c.flags !== 0 && !(c.flags & CF.Dead) && c.actor === a)) continue;
-    if (actor.tile === 0x1f) corpse = actor.tile;
-    else return actor.tile;
+    if (rec.tile === 0x1f) corpse = rec.tile;
+    else return rec.tile;
   }
   return corpse;
 }
@@ -2696,8 +2695,8 @@ export async function klimbInCombat(g: Game): Promise<boolean> {
     const { actorTileAtRev } = await import('./actors.ts');
     if (tileAt(g, x, y) === T.T4C && actorTileAtRev(g, x, y, 0) === 0) {
       const c = g.combat[s.combatTurn];
-      s.actors[c.actor].x = c.x = x;
-      s.actors[c.actor].y = c.y = y;
+      actor(g, c.actor).x = c.x = x;
+      actor(g, c.actor).y = c.y = y;
       trigger(g, x, y);
     } else {
       g.say(0x8efa); // "What?\n"
@@ -2813,7 +2812,7 @@ async function escape(g: Game): Promise<number> {
       }
     }
     for (let i = 0; i < 0x20; i++) {
-      if (s.actors[i].tile !== 0) {
+      if (actor(g, i).tile !== 0) {
         removeCombatant(g, i + 1);
         updateFrame(g);
       }
@@ -2829,7 +2828,6 @@ async function escape(g: Game): Promise<number> {
 
 /** COMBAT_1b1e: what the square does at the end of a turn: fire and lava burn, swamp poisons, fields act. */
 async function squareEffect(g: Game, i: number): Promise<void> {
-  const s = g.s;
   const c = g.combat[i];
   const t = g.combatMap[c.y * 32 + c.x];
   let kind = 0;
@@ -2837,8 +2835,8 @@ async function squareEffect(g: Game, i: number): Promise<void> {
   if (t === 4) kind = 50;
   if (kind === 0) {
     for (let a = 0; a < 0x20; a++) {
-      if (a === c.actor || c.x !== s.actors[a].x || c.y !== s.actors[a].y) continue;
-      const at = s.actors[a].tile;
+      if (a === c.actor || c.x !== actor(g, a).x || c.y !== actor(g, a).y) continue;
+      const at = actor(g, a).tile;
       if (at === 0xea) kind = 100;
       if (at === 0xe8) kind = 50;
       if (at === 0xe9) kind = 150;
@@ -2857,7 +2855,7 @@ async function squareEffect(g: Game, i: number): Promise<void> {
       g.vitalsDirty = 1;
       break;
     case 50:
-      if (s.actors[c.actor].tile < 0x80) {
+      if (actor(g, c.actor).tile < 0x80) {
         await poison(g, i, -1);
         await hitFlash(g, i, true); // a poison field
       }
@@ -2874,7 +2872,7 @@ async function regurgitate(g: Game, i: number): Promise<void> {
   g.say(0x6f5e); // " regurgitated!\n"
   if (!g.soundOff) await g.sound.noise(1, 7000, 600);
   c.flags &= ~CF.F4;
-  s.actors[c.actor].anim = s.actors[c.actor].tile;
+  actor(g, c.actor).anim = actor(g, c.actor).tile;
 }
 
 // --- The player's turn -------------------------------------------------------------------------
@@ -3324,10 +3322,10 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
   g.autoIdle = 0;
   g.autoHeld = false;
   g.autoSwitchedAt = '';
-  g.savedActorBytes.set(s.b.subarray(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100));
+  g.combatTable = copyActorTable(g);
   let fight = true;
   if (flags === 0) {
-    const a0 = s.actors[a];
+    const a0 = actor(g, a);
     let kind = (a0.tile & 0xfc) === 0x2c ? 1 : (a0.tile - 0x40) >> 2;
     if (a0.b5 > 0x7f) kind += 0x100;
     await prepareCombat(g, 1, kind);
@@ -3358,7 +3356,7 @@ export async function specialMap(g: Game, flags: number, a: number, b: number): 
   musicForMap(g);
   drawVitals(g);
   s.activeMember = s.members[active]?.status !== Status.Dead && s.members[active]?.status !== Status.Sleeping ? active : 0xff;
-  s.b.set(g.savedActorBytes, 0x5c5a - 0x55a6);
+  restoreActorTable(g, g.combatTable);
 }
 
 /** SJOG_203e: after the fight: the Mirror's end, the actors back, the foe gone (pirate ships left to board). */
@@ -3368,10 +3366,10 @@ async function afterCombat(g: Game, foe: number): Promise<void> {
     const { endgame } = await import('./story.ts');
     await endgame(g);
   }
-  s.b.set(g.savedActorBytes, 0x5c5a - 0x55a6);
+  restoreActorTable(g, g.combatTable);
   if ((s.combatFlags & 0x82) === 0) {
     if (foe < 0x20) {
-      const a = s.actors[foe];
+      const a = actor(g, foe);
       if (s.battleWon !== 0 && (a.tile & 0xfc) === 0x2c) {
         a.tile -= 8;
         a.anim -= 8;
@@ -3389,7 +3387,7 @@ async function afterCombat(g: Game, foe: number): Promise<void> {
 /** ULTIMA_6150_Combat: a fight with actor `foe` on an arena chosen by the ground and the foe. */
 export async function attackCombat(g: Game, foe: number): Promise<void> {
   const s = g.s;
-  const a = s.actors[foe];
+  const a = actor(g, foe);
   const kind = a.tile & 0xfc;
   g.printChar('\n');
   g.printChar(0xfc);
@@ -3484,7 +3482,7 @@ async function camp(g: Game, flags: number, guard: number, hours: number): Promi
   }
   updateFrame(g);
   if (bard !== -1) {
-    const a = s.actors[g.combat[bard].actor];
+    const a = actor(g, g.combat[bard].actor);
     const [t, an] = [a.tile, a.anim];
     a.tile = a.anim = 0x5f;
     g.banjoNote = 1;
@@ -3495,7 +3493,7 @@ async function camp(g: Game, flags: number, guard: number, hours: number): Promi
     updateFrame(g);
   }
   g.say(0x41d4); // "Zzzzzz...\n\n"
-  const guardTile = guard !== -1 ? s.actors[g.combat[guardC].actor].tile : 0;
+  const guardTile = guard !== -1 ? actor(g, g.combat[guardC].actor).tile : 0;
   // A rest as soon as it is earned, the poisoned and the watch not healed (rest.ts restTimer).
   const timer = restTimer(g, (m) => poisoned[m] !== 0 || m === guard);
   while (until !== s.hour) {
@@ -3553,8 +3551,8 @@ async function camp(g: Game, flags: number, guard: number, hours: number): Promi
           break;
       }
       if (inArena(s.dx, s.dy) && arenaFree(g, guardTile, s.dx, s.dy)) {
-        c.x = s.actors[c.actor].x = s.dx;
-        c.y = s.actors[c.actor].y = s.dy;
+        c.x = actor(g, c.actor).x = s.dx;
+        c.y = actor(g, c.actor).y = s.dy;
         updateFrame(g);
       }
     }
@@ -3605,12 +3603,11 @@ export function apparitionComes(g: Game): boolean {
 
 /** OUTSUBS_0658: the old man appears at the camp: healing, levels by experience, and a word on karma. */
 async function apparition(g: Game): Promise<void> {
-  const s = g.s;
   g.say(0x7750); // "An apparition!\n"
   const snd = g.soundOff ? null : g.sound;
   await snd?.pulse(0x0a3c, 1, 10000, 0x9c4, 6);
   for (const f of g.data.words(0x3a26, 6)) await snd?.pulse(f, 1, 5000, 200, 0xd);
-  const man = s.actors[10];
+  const man = actor(g, 10);
   man.x = man.y = 5;
   man.tile = man.anim = 0x16;
   await reveal(g, 0x174, 5, 5);
@@ -3641,10 +3638,10 @@ async function blessings(
     if (p.status === Status.Dead) continue;
     p.hp = p.maxHp;
     p.status = Status.Good;
-    let figure = s.actors[0];
+    let figure = party(g);
     for (const c of g.combat) {
       if (c.who === m) {
-        figure = s.actors[c.actor];
+        figure = actor(g, c.actor);
         break;
       }
     }
@@ -3847,12 +3844,12 @@ export { freeActor, setActor };
 /** ULTIMA_3c9a_HoleUpCmd (outdoors and in dungeons): a ship's crew repairs the hull; otherwise the party camps. */
 export async function holeUpCommand(g: Game): Promise<number> {
   const s = g.s;
-  const party = s.actors[0];
-  let tile = party.anim;
+  const pa = party(g);
+  let tile = pa.anim;
   g.say(0xa2c2); // "Hole up & "
   if ((tile & 0xf8) === 0x20) {
     g.say(0xa2ce); // "\nrepair...\n\n"
-    if (party.anim < 0x24) {
+    if (pa.anim < 0x24) {
       g.say(0xa2dc); // "Sails must be\n"
       g.say(0xa2ec); // "lowered!\n\n"
     } else {
@@ -3863,10 +3860,10 @@ export async function holeUpCommand(g: Game): Promise<number> {
         if ((s.partyTile & 0xfc) !== 0x24) return 1;
         passTime(g, 5);
       }
-      do party.b5 = Math.min(party.b5 + g.random(1, 3), 99);
-      while (party.b5 < 10);
+      do pa.b5 = Math.min(pa.b5 + g.random(1, 3), 99);
+      while (pa.b5 < 10);
       g.say(0xa2f8); // "Hull now "
-      g.printNumber(party.b5, 2);
+      g.printNumber(pa.b5, 2);
       g.say(0xa302); // "!\n\n"
       g.vitalsDirty = 1;
     }
@@ -3878,7 +3875,7 @@ export async function holeUpCommand(g: Game): Promise<number> {
     g.say(0xa30e); // "On land or ship!\n\n"
     return 1;
   }
-  if (s.mapId < 0x21 && party.anim !== A.Avatar) {
+  if (s.mapId < 0x21 && pa.anim !== A.Avatar) {
     g.say(0xa322); // "On foot!\n"
     return 1;
   }

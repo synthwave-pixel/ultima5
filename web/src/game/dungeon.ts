@@ -35,6 +35,7 @@ import { damageMember, damageParty, endTurn, firstActive, passTime } from './tim
 import { Colour } from '../ui/colours.ts';
 import { cue } from './cues.ts';
 import { animateParty } from './world.ts';
+import { actor } from './actors.ts';
 
 /** GetDungeonMap: a cell's index in the save's dungeon block. */
 const cellIndex = (x: number, y: number, level: number): number => level * 0x40 + (y & 7) * 8 + (x & 7);
@@ -71,7 +72,7 @@ function resource(g: Game, name: string): Uint8Array {
 const resourceName = (g: Game, i: number): string => g.data.ovl.strings(0x25ea, 30)[i];
 const wallsName = (g: Game): string => resourceName(g, 4 + g.s.dungeonLook);
 const itemsName = (g: Game): string => resourceName(g, 4);
-const monsterName = (g: Game): string => resourceName(g, g.s.actors[1].tile + 8);
+const monsterName = (g: Game): string => resourceName(g, actor(g, 1).tile + 8);
 const wallsRes = (g: Game): Uint8Array => resource(g, wallsName(g));
 const itemsRes = (g: Game): Uint8Array => resource(g, itemsName(g));
 const monsterRes = (g: Game): Uint8Array => resource(g, monsterName(g));
@@ -130,7 +131,7 @@ function piece(g: Game, n: number, ceiling: number, mirror: number): void {
 /** DUNGEON_111e: the creature at `depth`, its halves by its animation (D_1744 bits). */
 function drawMonster(g: Game, depth: number): void {
   const s = g.s;
-  const a = s.actors[1];
+  const a = actor(g, 1);
   if (s.icon === 0x54) a.b6 = g.data.bytes(0x1744, 8)[a.tile];
   const ceiling = a.b7 === 0xff ? 1 : 0;
   const mirrorMode = a.b6 & 0x90;
@@ -407,7 +408,7 @@ function contents(g: Game, x: number, y: number, depth: number): void {
     piece(g, hole + depth * 2, 1, 0);
     piece(g, hole + depth * 2, 1, 1);
   }
-  const a = s.actors[1];
+  const a = actor(g, 1);
   if (depth !== 0 && (x & 7) === a.x && (y & 7) === a.y) drawMonster(g, depth);
   if (depth === 0 && ++state.sparkle > 2) state.sparkle = 0;
 }
@@ -553,8 +554,8 @@ function borders(g: Game): void {
 /** DUNGEON_0252: the creature to a random open cell off the party's row and column; false if none found. */
 function placeMonster(g: Game): boolean {
   const s = g.s;
-  const a = s.actors[1];
-  const b = s.actors[2];
+  const a = actor(g, 1);
+  const b = actor(g, 2);
   for (let n = 0; n < 8; n++) {
     const i = g.random(0, 0x3f);
     const c = s.dungeon[s.level * 0x40 + i] & 0xf0;
@@ -576,7 +577,7 @@ function placeMonster(g: Game): boolean {
 /** DUNGEON_0134: a new creature on the level (its picture, kind and ways by D_1744/D_173c), or none. */
 function newMonster(g: Game, fresh: boolean): void {
   const s = g.s;
-  const a = s.actors[1];
+  const a = actor(g, 1);
   if (!fresh) return;
   const t = g.random(0, 7);
   a.tile = a.anim = t;
@@ -593,8 +594,8 @@ function newMonster(g: Game, fresh: boolean): void {
 /** DUNGEON_07e2: the creature wanders a step (not into pits, fields or walls, seldom back); true if it reached the party. */
 function monsterStep(g: Game): boolean {
   const s = g.s;
-  const a = s.actors[1];
-  const b = s.actors[2];
+  const a = actor(g, 1);
+  const b = actor(g, 2);
   if (a.b5 === 0xff) return false;
   if (a.b5 !== 0x1b) {
     let moved = false;
@@ -776,7 +777,7 @@ function corridorMap(g: Game): void {
     [order[i], order[j]] = [order[j], order[i]];
     m[5 * 32 + 11 + i] = 0;
   }
-  const kind = camp ? t(0x173c, 8)[g.random(0, 7)] : s.actors[1].b5;
+  const kind = camp ? t(0x173c, 8)[g.random(0, 7)] : actor(g, 1).b5;
   const most = g.data.bytes(0x13bc + kind * 8 + 6, 1)[0];
   let n = g.random(1, most);
   if (most === 8 || most === 0x10) n = most;
@@ -802,8 +803,8 @@ async function placeRoom(g: Game, cell: number, how: number): Promise<void> {
       // for the whole fight (COMBAT_0000: a record whose actor is elsewhere, flags 0) - a phantom on a ladder,
       // in Doom. An empty record is left where placeParty cleared it.
       if (g.combat[i].flags === 0) continue;
-      g.combat[i].x = s.actors[i].x = m[row * 32 + 11 + i];
-      g.combat[i].y = s.actors[i].y = m[row * 32 + 17 + i];
+      g.combat[i].x = actor(g, i).x = m[row * 32 + 11 + i];
+      g.combat[i].y = actor(g, i).y = m[row * 32 + 17 + i];
     }
   }
   if (how > 0 && ((cell > 0xef && how === 3) || how < 3)) {
@@ -822,10 +823,10 @@ async function placeRoom(g: Game, cell: number, how: number): Promise<void> {
       if ((t & 0xfc) === 0xec) what = kinds[t & 3];
       const a = placeCombatant(g, what, plain, m[6 * 32 + 11 + i], m[7 * 32 + 11 + i], s.level);
       if (plain === 2 && a >= 0) {
-        if (what === 1) s.actors[a].b5 = s.level * 3 + 7;
-        else if (what === 2) s.actors[a].b5 = g.random(1, s.level * 10 + 10);
+        if (what === 1) actor(g, a).b5 = s.level * 3 + 7;
+        else if (what === 2) actor(g, a).b5 = g.random(1, s.level * 10 + 10);
         else if (what < 0x10 && what >= 3) {
-          s.actors[a].b5 = g.data.bytes(0x3850, 0xd)[what - 3] + g.random(0, g.data.bytes(0x3842, 0xd)[what - 3] - 1);
+          actor(g, a).b5 = g.data.bytes(0x3850, 0xd)[what - 3] + g.random(0, g.data.bytes(0x3842, 0xd)[what - 3] - 1);
         }
       }
     }
@@ -902,7 +903,7 @@ function resetView(g: Game, fresh: boolean): void {
   const s = g.s;
   if (s.mapId === 0) return;
   if (fresh) {
-    const a = s.actors[1];
+    const a = actor(g, 1);
     a.tile = a.anim = 0;
     a.b5 = a.x = a.y = 0xff;
   }
@@ -929,8 +930,8 @@ async function enterRoom(g: Game, cell: number): Promise<void> {
   g.combatMap.set(g.data.files.get('DUNGEON.CBT').subarray(at, at + 0x160));
   s.savedMapId = s.mapId;
   const [x, y] = [s.x, s.y];
-  const a1 = s.actors[1].b.slice();
-  const a2 = s.actors[2].b.slice();
+  const a1 = actor(g, 1).b.slice();
+  const a2 = actor(g, 2).b.slice();
   s.mapId = 0xff;
   s.exitDir = 0;
   await placeRoom(g, cell, 3);
@@ -951,15 +952,15 @@ async function enterRoom(g: Game, cell: number): Promise<void> {
   s.x = x;
   s.mapId = s.savedMapId;
   leaveFight(g);
-  s.actors[1].b.set(a1);
-  s.actors[2].b.set(a2);
+  actor(g, 1).b.set(a1);
+  actor(g, 2).b.set(a2);
   s.activeMember = active;
 }
 
 /** DUNGEON_0b7e: the creature attacks from where it came; a fight in the corridor. */
 async function attacked(g: Game): Promise<void> {
   const s = g.s;
-  const b = s.actors[2];
+  const b = actor(g, 2);
   g.say(0x2d92); // "Attacked"
   if (((b.x - 1) & 7) === s.x) s.d6602 = 1;
   else if (((b.x + 1) & 7) === s.x) s.d6602 = 3;
@@ -977,7 +978,7 @@ async function attacked(g: Game): Promise<void> {
   s.exitDir = 0;
   s.combatFlags = 2;
   corridorMap(g);
-  await specialMap(g, 2, s.actors[1].b5, 0);
+  await specialMap(g, 2, actor(g, 1).b5, 0);
   leaveFight(g);
   resetView(g, true);
   newMonster(g, true);
@@ -1000,10 +1001,10 @@ export async function campInDungeon(g: Game, guard: number, hours: number): Prom
   const s = g.s;
   s.combatFlags = 6;
   corridorMap(g);
-  const a1 = s.actors[1].b.slice();
+  const a1 = actor(g, 1).b.slice();
   await specialMap(g, 6, guard, hours);
   resetView(g, false);
-  s.actors[1].b.set(a1);
+  actor(g, 1).b.set(a1);
   newMonster(g, false);
 }
 
@@ -1102,11 +1103,11 @@ async function move(g: Game, key: number, here: number): Promise<number> {
       took = 0;
     } else if ((c > 0xa0 && c < 0xe0) || (dir === -1 && (c === 0xa0 || c === 0xf0))) {
       g.say(0x2d19); // "Blocked!\n"
-    } else if (x === s.actors[1].x && y === s.actors[1].y && dir === 1) {
+    } else if (x === actor(g, 1).x && y === actor(g, 1).y && dir === 1) {
       // Bump to act (the port's): advancing into the creature attacks it.
       queueKeys(0x41);
       took = 0;
-    } else if (x === s.actors[1].x && y === s.actors[1].y) {
+    } else if (x === actor(g, 1).x && y === actor(g, 1).y) {
       g.say(0x2d23); // "Blocked!\n"
     } else {
       state.footstep = 0xf;
@@ -1129,7 +1130,7 @@ async function move(g: Game, key: number, here: number): Promise<number> {
  */
 function worthALook(g: Game, x: number, y: number): boolean {
   const s = g.s;
-  if (x === s.actors[1].x && y === s.actors[1].y) return true;
+  if (x === actor(g, 1).x && y === actor(g, 1).y) return true;
   const kind = kindOf(s.dungeon[cellIndex(x, y, s.level)]);
   if (kind === 'rock' || kind === 'rubble') return !inTheDark(g);
   return kind !== 'floor' && kind !== 'door';
@@ -1897,14 +1898,14 @@ export async function attackInDungeon(g: Game): Promise<number> {
   g.say(0x6caa); // "Attack\n"
   const x = (stepX(g)[s.facing] + s.x) & 7;
   const y = (stepY(g)[s.facing] + s.y) & 7;
-  if (x !== s.actors[1].x || y !== s.actors[1].y) {
+  if (x !== actor(g, 1).x || y !== actor(g, 1).y) {
     g.say(0x6cb2); // "What?\n"
     return 0;
   }
   s.combatFlags = 2;
   corridorWalls(g);
   corridorMap(g);
-  await specialMap(g, 2, s.actors[1].b5, 0);
+  await specialMap(g, 2, actor(g, 1).b5, 0);
   if (s.exitDir === 5) {
     if (s.level !== 0) s.level--;
     else dungeonExitNow(g);

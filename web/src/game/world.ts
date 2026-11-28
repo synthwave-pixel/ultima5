@@ -23,6 +23,7 @@ import { Status } from './save.ts';
 import { A, T } from './tiles.ts';
 import { CLASSES } from './zstats.ts';
 import { dressingOf, dressingOfActor } from './companions.ts';
+import { actor, actorSlots, party } from './actors.ts';
 
 /** A byte of memory: a buffer and an index. */
 export type Cell = [Uint8Array, number];
@@ -436,7 +437,7 @@ function fieldLayer(tile: number): number {
 export function overlayActors(g: Game): void {
   const s = g.s;
   if (s.mapId < 0x80) {
-    const a0 = s.actors[0];
+    const a0 = party(g);
     a0.x = s.x;
     a0.y = s.y;
     a0.z = s.level;
@@ -455,9 +456,9 @@ export function overlayActors(g: Game): void {
   // - to be seen, whatever it fell on - and whoever stands there over all.
   const order = [...Array(32).keys()].reverse();
   const combat = s.mapId >= 0x80;
-  if (combat) order.sort((a, b) => fieldLayer(s.actors[a].tile) - fieldLayer(s.actors[b].tile));
+  if (combat) order.sort((a, b) => fieldLayer(actor(g, a).tile) - fieldLayer(actor(g, b).tile));
   for (const i of order) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile === 0) continue;
     let vx = a.x;
     let vy = a.y;
@@ -729,12 +730,12 @@ export function drawView(g: Game): void {
   // The squares where a companion stands (companions.ts): their figure drawn in their colours.
   const companions = new Map<number, Dressing>();
   if (d.dressAs)
-    s.actors.forEach((a, i) => {
+    for (const [i, a] of actorSlots(g)) {
       const dress = a.tile === 0 ? null : dressingOfActor(g, i);
-      if (!dress) return;
+      if (!dress) continue;
       const [vx, vy] = s.mapId < 0x80 ? [(a.x - (s.x - 5)) & 0xff, (a.y - (s.y - 5)) & 0xff] : [a.x, a.y];
       if (vx <= 10 && vy <= 10) companions.set(vy * 16 + vx, dress);
-    });
+    }
   /** A figure drawn as `dress`, a companion, where one is given. */
   const drawn = (dress: Dressing | null | undefined, draw: () => void): void => {
     if (!dress) return draw();
@@ -800,18 +801,18 @@ export function drawView(g: Game): void {
 function moversInView(g: Game): Map<number, string> {
   const s = g.s;
   const out = new Map<number, string>();
-  s.actors.forEach((a, i) => {
-    if (a.tile === 0 || a.anim === 0 || (i === 0 && s.mapId < 0x80)) return;
+  for (const [i, a] of actorSlots(g)) {
+    if (a.tile === 0 || a.anim === 0 || (i === 0 && s.mapId < 0x80)) continue;
     let [vx, vy] = [a.x, a.y];
     if (s.mapId < 0x80) {
       vx = (vx - (s.x - 5)) & 0xff;
       vy = (vy - (s.y - 5)) & 0xff;
-      if (a.z !== s.level) return;
+      if (a.z !== s.level) continue;
     }
-    if (vx > 10 || vy > 10 || viewAt(g, vx, vy) !== 0) return;
+    if (vx > 10 || vy > 10 || viewAt(g, vx, vy) !== 0) continue;
     const shown = actorAt(g, vx, vy);
     if (shown === (a.anim & 0xff) || shown === ((a.anim - 8) & 0xff)) out.set(vy * 16 + vx, `a${i}`);
-  });
+  }
   return out;
 }
 
@@ -840,7 +841,7 @@ export function drawReadings(g: Game): void {
   const s = g.s;
   const d = g.draw;
   for (let i = 1; i < 0x20; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile !== 1) continue;
     let vx = a.x;
     let vy = a.y;

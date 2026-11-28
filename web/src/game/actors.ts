@@ -54,7 +54,7 @@ export function restoreActorTable(g: Game, bytes: Uint8Array): void {
 export function actorTileAt(g: Game, x: number, y: number, z: number): number {
   const s = g.s;
   for (let i = 1; i < 32; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z)) {
       s.dx = i;
       return a.tile;
@@ -68,7 +68,7 @@ export function actorTileAt(g: Game, x: number, y: number, z: number): number {
 export function actorTileAtRev(g: Game, x: number, y: number, z: number): number {
   const s = g.s;
   for (let i = 31; i >= 0; i--) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z)) {
       s.dx = i;
       return a.tile;
@@ -82,11 +82,11 @@ export function actorTileAtRev(g: Game, x: number, y: number, z: number): number
 function slotWith(g: Game, lo: number, hi: number, outOfView: boolean): number {
   const s = g.s;
   for (let i = 1; i < 0x18; i++) {
-    const t = s.actors[i].tile;
+    const t = actor(g, i).tile;
     if (t >= lo && t <= hi && t !== 0xb5) {
       if (!outOfView) return i;
-      const vx = (s.actors[i].x - s.x + 5) & 0xff;
-      const vy = (s.actors[i].y - s.y + 5) & 0xff;
+      const vx = (actor(g, i).x - s.x + 5) & 0xff;
+      const vy = (actor(g, i).y - s.y + 5) & 0xff;
       if (vx > 10 || vy > 10) return i;
     }
   }
@@ -116,7 +116,7 @@ export function freeActor(g: Game): number {
 
 /** ULTIMA_3a74. */
 export function setActor(g: Game, i: number, tile: number, anim: number, x: number, y: number, z: number, b5: number): void {
-  const a = g.s.actors[i];
+  const a = actor(g, i);
   a.tile = tile & 0xff;
   a.anim = anim & 0xff;
   a.x = x & 0xff;
@@ -175,5 +175,6 @@ export function canEnter(g: Game, actor: number, tile: number): boolean {
  * be picked up are tiles 1 to 15 - gold, a potion, a scroll, arms, a key, a gem, a torch, food).
  */
 export function treasureLies(g: Game): boolean {
-  return g.s.actors.some((a, i) => i > 0 && a.tile >= 1 && a.tile <= 0xf);
+  for (const [, a] of actorSlots(g, 1)) if (a.tile >= 1 && a.tile <= 0xf) return true;
+  return false;
 }

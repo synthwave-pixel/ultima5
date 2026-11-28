@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actorTileAt, freeActor, setActor } from './actors.ts';
+import { actor, actorTileAt, freeActor, setActor } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
 import { selectDirection, whoActs } from './input.ts';
@@ -86,9 +86,9 @@ export async function springTrap(g: Game, i: number): Promise<void> {
 // --- Search -----------------------------------------------------------------------
 
 /** SJOG_01f2: searching a body: mostly remains, sometimes plague, now and then food or gold. */
-function searchBody(g: Game, actor: number, who: number): void {
+function searchBody(g: Game, slot: number, who: number): void {
   if (g.random(0, 7) !== 0) {
-    setActor(g, actor, 0, 0, 0, 0, 0, 0);
+    setActor(g, slot, 0, 0, 0, 0, 0, 0);
     if (g.random(0, 0x1f) === 0x13) {
       g.say(0x8606); // "Plague!\n"
       if (!g.soundOff) void g.sound.noise(0x28, 3000, 500);
@@ -98,7 +98,7 @@ function searchBody(g: Game, actor: number, who: number): void {
       g.say([0x8610, 0x861a, 0x8622, 0x862a][g.random(0, g.random(0, 3))]); // nothing, worms, guts, a bloody pulp
     }
   } else {
-    const a = g.s.actors[actor];
+    const a = actor(g, slot);
     if (g.random(0, 3) === 0) {
       g.say(0x863a); // "food!\n"
       a.tile = a.anim = 0xf;
@@ -113,8 +113,8 @@ function searchBody(g: Game, actor: number, who: number): void {
 }
 
 /** SJOG_02ea: searching a chest for traps, by intelligence. */
-export function searchChest(g: Game, actor: number, who: number): void {
-  const a = g.s.actors[actor];
+export function searchChest(g: Game, slot: number, who: number): void {
+  const a = actor(g, slot);
   const b5 = a.b5;
   const int = g.s.members[who].int;
   const odds = (b5 & 0x80) === 0 ? -(int - 0x1e) >> 1 : ((b5 & 0x7f) - int + 0x1e) >> 1;
@@ -140,7 +140,7 @@ function findMoonstone(g: Game, x: number, y: number, z: number): boolean {
   for (let i = 7; i >= 0; i--) {
     if (s.moonstoneX[i] !== x || s.moonstoneY[i] !== y || s.moonstoneZ[i] !== z || s.moonstoneHeld[i] !== s.mapId) continue;
     let shown = false;
-    for (let k = 0x1f; k >= 0; k--) if (actorTileAt(g, x, y, z) === 0x19 && s.actors[s.dx].b5 === i) shown = true;
+    for (let k = 0x1f; k >= 0; k--) if (actorTileAt(g, x, y, z) === 0x19 && actor(g, s.dx).b5 === i) shown = true;
     if (shown) continue;
     setActor(g, freeActor(g), 0x19, 0x19, x, y, z, i);
     g.say(0x8680); // "a strange rock!\n"
@@ -264,7 +264,7 @@ export async function searchCommand(g: Game): Promise<number> {
   const t = tileAt(g, x, y);
   let chest = 1;
   for (; chest < 0x20; chest++) {
-    const a = s.actors[chest];
+    const a = actor(g, chest);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
   }
   if (chest < 0x20) {
@@ -276,7 +276,7 @@ export async function searchCommand(g: Game): Promise<number> {
   // - two fallen on one square, one searched - was never found).
   let body = 0x1f;
   for (; body > 0; body--) {
-    const a = s.actors[body];
+    const a = actor(g, body);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 0x1f) break;
   }
   if (body > 0) {
@@ -323,8 +323,8 @@ async function jimmyChest(g: Game, actor: number): Promise<void> {
 }
 
 /** A chest's lock picked by member `who` (loot.ts names them; Jimmy asks): whether its trap was disarmed. */
-export async function jimmyChestBy(g: Game, actor: number, who: number): Promise<boolean> {
-  const a = g.s.actors[actor];
+export async function jimmyChestBy(g: Game, slot: number, who: number): Promise<boolean> {
+  const a = actor(g, slot);
   const b5 = a.b5;
   // The bump's next step (bumpAct.ts): open it, disarmed; or, the key broken, search it again - the reading that
   // sent the party here may have been wrong, and a chest never trapped breaks every key.
@@ -463,7 +463,7 @@ export async function jimmyCommand(g: Game): Promise<number> {
     default: {
       let c = 1;
       for (; c < 0x20; c++) {
-        const a = s.actors[c];
+        const a = actor(g, c);
         if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level) && a.tile === 1) break;
       }
       if (c < 0x20) await jimmyChest(g, c);
@@ -482,7 +482,7 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
   const n = tile === 1 ? g.random(1, level) : tile === 2 ? g.random(1, level * 3) : amount;
   let slot = 0;
   for (let i = 0x1f; i >= 0; i--) {
-    if (s.actors[i].tile === 0) {
+    if (actor(g, i).tile === 0) {
       slot = i;
       break;
     }
@@ -490,10 +490,10 @@ function chestItem(g: Game, tile: number, amount: number, x: number, y: number, 
   if (slot === 0) return;
   setActor(g, slot, tile, tile, x, y, z, n);
   if (s.mapId < 0x80) {
-    s.actors[slot].b7 = 0;
-    s.actors[slot].z = z;
+    actor(g, slot).b7 = 0;
+    actor(g, slot).z = z;
   } else {
-    s.actors[slot].b7 = 0x20;
+    actor(g, slot).b7 = 0x20;
   }
   g.viewDirty |= 2;
   updateFrame(g);
@@ -512,7 +512,7 @@ export async function openChest(g: Game, x: number, y: number, z: number, by?: {
   const s = g.s;
   let i = by ? by.actor : 1;
   for (; i < 0x20 && !by; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z)) {
       if (a.tile === 1) break;
       if (a.tile === 0xe) {
@@ -527,7 +527,7 @@ export async function openChest(g: Game, x: number, y: number, z: number, by?: {
   }
   const who = by ? by.who : await whoActs(g);
   if (who === -1) return;
-  let level = s.actors[i].b5;
+  let level = actor(g, i).b5;
   setActor(g, i, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
   if (s.mapId >= 1 && s.mapId <= 0x20) {
@@ -542,7 +542,7 @@ export async function openChest(g: Game, x: number, y: number, z: number, by?: {
       for (const c of g.combat) {
         if ((c.flags & 0x80) !== 0 && c.who === who) {
           c.flags |= 0x20;
-          s.actors[c.actor].tile = s.actors[c.actor].anim = 0x1e;
+          actor(g, c.actor).tile = actor(g, c.actor).anim = 0x1e;
           break;
         }
       }
@@ -785,7 +785,7 @@ export function thingUnderfoot(g: Game): boolean {
   const s = g.s;
   if (g.inDungeon) return false;
   for (let i = 1; i < 0x20; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x !== s.x || a.y !== s.y || !(s.mapId > 0x7f || a.z === s.level)) continue;
     const t = a.tile;
     if ((t > 1 && t < 0x10) || t === 0x19 || t === 0x1b || (t & 0xfc) === 0xb4) return true;
@@ -810,14 +810,14 @@ export async function getCommand(g: Game): Promise<number> {
   let i = 1;
   let tile = 0;
   for (; i < 0x20; i++) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level)) {
       tile = a.tile;
       if (tile < 0x10 || tile === 0x19 || tile === 0x1b || (tile & 0xfc) === 0xb4) break;
     }
   }
   if (i < 0x20) {
-    getObject(g, tile, s.actors[i].b5, i);
+    getObject(g, tile, actor(g, i).b5, i);
     return 1;
   }
   const t = tileAt(g, x, y);

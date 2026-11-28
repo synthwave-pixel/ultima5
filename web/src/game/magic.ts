@@ -12,7 +12,7 @@
 
 import * as modern from './modernKarma.ts';
 import { SETTLEMENTS } from '../data/maps.ts';
-import { actorTileAt } from './actors.ts';
+import { actor, actorSlots, actorTileAt } from './actors.ts';
 import {
   aim,
   arenaFree,
@@ -583,9 +583,9 @@ async function anSanct(g: Game): Promise<number> {
     return 1;
   }
   for (let a = 0; a < 0x20; a++) {
-    const actor = s.actors[a];
-    if (actor.tile === 1 && actor.x === s.dx && actor.y === s.dy && (s.mapId > 0x7f || actor.z === s.level)) {
-      actor.b5 &= 0x7f;
+    const rec = actor(g, a);
+    if (rec.tile === 1 && rec.x === s.dx && rec.y === s.dy && (s.mapId > 0x7f || rec.z === s.level)) {
+      rec.b5 &= 0x7f;
       g.bumped.set(thingKey(g, s.dx, s.dy), 'disarmed'); // the bump opens it next (bumpAct.ts)
       await castEffect(g, 2);
       return 1;
@@ -643,7 +643,7 @@ async function kalXen(g: Game): Promise<number> {
     }
     const i = placeCombatant(g, kind, 0, s.dx, s.dy, s.level);
     if (i < 0) return 0;
-    const a = s.actors[g.combat[i].actor];
+    const a = actor(g, g.combat[i].actor);
     a.anim = a.tile = A.Circle;
     const { reveal } = await import('./effects.ts');
     await reveal(g, kind * 4 + 0x140, s.dx, s.dy);
@@ -659,7 +659,7 @@ async function inPor(g: Game): Promise<number> {
   const s = g.s;
   if (s.mapId > 0x7f) {
     const c = g.combat[s.combatTurn];
-    const a = s.actors[c.actor];
+    const a = actor(g, c.actor);
     if (s.combatFlags & 2) return 0;
     await castEffect(g, 3);
     for (let n = 0; n < 7; n++) {
@@ -701,7 +701,7 @@ async function quasWis(g: Game): Promise<void> {
     const c = g.combat[i];
     if (c.flags !== 0 && (c.flags & CF.Player) === 0 && (c.flags & CF.Invisible) !== 0) {
       c.flags &= ~CF.Invisible;
-      const a = g.s.actors[c.actor];
+      const a = actor(g, c.actor);
       a.anim = a.tile;
       overlayActors(g);
       drawView(g);
@@ -824,7 +824,7 @@ async function betRelXen(g: Game): Promise<number> {
 /** CAST_0afe_LorSanct: the caster turns invisible. */
 async function lorSanct(g: Game): Promise<number> {
   const c = g.combat[g.s.combatTurn];
-  g.s.actors[c.actor].anim = A.Invisible;
+  actor(g, c.actor).anim = A.Invisible;
   c.flags |= CF.Invisible;
   await castEffect(g, 7);
   return 1;
@@ -839,12 +839,18 @@ async function inQuasXen(g: Game): Promise<number> {
   await castEffect(g, 7);
   const i = combatantAt(g, s.crossX, s.crossY);
   if (i < 0) return 0;
-  const actor = s.actors.findIndex((a) => a.tile === 0);
-  if (actor < 0) return 0;
+  let free = -1;
+  for (const [k, a] of actorSlots(g)) {
+    if (a.tile === 0) {
+      free = k;
+      break;
+    }
+  }
+  if (free < 0) return 0;
   const slot = g.combat.findIndex((c) => c.flags === 0);
   if (slot < 0) return 0;
   g.combat[slot].b.set(g.combat[i].b);
-  g.combat[slot].actor = actor;
+  g.combat[slot].actor = free;
   // Whatever the slot's last occupant left is not the clone's (as placeCombatant clears it); a charm comes with it -
   // a clone of a creature bound to the party bound too, never to shake it off (combat.ts shakeCharm).
   g.splitLimit.delete(slot);
@@ -855,12 +861,12 @@ async function inQuasXen(g: Game): Promise<number> {
   const by = g.charmedBy.get(i);
   if (by !== undefined) g.charmedBy.set(slot, by);
   else g.charmedBy.delete(slot);
-  s.actors[actor].b.set(s.actors[g.combat[i].actor].b);
+  actor(g, free).b.set(actor(g, g.combat[i].actor).b);
   // The original tries random squares until one is free.
   for (let n = 0; n < 1000; n++) {
     if (randomSquare(g) && arenaFree(g, A.Avatar, s.dx, s.dy)) {
-      s.actors[actor].x = g.combat[slot].x = s.dx;
-      s.actors[actor].y = g.combat[slot].y = s.dy;
+      actor(g, free).x = g.combat[slot].x = s.dx;
+      actor(g, free).y = g.combat[slot].y = s.dy;
       return 1;
     }
   }
@@ -911,7 +917,7 @@ async function porRelVas(g: Game): Promise<number> {
 /** CAST_0d4c_AnTym: time stops (not before a Shadowlord). */
 async function anTym(g: Game): Promise<number> {
   await castEffect(g, 8);
-  if (g.s.actors.some((a) => a.tile === 0xfc)) {
+  if ([...actorSlots(g)].some(([, a]) => a.tile === 0xfc)) {
     g.say(0x45f2); // "Magic absorbed!\n"
     if (!g.soundOff) await g.sound.pulse(0x2648, 1, 28000, 1000, 2);
     return 0;
@@ -931,7 +937,7 @@ async function summonDaemon(g: Game, scroll: boolean): Promise<number> {
     const i = placeCombatant(g, 0x26, 0, s.dx, s.dy, s.level);
     if (i < 0) return 0;
     if (!g.soundOff) await g.sound.pulse(0xac8, 1, 12000, 500, 5);
-    const a = s.actors[g.combat[i].actor];
+    const a = actor(g, g.combat[i].actor);
     a.tile = a.anim = A.Circle;
     const { reveal } = await import('./effects.ts');
     await reveal(g, 0x1d8, s.dx, s.dy);
@@ -980,8 +986,8 @@ async function dispelField(g: Game, spell: boolean): Promise<number> {
   if ((await castDirection(g)) === 0) return -1;
   if (spell) await castEffect(g, 4);
   for (let a = 0; a < 0x20; a++) {
-    const actor = s.actors[a];
-    if ((actor.tile & 0xfc) === 0xe8 && actor.x === s.dx && actor.y === s.dy) {
+    const rec = actor(g, a);
+    if ((rec.tile & 0xfc) === 0xe8 && rec.x === s.dx && rec.y === s.dy) {
       removeCombatant(g, a + 1);
       return 1;
     }
@@ -1181,12 +1187,12 @@ export function unlockAnyCaster(g: Game): number {
 }
 
 /** An Sanct on chest `actor`, cast by `who` (loot.ts): its mixture and mana spent, and its trap gone for certain. */
-export async function unlockChest(g: Game, actor: number, who: number): Promise<void> {
+export async function unlockChest(g: Game, slot: number, who: number): Promise<void> {
   const s = g.s;
   const circle = Math.trunc(AN_SANCT / 6) + 1;
   s.mixtures[AN_SANCT]--;
   s.members[who].mp -= circle;
-  const a = s.actors[actor];
+  const a = actor(g, slot);
   a.b5 &= 0x7f;
   g.bumped.set(thingKey(g, a.x, a.y), 'disarmed');
   g.vitalsDirty = 1;
@@ -1903,7 +1909,7 @@ export async function usePotion(g: Game, n: number): Promise<number> {
     case 5: // purple: the drinker becomes a rat
       if (s.mapId > 0x7f) {
         g.say(0x4739); // "Poof!\n"
-        const a = s.actors[me.actor];
+        const a = actor(g, me.actor);
         a.tile = a.anim = 0x90;
       } else noEffect();
       break;
@@ -1911,7 +1917,7 @@ export async function usePotion(g: Game, n: number): Promise<number> {
       if (s.mapId > 0x7f) {
         me.flags |= CF.Invisible;
         g.say(0x4740); // "Invisible!\n"
-        const a = s.actors[me.actor];
+        const a = actor(g, me.actor);
         a.tile = a.anim = A.Invisible;
       } else noEffect();
       break;

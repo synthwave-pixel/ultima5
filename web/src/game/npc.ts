@@ -13,7 +13,7 @@
  * 8 elsewhere.
  */
 
-import { actorTileAtRev, freeActor, setActor } from './actors.ts';
+import { actor, actorTileAtRev, freeActor, party, setActor } from './actors.ts';
 import { Game } from './game.ts';
 import { T } from './tiles.ts';
 import { tileAt } from './world.ts';
@@ -138,10 +138,10 @@ function buildGrid(g: Game, x1: number, y1: number, x2: number, y2: number, goal
   }
   const me = s.npcs[npc];
   for (let i = 0x1f; i > 0; i--) {
-    const a = s.actors[i];
+    const a = actor(g, i);
     if (a.tile > 0x3f && manhattan(a.x, a.y, me.x, me.y) < 4) grid[a.y * 0x20 + a.x] = 0x90;
   }
-  const p = s.actors[0];
+  const p = party(g);
   if (manhattan(p.x, p.y, me.x, me.y) < 4) grid[p.y * 0x20 + p.x] = 0x90;
   if (goal > -1) grid[y2 * 0x20 + x2] = 5;
   grid[y1 * 0x20 + x1] = 0x46;
@@ -281,10 +281,10 @@ function makePath(g: Game, npc: number, x: number, y: number): number {
  */
 function approach(g: Game, npc: number, slot: number): void {
   const s = g.s;
-  const party = s.actors[0];
+  const pa = party(g);
   const me = s.npcs[npc];
   const kind = s.schedules[npc].type(slot);
-  let d = manhattan(party.x, party.y, me.x, me.y);
+  let d = manhattan(pa.x, pa.y, me.x, me.y);
   if (d === 1 && kind > 3) {
     if (kind === 4 || kind === 5) {
       if (me.fa !== 0) {
@@ -304,10 +304,10 @@ function approach(g: Game, npc: number, slot: number): void {
     step(g, i);
     const nx = s.dx;
     const ny = s.dy;
-    dist[i - 1] = npcCanStep(g, nx, ny, npc, -1) !== 0 ? manhattan(party.x, party.y, nx, ny) : 99;
+    dist[i - 1] = npcCanStep(g, nx, ny, npc, -1) !== 0 ? manhattan(pa.x, pa.y, nx, ny) : 99;
   }
   let pick = -1;
-  d = manhattan(party.x, party.y, me.x, me.y);
+  d = manhattan(pa.x, pa.y, me.x, me.y);
   for (let i = 1; i < 8; i++) {
     if (i < 5 && dist[i - 1] !== 99) {
       if (kind === 3) {
@@ -336,7 +336,7 @@ function approach(g: Game, npc: number, slot: number): void {
     s.dx = me.x;
     s.dy = me.y;
     step(g, pick);
-    const a = s.actors[me.actor];
+    const a = actor(g, me.actor);
     a.x = me.x = s.dx;
     a.y = me.y = s.dy;
     g.viewDirty |= 2;
@@ -381,7 +381,7 @@ function scheduleChange(g: Game, npc: number, hour: number): number {
 /** NPC_0a4a: is the NPC standing on a way to its place's level. */
 function onWayDown(g: Game, npc: number, slot: number): boolean {
   const s = g.s;
-  const a = s.actors[s.npcs[npc].actor];
+  const a = actor(g, s.npcs[npc].actor);
   const t = tileAt(g, a.x, a.y);
   if (s.schedules[npc].zs(slot) < (s.level << 24) >> 24) return t === T.LadderDown || (t & 0xf4) === T.Stair;
   return t === T.LadderUp || (t & 0xf4) === T.Stair;
@@ -400,7 +400,7 @@ function wander(g: Game, npc: number, range: number, slot: number): void {
   const nx = s.dx;
   const ny = s.dy;
   if ((range === 0 || manhattan(sch.x(slot), sch.y(slot), s.dx, s.dy) <= range) && npcCanStep(g, s.dx, s.dy, npc, slot) !== 0) {
-    const a = s.actors[me.actor];
+    const a = actor(g, me.actor);
     a.x = me.x = nx;
     a.y = me.y = ny;
     g.viewDirty |= 2;
@@ -439,7 +439,7 @@ export function putNpc(g: Game, npc: number, x: number, y: number, z: number): v
   if (s.npcTypes[npc] === 0) return;
   const me = s.npcs[npc];
   if (z !== s.level && me.actor !== 0) {
-    s.actors[me.actor].tile = 0;
+    actor(g, me.actor).tile = 0;
     me.actor = 0;
   }
   if (z === s.level && me.actor === 0) {
@@ -448,11 +448,11 @@ export function putNpc(g: Game, npc: number, x: number, y: number, z: number): v
     if (s.npcTypes[npc] === 1) b5 = 0x1e;
     else if ((g.data.ovl.data[0x28c6 + 0x10 + (s.mapId - 1) * 4 + (npc >> 3)] >> (npc & 7)) & 1) b5 = 0xff;
     setActor(g, slot, s.npcTypes[npc], s.npcTypes[npc], x, y, z, b5);
-    s.actors[slot].b6 = 0;
+    actor(g, slot).b6 = 0;
     me.actor = slot;
   }
   if (z === s.level && me.actor !== 0) {
-    const a = s.actors[me.actor];
+    const a = actor(g, me.actor);
     a.x = x;
     a.y = y;
     a.z = z;
@@ -481,11 +481,11 @@ function movesAside(g: Game, npc: number): boolean {
 /** The NPCs who would step aside (movesAside) standing beside the party: on one of the four squares a step reaches. */
 export function besideParty(g: Game): number[] {
   const s = g.s;
-  const party = s.actors[0];
+  const pa = party(g);
   const out: number[] = [];
   for (let i = 1; i < 0x20; i++) {
     const me = s.npcs[i];
-    if (s.npcTypes[i] !== 0 && movesAside(g, i) && manhattan(party.x, party.y, me.x, me.y) === 1) out.push(i);
+    if (s.npcTypes[i] !== 0 && movesAside(g, i) && manhattan(pa.x, pa.y, me.x, me.y) === 1) out.push(i);
   }
   return out;
 }
@@ -500,7 +500,7 @@ export function besideParty(g: Game): number[] {
 export function stepAside(g: Game, npc: number): boolean {
   const s = g.s;
   const me = s.npcs[npc];
-  const party = s.actors[0];
+  const pa = party(g);
   const slot = scheduleSlot(g, npc, s.hour);
   const sch = s.schedules[npc];
   const near = sch.type(slot) === 1;
@@ -511,13 +511,13 @@ export function stepAside(g: Game, npc: number): boolean {
     s.dy = me.y;
     step(g, dir);
     const [nx, ny] = [s.dx, s.dy];
-    if (manhattan(party.x, party.y, nx, ny) < 2 || npcCanStep(g, nx, ny, npc, slot) === 0) continue;
+    if (manhattan(pa.x, pa.y, nx, ny) < 2 || npcCanStep(g, nx, ny, npc, slot) === 0) continue;
     (!near || manhattan(sch.x(slot), sch.y(slot), nx, ny) <= 3 ? inReach : beyond).push([nx, ny]);
   }
   const open = inReach.length !== 0 ? inReach : beyond;
   if (open.length === 0) return false;
   const [nx, ny] = open[open.length === 1 ? 0 : g.random(0, open.length - 1)];
-  const a = s.actors[me.actor];
+  const a = actor(g, me.actor);
   a.x = me.x = nx;
   a.y = me.y = ny;
   g.viewDirty |= 2;
@@ -611,7 +611,7 @@ export function moveNpcs(g: Game, hour: number, still: ReadonlySet<number> = new
         const ny = s.dy;
         const ok = npcCanStep(g, s.dx, ny, i, slot);
         if (ok !== 0) {
-          const a = s.actors[me.actor];
+          const a = actor(g, me.actor);
           a.x = nx & 0xff;
           me.x = nx & 0xff;
           a.y = ny & 0xff;

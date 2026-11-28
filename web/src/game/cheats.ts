@@ -14,6 +14,7 @@ import { Relocate } from './relocate.ts';
 import * as modern from './modernKarma.ts';
 import { CF, Game } from './game.ts';
 import { Status } from './save.ts';
+import { actor } from './actors.ts';
 
 export interface Cheat {
   label: string;
@@ -237,7 +238,7 @@ export async function slayAll(g: Game): Promise<number> {
     if ((c.flags & CF.Dead) === 0) {
       c.flags = CF.Dead;
       c.hp = 0;
-      const a = g.s.actors[c.actor];
+      const a = actor(g, c.actor);
       a.tile = a.anim = 0;
     }
     slain++;

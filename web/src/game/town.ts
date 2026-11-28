@@ -7,7 +7,7 @@
  * loop that reads a command and gives the people their turn.
  */
 
-import { actorTileAt, canEnter, freeActor, actorTileAtRev } from './actors.ts';
+import { actor, actorSlots, actorTileAt, actorTileAtRev, canEnter, clearActors, freeActor, party } from './actors.ts';
 import { attackCombat } from './combat.ts';
 import { processCommand, setActivePlayer } from './commands.ts';
 import { commandPrompt, drawVitals, updateFrame } from './frame.ts';
@@ -58,7 +58,7 @@ export function setNpcKilled(g: Game, i: number): void {
 export function removeNpc(g: Game, i: number): void {
   const s = g.s;
   const n = s.npcs[i];
-  const a = s.actors[n.actor];
+  const a = actor(g, n.actor);
   a.tile = a.anim = a.x = a.y = a.z = a.b6 = a.b7 = 0;
   n.f0 = n.x = n.y = n.z = n.fa = 0;
   const sch = s.schedules[i];
@@ -124,9 +124,9 @@ function shadowlordArrives(g: Game): void {
   }
   if (s.townAir === 0xff) return;
   blight(g);
-  for (const a of s.actors) if (a.tile === 0xfc) return;
+  for (const [, a] of actorSlots(g)) if (a.tile === 0xfc) return;
   const slot = freeActor(g);
-  const a = s.actors[slot];
+  const a = actor(g, slot);
   let npc = 0x1f;
   for (let i = 0x1f; i >= 0; i--) {
     if (s.npcTypes[i] === 0) {
@@ -201,7 +201,7 @@ export function loadLevel(g: Game, placePeople: boolean): void {
 export function placeAllNpcs(g: Game): void {
   const s = g.s;
   for (let i = 1; i < 0x20; i++) {
-    s.actors[i].clear();
+    actor(g, i).clear();
     s.npcs[i].actor = 0;
   }
   for (let i = 1; i < 0x20; i++) {
@@ -588,7 +588,7 @@ const tethered = (g: Game, x: number, y: number): boolean => {
 /** TOWN_0c78: loose horses wander. */
 function horses(g: Game): void {
   const s = g.s;
-  for (const a of s.actors) {
+  for (const [, a] of actorSlots(g)) {
     let tile = a.tile;
     if ((tile & 0xfe) !== 0x10 || a.z !== s.level || g.random(0, 1) !== 0) continue;
     let x = a.x;
@@ -662,7 +662,7 @@ async function afterMove(g: Game): Promise<void> {
         if (!g.soundOff) await g.sound.sweep(1000, 250, 0x28, 30000);
         g.map.fill(T.Lava);
         g.viewDirty = 1;
-        s.b.fill(0, 0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100);
+        clearActors(g, 0);
         for (let i = 0; i < s.partySize; i++) {
           s.members[i].hp = 0;
           s.members[i].status = Status.Dead;
@@ -748,7 +748,7 @@ export async function enterTown(g: Game, fresh: boolean): Promise<void> {
   g.a9bc = g.viewDirty = 1;
   g.passedBeside = null;
   if (fresh) {
-    for (let i = 1; i < 0x20; i++) s.actors[i].tile = 0;
+    for (let i = 1; i < 0x20; i++) actor(g, i).tile = 0;
     s.drunk = 0;
     s.drawMap = 1;
     loadNpcs(g);
@@ -833,13 +833,13 @@ async function npcActs(g: Game, talked: number): Promise<void> {
   const s = g.s;
   let fight = false;
   const npc = s.d65bf;
-  const actor = s.actors[s.npcs[npc].actor];
+  const rec = actor(g, s.npcs[npc].actor);
   updateFrame(g);
   if (s.d65be === 0x61) {
     if (s.npcs[npc].fa === 0xfe) {
       g.printChar('\n');
       await begone(g, npc);
-    } else if (actor.tile !== 0x70) {
+    } else if (rec.tile !== 0x70) {
       fight = true;
     } else {
       fight = await arrest(g);
@@ -850,7 +850,7 @@ async function npcActs(g: Game, talked: number): Promise<void> {
     fight = await arrest(g);
   }
   if (!fight) return;
-  if (s.actors[s.npcs[npc].actor].tile >= 0x40) {
+  if (actor(g, s.npcs[npc].actor).tile >= 0x40) {
     g.say(0x2881); // "\nAttacked!\n"
     await fightNpc(g, npc);
   } else {
@@ -934,7 +934,7 @@ export async function townLoop(g: Game): Promise<void> {
         setTownTile(g, s.openDoor, s.doorX, s.doorY);
         if (open && near) void cue(g, 'DoorClose');
       }
-      const a0 = s.actors[0];
+      const a0 = party(g);
       a0.x = s.x;
       a0.y = s.y;
       a0.z = s.level;

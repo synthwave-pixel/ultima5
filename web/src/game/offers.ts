@@ -7,7 +7,7 @@
  */
 
 import { talkingHorseBeside } from './cmds.ts';
-import { actorTileAt } from './actors.ts';
+import { actor, actorTileAt } from './actors.ts';
 import { foesAbout } from './bumpAct.ts';
 import { drawVitals } from './frame.ts';
 import { CF, Game } from './game.ts';
@@ -202,7 +202,7 @@ export function contextual(g: Game): Item[] {
     const kind = cell & 0xf0;
     const ax = (g.data.swords(0x24d6, 4)[s.facing] + s.x) & 7;
     const ay = (g.data.swords(0x24de, 4)[s.facing] + s.y) & 7;
-    if (s.actors[1].x === ax && s.actors[1].y === ay) out.push(attackItem(g));
+    if (actor(g, 1).x === ax && actor(g, 1).y === ay) out.push(attackItem(g));
     // Klimb: a ladder or a pit, or a hole above - grey without the grapple to go up it.
     const klimb = klimbOffer(g);
     if (klimb !== 'hide') out.push({ label: 'Klimb', key: c('K'), enabled: klimb === 'show' });

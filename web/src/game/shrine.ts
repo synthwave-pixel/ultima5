@@ -9,7 +9,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { setActor } from './actors.ts';
+import { actorSlots, copyActorTable, party, restoreActorTable, setActor } from './actors.ts';
 import { shakeScreen, sleepTicks } from './effects.ts';
 import { drawVitals, updateFrame } from './frame.ts';
 import { Game } from './game.ts';
@@ -54,7 +54,7 @@ async function shrineOfVirtue(g: Game): Promise<void> {
   let v = 0;
   for (; v < 8; v++) if (s.x === xs[v] && s.y === ys[v]) break;
   if (v === 8) v = 6;
-  const a0 = s.actors[0];
+  const a0 = party(g);
   a0.tile = a0.anim = 0x6c;
   updateFrame(g);
   g.print(msg(g, 0x36d)); // "...and thou dost kneel before the Altar.\n\n"
@@ -211,8 +211,8 @@ export async function shrine(g: Game): Promise<void> {
   s.mapId = 0xff;
   g.chromePlace = 'shrine'; // the frame in a shrine's gold (chromeTone.ts)
   s.combatTurn = 0xff;
-  const saved = s.b.slice(0x5c5a - 0x55a6, 0x5c5a - 0x55a6 + 0x100);
-  for (const a of s.actors) a.tile = 0;
+  const saved = copyActorTable(g);
+  for (const [, a] of actorSlots(g)) a.tile = 0;
   playTune(g, Tune.Stones, 'shrine');
   miscMap(g, isCodex ? 0x160 : 0xb0);
   updateFrame(g);
@@ -226,7 +226,7 @@ export async function shrine(g: Game): Promise<void> {
   }
   g.print(msg(g, isCodex ? 0x6db : 0x6ae));
   for (let i = 0; i < 4; i++) await step(g);
-  const a0 = s.actors[0];
+  const a0 = party(g);
   a0.tile = a0.anim = 0x1c;
   a0.x = 5;
   a0.y = 10;
@@ -256,7 +256,7 @@ export async function shrine(g: Game): Promise<void> {
   a0.tile = a0.x = a0.y = 0;
   for (let i = 0; i < 4; i++) await step(g);
   await sleepTicks(g, 10);
-  s.b.set(saved, 0x5c5a - 0x55a6);
+  restoreActorTable(g, saved);
   s.mapId = from;
   g.chromePlace = null; // back on the map: a fight or a camp is where it is again
   passTime(g, 0x10);

@@ -20,7 +20,7 @@ import { Fog } from './fog.ts';
 import { PathState } from './modernKarma.ts';
 import { Vocabulary } from './words.ts';
 import type { Platform } from './io.ts';
-import { Actor, Save } from './save.ts';
+import { Save } from './save.ts';
 import { TalkState } from './talk.ts';
 
 import { GameCore } from './gameCore.ts';
@@ -139,9 +139,8 @@ export class Game extends GameCore {
   readonly groundMap = new Uint8Array(0xb0);
   /** D_ad14: the combat map, or the light map (lit squares) outside combat. */
   readonly combatMap = new Uint8Array(0x400);
-  /** D_a9fc: the actors put aside during combat or camping. */
-  readonly savedActorBytes = new Uint8Array(256);
-  readonly savedActors = Array.from({ length: 32 }, (_, i) => new Actor(this.savedActorBytes.subarray(i * 8, i * 8 + 8)));
+  /** D_a9fc: the world's creature table put aside during a fight (actors.ts copyActorTable). */
+  combatTable: Uint8Array = new Uint8Array(256);
   /** D_ba14: the combatants. */
   readonly combatBytes = new Uint8Array(256);
   readonly combat = Array.from({ length: 32 }, (_, i) => new Combatant(this.combatBytes.subarray(i * 8, i * 8 + 8)));
