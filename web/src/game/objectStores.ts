@@ -158,15 +158,15 @@ export function vehicleAt(g: Game, x: number, y: number, z: number): Vehicle | u
 }
 
 /**
- * Leave a vehicle in the party's place. A fourth of its kind lets one go: the farthest out of sight, or with all in
- * sight the oldest.
+ * Leave a vehicle in the party's place. A fourth of its kind lets one of the others go (never the one just left, as a
+ * ship bought at a far dock): the farthest out of sight, or with all in sight the oldest.
  */
 export function leaveVehicle(g: Game, v: Omit<Vehicle, 'serial'>): Vehicle {
   const st = hereForWriting(g);
   const left: Vehicle = { ...v, x: v.x & 0xff, y: v.y & 0xff, z: v.z & 0xff, serial: g.objects.serial++ };
   st.vehicles.push(left);
-  const same = st.vehicles.filter((o) => o.kind === left.kind);
-  if (same.length > MAX_PER_KIND) {
+  const same = st.vehicles.filter((o) => o.kind === left.kind && o !== left);
+  if (same.length >= MAX_PER_KIND) {
     const away = same.filter((o) => !inSight(g, o.x, o.y, o.z));
     const go = away.length ? farthest(g, away) : same.reduce((a, b) => (b.serial < a.serial ? b : a));
     st.vehicles.splice(st.vehicles.indexOf(go!), 1);
@@ -199,15 +199,16 @@ export function itemAt(g: Game, x: number, y: number, z: number): Item | undefin
 }
 
 /**
- * Place a thing in the party's place. A 25th (unique finds aside) lets one go: the first tier that has any, bodies
- * before food before gold before equipment before chests, and of that tier the farthest from the party.
+ * Place a thing in the party's place. A 25th (unique finds aside) lets one of the others go (never the one just
+ * placed): the first tier that has any, bodies before food before gold before equipment before chests, and of that
+ * tier the farthest from the party.
  */
 export function placeItem(g: Game, it: Item): Item {
   const st = hereForWriting(g);
   const placed: Item = { ...it, x: it.x & 0xff, y: it.y & 0xff, z: it.z & 0xff };
   st.items.push(placed);
-  const common = st.items.filter((o) => !o.unique);
-  if (common.length > MAX_ITEMS) {
+  const common = st.items.filter((o) => !o.unique && o !== placed);
+  if (common.length >= MAX_ITEMS && !placed.unique) {
     for (const tier of TIERS) {
       const of = common.filter((o) => g.objectRules.itemTier(o.tile) === tier);
       if (!of.length) continue;

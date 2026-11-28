@@ -629,7 +629,9 @@ export function getObject(g: Game, tile: number, amount: number, actor: number):
       g.say(0x8c5c); // "A magic carpet!\n"
       s.carpets++;
       if (s.carpets === 100) s.carpets = 99;
-      if (s.mapId === 0x11) removeNpc(g, 0x16);
+      // The castle's own carpet (a townsfolk record's, in the table) taken: its record goes. Not for the party's own,
+      // left there from the vehicles' store (actor 0x20).
+      if (s.mapId === 0x11 && actor < 0x20) removeNpc(g, 0x16);
       break;
     case 0xf:
       g.printNumber(amount);

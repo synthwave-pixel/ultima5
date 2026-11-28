@@ -86,7 +86,7 @@ vehicles' and items' stores persist across visits and in the saved game; the cre
   All of a tier goes before any of the next, whether in sight or not.
 - Unique finds are kept apart and never let go: each has a slot of its own, outside the 24, so no other item can
   push one out. A unique find is a one-of-a-kind thing among the 113 hidden things, whose loss could not be undone:
-  one no shop sells and the game does not put back. There are seventeen: the twelve Mystic Arms beneath Hythloth,
+  one no shop sells and the game does not put back. There are sixteen: the twelve Mystic Arms beneath Hythloth,
   the HMS Cape plans, the Sword of Chaos, the Jeweled Sword in Blackthorn's palace, and the Ankh in Cove (the plan
   lists them). The skull keys and the Glass Sword come back when searched for again, and the rings and amulets are
   sold, so they are ordinary items. An item record says whether it is unique.

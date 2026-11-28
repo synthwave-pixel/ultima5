@@ -115,6 +115,18 @@ describe('an old save', () => {
     expect(g2.ool.under[29 * 8]).toBe(0);
   });
 
+  it("leaves a dungeon's own table alone: its creature's tile numbers are not the world's", () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 0x23, level: 2, x: 1, y: 1, partyTile: 0x1c });
+    clearActors(g);
+    Object.assign(actor(g, 1), { tile: 3, anim: 3, x: 5, y: 6, z: 2, b5: 0x10 }); // a wandering creature, kind 3
+    const g2 = oldSaveOf(g);
+    expect([actor(g2, 1).tile, actor(g2, 1).x, actor(g2, 1).b5]).toEqual([3, 5, 0x10]);
+    Object.assign(g2.s, { mapId: 0x23, level: 2 });
+    expect(itemsHere(g2)).toEqual([]);
+  });
+
   it('a save with the field is left as it is', () => {
     const g = surface();
     Object.assign(actor(g, 3), { tile: 0x84, anim: 0x84, x: 105, y: 100, z: 0 });

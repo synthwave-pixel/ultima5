@@ -39,7 +39,7 @@ state that already records them. Creature slots are reused farthest-first.
 ## Unique finds (checked against the data and the Ultima Codex walkthrough)
 
 Among the 113 hidden things (DATA.OVL tables 0x3e78 tile, 0x3eea amount), a find is unique when no arms shop sells
-it (the wares at 0x3ae2, eight per shop, shops 0-8) and the game does not put it back. Seventeen are:
+it (the wares at 0x3ae2, eight per shop, shops 0-8) and the game does not put it back. Sixteen are:
 
 | Hidden # | Where | What |
 | --- | --- | --- |

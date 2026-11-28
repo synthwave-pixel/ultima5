@@ -131,8 +131,9 @@ export function restore(g: Game, stored: SaveData | StoredSave, fresh = false): 
     if (Number.isInteger(n) && n > 0 && n <= 900) g.ammoExtra[Number(k)] = n;
   // The Modern karma, as saved; a save from before it begins it afresh, at a new game's (not from 1988's karma).
   g.path = PathState.decode(d.path);
+  // The stores as saved; a save from before them has its tables' vehicles and things moved in (objectMigration.ts).
   if (typeof d.objects === 'object' && d.objects !== null) decodeObjects(g, d.objects);
-  else freshObjects(g); // a save from before the stores: its tables' vehicles and things moved in (objectMigration.ts)
+  else freshObjects(g);
   g.appearance = validAppearance(d.appearance);
   const made = typeof d.companions === 'object' && d.companions !== null ? Object.entries(d.companions) : [];
   g.companionLooks = new Map(made.map(([name, look]) => [name, validAppearance(look)]));

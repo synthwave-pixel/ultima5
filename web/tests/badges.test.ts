@@ -5,6 +5,7 @@ import { updateFrame } from '../src/game/frame.ts';
 import { Colour } from '../src/ui/colours.ts';
 import { newGame } from './helpers.ts';
 import { actor } from '../src/game/actors.ts';
+import { placeItem } from '../src/game/objectStores.ts';
 
 /**
  * A chest's badge (world.ts drawReadings): what its search said, in its top-right corner, the party's reading
@@ -61,6 +62,15 @@ describe("a chest's badge", () => {
       const white = [...(px.get(Colour.brightWhite) ?? [])].filter((p) => corner(...(p.split(',').map(Number) as [number, number])));
       expect(white.length, reading).toBe(reading === 'trap' ? 4 : 5);
     }
+    // A chest found out of a fight lies in the place's item store (objectStores.ts): its badge is drawn the same.
+    actor(g, 5).tile = actor(g, 5).anim = 0;
+    placeItem(g, { tile: 1, x: s.x + 1, y: s.y, z: 0, amount: 0x81, b6: 0, b7: 0, unique: false, hidden: -1 });
+    g.bumped.set(key, 'trap');
+    g.viewDirty = 1;
+    expect(
+      [...(drawn().get(Colour.red) ?? [])].some((p) => corner(...(p.split(',').map(Number) as [number, number]))),
+      'stored',
+    ).toBe(true);
     // A search begun and backed out of has no reading: no badge.
     g.bumped.set(key, 'searched');
     const px = drawn();

@@ -2,13 +2,13 @@
 // Vehicles live in their own store, never taken for a creature (#69).
 import { describe, expect, it } from 'vitest';
 import { actor, actorTileAt, clearActors, party, thingsAt } from '../src/game/actors.ts';
-import { boardCommand, xitCommand } from '../src/game/cmds.ts';
+import { boardCommand, fireCommand, xitCommand } from '../src/game/cmds.ts';
 import { takePrize } from '../src/game/combat.ts';
 import type { Game } from '../src/game/game.ts';
-import { leaveVehicle, vehicleAt, vehiclesHere } from '../src/game/objectStores.ts';
+import { itemAt, leaveVehicle, placeItem, vehicleAt, vehiclesHere } from '../src/game/objectStores.ts';
 import { enterWorld, spawn } from '../src/game/outdoors.ts';
 import { journeyOnward } from '../src/game/run.ts';
-import { loadLevel } from '../src/game/town.ts';
+import { enterTown, loadLevel } from '../src/game/town.ts';
 import { Pad } from '../src/game/io.ts';
 import { getCommand } from '../src/game/items.ts';
 import { updateFrame } from '../src/game/frame.ts';
@@ -79,6 +79,22 @@ describe('vehicles left in the world (#69)', () => {
     expect(vehiclesHere(g)).toEqual([]);
   });
 
+  it("taking up the party's own carpet in Lord British's castle leaves the castle's own where it lies", async () => {
+    const { g, p } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 0x11, level: 0, x: 10, y: 10, hour: 10, partyTile: 0x1c });
+    await enterTown(g, true);
+    Object.assign(g.s, { x: 10, y: 10 });
+    const type = g.s.npcTypes[0x16];
+    expect(type).toBe(0x1b); // the castle's carpet, in Lord British's study
+    leaveVehicle(g, { kind: 'carpet', tile: 0x1b, x: 10, y: 10, z: 0, hull: 0, skiffs: 0 });
+    g.options.input = 'controller';
+    p.keys.push(Pad.A);
+    await getCommand(g);
+    expect(vehiclesHere(g)).toEqual([]);
+    expect(g.s.npcTypes[0x16]).toBe(type);
+  });
+
   it('boards and leaves a horse and a frigate, keeping facing, hull and skiffs', async () => {
     const g = at(0x24, 225, 225);
     leaveVehicle(g, { kind: 'frigate', tile: 0x26, x: 225, y: 225, z: 0, hull: 77, skiffs: 2 });
@@ -140,6 +156,23 @@ describe('vehicles left in the world (#69)', () => {
     expect(vehiclesHere(g)).not.toContain(first);
     const prize = vehicleAt(g, 226, 225, 0);
     expect([prize?.tile, prize?.hull, prize?.skiffs]).toEqual([0x26, 99, 2]);
+  });
+
+  it("a towne's cannon shot passes over a horse left in its line, and a found thing", async () => {
+    const { g } = newGame();
+    journeyOnward(g);
+    Object.assign(g.s, { mapId: 1, level: 0, x: 10, y: 16, hour: 10, partyTile: 0x1c });
+    loadLevel(g, false);
+    clearActors(g);
+    updateFrame(g);
+    g.view[5 * 32 + 6] = 0xb5; // a cannon east of the party, aimed east
+    leaveVehicle(g, { kind: 'horse', tile: 0x10, x: 12, y: 16, z: 0, hull: 0, skiffs: 0 });
+    placeItem(g, { tile: 4, x: 13, y: 16, z: 0, amount: 0xff, b6: 0, b7: 0, unique: true, hidden: 0x0c });
+    const karma = g.s.karma;
+    await fireCommand(g);
+    expect(vehicleAt(g, 12, 16, 0)?.kind).toBe('horse');
+    expect(itemAt(g, 13, 16, 0)?.unique).toBe(true);
+    expect(g.s.karma).toBe(karma);
   });
 
   it('a horse ridden into a towne is there on the next visit', async () => {

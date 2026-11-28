@@ -90,7 +90,9 @@ function moveOut(g: Game, bytes: Uint8Array, key: PlaceKey, live: boolean, keep:
 /** Every table's vehicles and things moved into the stores: the live one (the party's place), BRIT.OOL, UNDER.OOL. */
 export function migrateActorTables(g: Game): void {
   const here = placeKey(g);
-  if (here) {
+  // A dungeon's table is its own (dungeon.ts newMonster: a creature's tile is its kind, 0-7, not a world tile), and
+  // holds no vehicle or world thing: left as it is.
+  if (here && !here.startsWith('dungeon:')) {
     const live = copyActorTable(g);
     moveOut(g, live, here, true, true);
     restoreActorTable(g, live);

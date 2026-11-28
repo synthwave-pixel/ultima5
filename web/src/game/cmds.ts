@@ -9,19 +9,8 @@
  */
 
 import * as modern from './modernKarma.ts';
-import {
-  actor,
-  actorSlots,
-  actorTileAt,
-  actorTileAtRev,
-  canEnter,
-  creatureTileAt,
-  freeActor,
-  party,
-  setActor,
-  thingsAt,
-} from './actors.ts';
-import { leaveVehicle, takeItem, takeVehicle, vehicleAt } from './objectStores.ts';
+import { actor, actorSlots, actorTileAt, actorTileAtRev, canEnter, creatureTileAt, freeActor, party, setActor } from './actors.ts';
+import { leaveVehicle, takeVehicle, vehicleAt } from './objectStores.ts';
 import { shoot } from './combat.ts';
 import { reveal, shakeScreen, explosion } from './effects.ts';
 import { drawMoons, drawVitals, updateFrame } from './frame.ts';
@@ -341,8 +330,10 @@ export async function fireCommand(g: Game): Promise<number> {
     y += dy;
     vx += dx;
     vy += dy;
+    // A vehicle or a thing lying there (the stores, dx 32) is flown over: what the party leaves is never let go but by
+    // the stores' rules (objectStores.ts).
     const other = actorTileAtRev(g, x, y, s.level);
-    if (other === 0) {
+    if (other === 0 || s.dx === 32) {
       switch (tileAt(g, x, y)) {
         case T.T97:
         case T.T98:
@@ -356,12 +347,6 @@ export async function fireCommand(g: Game): Promise<number> {
     } else {
       hit = true;
       victim = s.dx;
-      // A vehicle or a thing lying there (the stores, dx 32): the shot takes it, and no one of the place is hurt.
-      if (victim === 32) {
-        const th = thingsAt(g, x, y, s.level)[0];
-        if (th?.kind === 'vehicle') takeVehicle(g, th.v);
-        else if (th?.kind === 'item') takeItem(g, th.it);
-      }
     }
   }
   await shoot(g, vx0, vy0, vx, vy, 1);
@@ -373,9 +358,7 @@ export async function fireCommand(g: Game): Promise<number> {
     g.viewDirty = 1;
     s.openDoor = 0;
   }
-  if (hit && victim === 32) {
-    g.viewDirty |= 2;
-  } else if (hit && victim !== 0) {
+  if (hit && victim !== 0) {
     setActor(g, victim, 0, 0, 0, 0, 0, 0);
     g.viewDirty |= 2;
     s.karma = decrease(s.karma, 5);

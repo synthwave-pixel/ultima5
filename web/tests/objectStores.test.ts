@@ -63,7 +63,7 @@ describe('places', () => {
     leaveVehicle(g, skiff(101, 100));
     expect(vehiclesHere(g).length).toBe(1);
     g.s.level = 0xff;
-    expect(vehiclesHere(g).length).toBe(0);
+    expect(vehiclesHere(g).some((v) => v.x === 101 && v.y === 100)).toBe(false); // the Underworld has its own
     Object.assign(g.s, { mapId: 5, level: 0 });
     expect(vehiclesHere(g).length).toBe(0);
     Object.assign(g.s, { mapId: 0, level: 0 });
@@ -76,7 +76,22 @@ describe('vehicles', () => {
     const g = surface();
     expect(MAX_PER_KIND).toBe(3);
     for (const d of [10, 20, 30, 40]) leaveVehicle(g, skiff(100 + d, 100));
-    expect(vehiclesHere(g).map((v) => v.x)).toEqual([110, 120, 130]);
+    expect(vehiclesHere(g).map((v) => v.x)).toEqual([110, 120, 140]); // the one just left is kept
+  });
+
+  it('never lets go of the one just placed: a ship bought at a dock out of sight, food just found', () => {
+    const g = surface();
+    for (const d of [10, 20, 30]) leaveVehicle(g, frigate(100 + d, 100));
+    leaveVehicle(g, frigate(100, 160)); // bought, waiting at a far dock
+    expect(vehiclesHere(g).map((v) => [v.x, v.y])).toEqual([
+      [110, 100],
+      [120, 100],
+      [100, 160],
+    ]);
+    for (let i = 0; i < 24; i++) placeItem(g, item(0x01, 100 + i, 101)); // chests
+    const food = placeItem(g, item(0x0f, 140, 140));
+    expect(itemsHere(g)).toContain(food);
+    expect(itemAt(g, 123, 101, 0)).toBeUndefined(); // the farthest chest instead
   });
 
   it('measures across the edge of the world', () => {

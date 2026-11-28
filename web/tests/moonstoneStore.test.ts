@@ -60,7 +60,7 @@ describe('the Amulet and the shards', () => {
     expect(thingsAt(g, 0x69, 0xe1, 0xff)).toEqual([]);
   });
 
-  it('a shard is not there while its Shadowlord is abroad', () => {
+  it('a shard used on its Shadowlord is not there again', () => {
     const { g } = newGame();
     journeyOnward(g);
     g.s.shadowlords[1] = 0x80;

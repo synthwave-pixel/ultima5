@@ -29,6 +29,7 @@ import type { Draw, Effects, Platform, Sound } from '../src/game/io.ts';
 import { Save } from '../src/game/save.ts';
 import { MockRandom } from './mockRandom.ts';
 import { Text } from '../src/ui/text.ts';
+import { freshObjects } from '../src/game/objectMigration.ts';
 
 /** A platform with no screen: text goes to a 40x25 grid, keys come from a script. */
 export class FakePlatform implements Platform {
@@ -123,6 +124,7 @@ export function newGame(seed = 1234): { g: Game; p: FakePlatform } {
   g.drawCombatMarks = () => drawCombatMarks(g);
   g.rng = new MockRandom(seed);
   g.ool.under.set(files.get('INIT.OOL').subarray(0, 256));
+  freshObjects(g); // INIT.OOL's skiff and bodies into the stores, as main.ts does at boot
   g.s.members[0].name = 'Tester';
   // The tests drive the game by its letter commands, as the original is played; a test about the
   // controller's keys says so itself.

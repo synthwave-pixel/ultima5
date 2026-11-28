@@ -852,9 +852,12 @@ export function drawReadings(g: Game): void {
   if (g.bumped.size === 0 || g.inDungeon) return;
   const s = g.s;
   const d = g.draw;
-  for (let i = 1; i < 0x20; i++) {
-    const a = actor(g, i);
-    if (a.tile !== 1) continue;
+  // The chests of the table (a fight's field, or the place's people's), and those lying in the place's item store.
+  const chests: { tile: number; x: number; y: number; z: number }[] = [...actorSlots(g, 1, 0x20)]
+    .map(([, a]) => a)
+    .filter((a) => a.tile === 1);
+  if (s.mapId < 0x80) chests.push(...itemsHere(g).filter((it) => it.tile === 1));
+  for (const a of chests) {
     let vx = a.x;
     let vy = a.y;
     if (s.mapId < 0x80) {
