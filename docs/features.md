@@ -1195,6 +1195,25 @@ settled on the original Apple II disks - is told in
 - **A body under gold is found.** Search in 1988 looked only at what lay
   on top of a square; a corpse under the gold another left was never
   searched.
+- **What the party leaves stays where it was left.** In 1988 a vehicle
+  left behind, a thing found and the creatures about all shared one table
+  of 32 figures, and when it was full the next to come took the first
+  slot, whatever it held: on the open sea by the Codex at night, a sea of
+  pirate ships filled it, and a frigate, a skiff or a magic carpet just
+  left vanished under a sea monster. A thing found in a towne
+  and walked away from was the first taken for its people, and lost for
+  good, as it had been found. Now each place - Britannia, the Underworld,
+  each towne and each dungeon - keeps its own, across visits and in the
+  saved game: three horses, three magic carpets, three skiffs and three
+  frigates (a fourth lets the farthest of its kind go, never one in
+  sight), and 24 things lying about (bodies go first, then food, then
+  gold, then arms and the rest, then chests, the farthest first). The
+  one-of-a-kind finds - the HMS Cape plans, the Mystic Arms, the Sword of
+  Chaos, the Jeweled Sword and the Ankh - are kept apart and never let go,
+  and a moonstone dug up, the Amulet and the shards are drawn from their
+  own records. When the creatures are many, the farthest out of sight
+  makes room for the next, and none wanders in while every one is in
+  sight. A save from before is carried over.
 - **Jeremy's keys are no longer a store of them.** Yew's chef says "Have
   five!" and gives five keys before he asks 50 gold for them, so in 1988
   one who could not pay kept them anyway, and could ask again and again, to
