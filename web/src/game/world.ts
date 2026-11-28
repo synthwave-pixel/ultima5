@@ -24,6 +24,7 @@ import { A, T } from './tiles.ts';
 import { CLASSES } from './zstats.ts';
 import { dressingOf, dressingOfActor } from './companions.ts';
 import { actor, actorSlots, party } from './actors.ts';
+import { vehiclesHere } from './objectStores.ts';
 
 /** A byte of memory: a buffer and an index. */
 export type Cell = [Uint8Array, number];
@@ -457,34 +458,41 @@ export function overlayActors(g: Game): void {
   const order = [...Array(32).keys()].reverse();
   const combat = s.mapId >= 0x80;
   if (combat) order.sort((a, b) => fieldLayer(actor(g, a).tile) - fieldLayer(actor(g, b).tile));
-  for (const i of order) {
-    const a = actor(g, i);
-    if (a.tile === 0) continue;
-    let vx = a.x;
-    let vy = a.y;
+  /** One figure drawn: `slot` its place in the table (0 the party), -1 for a thing from the stores. */
+  const figure = (tile: number, anim: number, x: number, y: number, z: number, slot: number): void => {
+    let vx = x;
+    let vy = y;
     if (s.mapId < 0x80) {
       vx = (vx - (s.x - 5)) & 0xff;
       vy = (vy - (s.y - 5)) & 0xff;
-      if (a.z !== s.level || vx > 10 || vy > 10) continue;
+      if (z !== s.level || vx > 10 || vy > 10) return;
     }
     const v = viewAt(g, vx, vy);
     // The Standard look shows the party wherever it stands, the Underworld's dark (0xff, which is also the view's
     // "unseen") too: the Amulet worn, the party walks it, and was not drawn - in 1988 as here in the EGA look.
-    const party = i === 0 && s.mapId < 0x80 && g.options.tileSet === 'standard';
-    if (a.anim === 0 || (v === 0xff && !party) || v === T.T87) continue;
-    if ((a.tile & 0xfc) === 0xe8 || a.tile === 0x1e || a.tile === 0x1f) {
-      if (v !== 0 || (combat && a.tile === 0x1e)) putActor(g, vx, vy, a.anim);
-    } else if (a.anim === 0x1d || a.anim === 0x1e) {
-      putActor(g, vx, vy, a.anim);
-    } else if (a.tile === 0x5c) {
+    const party = slot === 0 && s.mapId < 0x80 && g.options.tileSet === 'standard';
+    if (anim === 0 || (v === 0xff && !party) || v === T.T87) return;
+    if ((tile & 0xfc) === 0xe8 || tile === 0x1e || tile === 0x1f) {
+      if (v !== 0 || (combat && tile === 0x1e)) putActor(g, vx, vy, anim);
+    } else if (anim === 0x1d || anim === 0x1e) {
+      putActor(g, vx, vy, anim);
+    } else if (tile === 0x5c) {
       if (v === T.Chair92) {
-        putActor(g, vx, vy, a.anim);
+        putActor(g, vx, vy, anim);
       } else {
-        placeActor(g, vx, vy, a.x, a.y, a.anim - 8);
+        placeActor(g, vx, vy, x, y, anim - 8);
       }
     } else {
-      placeActor(g, vx, vy, a.x, a.y, a.anim, i === 0 && s.mapId < 0x80);
+      placeActor(g, vx, vy, x, y, anim, slot === 0 && s.mapId < 0x80);
     }
+  };
+  // Drawn first, so that whoever stands on the same square is drawn over them (1988's layering): the vehicles left
+  // about (objectStores.ts).
+  if (!combat) for (const v of vehiclesHere(g)) figure(v.tile, v.tile, v.x, v.y, v.z, -1);
+  for (const i of order) {
+    const a = actor(g, i);
+    if (a.tile === 0) continue;
+    figure(a.tile, a.anim, a.x, a.y, a.z, i);
   }
 }
 

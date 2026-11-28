@@ -52,6 +52,7 @@ import { devMode } from '../devMode.ts';
 import { ammoHeld, spendOne } from './ammo.ts';
 import { shortArmNames } from './armNames.ts';
 import { fieldWon, onMonsterSide } from './turn.ts';
+import { leaveVehicle } from './objectStores.ts';
 
 /** Enemy flags (u5d macros.h ENEMY_FLAG_*). */
 export const EF = {
@@ -3368,20 +3369,21 @@ async function afterCombat(g: Game, foe: number): Promise<void> {
   }
   restoreActorTable(g, g.combatTable);
   if ((s.combatFlags & 0x82) === 0) {
-    if (foe < 0x20) {
-      const a = actor(g, foe);
-      if (s.battleWon !== 0 && (a.tile & 0xfc) === 0x2c) {
-        a.tile -= 8;
-        a.anim -= 8;
-        a.b5 = 99;
-        a.b7 = 2;
-      } else {
-        a.tile = a.anim = a.x = a.y = a.z = 0;
-      }
-    }
     g.printChar('\n');
     s.mapId = s.savedMapId;
+    if (foe < 0x20) takePrize(g, foe);
   }
+}
+
+/**
+ * The foe gone from the world after the fight - a pirate ship beaten, a frigate to board: it leaves the creatures'
+ * table for the vehicles' store (hull whole, two skiffs aboard), as 1988 turned the actor into one.
+ */
+export function takePrize(g: Game, foe: number): void {
+  const a = actor(g, foe);
+  if (g.s.battleWon !== 0 && (a.tile & 0xfc) === 0x2c)
+    leaveVehicle(g, { kind: 'frigate', tile: a.tile - 8, x: a.x, y: a.y, z: a.z, hull: 99, skiffs: 2 });
+  setActor(g, foe, 0, 0, 0, 0, 0, 0);
 }
 
 /** ULTIMA_6150_Combat: a fight with actor `foe` on an arena chosen by the ground and the foe. */

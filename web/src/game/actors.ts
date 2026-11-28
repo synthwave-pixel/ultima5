@@ -7,6 +7,7 @@
  */
 
 import { Game } from './game.ts';
+import { type Item, itemsHere, type Vehicle, vehicleAt } from './objectStores.ts';
 import { Actor, type Save } from './save.ts';
 import { T } from './tiles.ts';
 
@@ -67,8 +68,8 @@ export function restoreActorTable(g: Game, bytes: Uint8Array): void {
   g.s.b.set(bytes.subarray(0, ACTOR_SLOTS * 8), TABLE_AT);
 }
 
-/** ULTIMA_368e: the first actor from 1 up standing at (x, y, z): its tile, and its index in dx (0 if none). */
-export function actorTileAt(g: Game, x: number, y: number, z: number): number {
+/** ULTIMA_368e: the first actor from 1 up standing at (x, y, z) in the table: its tile, its index in dx (0 if none). */
+export function creatureTileAt(g: Game, x: number, y: number, z: number): number {
   const s = g.s;
   for (let i = 1; i < 32; i++) {
     const a = actor(g, i);
@@ -81,7 +82,22 @@ export function actorTileAt(g: Game, x: number, y: number, z: number): number {
   return 0;
 }
 
-/** ULTIMA_3702: the same, searching from 31 down to 0 (the party included). */
+/**
+ * What a square shows, as ULTIMA_368e did when everything stood in the table: a creature's tile (its slot in dx),
+ * else what lies there in the stores (dx 32, not a slot), else 0.
+ */
+export function actorTileAt(g: Game, x: number, y: number, z: number): number {
+  const t = creatureTileAt(g, x, y, z);
+  if (t !== 0) return t;
+  const stored = storedAt(g, x, y, z);
+  if (stored) {
+    g.s.dx = 32;
+    return stored.tile;
+  }
+  return 0;
+}
+
+/** ULTIMA_3702: the same, searching the table from 31 down to 0 (the party included), then the stores (dx 32). */
 export function actorTileAtRev(g: Game, x: number, y: number, z: number): number {
   const s = g.s;
   for (let i = 31; i >= 0; i--) {
@@ -91,8 +107,54 @@ export function actorTileAtRev(g: Game, x: number, y: number, z: number): number
       return a.tile;
     }
   }
-  s.dx = -1;
-  return 0;
+  const stored = storedAt(g, x, y, z);
+  s.dx = stored ? 32 : -1;
+  return stored?.tile ?? 0;
+}
+
+/** Something on a square: a creature (or anything else the table holds), a vehicle, a thing lying about. */
+export type Thing =
+  | { kind: 'creature'; slot: number; tile: number }
+  | { kind: 'vehicle'; v: Vehicle; tile: number }
+  | { kind: 'moonstone'; stone: number; tile: number }
+  | { kind: 'regalia'; which: number; tile: number }
+  | { kind: 'item'; it: Item; tile: number };
+
+/** The first of the stores' things at a square, in drawing order (vehicle, then item). */
+function storedAt(g: Game, x: number, y: number, z: number): Thing | undefined {
+  const v = vehicleAt(g, x, y, z);
+  if (v) return { kind: 'vehicle', v, tile: v.tile };
+  const it = itemOnSquare(g, x, y, z);
+  return it ? { kind: 'item', it, tile: it.tile } : undefined;
+}
+
+/** The last placed of the things lying on a square. */
+function itemOnSquare(g: Game, x: number, y: number, z: number): Item | undefined {
+  const list = itemsHere(g);
+  for (let i = list.length - 1; i >= 0; i--) {
+    const it = list[i];
+    if (it.x === (x & 0xff) && it.y === (y & 0xff) && it.z === (z & 0xff)) return it;
+  }
+  return undefined;
+}
+
+/** Everything on a square, top first: the table's from slot 1 up, then a vehicle, then the things lying there. */
+export function thingsAt(g: Game, x: number, y: number, z: number): Thing[] {
+  const s = g.s;
+  const out: Thing[] = [];
+  for (let i = 1; i < 32; i++) {
+    const a = actor(g, i);
+    if (a.tile !== 0 && a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === z))
+      out.push({ kind: 'creature', slot: i, tile: a.tile });
+  }
+  const v = vehicleAt(g, x, y, z);
+  if (v) out.push({ kind: 'vehicle', v, tile: v.tile });
+  const list = itemsHere(g);
+  for (let i = list.length - 1; i >= 0; i--) {
+    const it = list[i];
+    if (it.x === (x & 0xff) && it.y === (y & 0xff) && it.z === (z & 0xff)) out.push({ kind: 'item', it, tile: it.tile });
+  }
+  return out;
 }
 
 /** ULTIMA_3868: an actor slot 1-23 whose tile is in [lo, hi] (and out of view, if asked). */

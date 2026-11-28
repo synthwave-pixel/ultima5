@@ -8,7 +8,7 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actor, actorTileAt, freeActor, setActor } from './actors.ts';
+import { actor, actorTileAt, freeActor, setActor, thingsAt } from './actors.ts';
 import { invertMember, updateFrame, drawVitals } from './frame.ts';
 import { Game, thingKey } from './game.ts';
 import { selectDirection, whoActs } from './input.ts';
@@ -21,6 +21,7 @@ import { buildLightMap, setTileAt, setTownTile, tileAt } from './world.ts';
 import { roll30 } from './outdoors.ts';
 import { cue } from './cues.ts';
 import { addAmmo, isAmmo } from './ammo.ts';
+import { takeVehicle } from './objectStores.ts';
 
 const inc = (v: number, n: number, max: number): number => (v + n < max ? v + n : max);
 
@@ -784,13 +785,7 @@ function getInDungeon(g: Game): void {
 export function thingUnderfoot(g: Game): boolean {
   const s = g.s;
   if (g.inDungeon) return false;
-  for (let i = 1; i < 0x20; i++) {
-    const a = actor(g, i);
-    if (a.x !== s.x || a.y !== s.y || !(s.mapId > 0x7f || a.z === s.level)) continue;
-    const t = a.tile;
-    if ((t > 1 && t < 0x10) || t === 0x19 || t === 0x1b || (t & 0xfc) === 0xb4) return true;
-  }
-  return false;
+  return thingsAt(g, s.x, s.y, s.level).some(({ tile: t }) => (t > 1 && t < 0x10) || t === 0x19 || t === 0x1b || (t & 0xfc) === 0xb4);
 }
 
 /** SJOG_18ce: Get: items, torches from walls, crops and a bite from a plate. */
@@ -807,17 +802,16 @@ export async function getCommand(g: Game): Promise<number> {
   const x = dx + s.x;
   const y = dy + s.y;
   g.say(0x8de6); // "\n"
-  let i = 1;
-  let tile = 0;
-  for (; i < 0x20; i++) {
-    const a = actor(g, i);
-    if (a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level)) {
-      tile = a.tile;
-      if (tile < 0x10 || tile === 0x19 || tile === 0x1b || (tile & 0xfc) === 0xb4) break;
-    }
+  // The first thing there that can be taken: from the table, a carpet from the vehicles' store, a thing lying about.
+  const got = thingsAt(g, x, y, s.level).find(({ tile }) => tile < 0x10 || tile === 0x19 || tile === 0x1b || (tile & 0xfc) === 0xb4);
+  if (got?.kind === 'creature') {
+    getObject(g, got.tile, actor(g, got.slot).b5, got.slot);
+    return 1;
   }
-  if (i < 0x20) {
-    getObject(g, tile, actor(g, i).b5, i);
+  if (got?.kind === 'vehicle') {
+    takeVehicle(g, got.v);
+    g.viewDirty |= 2;
+    getObject(g, got.tile, 0, 0x20);
     return 1;
   }
   const t = tileAt(g, x, y);

@@ -9,7 +9,19 @@
  */
 
 import * as modern from './modernKarma.ts';
-import { actor, actorSlots, actorTileAt, actorTileAtRev, canEnter, freeActor, party, setActor } from './actors.ts';
+import {
+  actor,
+  actorSlots,
+  actorTileAt,
+  actorTileAtRev,
+  canEnter,
+  creatureTileAt,
+  freeActor,
+  party,
+  setActor,
+  thingsAt,
+} from './actors.ts';
+import { leaveVehicle, takeItem, takeVehicle, vehicleAt } from './objectStores.ts';
 import { shoot } from './combat.ts';
 import { reveal, shakeScreen, explosion } from './effects.ts';
 import { drawMoons, drawVitals, updateFrame } from './frame.ts';
@@ -85,8 +97,10 @@ export async function boardCommand(g: Game): Promise<number> {
     g.say(0x4252); // "\nNot here!\n"
     return 1;
   }
-  const tile = actorTileAt(g, s.x, s.y, s.level);
-  const i = s.dx;
+  // A vehicle left here (the vehicles' store), else a horse that is one of the place's people (the table).
+  const v = vehicleAt(g, s.x, s.y, s.level);
+  const tile = v ? v.tile : creatureTileAt(g, s.x, s.y, s.level);
+  const i = v ? 32 : s.dx;
   // Smith beside the party, who will not be ridden (the port's): in 1988 he was stood on and Board said "Nay!"; walked
   // into, he is talked to now (town.ts move), and Board says it from beside him.
   if (tile === 0 && talkingHorseBeside(g)) {
@@ -116,10 +130,10 @@ export async function boardCommand(g: Game): Promise<number> {
   } else if ((tile & 0xfc) === 0x24) {
     if (!canBoardShip(g)) return 1;
     g.say(0x427c); // "Ship\n"
-    const hull = actor(g, i).b5;
+    const hull = v ? v.hull : actor(g, i).b5;
     if (hull < 10) g.say(0x4282); // "\nDANGER: SHIP BADLY DAMAGED!\n"
     party(g).b5 = hull;
-    let skiffs = actor(g, i).b7;
+    let skiffs = v ? v.skiffs : actor(g, i).b7;
     if ((s.partyTile & 0xfe) === 0x14) s.carpets++;
     if ((s.partyTile & 0xfc) === 0x28) skiffs++;
     if (skiffs === 0) g.say(0x42a0); // "\nWARNING: NO SKIFFS ON BOARD!\n"
@@ -130,7 +144,8 @@ export async function boardCommand(g: Game): Promise<number> {
     g.say(0x42bf); // "What?\n"
     return 0;
   }
-  setActor(g, i, 0, 0, 0, 0, 0, 0);
+  if (v) takeVehicle(g, v);
+  else setActor(g, i, 0, 0, 0, 0, 0, 0);
   g.viewDirty |= 2;
   musicForMap(g);
   return 1;
@@ -216,9 +231,11 @@ export async function xitCommand(g: Game): Promise<number> {
     default:
       return 1;
   }
-  const i = freeActor(g);
-  setActor(g, i, left, left, s.x, s.y, s.level, party(g).b5);
-  actor(g, i).b7 = skiffs;
+  // Left where the party stood, in the vehicles' store: never taken for a creature (#69).
+  const kind = g.objectRules.vehicleKind(left)!;
+  const ship = kind === 'frigate';
+  leaveVehicle(g, { kind, tile: left, x: s.x, y: s.y, z: s.level, hull: ship ? party(g).b5 : 0, skiffs: ship ? skiffs : 0 });
+  g.viewDirty |= 2;
   drawVitals(g);
   musicForMap(g);
   return 1;
@@ -339,6 +356,12 @@ export async function fireCommand(g: Game): Promise<number> {
     } else {
       hit = true;
       victim = s.dx;
+      // A vehicle or a thing lying there (the stores, dx 32): the shot takes it, and no one of the place is hurt.
+      if (victim === 32) {
+        const th = thingsAt(g, x, y, s.level)[0];
+        if (th?.kind === 'vehicle') takeVehicle(g, th.v);
+        else if (th?.kind === 'item') takeItem(g, th.it);
+      }
     }
   }
   await shoot(g, vx0, vy0, vx, vy, 1);
@@ -350,7 +373,9 @@ export async function fireCommand(g: Game): Promise<number> {
     g.viewDirty = 1;
     s.openDoor = 0;
   }
-  if (hit && victim !== 0) {
+  if (hit && victim === 32) {
+    g.viewDirty |= 2;
+  } else if (hit && victim !== 0) {
     setActor(g, victim, 0, 0, 0, 0, 0, 0);
     g.viewDirty |= 2;
     s.karma = decrease(s.karma, 5);

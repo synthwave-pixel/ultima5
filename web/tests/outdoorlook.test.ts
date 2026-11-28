@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { actor, actorList, party, setActor } from '../src/game/actors.ts';
+import { actor, party, setActor } from '../src/game/actors.ts';
 import { K, Pad } from '../src/game/io.ts';
 import { lookCommand, nightSky, viewGem } from '../src/game/look.ts';
 import { enterWorld, falls, hullDamage, monstersTurn, outdoorsLoop } from '../src/game/outdoors.ts';
@@ -10,6 +10,7 @@ import { setTileAt } from '../src/game/world.ts';
 import { Colour } from '../src/ui/colours.ts';
 import { newGame } from './helpers.ts';
 import { fly, pick, press } from './pilot.ts';
+import { vehiclesHere } from '../src/game/objectStores.ts';
 
 type Made = ReturnType<typeof newGame>;
 
@@ -273,7 +274,7 @@ describe('Look', () => {
   };
   const keysOf = (...ks: (number | string)[]): number[] =>
     ks.flatMap((k) => (typeof k === 'string' ? [...k].map((c) => c.charCodeAt(0)) : [k]));
-  const horsesBeside = ({ g }: Made): number => actorList(g).filter((a, i) => i > 0 && a.tile === 0x10 && a.x === 16 && a.y === 20).length;
+  const horsesBeside = ({ g }: Made): number => vehiclesHere(g).filter((v) => v.tile === 0x10 && v.x === 16 && v.y === 20).length;
 
   describe('a well', () => {
     it('grants a horse at the wells in Paws and Empath Abbey, for the coin it is wished on', async () => {

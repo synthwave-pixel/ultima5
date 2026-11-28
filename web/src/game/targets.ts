@@ -17,7 +17,7 @@ import { Status } from './save.ts';
 import { K } from './io.ts';
 import { turnMember } from './turn.ts';
 import { counter } from './talk.ts';
-import { actor, actorSlots } from './actors.ts';
+import { actor, actorSlots, thingsAt } from './actors.ts';
 
 /** Offered, offered greyed, or left out. */
 export type Offer = 'show' | 'grey' | 'hide';
@@ -40,13 +40,7 @@ const night = (g: Game): boolean => g.s.hour < 6 || g.s.hour > 0x12;
 
 /** Every actor's tile on a square (a square may hold more than one), as actorTileAt reads them - without its marks. */
 function actorsOn(g: Game, x: number, y: number): number[] {
-  const s = g.s;
-  const out: number[] = [];
-  for (let i = 1; i < 32; i++) {
-    const a = actor(g, i);
-    if (a.tile !== 0 && a.x === (x & 0xff) && a.y === (y & 0xff) && (s.mapId > 0x7f || a.z === s.level)) out.push(a.tile);
-  }
-  return out;
+  return thingsAt(g, x, y, g.s.level).map((t) => t.tile);
 }
 
 /** Whether any square beside the party holds what `test` looks for: the square's tile, what stands on it, the side. */

@@ -29,6 +29,7 @@ import { explosion, shakeScreen, sleepTicks } from './effects.ts';
 import { autosave } from './storage.ts';
 import { cue } from './cues.ts';
 import { enteredPlace } from './placeNames.ts';
+import { leaveVehicle } from './objectStores.ts';
 
 /** D_2c55, D_2c57: every other turn under Quickness, and on horse or carpet. */
 let quickTurn = 0;
@@ -99,14 +100,16 @@ export async function outdoorsEntry(g: Game): Promise<void> {
   g.sound.music(0);
   enterWorld(g);
   if (s.boughtShip >= 0x40) {
-    const i = freeActor(g);
-    const a = actor(g, i);
-    a.b7 = s.boughtShip & 0x3f;
-    a.x = s.shipX;
-    a.y = s.shipY;
-    a.z = 0;
-    a.tile = a.anim = s.boughtShip > 0x7f ? 0x25 : 0x29;
-    a.b5 = 99;
+    const frigate = s.boughtShip > 0x7f;
+    leaveVehicle(g, {
+      kind: frigate ? 'frigate' : 'skiff',
+      tile: frigate ? 0x25 : 0x29,
+      x: s.shipX,
+      y: s.shipY,
+      z: 0,
+      hull: frigate ? 99 : 0,
+      skiffs: frigate ? s.boughtShip & 0x3f : 0,
+    });
     s.boughtShip = 0;
   }
   musicForMap(g);
@@ -589,7 +592,7 @@ function spawnSquare(g: Game): void {
 }
 
 /** MAINOUT_0fc4: try to bring a monster into the world. */
-function spawn(g: Game): void {
+export function spawn(g: Game): void {
   const s = g.s;
   let tile = 0;
   let x = 0;

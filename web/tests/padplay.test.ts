@@ -4,6 +4,7 @@ import { runGame, journeyOnward } from '../src/game/run.ts';
 import { fighter, newGame } from './helpers.ts';
 import { command, fly, Landed, pick, press, until, type Step } from './pilot.ts';
 import { actor, actorList, party } from '../src/game/actors.ts';
+import { leaveVehicle, vehiclesHere } from '../src/game/objectStores.ts';
 
 /** The game played with nothing but a controller, from its prompts and menus as a player meets them. */
 describe('a controller plays', () => {
@@ -852,8 +853,8 @@ describe('a horse, by controller', () => {
     expect(mounted).toBe(true);
     expect([s.x, s.y]).not.toEqual(start); // ridden a square north
     expect(s.partyTile).toBe(0x1c); // on foot again
-    // The horse left there - where it may have taken a step of its own the turn after
-    expect(actorList(g).some((a) => (a.tile & 0xfe) === 0x10 && Math.abs(a.x - s.x) <= 1 && Math.abs(a.y - s.y) <= 1)).toBe(true);
+    // The horse left there, in the towne's vehicles' store (objectStores.ts): where it was left
+    expect(vehiclesHere(g).some((v) => v.kind === 'horse' && v.x === s.x && v.y === s.y)).toBe(true);
   });
 });
 
@@ -963,15 +964,12 @@ describe('a skiff rowed back to its ship, by controller', () => {
     const { g, p } = newGame();
     journeyOnward(g);
     const s = g.s;
-    const { freeActor, setActor } = await import('../src/game/actors.ts');
     const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0, x: 133, y: 150 });
-    const ship = freeActor(g);
-    setActor(g, ship, 0x26, 0x26, s.x, s.y, 0, 0); // a frigate, under the skiff
-    actor(g, ship).b5 = 50;
-    actor(g, ship).b7 = 0; // her skiff is the one the party is in
+    // A frigate, under the skiff; her skiff is the one the party is in.
+    leaveVehicle(g, { kind: 'frigate', tile: 0x26, x: s.x, y: s.y, z: 0, hull: 50, skiffs: 0 });
     s.partyTile = 0x28;
     g.commandPrompt = 'outdoors';
     let offered: string[] = [];
@@ -981,7 +979,6 @@ describe('a skiff rowed back to its ship, by controller', () => {
     };
     await commandMenu(g);
     expect(offered).toContain('Board');
-    s.dx = ship; // the actor Board takes (actorTileAt leaves its index there)
     await boardCommand(g);
     expect(s.partyTile & 0xfc).toBe(0x24);
     expect(party(g).b7).toBe(1);
@@ -993,13 +990,12 @@ describe('a magic carpet where it lies, by controller', () => {
     const { g, p } = newGame();
     journeyOnward(g);
     const s = g.s;
-    const { freeActor, setActor } = await import('../src/game/actors.ts');
     const { commandMenu } = await import('../src/game/offers.ts');
     const { boardCommand } = await import('../src/game/cmds.ts');
     g.options.input = 'controller';
     Object.assign(s, { mapId: 0, level: 0 });
-    const carpet = freeActor(g);
-    setActor(g, carpet, 0x1b, 0x1b, s.x, s.y, 0, 0); // a carpet on the ground, where it was left (X-it) or kept
+    // A carpet on the ground, where it was left (X-it).
+    leaveVehicle(g, { kind: 'carpet', tile: 0x1b, x: s.x, y: s.y, z: 0, hull: 0, skiffs: 0 });
     g.commandPrompt = 'outdoors';
     let offered: string[] = [];
     p.next = () => {
@@ -1008,8 +1004,8 @@ describe('a magic carpet where it lies, by controller', () => {
     };
     await commandMenu(g);
     expect(offered).toContain('Board');
-    s.dx = carpet;
     await boardCommand(g);
     expect(s.partyTile & 0xfe).toBe(0x14);
+    expect(vehiclesHere(g)).toEqual([]);
   });
 });
