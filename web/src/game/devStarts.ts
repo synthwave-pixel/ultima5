@@ -46,7 +46,7 @@ export async function startArena(g: Game, n: number): Promise<void> {
   if (!arena) return;
   Object.assign(g.s, { mapId: 0, level: 0, x: 86, y: 110 });
   if (arena.aboard) g.s.partyTile = FRIGATE;
-  const foe = freeActor(g);
+  const foe = freeActor(g, true) || 1;
   Object.assign(actor(g, foe), { tile: arena.foe, anim: arena.foe, x: 86, y: 109, z: 0, b5: 0 });
   await arenaFight(g, n, foe);
 }

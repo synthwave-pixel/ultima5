@@ -7,7 +7,7 @@
  */
 
 import { Game } from './game.ts';
-import { type Item, itemsHere, takeItem, type Vehicle, vehicleAt } from './objectStores.ts';
+import { distance, inSight, type Item, itemsHere, takeItem, type Vehicle, vehicleAt } from './objectStores.ts';
 import { Actor, type Save } from './save.ts';
 import { T } from './tiles.ts';
 
@@ -276,40 +276,34 @@ export function lyingAt(g: Game, x: number, y: number, z: number, test: (tile: n
   return undefined;
 }
 
-/** ULTIMA_3868: an actor slot 1-23 whose tile is in [lo, hi] (and out of view, if asked). */
-function slotWith(g: Game, lo: number, hi: number, outOfView: boolean): number {
-  const s = g.s;
+/**
+ * ULTIMA_38e4: a slot for a new creature, 1-23 as in 1988: an empty one; else the creature farthest from the party
+ * out of sight (1988 took the lowest slot of a kind, and at last slot 1, whatever it held); with `must` - the trolls,
+ * a Shadowlord, an ambush, the place's people, whom the story needs - the farthest even in sight. Never one of the
+ * place's people (a townsfolk record points at its slot), nor the Crown; 0 when there is none to take.
+ */
+export function freeActor(g: Game, must = false): number {
+  for (let i = 1; i < 0x18; i++) if (actor(g, i).tile === 0) return i;
+  let best = 0;
+  let far = -1;
   for (let i = 1; i < 0x18; i++) {
-    const t = actor(g, i).tile;
-    if (t >= lo && t <= hi && t !== 0xb5) {
-      if (!outOfView) return i;
-      const vx = (actor(g, i).x - s.x + 5) & 0xff;
-      const vy = (actor(g, i).y - s.y + 5) & 0xff;
-      if (vx > 10 || vy > 10) return i;
+    const a = actor(g, i);
+    if (a.tile === 0xb5 || npcOfActor(g, i) >= 0) continue;
+    if (!must && inSight(g, a.x, a.y, a.z)) continue;
+    const d = distance(g, a.x, a.y, a.z);
+    if (d > far) {
+      far = d;
+      best = i;
     }
   }
-  return 0;
+  return best;
 }
 
-/** ULTIMA_38e4: a slot for a new actor: an empty one, else one to reuse, least missed first. */
-export function freeActor(g: Game): number {
-  const tries: [number, number, boolean][] = [
-    [0, 0, false],
-    [1, 0xf, true],
-    [0x80, 0xff, true],
-    [0x10, 0x11, true],
-    [0x30, 0x7f, true],
-    [1, 0xf, false],
-    [0x80, 0xff, false],
-    [0x10, 0x11, false],
-    [0x30, 0x7f, false],
-    [0, 0xff, false],
-  ];
-  for (const [lo, hi, out] of tries) {
-    const i = slotWith(g, lo, hi, out);
-    if (i !== 0) return i;
-  }
-  return 0;
+/** Which townsfolk record points at slot `i`, -1 for none (town.ts npcOfActor, here for freeActor). */
+function npcOfActor(g: Game, i: number): number {
+  const s = g.s;
+  for (let n = 0; n < 0x20; n++) if (s.npcs[n].actor === i && s.npcTypes[n] !== 0 && s.npcs[n].f0 !== 0) return n;
+  return -1;
 }
 
 /** ULTIMA_3a74. */

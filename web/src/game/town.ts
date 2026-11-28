@@ -125,7 +125,8 @@ function shadowlordArrives(g: Game): void {
   if (s.townAir === 0xff) return;
   blight(g);
   for (const [, a] of actorSlots(g)) if (a.tile === 0xfc) return;
-  const slot = freeActor(g);
+  const slot = freeActor(g, true);
+  if (slot === 0) return;
   const a = actor(g, slot);
   let npc = 0x1f;
   for (let i = 0x1f; i >= 0; i--) {

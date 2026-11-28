@@ -110,7 +110,7 @@ function hereForWriting(g: Game): PlaceStore {
 }
 
 /** Squares from the party: around the edge on the 256-square worlds, plain elsewhere; on another level, far. */
-function distance(g: Game, x: number, y: number, z: number): number {
+export function distance(g: Game, x: number, y: number, z: number): number {
   const s = g.s;
   const wrap = s.mapId === 0;
   const d = (a: number, b: number): number => {

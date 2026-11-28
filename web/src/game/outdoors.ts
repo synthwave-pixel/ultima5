@@ -409,9 +409,11 @@ async function enterDungeon(g: Game, kind: string): Promise<boolean> {
   if (i === 0x27) {
     if ((s.shadowlords[0] & s.shadowlords[1] & s.shadowlords[2]) < 0x80) {
       g.say(0x2a2f); // "\nAttacked at entrance!\n"
-      const a = freeActor(g);
-      actor(g, a).tile = 0xfc;
-      await attackCombat(g, a);
+      const a = freeActor(g, true);
+      if (a !== 0) {
+        actor(g, a).tile = 0xfc;
+        await attackCombat(g, a);
+      }
       return false;
     }
   } else {
@@ -579,7 +581,9 @@ export function spawn(g: Game): void {
     if (tile !== 0 && (tile !== 0x2c || (tileAt(g, x, y) & 0xf0) !== T.T60)) break;
   }
   if (tries === 0x80) return;
+  // A wandering monster: none appears when every creature is in sight and no slot is free (freeActor).
   const i = freeActor(g);
+  if (i === 0) return;
   setActor(g, i, tile, tile, x, y, s.level, 0);
   if (tile === 0x2c) actor(g, i).b5 = 100;
 }
@@ -956,7 +960,8 @@ async function trollToll(g: Game): Promise<void> {
     if (s.gold >= 0) return;
     s.gold += toll;
   }
-  const i = freeActor(g);
+  const i = freeActor(g, true);
+  if (i === 0) return;
   setActor(g, i, 0xe4, 0, s.x, s.y, 0, 0);
   await attackCombat(g, i);
 }

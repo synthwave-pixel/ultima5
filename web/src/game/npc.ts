@@ -442,8 +442,9 @@ export function putNpc(g: Game, npc: number, x: number, y: number, z: number): v
     actor(g, me.actor).tile = 0;
     me.actor = 0;
   }
-  if (z === s.level && me.actor === 0) {
-    const slot = freeActor(g);
+  // Every slot one of the place's people (freeActor gives 0): the record is kept, with no figure, until one is free.
+  const slot = z === s.level && me.actor === 0 ? freeActor(g, true) : 0;
+  if (slot !== 0) {
     let b5 = 0;
     if (s.npcTypes[npc] === 1) b5 = 0x1e;
     else if ((g.data.ovl.data[0x28c6 + 0x10 + (s.mapId - 1) * 4 + (npc >> 3)] >> (npc & 7)) & 1) b5 = 0xff;

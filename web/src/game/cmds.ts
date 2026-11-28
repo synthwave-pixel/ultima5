@@ -482,7 +482,11 @@ async function yellInTown(g: Game, word: string): Promise<number> {
     }
   }
   s.d58cb = which;
-  const slot = freeActor(g);
+  const slot = freeActor(g, true);
+  if (slot === 0) {
+    g.say(0x440b); // "\nNo effect!\n"
+    return 1;
+  }
   setActor(g, slot, 0xfc, 0xfc, s.x, s.y - 2, s.level, 0);
   let npc = 0x1f;
   for (; npc >= 0; npc--) if (s.npcTypes[npc] === 0) break;
